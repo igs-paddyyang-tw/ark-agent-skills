@@ -1,15 +1,12 @@
 # ark-kiro-skills
 
-37 個 Kiro Skills 食譜集，用自然語言觸發產出智能助理功能。
+38 個 Kiro Skills 食譜集，用自然語言觸發產出智能助理功能。
 
 ## 安裝
 
 ```bash
-# 在 Kiro CLI 專案中
+# 直接 clone 為 .kiro/skills（repo root = skills 目錄）
 git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git .kiro/skills
-
-# 或複製到全域
-git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git ~/.kiro/skills
 ```
 
 ## Skills 總覽（37 個）
@@ -24,7 +21,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git ~/.kiro/skills
 | `ark-wiki-engine` | 知識庫管理（Schema v3.0） |
 | `ark-kiro-init` | 產出 .kiro/ workspace 配置 |
 
-### 團隊與應用（4 個）
+### 團隊與應用（5 個）
 
 | Skill | 說明 |
 |-------|------|
@@ -32,6 +29,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git ~/.kiro/skills
 | `ark-webapp-generator` | FastAPI + Skill 插件系統 + Web Chat UI |
 | `ark-chatbot-generator` | Telegram Bot + LLM（Gemini/Kiro/Ollama） |
 | `ark-scheduler-generator` | WorkflowEngine + ScheduleEngine |
+| `ark-env-doctor` | 開發環境診斷、修復、DevContainer 產出 |
 
 ### 文件與報告（8 個）
 
@@ -93,6 +91,7 @@ Skills 會自動觸發（依 description 匹配），也可用 slash command 手
 
 ## 版本
 
+- **v2.1** (2026-05-14) — 扁平化 repo 結構 + 新增 ark-env-doctor（共 38 Skills）
 - **v2.0** (2026-05-14) — 新增 5 個核心 Skills + ark-superpowers 升級為 7 階段方法論
 - **v1.0** (2026-04) — 初版 32 個 Skills
 

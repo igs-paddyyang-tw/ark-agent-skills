@@ -1,0 +1,41 @@
+{
+  "skill_name": "ark-env-doctor",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我剛 clone 了專案，跑 python main.py 出現 ModuleNotFoundError: No module named 'google.genai'，幫我修",
+      "expected_output": "偵測環境 → 找出缺失套件 → 提供 pip install 指令或自動修復",
+      "files": [],
+      "expectations": [
+        "產出環境診斷報告",
+        "識別出 google-genai 為缺失套件",
+        "提供 pip install google-genai 指令",
+        "建議建立 venv 隔離環境"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "幫我檢查這個專案的開發環境是否正常，需要 Python 3.11+ 和 Go 1.21+",
+      "expected_output": "完整環境報告，包含 Python/Go 版本檢查結果與修復建議",
+      "files": [],
+      "expectations": [
+        "檢查 Python 版本並顯示結果",
+        "檢查 Go 版本並顯示結果",
+        "產出 Markdown 格式報告",
+        "若有問題提供修復指令"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "我是新手，完全不懂環境設定，幫我一鍵把開發環境弄好，專案用 Python + Go",
+      "expected_output": "產出 setup 腳本 + DevContainer 配置，讓新手可以無痛開始",
+      "files": [],
+      "expectations": [
+        "產出 fix_env.sh 和 fix_env.ps1",
+        "產出 .devcontainer/devcontainer.json 和 Dockerfile",
+        "腳本包含 venv 建立和套件安裝",
+        "提供清楚的使用說明"
+      ]
+    }
+  ]
+}
