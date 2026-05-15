@@ -1,6 +1,6 @@
 ﻿---
 author: paddyyang
-name: generate-uml
+name: ark-uml-generator
 description: |
   產出 Mermaid 格式的 UML 圖表，用於系統設計文件。
   支援序列圖、類別圖、ERD、流程圖、元件圖。
