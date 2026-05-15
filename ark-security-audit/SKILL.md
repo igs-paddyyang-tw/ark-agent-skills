@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-security-audit
 description: |
   產出 security_audit.py 安全性掃描 Skill，對專案進行程式碼安全性檢查與弱點偵測。

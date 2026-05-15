@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-translator
 description: |
   產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯，

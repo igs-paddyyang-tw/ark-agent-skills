@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-mcp-builder
 description: |
   建立高品質 MCP（Model Context Protocol）Server 的指南，

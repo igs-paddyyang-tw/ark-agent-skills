@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-cost-tracker
 description: |
   產出 API 呼叫成本追蹤 Skill，記錄 LLM API 的 token 使用量和費用。

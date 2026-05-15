@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-env-doctor
 description: |
   當使用者遇到開發環境問題時使用此技能。觸發條件包括：環境檢查、套件缺失、

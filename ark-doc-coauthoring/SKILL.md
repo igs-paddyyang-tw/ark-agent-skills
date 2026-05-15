@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-doc-coauthoring
 description: |
   引導使用者透過結構化工作流共同撰寫文件。

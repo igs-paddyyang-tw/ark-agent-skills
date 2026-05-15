@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-file-export
 description: |
   產出檔案匯出 Skill，將記憶體中的資料（dict/list/str）輸出為 Markdown、CSV、JSON 檔案。

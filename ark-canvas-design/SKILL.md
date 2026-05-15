@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-canvas-design
 description: |
   使用設計哲學創作精美的視覺藝術，輸出 .png 和 .pdf 文件。

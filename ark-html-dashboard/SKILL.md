@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-html-dashboard
 description: |
   產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、

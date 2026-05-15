@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-agent-teams-builder
 description: |
   產出完整的多 Agent 團隊系統（team.yaml + runtime + scheduler + MCP），

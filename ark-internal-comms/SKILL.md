@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-internal-comms
 description: |
   協助撰寫各類內部溝通文件，使用公司慣用的格式。

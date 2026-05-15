@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-scheduler-generator
 description: |
   在既有專案上加入 WorkflowEngine 工作流引擎、ScheduleEngine 排程引擎，

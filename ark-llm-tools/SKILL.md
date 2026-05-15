@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-llm-tools
 description: |
   產出 LLM 通用工具 Skills（summarize、analyze、qa、intent_parse），

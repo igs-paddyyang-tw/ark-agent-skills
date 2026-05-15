@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-telegram-notify
 description: |
   產出 telegram_notify.py Skill，透過 Telegram Bot API 推送訊息和圖片。

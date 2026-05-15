@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-code-spec-validator
 description: |
   驗證 code 與 spec/design 文件的一致性，產出 Drift Report。

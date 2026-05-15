@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-test-runner
 description: |
   產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。

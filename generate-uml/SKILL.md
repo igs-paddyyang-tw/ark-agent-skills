@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: generate-uml
 description: |
   產出 Mermaid 格式的 UML 圖表，用於系統設計文件。

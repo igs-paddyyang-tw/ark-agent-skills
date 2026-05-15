@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-pdf-tool
 description: |
   處理 PDF 檔案的所有操作。包括讀取或提取 PDF 中的文字/表格、

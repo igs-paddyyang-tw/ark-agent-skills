@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-superpowers
 description: |
   產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫），

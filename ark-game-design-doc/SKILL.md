@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-game-design-doc
 description: >
   根據遊戲構想或需求描述，產出完整的遊戲企劃文件（Game Design Document, GDD）。

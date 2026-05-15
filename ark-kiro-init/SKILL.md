@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-kiro-init
 description: |
   產出完整的 .kiro/ workspace 配置（agents、steering、prompts、skills、settings），

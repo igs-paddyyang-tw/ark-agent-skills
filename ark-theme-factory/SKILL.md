@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-theme-factory
 description: |
   為 artifacts 套用主題樣式的工具包。這些 artifacts 可以是投影片、文件、報表、

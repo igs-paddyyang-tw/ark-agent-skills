@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-chart-generator
 description: |
   產出 chart_generator.py 標準化圖表 Skill，使用 Matplotlib 將結構化數據轉換為圖表，

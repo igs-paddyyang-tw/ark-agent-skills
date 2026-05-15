@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-code-review
 description: |
   產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、

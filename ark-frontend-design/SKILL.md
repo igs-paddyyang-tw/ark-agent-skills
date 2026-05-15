@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-frontend-design
 description: |
   產出獨特、生產級品質的前端介面，具備高設計水準。

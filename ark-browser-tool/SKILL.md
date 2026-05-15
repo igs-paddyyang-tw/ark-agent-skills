@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-browser-tool
 description: |
   產出 agent-browser MCP Server 封裝與業務 Skill 抽象。

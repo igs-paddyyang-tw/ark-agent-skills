@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-webapp-generator
 description: |
   產出完整 Web 專案骨架，包含 FastAPI Server、Web Chat UI、BaseSkill 插件系統

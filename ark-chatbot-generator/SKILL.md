@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-chatbot-generator
 description: |
   在既有 Web 專案上加入 Telegram Bot + LLM 對話能力 + Kiro CLI Agent 整合 + 呼叫 Skill 執行，可獨立運作。

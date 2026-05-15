@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-web-scraper
 description: |
   產出通用網頁爬蟲 Skill，使用 httpx + BeautifulSoup 抓取任何網頁內容。

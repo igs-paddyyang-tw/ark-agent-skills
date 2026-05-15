@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-skill-creator
 description: |
   建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。

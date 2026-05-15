@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-report-template
 description: |
   產出標準化報表模板引擎 Skill，使用 Jinja2 將資料 + 圖表組裝成完整報表。

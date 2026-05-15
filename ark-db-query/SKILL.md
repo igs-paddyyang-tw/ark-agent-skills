@@ -1,4 +1,5 @@
----
+﻿---
+author: paddyyang
 name: ark-db-query
 description: |
   產出 db_query.py Skill，支援多種資料庫查詢並回傳標準格式（list[dict]），
