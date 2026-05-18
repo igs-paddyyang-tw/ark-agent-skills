@@ -2,19 +2,22 @@
 author: paddyyang
 name: ark-browser-tool
 description: |
-  產出 agent-browser MCP Server 封裝與業務 Skill 抽象。
-  底層使用 vercel-labs/agent-browser（Rust CLI 瀏覽器自動化工具），
-  透過 FastMCP 封裝成 MCP Server，供 Workflow 和 Bot 呼叫。
+  完整瀏覽器開發測試工具：MCP Server 封裝（agent-browser CLI）+ 視覺測試驗證（Playwright）。
+  提供 7 個 MCP Tools（open/snapshot/click/fill/screenshot/getText/close）+
+  視覺測試工作流（截圖驗證、互動測試、響應式檢查、前後對比）。
   使用此 Skill 當使用者提及 agent-browser、瀏覽器自動化、MCP browser、
   browser tool、網頁抓取 MCP、瀏覽器搜尋、web scraping MCP、
-  或任何需要將 agent-browser 封裝為 MCP Server 的場景。
+  瀏覽器測試、截圖驗證、visual testing、dev-browser、看一下畫面、
+  確認 UI、E2E 驗證、localhost 預覽、
+  或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
+metadata:
+  version: "2.0"
+  updated: 2026-05-18
 ---
 
 # ark-browser-tool
 
-產出 agent-browser MCP Server 封裝，採用「MCP 封裝 + 業務 Skill 抽象」策略。
-底層使用 [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser)（Rust CLI），
-透過 FastMCP 封裝成 MCP Server，可獨立運作。
+完整瀏覽器開發測試工具 — MCP 自動化 + 視覺測試驗證。
 
 ## 觸發條件
 
@@ -22,6 +25,10 @@ description: |
 - 「agent-browser」、「瀏覽器自動化」、「MCP browser」
 - 「browser tool」、「網頁抓取 MCP」
 - 「瀏覽器搜尋」、「web scraping MCP」
+- 「瀏覽器測試」、「截圖驗證」、「visual testing」
+- 「看一下畫面」、「確認 UI」、「E2E 驗證」
+- 「localhost 預覽」、「開啟頁面」
+- 前端任務完成後的驗證階段
 
 ## 輸入參數
 
@@ -129,3 +136,81 @@ python mcp-servers/agent-browser/server.py
 - MCP Server 透過 `subprocess` 呼叫 CLI，每個 Tool 是獨立的 CLI 呼叫
 - `browser_snapshot` 回傳 accessibility tree，是 AI agent 最佳的頁面理解格式
 - 瀏覽器 session 在 CLI daemon 中維持，多個 Tool 呼叫共享同一個瀏覽器實例
+
+---
+
+## 視覺測試驗證（Playwright）
+
+讓 Agent 看見自己的產出，閉合開發回饋迴圈。
+
+### 核心原則
+
+```
+沒有瀏覽器的 Agent = 盲人寫 UI
+→ 寫完 code 必須看到結果才算完成
+```
+
+### 截圖驗證
+
+```python
+from playwright.sync_api import sync_playwright
+
+def screenshot(url: str, output: str = "screenshot.png", width: int = 1280, height: int = 720):
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": height})
+        page.goto(url, wait_until="networkidle")
+        page.screenshot(path=output, full_page=True)
+        browser.close()
+```
+
+### 互動測試
+
+```python
+page.click("button#submit")
+page.fill("input[name='email']", "test@example.com")
+assert page.locator(".success-message").is_visible()
+```
+
+### 響應式檢查
+
+```python
+viewports = [
+    {"width": 375, "height": 812, "name": "mobile"},
+    {"width": 768, "height": 1024, "name": "tablet"},
+    {"width": 1280, "height": 720, "name": "desktop"},
+]
+for vp in viewports:
+    page.set_viewport_size({"width": vp["width"], "height": vp["height"]})
+    page.screenshot(path=f"screenshot-{vp['name']}.png")
+```
+
+### 視覺檢查清單
+
+截圖後確認：
+- [ ] 頁面正常載入（無白屏/錯誤）
+- [ ] 佈局符合設計（元素位置正確）
+- [ ] 文字可讀（無溢出/截斷）
+- [ ] 互動元素可見（按鈕/連結）
+- [ ] 響應式正確
+
+### 使用場景
+
+| 場景 | 動作 | 驗證 |
+|------|------|------|
+| 前端開發完成 | 截圖 localhost | 佈局正確 |
+| CSS 修改 | 前後截圖對比 | 無意外變化 |
+| 表單功能 | 填寫 + 提交 | 成功訊息出現 |
+| 響應式 | 多尺寸截圖 | 各斷點正常 |
+
+### 與 ark-superpowers 整合
+
+在 ④ Execute 階段的 TDD 循環中：
+```
+RED → GREEN → REFACTOR → VISUAL VERIFY → COMMIT
+```
+
+### 前置需求
+
+- Playwright：`pip install playwright && playwright install chromium`
+- 截圖存放：`artifacts/screenshots/`（不入版控）
