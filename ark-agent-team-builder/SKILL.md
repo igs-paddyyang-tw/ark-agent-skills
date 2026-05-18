@@ -1,5 +1,5 @@
-﻿---
-name: ark-agent-team-builder
+---
+name: ark-agent-team-init
 description: |
   產出多 Agent 團隊骨架（team.yaml + scheduler.yaml + 目錄結構 + prompts），
   支援 2-12 人團隊，預設 4 人（admin + leader + dev + qa）。

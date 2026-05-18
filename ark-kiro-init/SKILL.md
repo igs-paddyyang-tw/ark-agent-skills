@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-kiro-init
 description: |
   產出完整的 .kiro/ workspace 配置（agents、steering、prompts、skills、settings），
@@ -9,6 +8,10 @@ description: |
   kiro init、kiro-init、設定角色的 .kiro、幫我建 agent 配置、新增角色、
   kiro workspace、建立開發環境、設定 AI 助手角色、
   或任何需要產出 .kiro 目錄結構的場景。
+metadata:
+  author: paddyyang
+  version: "1.1"
+  updated: 2026-05-15
 ---
 
 # ark-kiro-init
@@ -39,6 +42,7 @@ description: |
 | 情境 | 動作 |
 |------|------|
 | 未指定角色 | 使用預設：全端工程師 + SA/SD（從 `references/defaults/` 載入） |
+| 指定 admin | 產出 admin 專用 SOUL.md（服務管理、不接業務） |
 | 指定已知角色 | 從 `references/role-templates.md` 查對應模板 |
 | 指定未知角色 | 上網搜尋 → 整理 → 產出 |
 
@@ -47,26 +51,54 @@ description: |
 ## 產出結構
 
 ```
-{target}/.kiro/
-├── agents/{role}.json
-├── prompts/{prompt-1}.md
-├── prompts/{prompt-2}.md
-├── skills/                         # 核心 skills（選填，預設部署）
-│   ├── ark-superpowers/SKILL.md
-│   ├── ark-code-spec-validator/SKILL.md
-│   ├── ark-wiki-engine/SKILL.md
-│   └── ark-skill-creator/SKILL.md
-└── steering/
-    ├── AGENTS.md               # 全域行為準則（怎麼做事，永遠載入）
-    ├── KIRO.md                 # Kiro CLI 行為指引（工具使用、對話模式）
-    ├── MEMORY.md               # 專案記憶（目前在哪）
-    ├── SOUL.md                 # 角色定義（你是誰）
-    ├── USER.md                 # 使用者百科（關於你的筆記本）
-    ├── product.md              # 產品概覽（做什麼）
-    ├── tech.md                 # 技術棧規範
-    ├── {domain}.md             # 領域規範（如 api-contract.md）
-    └── structure.md            # 目錄結構約定
+{target}/
+├── .kiro/                             # Kiro workspace 配置
+│   ├── agents/{role}.json
+│   ├── prompts/{prompt-1}.md
+│   ├── prompts/{prompt-2}.md
+│   ├── settings/mcp.json
+│   ├── skills/{skill-name}/SKILL.md
+│   └── steering/
+│       ├── AGENTS.md               # 全域行為準則（怎麼做事，永遠載入）
+│       ├── KIRO.md                 # Kiro CLI 行為指南（fileMatch: *.py）
+│       ├── MEMORY.md               # 專案記憶（目前在哪）
+│       ├── SOUL.md                 # 角色定義（你是誰）
+│       ├── USER.md                 # 使用者百科（關於你的筆記本）
+│       └── TEAM.md                 # 團隊運作規範（通訊規則 + MCP 工具）
+├── docs/.gitkeep                      # 工作文件
+├── output/.gitkeep                    # 任務產出
+└── knowledge/                         # 私有知識庫（Schema v3.0）
+    ├── schema.md                      # 規則定義
+    ├── index.md                       # 索引目錄（必須同步）
+    ├── log.md                         # 操作日誌（append-only）
+    ├── raw/.gitkeep                   # 唯讀原始資料
+    └── wiki/
+        └── overview.md                # 知識庫概覽
 ```
+
+> **注意：** `product.md`、`tech.md`、`structure.md` 不在 init 預設產出中。
+> 這些是專案特定檔案，由使用者依需求手動建立（或後續用 ark-superpowers 產出）。
+> 預設只產出 5 個核心 steering 檔案，確保最小可用。
+
+### 知識庫五件套（每個 agent 必有）
+
+| 檔案 | 用途 | 規則 |
+|------|------|------|
+| `schema.md` | 規則定義 | 定義 frontmatter 欄位、操作規則、適合存放的知識類型 |
+| `index.md` | 索引目錄 | 每次修改 wiki 必須同步更新 |
+| `log.md` | 操作日誌 | **append-only**，禁止刪除舊記錄 |
+| `raw/` | 唯讀原始資料 | LLM 只讀不改，ingest 工具處理 |
+| `wiki/overview.md` | 知識庫概覽 | 含 frontmatter（title/type/tags/created/updated/status） |
+
+### schema.md 產出規則
+
+根據角色自動填充「適合存放的知識」段落：
+- **Admin** → 服務管理 SOP、crash 處理、版本發布、跨團隊隔離
+- Leader → 需求分析筆記、派工策略、驗收標準
+- AI Dev → LLM API 踩坑、Prompt pattern、RAG 策略
+- Coder → 框架 pattern、DB 設計、測試策略
+- QA → Bug pattern、測試技巧、CI/CD 整合
+- 自訂角色 → 根據搜尋結果推斷
 
 ---
 
@@ -89,11 +121,9 @@ description: |
     "skill://.kiro/skills/**/SKILL.md",
     {
       "type": "knowledgeBase",
-      "source": "file://./docs",
-      "name": "ProjectDocs",
-      "description": "Project documentation and guides",
-      "indexType": "best",
-      "autoUpdate": true
+      "source": "file://./knowledge",
+      "name": "{RoleName}Knowledge",
+      "description": "{角色專屬知識描述}"
     }
   ],
   "mcpServers": {
@@ -347,18 +377,24 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 ## 品質檢查
 
-產出後自動驗證：
+產出後自動驗證（可用 `scripts/estimate_context.py` 量測 context 佔比）：
 
-- [ ] `agents/{role}.json` 有 name/goal/backstory/instructions/resources
-- [ ] `steering/AGENTS.md` 有工具規則 + 回報格式 + 學習 SOP
+- [ ] `agents/{role}.json` 有 name/description/prompt/tools/resources/allowedTools
+- [ ] `agents/{role}.json` 有 knowledgeBase resource 指向 knowledge/
+- [ ] `steering/AGENTS.md` 有工具規則 + 回報格式 + 學習 SOP + AI 開發流程 + 修改追蹤規範
+- [ ] `steering/KIRO.md` 有程式碼規範（Python 專案時）
 - [ ] `steering/MEMORY.md` 有專案快照 + 待辦 + 近期進度結構
 - [ ] `SOUL.md` 包含八段式全部 8 個段落
 - [ ] `USER.md` 有個人特徵 + 溝通風格 + 目標 + 習慣四段
-- [ ] `tech.md` 有至少一個語言規範
-- [ ] `structure.md` 有目錄樹
+- [ ] `TEAM.md` 有團隊成員 + 通訊規則 + 成員管理規範
 - [ ] `prompts/` 至少 2 個模板
-- [ ] `settings/mcp.json` JSON 格式正確
+- [ ] `settings/mcp.json` JSON 格式正確（如有）
 - [ ] resources 引用的檔案全部存在
+- [ ] 所有 always steering 總量 ≤ 50KB（≈ 14K tokens ≈ 7% context）
+- [ ] `knowledge/` 有五件套：schema.md + index.md + log.md + raw/ + wiki/overview.md
+- [ ] `knowledge/schema.md` 有角色客製化「適合存放的知識」段落
+- [ ] `docs/` 目錄存在
+- [ ] `output/` 目錄存在
 
 ---
 
@@ -368,21 +404,27 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 ✅ .kiro workspace 已建立
 
 📁 產出清單：
-- agents/{role}.json
-- steering/AGENTS.md（全域行為準則）
-- steering/MEMORY.md（專案記憶）
-- steering/SOUL.md（{size} KB）
-- steering/USER.md（使用者百科）
-- steering/product.md（產品概覽）
-- steering/tech.md
-- steering/{domain}.md
-- steering/structure.md
-- prompts/{name-1}.md
-- prompts/{name-2}.md
-- skills/{name}/SKILL.md
-- settings/mcp.json
+- .kiro/agents/{role}.json
+- .kiro/steering/AGENTS.md（全域行為準則）
+- .kiro/steering/KIRO.md（程式碼規範）
+- .kiro/steering/MEMORY.md（專案記憶）
+- .kiro/steering/SOUL.md（{size} KB）
+- .kiro/steering/USER.md（使用者百科）
+- .kiro/steering/TEAM.md（團隊運作規範）
+- .kiro/prompts/{name-1}.md
+- .kiro/prompts/{name-2}.md
+- .kiro/skills/{name}/SKILL.md
+- .kiro/settings/mcp.json
+- knowledge/（五件套：schema + index + log + raw/ + wiki/）
+- docs/
+- output/
 
 📊 Context 佔比估算：~{total_kb} KB ≈ {tokens} tokens ≈ {percent}%
+
+💡 下一步（選用）：
+- 建立 product.md（產品概覽）
+- 建立 tech.md（技術棧規範）
+- 建立 structure.md（目錄結構）
 ```
 
 ---
@@ -390,10 +432,31 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 ## 注意事項
 
 - 目標目錄已有 `.kiro/` 時，只補缺少的檔案，不覆寫已存在的
-- steering 總量控制在 25KB 以內（context 佔比 < 5%）
+- 目標目錄已有 `knowledge/` 時，只補缺少的五件套，不覆寫已存在的
+- steering 總量控制在 50KB 以內（context 佔比 < 6%）
 - 預設角色不需要網路，離線可用
 - 自訂角色需要網路搜尋，無網路時提示使用者手動提供資訊
-- **TEAM.md 不產出** — 由 runtime（backend.py）每次啟動時動態產生，內容依角色權限過濾
-- **mcp.json 不產出** — 若使用 ark-team-agent 套件，mcp.json 會被每次啟動覆寫（注入 team MCP server）
-- **KIRO.md 產出** — Kiro CLI 行為指引（工具使用規則、對話模式、trust 設定）
-- **核心 skills 預設部署** — 詢問使用者「要部署核心 skills 嗎？」預設 Yes，部署 superpowers + code-spec-validator + wiki-engine + skill-creator
+- `product.md`、`tech.md`、`structure.md` 不在預設產出中，使用者依需求手動建立
+- knowledge/schema.md 的「適合存放的知識」段落根據角色自動客製化
+
+---
+
+## 附帶資源
+
+### assets/steering/（預設模板，直接 copy）
+
+| 檔案 | 說明 |
+|------|------|
+| `AGENTS.md` | 全域行為準則（含 AI 開發流程 + 知識庫規則） |
+| `KIRO.md` | Kiro CLI 行為指南（程式碼規範，fileMatch: *.py） |
+| `MEMORY.md` | 專案記憶骨架（快照 + 待辦 + 進度） |
+| `USER.md` | 使用者百科骨架（空白待填） |
+| `SOUL.md` | 預設角色：全端 + SA/SD（八段式） |
+| `TEAM.md` | 團隊運作規範（通訊規則 + MCP 工具 + 協作流程 + 成員管理） |
+
+### references/（按需載入）
+
+| 檔案 | 說明 |
+|------|------|
+| `role-templates.md` | 已知角色索引（10 種內建角色） |
+| `defaults/README.md` | 預設角色說明 |
