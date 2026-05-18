@@ -52,28 +52,58 @@ metadata:
 
 ```
 {target}/
-├── .kiro/                             # Kiro workspace 配置
-│   ├── agents/{role}.json
-│   ├── prompts/{prompt-1}.md
+├── .kiro/                             # 根目錄 workspace = admin-agent（working_directory: .）
+│   ├── agents/admin-agent.json        #   admin 角色定義
+│   ├── prompts/{prompt-1}.md          #   admin 提詞
 │   ├── prompts/{prompt-2}.md
-│   ├── settings/mcp.json
-│   ├── skills/{skill-name}/SKILL.md
+│   ├── settings/mcp.json              #   admin MCP 設定（role: admin）
+│   ├── skills/ → ../skills/           #   全套 Skills（symlink 或全部複製）
 │   └── steering/
-│       ├── AGENTS.md               # 全域行為準則（怎麼做事，永遠載入）
-│       ├── KIRO.md                 # Kiro CLI 行為指南（fileMatch: *.py）
-│       ├── MEMORY.md               # 專案記憶（目前在哪）
-│       ├── SOUL.md                 # 角色定義（你是誰）
-│       ├── USER.md                 # 使用者百科（關於你的筆記本）
-│       └── TEAM.md                 # 團隊運作規範（通訊規則 + MCP 工具）
-├── docs/.gitkeep                      # 工作文件
-├── output/.gitkeep                    # 任務產出
-└── knowledge/                         # 私有知識庫（Schema v3.0）
-    ├── schema.md                      # 規則定義
-    ├── index.md                       # 索引目錄（必須同步）
-    ├── log.md                         # 操作日誌（append-only）
-    ├── raw/.gitkeep                   # 唯讀原始資料
-    └── wiki/
-        └── overview.md                # 知識庫概覽
+│       ├── AGENTS.md                  #   全域行為準則（共用規範來源）
+│       ├── KIRO.md                    #   程式碼規範
+│       ├── MEMORY.md                  #   admin 記憶
+│       ├── SOUL.md                    #   admin 角色定義（管理者）
+│       ├── USER.md                    #   使用者百科
+│       └── TEAM.md                    #   團隊運作規範（daemon 自動產生）
+│
+├── skills/                            # 共用 Skills 倉庫（git clone ark-kiro-skills）
+│   ├── ark-superpowers/SKILL.md
+│   ├── ark-wiki-engine/SKILL.md
+│   ├── ark-skill-creator/SKILL.md
+│   └── ...（全部 Skills）
+│
+├── agents/                            # 各 agent 工作目錄
+│   └── {name}-agent/
+│       ├── .kiro/                     #   agent workspace（按角色分配子集）
+│       │   ├── agents/{role}.json
+│       │   ├── prompts/{prompt-1}.md
+│       │   ├── prompts/{prompt-2}.md
+│       │   ├── settings/mcp.json
+│       │   ├── skills/{skill-name}/SKILL.md  ← 從 skills/ 複製子集
+│       │   └── steering/
+│       │       ├── AGENTS.md          #   從根目錄 .kiro/steering/ 複製
+│       │       ├── KIRO.md
+│       │       ├── MEMORY.md
+│       │       ├── SOUL.md            #   角色專屬
+│       │       ├── USER.md            #   共用
+│       │       └── TEAM.md            #   系統自動產生
+│       ├── docs/.gitkeep
+│       ├── output/.gitkeep
+│       └── knowledge/                 #   私有知識庫
+│           ├── schema.md
+│           ├── index.md
+│           ├── log.md
+│           ├── raw/.gitkeep
+│           └── wiki/overview.md
+│
+├── docs/                              # 團隊文件
+├── src/                               # 業務程式碼
+├── tests/                             # 測試
+├── knowledge/                         # 團隊知識庫
+├── team.yaml                          # 團隊配置
+├── scheduler.yaml                     # 排程
+├── start.py                           # 啟動腳本
+└── .env                               # 環境變數
 ```
 
 > **注意：** `product.md`、`tech.md`、`structure.md` 不在 init 預設產出中。
@@ -335,6 +365,71 @@ metadata:
 - 互動流程
 - 輸出格式
 - 品質要求
+
+**Skills 來源：** 從 `https://github.com/igs-paddyyang-tw/ark-kiro-skills` clone 到**專案根目錄的 `skills/`**。
+
+**Clone 流程：**
+
+```bash
+# Clone 到專案根目錄（與 agents/ 同層）
+git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
+
+# 結構：
+# {project}/
+# ├── skills/              ← 共用 Skills 倉庫（所有 agent 的來源）
+# │   ├── ark-superpowers/SKILL.md
+# │   ├── ark-wiki-engine/SKILL.md
+# │   └── ...
+# ├── agents/
+# │   └── {name}-agent/.kiro/skills/  ← 從 skills/ 複製子集
+# └── .kiro/               ← 根目錄也有 .kiro（管理者/CEO 用）
+```
+
+**根目錄 .kiro/ 建立規則：**
+
+根目錄的 `.kiro/` **就是 admin-agent 的 workspace**（team.yaml 中 `working_directory: .` 的那個 agent）：
+- admin-agent 的 Kiro CLI 啟動時 cwd = 根目錄，自動載入根目錄 `.kiro/`
+- `steering/AGENTS.md` 是所有 agent 共用規範的**來源**（其他 agent 複製此檔）
+- `skills/` 放全套 Skills（admin 擁有全部能力）
+- `settings/mcp.json` 的 role 必須是 `admin`
+- 非 admin agent 的 .kiro/ 在 `agents/{name}-agent/.kiro/`（不在根目錄）
+
+**分配流程：**
+
+```
+1. git clone ark-kiro-skills → {project}/skills/（共用倉庫）
+2. 建立根目錄 .kiro/（管理者 workspace，skills/ 放全套）
+3. 對每個 agent：
+   a. 掃描 skills/ 下所有 SKILL.md 的 name + description
+   b. 根據角色匹配適合的 Skills
+   c. 複製到 agents/{name}-agent/.kiro/skills/{skill-name}/
+```
+
+**角色 → Skills 對應表：**
+
+| 角色類型 | 建議 Skills | 說明 |
+|---------|------------|------|
+| Admin / CEO（根目錄 .kiro） | 全部 | 管理者擁有全套能力 |
+| 全員必備 | ark-wiki-engine, ark-skill-creator, ark-code-spec-validator, ark-planning-with-files | 知識管理 + Skill 成長 + 品質驗證 |
+| Leader / PM | ark-superpowers, ark-project-planning, ark-doc-coauthoring, ark-game-design-doc | 文件產出 + 任務規劃 |
+| AI Dev | ark-mcp-builder, ark-chatbot-generator, ark-llm-tools, ark-ab-testing, ark-git-ops | AI/LLM 開發 |
+| Coder / 全端 | ark-webapp-generator, ark-db-query, ark-etl-pipeline, ark-chart-generator, ark-frontend-design | 全端工程 |
+| QA / 測試 | ark-test-runner, ark-security-audit, ark-code-review | 品質保證 |
+| DevOps | ark-docker-deploy, ark-env-doctor, ark-scheduler-generator | 部署運維 |
+| 數據分析 | ark-db-query, ark-etl-pipeline, ark-chart-generator, ark-kpi-calculator, ark-anomaly-detector, ark-retention-analysis | 數據工程 |
+| 市場研究 | ark-web-scraper, ark-translator, ark-llm-tools | 資訊收集 |
+| 報告產出 | ark-report-template, ark-html-dashboard, ark-chart-generator, ark-file-export | 視覺化 + 報表 |
+
+**匹配邏輯：**
+
+1. 根目錄 .kiro/skills/ → 全套（admin 全能力覆蓋）
+2. 每個 agent 先分配「全員必備」4 個
+3. 根據角色類型分配對應 Skills
+4. 如角色跨多類型（如「全端 + DevOps」），合併兩組
+5. 自訂角色 → 根據 SOUL.md 的 Core Mission 關鍵字匹配 Skill description
+6. 每個 agent 最多 12 個 Skills（避免 context 過大）
+
+**離線模式：** 如無法存取 GitHub，提示使用者手動 clone 或從本地已有的 `skills/` 複製。
 
 ### 11. settings/mcp.json（全域 MCP，選填）
 
