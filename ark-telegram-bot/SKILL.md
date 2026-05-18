@@ -1,20 +1,25 @@
 ---
-name: ark-telegram
+name: ark-telegram-bot
+author: paddyyang
 description: |
-  Telegram Bot 開發標準 SOP：傳送圖片/檔案/相簿、Web App 整合、Menu 命令設定、
-  InlineKeyboard 互動、訊息格式化與分段、Rate Limiting 處理。
-  使用此 Skill 當使用者提及 Telegram Bot 開發、傳送圖片、傳送檔案、
+  Telegram Bot 開發完整 SOP（python-telegram-bot）：傳送圖片/檔案/相簿、
+  Web App 整合、Menu 命令設定、InlineKeyboard 互動、訊息格式化與分段、
+  Rate Limiting 處理、推送通知（排程/告警）、Workflow 串接。
+  為 ark-agent-team-builder 打造的 Telegram UI/UX 互動標準。
+  使用此 Skill 當使用者提及 Telegram Bot 開發、TG 推送、傳送圖片、傳送檔案、
   Web App、Mini App、Menu 命令、InlineKeyboard、Bot API、
-  訊息格式、分段發送、或任何 Telegram Bot 功能開發場景。
+  訊息格式、分段發送、TG 通知、推播訊息、告警通知、
+  或任何 Telegram Bot 功能開發與推送場景。
 metadata:
-  author: paddyyang
-  version: "1.0"
-  updated: 2026-05-16
+  version: "2.0"
+  updated: 2026-05-18
 ---
 
-# ark-telegram
+# ark-telegram-bot
 
-Telegram Bot 開發標準 SOP — 7 大模組完整指引。
+Telegram Bot 開發完整 SOP — 8 大模組（含推送通知）+ ark-team-agent 整合指引。
+
+使用 `python-telegram-bot[ext]>=21.0`，為 ark-agent-team-builder 團隊打造 Telegram UI/UX 互動標準。
 
 ## 觸發條件
 
@@ -352,3 +357,68 @@ except RetryAfter as e:
 - 敏感操作（刪除/重啟）必須加 InlineKeyboard 確認
 - file_id 跨 Bot 不通用（每個 Bot 有自己的 file_id）
 - Web App 必須 HTTPS + 在 BotFather 註冊域名
+
+
+---
+
+## 模組 8：推送通知（telegram_notify Skill）
+
+產出 `src/skills/internal/telegram_notify.py`，供 Workflow 排程/告警使用。
+
+### 參數
+
+| 參數 | 型別 | 必要 | 預設值 | 說明 |
+|------|------|------|--------|------|
+| `chat_id` | `str` | ✅ | — | 推送目標 chat_id |
+| `message` | `str` | ✅ | — | 訊息內容（支援 HTML） |
+| `image_path` | `str` | ❌ | `None` | 圖片路徑（有則用 sendPhoto） |
+
+### 實作要點
+
+```python
+class TelegramNotifySkill(BaseSkill):
+    skill_id = "telegram_notify"
+    skill_type = SkillType.PYTHON
+    description = "透過 Telegram Bot API 推送訊息和圖片"
+
+    async def execute(self, params: dict) -> SkillResult:
+        # 1. 取 TELEGRAM_BOT_TOKEN（未設定 → 靜默失敗）
+        # 2. image_path 存在 → send_photo（caption ≤ 1024）
+        # 3. 純文字 → send_message（自動分段 ≤ 4096）
+        # 4. 使用 httpx.AsyncClient POST Bot API
+```
+
+### Workflow 串接
+
+```yaml
+- id: notify
+  type: skill
+  skill: telegram_notify
+  params:
+    chat_id: "${NOTIFY_CHAT_ID}"
+    message: "{{ outputs.report.content }}"
+    image_path: "{{ outputs.chart.chart_path }}"
+```
+
+### 規則
+
+- `TELEGRAM_BOT_TOKEN` 未設定 → 不報錯，回傳 `notify_success: False`
+- 訊息 > 4096 字元 → 自動分段
+- caption > 1024 字元 → 圖片和文字分開發送
+- Windows 路徑用 `Path()` 處理
+
+---
+
+## 踩坑紀錄
+
+### Windows 路徑（2026-04-17）
+
+`image_path` 在 Windows 上可能是反斜線路徑。用 `Path(image_path).exists()` + `open(Path(...))` 處理。
+
+### 429 Rate Limit（2026-04-20）
+
+群組高頻發送觸發 429。解法：Semaphore(5) + per-chat queue + RetryAfter sleep。
+
+### file_id 跨 Bot 不通用（2026-05-01）
+
+每個 Bot 有自己的 file_id namespace，不能跨 Bot 使用。需重新上傳。
