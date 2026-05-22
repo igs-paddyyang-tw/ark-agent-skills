@@ -1,6 +1,6 @@
 # ark-kiro-skills
 
-45 個 Kiro Skills 食譜集，用自然語言觸發產出智能助理功能。
+50 個 Kiro Skills 食譜集，用自然語言觸發產出智能助理功能。
 
 ## 安裝
 
@@ -14,7 +14,58 @@ cd .kiro/skills && git pull
 
 ---
 
-## Skills 總覽（45 個）
+## 建置流程（Flow Build）
+
+### 從零建立 AI Agent Team
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1：團隊骨架                                           │
+│  Skill: ark-agent-team-builder                               │
+│  產出: team.yaml + scheduler.yaml + agents/ 目錄結構          │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2：AI 配置                                            │
+│  Skill: ark-kiro-init × N（每個 agent）                       │
+│  產出: .kiro/（steering + agent.json + skills + settings）    │
+│       + knowledge/（五件套）+ docs/ + output/                 │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 3：業務工具                                           │
+│  Skills: ark-mcp-builder + 業務 Skills                       │
+│  產出: MCP Server + 角色專屬 Skills                           │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 4：品質驗證                                           │
+│  Skills: ark-test-runner + ark-code-spec-validator            │
+│  產出: 測試 + Drift Report                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 日常開發流程（SDD — Spec-Driven Development）
+
+```
+① ark-superpowers     → 產出 Spec / Design / Plan
+② ark-skill-creator   → 建立可重用 Skill
+③ ark-code-spec-validator → 驗證 code 與 spec 一致性（drift > 70）
+④ ark-wiki-engine     → 歸檔經驗到知識庫
+```
+
+### 核心 4 Skills（全員必裝）
+
+| Skill | 用途 |
+|-------|------|
+| `ark-superpowers` | 文件產出（spec / design / plan / one-pager） |
+| `ark-wiki-engine` | 知識庫管理（Schema v3.0，ingest / query） |
+| `ark-skill-creator` | 建立/評估/優化 Skill |
+| `ark-code-spec-validator` | 驗證 code 與 spec 一致性 |
+
+---
+
+## Skills 總覽（50 個）
 
 ### ⚡ 核心開發流程（6）
 
@@ -31,8 +82,8 @@ cd .kiro/skills && git pull
 
 | Skill | 說明 |
 |-------|------|
-| `ark-agent-team-builder` | 產出多 Agent 團隊系統（team.yaml + scheduler + 目錄） |
-| `ark-kiro-init` | 產出 .kiro/ workspace 配置 |
+| `ark-agent-team-builder` | 產出多 Agent 團隊系統（team.yaml + scheduler + 目錄 + admin） |
+| `ark-kiro-init` | 產出 .kiro/ workspace 配置（steering + agent.json + knowledge 五件套） |
 | `ark-webapp-generator` | FastAPI + Skill 插件 + Web Chat UI |
 | `ark-chatbot-generator` | Telegram Bot + LLM（Gemini/Kiro/Ollama） |
 | `ark-scheduler-generator` | WorkflowEngine + ScheduleEngine |
@@ -96,34 +147,63 @@ cd .kiro/skills && git pull
 | `ark-retention-analysis` | 玩家留存與 LTV 分析 |
 | `ark-ui-design-system` | 設計系統自動生成 |
 
+### 🧠 AI 進階（5）
+
+| Skill | 說明 |
+|-------|------|
+| `ark-conversational` | 多輪對話管理 |
+| `ark-critic-loop` | 自我審查品質迴圈 |
+| `ark-plan-execute-verify` | 三階段工作流（計畫→執行→驗證） |
+| `ark-spec-first` | 先確認規格再執行 |
+| `ark-openai-tool` | OpenAI API 整合 |
+
+---
+
+## 各團隊部署建議
+
+| 團隊 | 建議部署的 Skills | 說明 |
+|------|-----------------|------|
+| **全員** | superpowers, wiki-engine, skill-creator, code-spec-validator | 核心方法論 |
+| **Leader/PM** | + project-planning, doc-coauthoring, planning-with-files | 派工 + 文件 |
+| **遊戲團隊** | + game-design-doc, retention-analysis, community-ops, marketing | 遊戲專用 |
+| **開發團隊** | + browser-tool, test-runner, security-audit, env-doctor, mcp-builder | 開發工具 |
+| **營運團隊** | + telegram-bot, internal-comms, chart-generator, html-dashboard | 通訊報表 |
+| **數據團隊** | + db-query, etl-pipeline, data-dashboard, cost-tracker | 資料分析 |
+
+---
+
+## 參考資源
+
+| 資源 | 連結 | 說明 |
+|------|------|------|
+| **ark-kiro-skills**（本 repo） | https://github.com/igs-paddyyang-tw/ark-kiro-skills | 50 個基礎 Skills |
+| **agency-agents** | https://github.com/msitarzewski/agency-agents | AI 配置能力參考（Agent 角色定義模式） |
+| **Skills Hub** | https://skills-hub.ai/ | 4,700+ Skills 聚合平台 |
+| **Anthropic Skills（官方）** | https://github.com/anthropics/skills | Anthropic 官方 Skills 公開 repo |
+
 ---
 
 ## 版本異動
+
+### v2.3 (2026-05-20) — GA Team 經驗回補
+
+- `ark-agent-team-builder`：加入 admin 目錄、純私聊模式、Skills 部署規則
+- `ark-kiro-init`：加入 KIRO.md、admin 角色、AGENTS.md 模板更新（reply 必用 + 編號選項 + 終端回饋）
+- `ark-chatbot-generator`：更新
+- `ark-telegram-bot`：更新
+- README 加入 Flow Build 文件 + 參考資源
 
 ### v2.2 (2026-05-18) — 整合重複 Skills + 新增 8 個
 
 **合併（需移除舊版）：**
 
-| 舊 Skill（已刪除） | 合併到 | 說明 |
-|-------------------|--------|------|
-| `ark-agent-teams-builder` | `ark-agent-team-builder` | 統一為單一版本 |
-| `ark-telegram-notify` | `ark-telegram-bot` | 推送功能整合到 Bot SOP |
-| `ark-dev-browser` | `ark-browser-tool` | 視覺測試整合到 MCP 工具 |
-| `ark-telegram`（舊名） | `ark-telegram-bot` | 改名 + 升級 |
-| `generate-uml`（舊名） | `ark-uml-generator` | 統一命名 |
+| 舊 Skill（已刪除） | 合併到 |
+|-------------------|--------|
+| `ark-agent-teams-builder` | `ark-agent-team-builder` |
+| `ark-telegram-notify` | `ark-telegram-bot` |
+| `ark-dev-browser` | `ark-browser-tool` |
 
-**新增：**
-
-| Skill | 說明 |
-|-------|------|
-| `ark-community-ops` | 遊戲社群營運 SOP |
-| `ark-landing-page` | Landing Page 產出 |
-| `ark-marketing` | 遊戲行銷策略 |
-| `ark-planning-with-files` | 持久化任務追蹤 |
-| `ark-retention-analysis` | 玩家留存分析 |
-| `ark-ui-design-system` | 設計系統生成 |
-| `ark-project-planning` | 標準化派工流程 |
-| `ark-env-doctor` | 環境診斷修復 |
+**新增：** community-ops, landing-page, marketing, planning-with-files, retention-analysis, ui-design-system, project-planning, env-doctor
 
 ### v2.1 (2026-05-14) — 扁平化 repo
 
@@ -132,42 +212,7 @@ cd .kiro/skills && git pull
 
 ### v2.0 (2026-05-14) — 38 Skills
 
-- 新增 ark-agent-teams-builder, ark-code-spec-validator, ark-kiro-init, ark-superpowers v2.0, generate-uml
-- 全部 SKILL.md 加入 `author: paddyyang`
-
 ### v1.0 (2026-04) — 初版 32 Skills
-
----
-
-## 遷移指南
-
-### 從 v2.0/v2.1 升級到 v2.2
-
-如果你的 `.kiro/skills/` 是舊版，需要移除已合併的 Skills：
-
-```bash
-cd .kiro/skills
-
-# 移除已合併的舊 Skills（現在由新名稱取代）
-rm -rf ark-agent-teams-builder    # → 已合併到 ark-agent-team-builder
-rm -rf ark-telegram-notify        # → 已合併到 ark-telegram-bot
-rm -rf ark-dev-browser            # → 已合併到 ark-browser-tool
-rm -rf ark-telegram               # → 已改名為 ark-telegram-bot
-rm -rf generate-uml               # → 已改名為 ark-uml-generator
-
-# 拉取最新
-git pull
-```
-
-### 各團隊部署建議
-
-| 團隊 | 建議部署的 Skills | 說明 |
-|------|-----------------|------|
-| **全員** | superpowers, wiki-engine, skill-creator, code-spec-validator | 核心方法論 |
-| **Leader/PM** | + project-planning | 派工流程標準化 |
-| **遊戲團隊** | + game-design-doc, retention-analysis, community-ops, marketing, landing-page | 遊戲專用 |
-| **開發團隊** | + browser-tool, test-runner, security-audit, env-doctor | 開發工具 |
-| **營運團隊** | + telegram-bot, internal-comms, chart-generator, html-dashboard | 通訊報表 |
 
 ---
 
