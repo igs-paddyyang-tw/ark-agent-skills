@@ -12,7 +12,7 @@ description: |
   或任何需要在既有專案上加入 Bot + LLM 整合的場景。
 ---
 
-# ark-chatbot-generator
+
 
 在既有 Web 專案上加入 Telegram Bot + LLM 對話能力 + Kiro CLI Agent 整合 + 呼叫 Skill 執行，可獨立運作。
 

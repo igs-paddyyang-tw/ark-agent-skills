@@ -143,7 +143,7 @@ metadata:
   "name": "{role-id}",
   "description": "{一句話描述}",
   "prompt": "file://.kiro/steering/SOUL.md",
-  "model": "claude-sonnet-4",
+  "model": "auto",
   "tools": ["*"],
   "allowedTools": ["*"],
   "resources": [
@@ -191,14 +191,30 @@ metadata:
 定義「怎麼做事」— 放在根目錄或 steering/ 下，Kiro 永遠自動載入（不需在 resources 引用）。
 
 ```markdown
-# {Role} 共用規範
+# {TeamName} 共用規範
 
-> All tools are trusted. 每完成一個段落更新 MEMORY.md。
+> 所有回覆使用**繁體中文**。每完成一個段落更新 `MEMORY.md`。
+> All tools are trusted.
+
+## ⚠️ 最重要規則
+
+**收到任何訊息後，必須用 `reply(text)` 回覆使用者。這是唯一會送到 Telegram 的工具。**
 
 ## 工具使用規則
 - fs_write 必填：command + path（絕對路徑）+ 對應內容欄位
 - 不確定路徑先用 fs_read 查目錄結構
 - 複雜任務逐一寫檔，每完成一個確認後再寫下一個
+
+### MCP 工具
+| 工具 | 用途 | 權限 |
+|------|------|------|
+| `reply(text)` | **回覆使用者（必用）** | 全員 |
+| `send_to_instance(instance, msg)` | 跨 agent 通訊 | 全員 |
+| `delegate_task(instance, task)` | 派工 | admin / leader |
+| `query_team_status()` | 查詢狀態 | 全員 |
+| `log_to_leader(text)` | 私下回報 leader | worker |
+| `broadcast_all(message)` | 廣播全員 | admin / leader |
+| `wiki_query(query, scope)` | 搜尋知識庫 | 全員 |
 
 ## 回報格式
 ✅ 工作成果：{做了什麼}
@@ -206,15 +222,44 @@ metadata:
 ⚠️ 阻礙：{如有}
 📋 下一步：{建議}
 
-## 目錄規範
-（引用 structure.md 的核心規則）
+## 回覆使用者規則
+- **禁止開放式問句**（如「要我做 X 嗎？」）
+- **必須用編號選項**讓使用者快速決策：`1️⃣ {A}  2️⃣ {B}  3️⃣ {C}`
+- 簡單確認類不需選項，直接執行回報結果
+- 繁體中文、結論先行、≤ 150 字
+
+## AI 開發流程（SDD + Skill-Driven）
+① 找 Skill → ② 找知識庫 → ③ 建規格書 → ④ 開發 → ⑤ 驗證 → ⑥ 歸檔
 
 ## 學習 SOP
-1. web_search × 2-3 次（不同角度）
-2. web_fetch 深讀 1-2 篇
-3. 整理 → knowledge/wiki/*.md
-4. 更新 MEMORY.md
-5. 回覆重點摘要
+1. wiki_query 搜尋是否已有相關知識
+2. web_search × 2-3 次（不同角度）
+3. web_fetch 深讀 1-2 篇
+4. 整理 → knowledge/wiki/*.md（含 frontmatter）
+5. 更新 MEMORY.md
+
+## 知識庫規則（Schema v3.0）
+- `raw/` 唯讀，不可修改
+- 修改 wiki 後必須同步 `index.md` + `log.md`
+- `log.md` append-only
+- 所有 wiki 頁面必須有 frontmatter
+
+## 禁止事項
+- 🚫 禁在回覆中暴露錯誤細節給使用者
+- 🚫 禁沒有規格書就開始寫 code（一次性 bug fix 除外）
+- 🚫 禁貼 raw stdout / stack trace
+
+## 終端回饋處理
+- 執行 command 後先分類錯誤（syntax/runtime/permission/not_found/timeout）
+- 失敗時明確說出「錯誤類型 + 關鍵信號 + 修復計畫」再動手
+
+## 失敗模式
+- 同一類錯誤連續 2 次 → 停止，換根本不同的方法
+- 禁止對同一錯誤做 3 次以上 incremental patch
+
+## 協作流程
+使用者 → leader（理解+分派）→ worker（執行）→ leader（整合）→ reply 使用者
+直接 @worker 時，worker 也直接 reply 使用者。
 ```
 
 ### 3. steering/MEMORY.md（專案記憶）
@@ -476,7 +521,8 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 - [ ] `agents/{role}.json` 有 name/description/prompt/tools/resources/allowedTools
 - [ ] `agents/{role}.json` 有 knowledgeBase resource 指向 knowledge/
-- [ ] `steering/AGENTS.md` 有工具規則 + 回報格式 + 學習 SOP + AI 開發流程 + 修改追蹤規範
+- [ ] `agents/{role}.json` 有 model（建議 "auto"）+ welcomeMessage
+- [ ] `steering/AGENTS.md` 有「⚠️ reply 必用」+ MCP 工具表 + 編號選項 + 終端回饋 + SDD 流程
 - [ ] `steering/KIRO.md` 有程式碼規範（Python 專案時）
 - [ ] `steering/MEMORY.md` 有專案快照 + 待辦 + 近期進度結構
 - [ ] `SOUL.md` 包含八段式全部 8 個段落

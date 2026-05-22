@@ -6,18 +6,126 @@ description: |
   Web App 整合、Menu 命令設定、InlineKeyboard 互動、訊息格式化與分段、
   Rate Limiting 處理、推送通知（排程/告警）、Workflow 串接。
   為 ark-agent-team-builder 打造的 Telegram UI/UX 互動標準。
+  也可產出完整可運行的 Telegram Adapter 模組（整合 CoreDaemon）。
   使用此 Skill 當使用者提及 Telegram Bot 開發、TG 推送、傳送圖片、傳送檔案、
   Web App、Mini App、Menu 命令、InlineKeyboard、Bot API、
   訊息格式、分段發送、TG 通知、推播訊息、告警通知、
+  產出 Telegram adapter、整合 Bot 到團隊、telegram_adapter、
   或任何 Telegram Bot 功能開發與推送場景。
 metadata:
-  version: "2.0"
+  version: "3.0"
   updated: 2026-05-18
 ---
 
 # ark-telegram-bot
 
-Telegram Bot 開發完整 SOP — 8 大模組（含推送通知）+ ark-team-agent 整合指引。
+Telegram Bot 開發完整 SOP — 8 大模組（含推送通知）+ **Adapter 產出模式** + ark-team-agent 整合指引。
+
+## 模式選擇
+
+| 模式 | 觸發詞 | 產出 |
+|------|--------|------|
+| **SOP 模式**（預設） | 「Telegram Bot 開發」「TG 推送」 | 教學文件 + 程式碼片段 |
+| **Adapter 模式** | 「產出 Telegram adapter」「整合 Bot 到團隊」 | `src/{pkg}/telegram_adapter.py` 可運行模組 |
+
+---
+
+## Adapter 模式（產出可運行的 Telegram 整合模組）
+
+### 觸發條件
+
+- 「產出 Telegram adapter」「整合 Bot 到團隊」
+- 「telegram_adapter」「Bot 接入」
+- Phase C2 執行時
+
+### 輸入參數
+
+| 參數 | 型別 | 必要 | 預設值 | 說明 |
+|------|------|------|--------|------|
+| `project_dir` | `str` | ✅ | — | 專案目錄 |
+| `package_name` | `str` | ✅ | — | Python 套件名（如 `game_analytics`） |
+| `default_target` | `str` | ❌ | `"leader-agent"` | 預設訊息路由目標 |
+
+### 產出檔案
+
+```
+{project_dir}/src/{package_name}/telegram_adapter.py
+```
+
+### 產出內容（~340 行）
+
+```python
+class TelegramAdapter:
+    """Telegram Bot 適配器 — 私聊模式，訊息路由到 CoreDaemon。"""
+
+    def __init__(self, daemon: CoreDaemon) -> None: ...
+    async def start(self) -> None: ...          # Bot polling + 啟動通知
+    async def stop(self) -> None: ...           # 優雅關閉
+    async def _on_message(self, update, ctx): ... # 訊息 → agent stdin
+    async def _poll_output(self, name): ...     # stdout → 偵測 reply → TG
+    async def _extract_final_reply(self, lines): ... # 過濾雜訊提取回覆
+    async def _send(self, chat_id, text): ...   # rate limited 發送
+    async def _send_reply(self, text): ...      # reply → 使用者
+    async def _cmd_start(self, update, ctx): ... # /start 歡迎
+    async def _cmd_status(self, update, ctx): ... # /status 狀態
+    async def _cmd_help(self, update, ctx): ...  # /help 說明
+    async def _notify_startup(self): ...        # 啟動通知
+```
+
+### 功能清單
+
+| 功能 | 說明 |
+|------|------|
+| Bot polling | 持續監聽 Telegram 訊息 |
+| 私聊路由 | 預設 → leader，@mention → 指定 agent |
+| stdout 監聽 | 偵測 reply() 呼叫 → 發送 Telegram |
+| stdout 過濾 | 過濾 shell/git/pip/traceback 雜訊 |
+| /start | 歡迎訊息 + 使用說明 + 團隊成員 |
+| /status | 各 agent 狀態（alive/idle/restarts） |
+| /help | 指令說明 |
+| 啟動通知 | 「✅ Team 就緒 N/N」 |
+| Rate limiting | 100ms 間隔 + 429 重試 |
+| 分段發送 | > 4000 字自動切割 |
+| HTML 格式 | 粗體/斜體/code + fallback 純文字 |
+| 白名單 | access.allowed_users 驗證 |
+
+### 整合到 start.py
+
+```python
+from src.{package_name}.telegram_adapter import TelegramAdapter
+
+daemon = CoreDaemon("team.yaml")
+# ... 啟動 agents ...
+adapter = TelegramAdapter(daemon)
+await adapter.start()
+# ... 主迴圈 ...
+await adapter.stop()
+```
+
+### 依賴
+
+```
+python-telegram-bot[ext]>=21.0
+python-dotenv>=1.0.0
+```
+
+### 前置條件
+
+- team.yaml 有 `channel.bot_token_env` 設定
+- .env 有對應的 Bot Token
+- 至少一個 instance 有 `private_chat`（reply 出口）
+- CoreDaemon 已啟動（agents 在運行中）
+
+### 驗收
+
+- Bot 收到訊息 → agent stdin 收到
+- agent reply → Telegram 發送給使用者
+- /start 顯示歡迎 + 團隊成員
+- /status 顯示 agent 狀態
+
+---
+
+## SOP 模式（以下為原有內容）
 
 使用 `python-telegram-bot[ext]>=21.0`，為 ark-agent-team-builder 團隊打造 Telegram UI/UX 互動標準。
 

@@ -436,9 +436,24 @@ if agents/{name}/ 已存在:
 ## 注意事項
 
 - 此 Skill 只產出團隊骨架，不產出 .kiro/ 配置
-- .kiro/ 由 /ark-kiro-init 或 /ark-gemini-init 產出（使用者選擇 AI 平台）
+- .kiro/ 由 /ark-kiro-init 產出（含 steering + agent.json + skills）
 - 知識庫由 /ark-wiki-engine 產出
 - team.yaml schema 遵循 ark-team-agent v0.11+
+
+### Skills 部署規則
+
+ark-kiro-init 產出 .kiro/ 時，必須部署核心 4 個 Skills 到 `.kiro/skills/`：
+
+| Skill | 用途 | 部署對象 |
+|-------|------|---------|
+| `ark-superpowers` | 文件產出（spec / design / plan） | 全員 |
+| `ark-wiki-engine` | 知識庫管理（ingest / query） | 全員 |
+| `ark-skill-creator` | 建立/修改 Skill | 全員 |
+| `ark-code-spec-validator` | 驗證 code 與 spec 一致性 | 全員 |
+
+**來源：** 從專案根層 `skills/` 目錄複製（如有），或從 ark-kiro-init 的 references 載入。
+
+**admin 額外 Skills：** admin 可擁有全套 Skills（視需求），worker 只需核心 4 個。
 
 ---
 
