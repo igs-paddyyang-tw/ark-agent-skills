@@ -21,6 +21,7 @@ metadata:
 - 「team runtime」、「啟動腳本」、「agent daemon」
 - 「團隊啟動程式」、「start.py」、「team 管理程式」
 - 「產出 runtime」、「啟動管理」
+- 「產出團隊啟動程式」、「包含 CoreDaemon」、「team start」
 
 ---
 
@@ -183,3 +184,45 @@ curl http://127.0.0.1:{health_port}/api/status
 - `tool_setup` 為 None 時，MCP Server 只提供通用工具（send/reply/status）
 - watchdog 腳本確保 crash 後自動重啟
 - health_port 從 team.yaml 讀取（預設 23031）
+
+
+---
+
+## Workshop 引導（agent-team-workshop）
+
+本 Skill 對應 Workshop Step 1b（產出啟動程式）+ Step 4（啟動團隊）。
+
+### 觸發提詞
+
+```
+產出團隊啟動程式，包含 CoreDaemon + Telegram + 排程
+```
+
+### 預期產出
+
+- `start.py` — 主啟動腳本
+- `start-team.bat` / `start-team.sh` — watchdog
+- `src/ark_team_core/` — vendored 核心引擎
+
+### 啟動驗證（Step 4）
+
+```bash
+python start.py
+```
+
+預期看到：
+```
+[INFO] 載入 team.yaml...
+[INFO] 啟動 5 個 agent...
+[INFO] Health API: http://127.0.0.1:23031
+```
+
+### 下一步
+
+完成後告訴 AI：`為 leader-agent 配置 .kiro/，角色是專案經理`（觸發 ark-kiro-init）
+
+### 卡關時
+
+- `ModuleNotFoundError: ark_team_core` → 確認 `src/ark_team_core/` 目錄存在
+- `FileNotFoundError: team.yaml` → 確認在專案根目錄執行
+- port 衝突 → 改 `team.yaml` 的 `health_port`

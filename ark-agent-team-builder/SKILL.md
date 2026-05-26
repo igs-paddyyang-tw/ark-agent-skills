@@ -487,3 +487,40 @@ ark-kiro-init 產出 .kiro/ 時，必須部署核心 4 個 Skills 到 `.kiro/ski
 | `start-team.bat` | Windows watchdog 腳本 | 永遠產出 |
 | `start-team.sh` | Linux/Mac watchdog 腳本 | 永遠產出 |
 | `gitignore.txt` | .gitignore 範本 | 永遠產出（copy 為 .gitignore） |
+
+
+---
+
+## Workshop 引導（agent-team-workshop）
+
+本 Skill 對應 Workshop Step 1：建立團隊骨架。
+
+### 觸發提詞
+
+```
+建立 5 人 AI 團隊，角色：admin + leader + ai-dev + coder + qa
+```
+
+### 預期產出
+
+- `team.yaml`（5 個 instances）
+- `scheduler.yaml`（≥ 2 個 jobs）
+- `agents/` 目錄（每個 agent 三件套 + 知識庫五件套）
+- `.env.example`、`.gitignore`、`README.md`
+
+### 驗證方式
+
+```bash
+python scripts/validate_team.py
+```
+
+全部 ✅ 即通過。
+
+### 下一步
+
+完成後告訴 AI：`產出團隊啟動程式，包含 CoreDaemon + Telegram + 排程`（觸發 ark-team-runtime）
+
+### 卡關時
+
+- 直接複製 `team.example.yaml` 改名為 `team.yaml`
+- 手動建目錄：`mkdir agents\leader-agent\docs agents\leader-agent\output agents\leader-agent\knowledge`

@@ -111,3 +111,29 @@ pip install google-genai pydantic>=2.5.0 playwright
 - Windows 使用 `py` launcher，Linux/Mac 使用 `python3`
 - 修復前先確認使用者同意（除非 `--fix` 模式）
 - 大型安裝（如 CUDA、Docker）僅提供指引，不自動執行
+
+---
+
+## Workshop 模式
+
+當使用者說「檢查我的開發環境」且專案有 Workshop 教材時，優先檢查 Workshop 必要項目：
+
+### agent-team-workshop 必要項目
+
+| 項目 | 檢查 | 修復 |
+|------|------|------|
+| Python 3.12+ | 版本 ≥ 3.12 | 提示升級 |
+| Git | `git --version` | 平台對應安裝指令 |
+| Kiro CLI | `kiro-cli --version` | 官方安裝腳本 |
+| `.kiro/skills/` | 目錄存在且有 SKILL.md | `git clone` 指令 |
+| TELEGRAM_BOT_TOKEN | `.env` 中有值 | 引導到 @BotFather |
+
+### ai-bot-workshop 必要項目
+
+| 項目 | 檢查 | 修復 |
+|------|------|------|
+| Python 3.12+ | 版本 ≥ 3.12 | 提示升級 |
+| Node.js 20+ | 版本 ≥ 20 | 提示升級 |
+| Git | `git --version` | 平台對應安裝指令 |
+| Gemini CLI | `gemini --version` | `npm install -g @google/gemini-cli` |
+| `.kiro/skills/` | 目錄存在 | `git clone` 指令 |

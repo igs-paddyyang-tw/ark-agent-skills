@@ -137,6 +137,7 @@ python-dotenv>=1.0.0
 - 「Menu 命令」「BotCommand」「setMyCommands」
 - 「InlineKeyboard」「callback」「按鈕互動」
 - 「訊息格式」「分段發送」「HTML 格式」
+- 「設定 Telegram」「Bot 加入群組」「取得 group_id」「TG 設定」
 
 ---
 
@@ -530,3 +531,58 @@ class TelegramNotifySkill(BaseSkill):
 ### file_id 跨 Bot 不通用（2026-05-01）
 
 每個 Bot 有自己的 file_id namespace，不能跨 Bot 使用。需重新上傳。
+
+---
+
+## Workshop 引導（agent-team-workshop）
+
+本 Skill 對應 Workshop Step 3：設定 Telegram Bot。
+
+### 觸發提詞
+
+```
+設定 Telegram Bot，幫我取得 group_id 並更新 .env
+```
+
+### Telegram 設定 SOP
+
+#### 1. 建立 Bot（@BotFather）
+
+1. Telegram 搜尋 `@BotFather`
+2. 發送 `/newbot`
+3. 輸入 Bot 名稱（如 `My AI Team`）
+4. 輸入 username（如 `my_ai_team_bot`）
+5. 取得 Token（格式：`123456:ABC-DEF...`）
+
+#### 2. 建立群組 + 取得 group_id
+
+1. 建立 Telegram 群組
+2. 將 Bot 加入群組並設為 Admin
+3. 在群組發送任意訊息
+4. 瀏覽器開啟：`https://api.telegram.org/bot{TOKEN}/getUpdates`
+5. 找到 `"chat":{"id":-100xxxxxxxxxx}` 即為 group_id
+
+#### 3. 更新 .env
+
+```bash
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+TELEGRAM_GROUP_ID=-100xxxxxxxxxx
+```
+
+#### 4. 更新 team.yaml
+
+```yaml
+channel:
+  bot_token_env: TELEGRAM_BOT_TOKEN
+  group_id: -100xxxxxxxxxx
+```
+
+### 下一步
+
+完成後告訴 AI：`啟動團隊`（執行 `python start.py`）
+
+### 卡關時
+
+- Bot 沒回應 → 確認 Bot 是群組 Admin
+- getUpdates 空的 → 加 Bot 後在群組發一則訊息再重試
+- 想跳過 TG → 不設 `channel` 區塊，用 HTTP API 操作
