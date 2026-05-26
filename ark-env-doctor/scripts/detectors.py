@@ -56,6 +56,46 @@ def detect_node() -> dict:
     }
 
 
+def detect_git() -> dict:
+    """偵測 Git 安裝狀態。"""
+    version = _run("git --version")
+    fix = None
+    if not version:
+        os_name = platform.system()
+        if os_name == "Windows":
+            fix = "winget install Git.Git"
+        elif os_name == "Darwin":
+            fix = "brew install git"
+        else:
+            fix = "sudo apt install git"
+    return {"exists": version is not None, "version": version, "fix": fix}
+
+
+def detect_gemini() -> dict:
+    """偵測 Gemini CLI 安裝狀態。"""
+    version = _run("gemini --version")
+    return {
+        "exists": version is not None,
+        "version": version,
+        "fix": "npm install -g @google/gemini-cli" if not version else None,
+    }
+
+
+def detect_kiro() -> dict:
+    """偵測 Kiro CLI 安裝狀態。"""
+    version = _run("kiro-cli --version")
+    fix = None
+    if not version:
+        os_name = platform.system()
+        if os_name == "Windows":
+            fix = "irm 'https://cli.kiro.dev/install.ps1' | iex"
+        elif os_name == "Darwin":
+            fix = "curl -fsSL https://cli.kiro.dev/install | bash"
+        else:
+            fix = "curl -fsSL https://cli.kiro.dev/install | bash"
+    return {"exists": version is not None, "version": version, "fix": fix}
+
+
 def detect_packages(req_path: Path, pkg_type: str = "python") -> dict:
     """比對需求檔案，找出缺失套件"""
     missing = []

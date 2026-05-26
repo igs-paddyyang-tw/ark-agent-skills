@@ -39,6 +39,9 @@ python scripts/env_doctor.py --check node
 
 | 項目 | 檢查內容 |
 |------|----------|
+| Git | 版本、是否在 PATH 中 |
+| Gemini CLI | 版本、全域 npm 安裝狀態 |
+| Kiro CLI | 版本、是否可用 |
 | Python | 版本、路徑、venv 狀態、pip 可用性 |
 | Go | 版本、GOPATH、go.mod 存在 |
 | Node | 版本、npm/pnpm、node_modules 狀態 |

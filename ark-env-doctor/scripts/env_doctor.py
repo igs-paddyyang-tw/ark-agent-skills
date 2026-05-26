@@ -9,7 +9,7 @@ if sys.platform == "win32":
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
     sys.stdout.reconfigure(encoding="utf-8")
 
-from detectors import detect_python, detect_go, detect_node, detect_packages, detect_system
+from detectors import detect_python, detect_go, detect_node, detect_packages, detect_system, detect_git, detect_gemini, detect_kiro
 from installers import generate_fix_commands
 from reporter import generate_report, generate_fix_scripts
 
@@ -25,6 +25,11 @@ def main():
 
     # 偵測
     result = {"system": detect_system()}
+
+    # 通用工具（永遠檢查）
+    result["git"] = detect_git()
+    result["gemini"] = detect_gemini()
+    result["kiro"] = detect_kiro()
 
     if not args.check or args.check == "python":
         result["python"] = detect_python()
