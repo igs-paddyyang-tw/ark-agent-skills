@@ -309,3 +309,42 @@ if simple_match:
 if v.startswith("${") and v.endswith("}"):
     resolved[k] = os.environ.get(v[2:-1], "")
 ```
+
+---
+
+## Workshop 引導（ai-bot-workshop）
+
+本 Skill 對應 Workshop Step 3：加入排程系統。
+
+### 前一步
+
+確認已完成 Step 2（`ark-chatbot-generator`），專案有 `src/bot/`。
+
+### 觸發提詞
+
+```
+加入排程系統
+```
+
+### 預期產出
+
+- `src/workflow/engine.py` — WorkflowEngine
+- `src/scheduler/engine.py` — ScheduleEngine
+- `workflows/hello.yaml` — 測試用工作流
+- `workflows/schedules/morning_report.yaml` — 排程範例
+
+### 驗證方式
+
+```bash
+python -c "from src.workflow.engine import WorkflowEngine; print('OK')"
+```
+
+### 下一步
+
+完成後告訴 AI：`封裝 Gemini CLI 為 Skill`（觸發 ark-llm-cli）
+
+### 卡關時
+
+- `No module named 'apscheduler'` → `pip install apscheduler`
+- YAML 載入失敗 → 確認 `workflows/` 目錄存在且有 `.yaml` 檔案
+- 排程沒觸發 → 確認 `enabled: true` 且 cron 時間正確

@@ -16,8 +16,8 @@ description: |
 ## 觸發條件
 
 使用者提及以下關鍵字時觸發：
-- 「建立專案」、「建立 Web 專案」
-- 「gen web app」、「ark webapp」
+- 「建立專案」、「建立 Web 專案」、「建立 ai-bot Web 專案」
+- 「gen web app」、「ark webapp」、「Workshop 專案」
 - 「產出 Web 應用」、「Web Chat」
 - 「FastAPI + Skill 系統」
 
@@ -212,3 +212,49 @@ shutdown 時反向關閉：Bot → ScheduleEngine。
 
 修改 CSS/JS 後瀏覽器可能使用快取版本（304 Not Modified）。
 HTML 引用靜態檔案時加 `?v={版本號}` 做 cache busting。
+
+---
+
+## Workshop 引導（ai-bot-workshop）
+
+本 Skill 對應 Workshop Step 1：建立 Web 專案骨架。
+
+### 觸發提詞
+
+```
+建立 ai-bot Web 專案，專案名稱 my-news-bot
+```
+
+或帶自訂首頁：
+
+```
+建立 ai-bot Web 專案，首頁使用 quickstart.html
+```
+
+### 自訂首頁整合
+
+當使用者指定首頁 HTML 檔案時：
+1. 將指定的 HTML 複製到 `src/server/templates/index.html`
+2. 保留原有 Chat UI 為 `/chat` 路由
+3. 首頁 `/` 顯示使用者指定的 HTML
+
+### 預期產出
+
+產出後專案可直接啟動：
+
+```bash
+pip install -r requirements.txt
+uvicorn src.server.main:app --reload --port 8000
+```
+
+瀏覽器開啟 `http://localhost:8000` 看到首頁。
+
+### 下一步
+
+完成後告訴 AI：`加入 Telegram Bot`（觸發 ark-chatbot-generator）
+
+### 卡關時
+
+- `ModuleNotFoundError` → 執行 `pip install -r requirements.txt`
+- port 被佔用 → 改用 `--port 8001`
+- 首頁空白 → 確認 `templates/index.html` 存在
