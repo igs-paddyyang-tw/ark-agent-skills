@@ -32,7 +32,7 @@ metadata:
 | Backend | 指令 | 特色 | 延遲 | 環境變數 |
 |---------|------|------|------|---------|
 | gemini | `gemini -p` | CodeGen、工具呼叫、快速 | 5-30s | `GEMINI_API_KEY` |
-| kiro | `kiro-cli chat --no-interactive` | 完整 Agent + MCP + Skill | 30-120s | — |
+| kiro | `kiro-cli chat --trust-all-tools --legacy-ui --resume` | 完整 Agent + MCP + Skill | 30-120s | — |
 | claude | `claude -p --output-format text` | 強推理、長文、精確 | 10-60s | `ANTHROPIC_API_KEY` |
 | antigravity | `ag chat -m` | Go binary、輕量、本地 | 5-20s | — |
 
@@ -124,10 +124,11 @@ BACKENDS = {
         "env_extra": {"GEMINI_CLI_TRUST_WORKSPACE": "true"},
     },
     "kiro": {
-        "cmd": os.getenv("KIRO_CLI_CMD", "kiro-cli"),
+        "cmd": os.getenv("KIRO_CLI_PATH", str(pathlib.Path.home() / "AppData/Local/Kiro-Cli/kiro-cli.exe") if os.name == "nt" else "kiro-cli"),
         "default_model": "auto",
         "build_args": lambda prompt, model, **kw: [
-            kw["cmd"], "chat", "--no-interactive", "--message", prompt,
+            kw["cmd"], "chat", "--trust-all-tools", "--legacy-ui", "--resume",
+            "--model", model, "--message", prompt,
         ],
         "env_extra": {},
         "default_timeout": 120,
@@ -336,7 +337,7 @@ def _extract_json(self, output: str) -> dict:
 | CLI | 安裝指令 | 驗證 |
 |-----|---------|------|
 | Gemini | `npm install -g @google/gemini-cli` | `gemini --version` |
-| Kiro | `npm install -g kiro-cli` | `kiro-cli --version` |
+| Kiro | Kiro IDE 自帶（路徑：`%LOCALAPPDATA%\Kiro-Cli\kiro-cli.exe`） | `kiro-cli --version` |
 | Claude | `npm install -g @anthropic-ai/claude-code` | `claude --version` |
 | Antigravity | Go binary 下載 | `ag --version` |
 
@@ -346,8 +347,8 @@ def _extract_json(self, output: str) -> dict:
 
 ```bash
 # CLI 路徑覆寫（選填）
+KIRO_CLI_PATH=C:\Users\{你的帳號}\AppData\Local\Kiro-Cli\kiro-cli.exe
 GEMINI_CLI_CMD=gemini
-KIRO_CLI_CMD=kiro-cli
 CLAUDE_CLI_CMD=claude
 AG_CLI_CMD=ag
 
@@ -360,10 +361,20 @@ ANTHROPIC_API_KEY=your_key
 
 ## Kiro CLI 特殊注意
 
+- 完整啟動參數：`kiro-cli chat --trust-all-tools --legacy-ui --resume --model auto`
+- Windows 絕對路徑：`%LOCALAPPDATA%\Kiro-Cli\kiro-cli.exe`
+- `--trust-all-tools`：自動化必備，否則會卡在工具確認
+- `--legacy-ui`：純文字模式，subprocess pipe 必用
+- `--resume`：接續上次對話（預設開啟）
+- `--model auto`：可改 `claude-sonnet-4.6` / `claude-opus-4.6`
 - 延遲高（30-120 秒），不適合意圖分類
 - 支援完整 MCP 工具呼叫（其他 CLI 不支援）
-- `--no-interactive` 必須，否則會等待 stdin
-- 無 model 參數（由 Kiro 自動選擇）
+
+### `--resume` 關閉時機（不帶此參數）
+
+- MCP 設定變更後（新 session 才會載入 tools/list）
+- Crash 後重啟（避免恢復壞掉的 session）
+- 版本更新後首次啟動
 
 ## Claude CLI 特殊注意
 

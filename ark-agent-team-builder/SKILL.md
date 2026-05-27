@@ -491,6 +491,102 @@ ark-kiro-init 產出 .kiro/ 時，必須部署核心 4 個 Skills 到 `.kiro/ski
 
 ---
 
+## 關鍵環境偵測規則
+
+### kiro-cli 絕對路徑
+
+產出 `start.py` 或 `src/ark_team_core/process.py` 時，**必須偵測 kiro-cli 的絕對路徑**並寫入配置。
+
+**Windows 絕對路徑：** `%LOCALAPPDATA%\Kiro-Cli\kiro-cli.exe`
+
+**偵測順序：**
+1. 環境變數 `KIRO_CLI_PATH`（如有設定，直接使用）
+2. Windows 預設路徑：`C:\Users\{username}\AppData\Local\Kiro-Cli\kiro-cli.exe`
+3. `where kiro-cli`（Windows）或 `which kiro-cli`（Mac/Linux）
+4. npm global：`npm root -g` + `kiro-cli/bin/kiro-cli`
+
+**產出方式（擇一）：**
+- 在 `.env.example` 加入 `KIRO_CLI_PATH=` 提示使用者填寫
+- 在 `start.py` 加入自動偵測邏輯：
+
+```python
+import shutil, os, pathlib
+
+def find_kiro_cli() -> str:
+    """偵測 kiro-cli 絕對路徑。"""
+    # 1. 環境變數
+    env_path = os.getenv("KIRO_CLI_PATH")
+    if env_path and pathlib.Path(env_path).exists():
+        return env_path
+    # 2. Windows 預設路徑
+    if os.name == "nt":
+        default = pathlib.Path.home() / "AppData/Local/Kiro-Cli/kiro-cli.exe"
+        if default.exists():
+            return str(default)
+    # 3. PATH 搜尋
+    found = shutil.which("kiro-cli")
+    if found:
+        return found
+    raise FileNotFoundError("找不到 kiro-cli，請設定 KIRO_CLI_PATH 環境變數")
+```
+
+### kiro-cli 完整啟動參數
+
+每個 agent 的 subprocess 必須使用以下完整參數：
+
+```bash
+kiro-cli chat --trust-all-tools --legacy-ui --resume --model auto
+```
+
+| 參數 | 用途 | 備註 |
+|------|------|------|
+| `chat` | 進入對話模式 | 必要 |
+| `--trust-all-tools` | 工具免確認 | 自動化必備，否則會卡在確認 |
+| `--legacy-ui` | 純文字模式 | 省資源、適合 subprocess pipe |
+| `--resume` | 接續上次對話 | 預設開啟（見下方關閉時機） |
+| `--model auto` | 模型選擇 | 可改 `claude-sonnet-4.6` / `claude-opus-4.6` |
+
+**`--resume` 關閉時機（改為不帶 --resume）：**
+- MCP 設定變更後（新 session 才會載入 tools/list）
+- Crash 後重啟（避免恢復壞掉的 session）
+- 版本更新後首次啟動
+
+**AgentProcess 建構參數範例：**
+
+```python
+cmd = find_kiro_cli()
+args = [cmd, "chat", "--trust-all-tools", "--legacy-ui", "--resume", "--model", model or "auto"]
+
+# crash 後重啟時移除 --resume
+if is_restart_after_crash:
+    args = [a for a in args if a != "--resume"]
+```
+
+### requirements.txt 必須包含
+
+產出 `requirements.txt` 時，**必須包含以下依賴**（Telegram polling 需要）：
+
+```
+python-telegram-bot>=21.0
+python-dotenv>=1.0.0
+apscheduler>=3.10.0
+uvicorn>=0.30.0
+fastapi>=0.111.0
+httpx>=0.27.0
+```
+
+> ⚠️ `python-telegram-bot` 是 Telegram Bot polling 的核心依賴，缺少會導致 `start.py` 啟動失敗。
+
+### 教學提醒
+
+產出完成後，提示使用者執行：
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
 ## Workshop 引導（agent-team-workshop）
 
 本 Skill 對應 Workshop Step 1：建立團隊骨架。
