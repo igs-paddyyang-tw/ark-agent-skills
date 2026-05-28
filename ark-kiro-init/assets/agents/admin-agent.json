@@ -1,0 +1,19 @@
+{
+  "name": "{AGENT_NAME}",
+  "description": "{DESCRIPTION}",
+  "prompt": "file://.kiro/steering/SOUL.md",
+  "model": "auto",
+  "tools": ["*"],
+  "allowedTools": ["*"],
+  "resources": [
+    "file://.kiro/steering/**/*.md",
+    "skill://.kiro/skills/**/SKILL.md",
+    {
+      "type": "knowledgeBase",
+      "source": "file://./knowledge",
+      "name": "AdminKnowledge",
+      "description": "團隊規範、運維紀錄、專案成效"
+    }
+  ],
+  "welcomeMessage": "👑 Admin 就緒。服務監控、技術決策、團隊協調 — @{AGENT_SHORT} 呼叫我。"
+}

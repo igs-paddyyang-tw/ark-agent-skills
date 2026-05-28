@@ -1,9 +1,17 @@
-# ark-team-agent project
-.env
-state/
-*.pid
 __pycache__/
 *.pyc
-node_modules/
+.env
+*.duckdb
+*.duckdb.wal
+output/
+data/
+.venv/
+logs/
+*.log
+state/
+*.pid
+secrets/
+!secrets/.gitignore
+!secrets/README.md
 .DS_Store
 Thumbs.db

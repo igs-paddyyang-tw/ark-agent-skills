@@ -468,3 +468,47 @@ gemini -p "你好"
 - `gemini` 指令不存在 → `npm install -g @google/gemini-cli`
 - 需要登入 → 執行 `gemini` 選擇 Login with Google
 - 額度用完 → 等隔天重置（60 req/min, 1000 req/day）
+
+---
+
+## Scripts（確定性產出）
+
+### scaffold_llm_cli.py
+
+一鍵產出 LLM CLI Skill + LLMRouter，不需要 LLM，100% 確定性。
+
+```bash
+python scripts/scaffold_llm_cli.py [project_dir]
+```
+
+**產出 5 個檔案：**
+
+| 檔案 | 說明 |
+|------|------|
+| `src/llm/__init__.py` | LLM 套件 |
+| `src/llm/gemini_adapter.py` | Gemini API adapter（文字生成） |
+| `src/llm/llm_router.py` | LLMRouter（API → CLI → 靜態 fallback） |
+| `src/skills/internal/gemini_cli.py` | v1 相容層（deprecated，委派給 llm_cli） |
+| `src/skills/internal/llm_cli.py` | v2 統一 4 後端（主要） |
+
+**使用方式：**
+
+```bash
+# 獨立執行
+python scripts/scaffold_llm_cli.py .
+
+# 或作為 build_ai_bot.py 的 Step 4
+from scripts.scaffold_llm_cli import scaffold
+scaffold(Path("."))
+```
+
+**驗證：**
+
+```bash
+python -c "from src.skills.internal.llm_cli import LlmCliSkill; print('OK')"
+python -c "from src.llm.llm_router import LLMRouter; print('OK')"
+```
+
+**與 LLM 的分工：**
+- scaffold 產出固定骨架（介面、fallback chain、CLI 封裝）
+- 使用者透過 Bot 對話擴充新後端或客製模式

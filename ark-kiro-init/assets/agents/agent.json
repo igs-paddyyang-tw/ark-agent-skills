@@ -1,0 +1,12 @@
+{
+  "name": "{AGENT_NAME}",
+  "description": "{DESCRIPTION}",
+  "prompt": "file://.kiro/steering/SOUL.md",
+  "model": "auto",
+  "tools": ["*"],
+  "allowedTools": ["*"],
+  "resources": [
+    "file://.kiro/steering/**/*.md",
+    "skill://.kiro/skills/**/SKILL.md"
+  ]
+}
