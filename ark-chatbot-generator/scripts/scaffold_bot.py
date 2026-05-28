@@ -26,7 +26,6 @@ from src.skills.registry import SkillRegistry
 from src.conversation.session_manager import SessionManager
 from src.conversation.planner import ConversationPlanner
 from src.conversation.memory import MemoryStore
-from src.llm.llm_router import LLMRouter
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
@@ -40,7 +39,14 @@ def create_app():
     registry = SkillRegistry()
     registry.auto_discover("src.skills.internal")
 
-    llm_router = LLMRouter()
+    # Lazy import LLMRouter（Step 4 才產出，Step 2 可先跑不含 LLM 功能）
+    llm_router = None
+    try:
+        from src.llm.llm_router import LLMRouter
+        llm_router = LLMRouter()
+    except ImportError:
+        logging.warning("LLMRouter 未安裝（Step 4 完成後重啟即可啟用 LLM 功能）")
+
     session_manager = SessionManager(db_path="data/sessions.db")
     planner = ConversationPlanner(skill_ids=[s["id"] for s in registry.list_skills()])
     memory_store = MemoryStore(base_dir="data/memory")
