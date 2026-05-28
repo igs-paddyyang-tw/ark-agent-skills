@@ -267,6 +267,123 @@ class ProgressReporter:
         pass  # 由 Bot handler 實作
 '''
 
+FILES["src/agent/__init__.py"] = ""
+
+FILES["src/agent/orchestrator.py"] = '''"""AgentOrchestrator — 評估需求並呼叫對應 Skill。"""
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+
+from src.skills.registry import SkillRegistry
+
+log = logging.getLogger(__name__)
+
+
+@dataclass
+class OrchestratorResult:
+    success: bool = True
+    output: dict = field(default_factory=dict)
+    error: str = ""
+
+
+class AgentOrchestrator:
+    """評估使用者需求，路由到對應 Skill 執行。"""
+
+    def __init__(self, registry: SkillRegistry) -> None:
+        self._registry = registry
+
+    async def process(self, text: str) -> OrchestratorResult:
+        """評估需求並執行。"""
+        try:
+            # 嘗試用 llm_cli evaluate 模式判斷意圖
+            eval_result = await self._registry.invoke(
+                "llm_cli", {"prompt": text, "mode": "evaluate"}
+            )
+            if eval_result.success:
+                action = eval_result.data.get("action", "answer")
+                skill_id = eval_result.data.get("skill_id", "")
+                params = eval_result.data.get("params", {})
+                if action == "invoke" and skill_id:
+                    result = await self._registry.invoke(skill_id, params)
+                    return OrchestratorResult(
+                        success=result.success,
+                        output=result.data or {},
+                        error=result.error or "",
+                    )
+                # answer / generate → 直接 chat
+                chat_result = await self._registry.invoke(
+                    "llm_cli", {"prompt": text, "mode": "chat"}
+                )
+                return OrchestratorResult(
+                    success=chat_result.success,
+                    output={"text": chat_result.data.get("output", "")},
+                    error=chat_result.error or "",
+                )
+        except Exception as e:
+            log.error("Orchestrator error: %s", e)
+            return OrchestratorResult(success=False, error=str(e))
+        return OrchestratorResult(success=False, error="無法處理需求")
+'''
+
+FILES["src/agent/delivery.py"] = '''"""ResultDelivery — 將 Skill 結果發送給使用者。"""
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import Callable, Awaitable
+
+log = logging.getLogger(__name__)
+
+
+class ResultDelivery:
+    """將 Skill 結果透過 Telegram 發送。"""
+
+    async def deliver(
+        self,
+        output: dict,
+        send_text: Callable[[str], Awaitable[None]],
+        send_doc: Callable[[str], Awaitable[None]] | None = None,
+        send_photo: Callable[[str], Awaitable[None]] | None = None,
+    ) -> None:
+        """根據 output 類型選擇發送方式。"""
+        if not output:
+            await send_text("✅ 完成")
+            return
+
+        # 文字回覆
+        if "text" in output:
+            text = str(output["text"])[:4096]
+            await send_text(text)
+            return
+
+        # 檔案發送
+        if "path" in output and send_doc:
+            path = Path(output["path"])
+            if path.exists():
+                if path.suffix in (".jpg", ".png", ".gif", ".webp") and send_photo:
+                    await send_photo(str(path))
+                else:
+                    await send_doc(str(path))
+                return
+
+        # 程式碼
+        if "code" in output:
+            code = output["code"][:3000]
+            await send_text(f"```python\\n{code}\\n```")
+            return
+
+        # 通用 dict 轉文字
+        lines = []
+        for k, v in output.items():
+            if isinstance(v, str) and len(v) < 200:
+                lines.append(f"**{k}**: {v}")
+        if lines:
+            await send_text("\\n".join(lines)[:4096])
+        else:
+            await send_text("✅ 完成")
+'''
+
 
 def scaffold(project_dir: Path) -> list[str]:
     created = []

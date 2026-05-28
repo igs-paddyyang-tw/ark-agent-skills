@@ -435,6 +435,66 @@ def scaffold(project_dir: Path) -> list[str]:
     ''')
 
     # ── 3. src/llm/llm_router.py ──
+    emit("src/llm/__init__.py", '''\
+        """LLM 整合層。"""
+    ''')
+
+    emit("src/llm/gemini_adapter.py", '''\
+        """GeminiAdapter — Gemini API 封裝（google-genai SDK）。"""
+        from __future__ import annotations
+
+        import logging
+        import os
+
+        log = logging.getLogger(__name__)
+
+
+        class GeminiAdapter:
+            """Gemini API 封裝，支援 generate 和 function_call。"""
+
+            TIERS = {
+                "FAST": "gemini-2.5-flash",
+                "BALANCE": "gemini-2.5-flash",
+                "SMART": "gemini-2.5-pro",
+            }
+
+            def __init__(self) -> None:
+                self._client = None
+                self.available = False
+                api_key = os.getenv("GEMINI_API_KEY", "")
+                if api_key:
+                    try:
+                        from google import genai
+                        self._client = genai.Client(api_key=api_key)
+                        self.available = True
+                    except ImportError:
+                        log.warning("google-genai 未安裝，Gemini API 不可用")
+                    except Exception as e:
+                        log.warning("Gemini API 初始化失敗: %s", e)
+
+            async def generate(self, prompt: str, system: str = "", tier: str = "BALANCE") -> dict:
+                """文字生成。回傳 {"text": str, "model": str}。"""
+                if not self.available or not self._client:
+                    return {"text": "", "model": ""}
+                model = self.TIERS.get(tier, "gemini-2.5-flash")
+                try:
+                    from google import genai
+                    contents = f"{system}\\n\\n{prompt}" if system else prompt
+                    response = await self._client.aio.models.generate_content(
+                        model=model,
+                        contents=contents,
+                        config=genai.types.GenerateContentConfig(
+                            temperature=0.7,
+                            max_output_tokens=2048,
+                        ),
+                    )
+                    text = response.text or ""
+                    return {"text": text, "model": model}
+                except Exception as e:
+                    log.error("Gemini generate 失敗: %s", e)
+                    return {"text": "", "model": ""}
+    ''')
+
     emit("src/llm/llm_router.py", '''\
         """LLMRouter — 統一路由 + fallback chain。
 

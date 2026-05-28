@@ -455,18 +455,23 @@ def scaffold(project_dir: Path) -> list[str]:
     # ── 5. config/news_sources.yaml ──
     emit("config/news_sources.yaml", '''\
         sources:
-          - name: "產業新聞"
-            url: "https://www.vegasslotsonline.com/news/"
-            selector: "article"
-            category: news
+          - name: "AI 焦點"
+            url: "https://techcrunch.com/category/artificial-intelligence/"
+            selector: ".post-block, article"
+            category: ai_focus
 
-          - name: "新遊戲資訊"
-            url: "https://www.vegasslotsonline.com/new/"
-            selector: "article, h2 a, h3 a"
-            category: new_slots
+          - name: "開發工具"
+            url: "https://www.infoq.com/news/"
+            selector: ".news_type_block, article"
+            category: dev_tools
+
+          - name: "Hacker News"
+            url: "https://news.ycombinator.com/"
+            selector: ".titleline a"
+            category: general
 
         schedule:
-          cron: "0 9 * * *"
+          cron: "0 8 * * *"
           timezone: "Asia/Taipei"
 
         output:
