@@ -1,83 +1,55 @@
-"""scaffold_scheduler.py — 一鍵產出 Workflow + 排程引擎。
+#!/usr/bin/env python3
+"""scaffold_scheduler.py — 確定性產出 Workflow + 排程引擎。
 
-用法：python scripts/scaffold_scheduler.py [project_dir]
-產出：src/workflow/ + src/scheduler/ + workflows/（共 8 個檔案）
+使用方式：
+    python scaffold_scheduler.py <project_dir>
 """
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-FILES: dict[str, str] = {}
+WF_INIT = '"""Workflow 模組。"""\n'
 
-FILES["src/workflow/__init__.py"] = 'from src.workflow.engine import WorkflowEngine\nfrom src.workflow.context import RunContext\n'
+WF_ENGINE = '''\
+"""WorkflowEngine — YAML 工作流解析與執行。"""
+from __future__ import annotations
 
-FILES["src/workflow/context.py"] = '''"""RunContext — 工作流執行上下文。"""
-
-import uuid
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
-
-
-class RunStatus(str, Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-@dataclass
-class RunContext:
-    run_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    workflow_id: str = ""
-    params: dict = field(default_factory=dict)
-    status: RunStatus = RunStatus.PENDING
-    outputs: dict = field(default_factory=dict)
-    errors: list[str] = field(default_factory=list)
-
-    def set_output(self, step_id: str, data: Any) -> None:
-        self.outputs[step_id] = data
-
-    def to_dict(self) -> dict:
-        return {"run_id": self.run_id, "workflow_id": self.workflow_id, "status": self.status.value, "outputs": self.outputs, "errors": self.errors}
-'''
-
-FILES["src/workflow/engine.py"] = '''"""WorkflowEngine — YAML 工作流執行引擎。"""
-
+import json
+import logging
 import os
 import re
 import uuid
-from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import yaml
 
-from src.skills.registry import SkillRegistry
+log = logging.getLogger(__name__)
 
 
-class RunStatus(str, Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
-@dataclass
 class RunContext:
-    run_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    workflow_id: str = ""
-    params: dict = field(default_factory=dict)
-    status: RunStatus = RunStatus.PENDING
-    outputs: dict = field(default_factory=dict)
-    errors: list[str] = field(default_factory=list)
+    """工作流執行上下文。"""
 
-    def set_output(self, step_id: str, data: Any) -> None:
+    def __init__(self, workflow_id: str, params: dict | None = None):
+        self.run_id = uuid.uuid4().hex[:8]
+        self.workflow_id = workflow_id
+        self.params = params or {}
+        self.outputs: dict[str, any] = {}
+        self.errors: list[str] = []
+        self.status = "running"
+
+    def set_output(self, step_id: str, data) -> None:
         self.outputs[step_id] = data
+
+    def to_dict(self) -> dict:
+        return {"run_id": self.run_id, "workflow_id": self.workflow_id,
+                "status": self.status, "outputs": self.outputs, "errors": self.errors}
 
 
 class WorkflowEngine:
-    def __init__(self, registry: SkillRegistry) -> None:
+    """載入 YAML 工作流並依序執行 Skill 步驟。"""
+
+    def __init__(self, registry=None):
         self._registry = registry
         self._workflows: dict[str, dict] = {}
 
@@ -86,159 +58,198 @@ class WorkflowEngine:
         self._workflows[data["id"]] = data
         return data
 
-    def load_dir(self, dir_path: Path) -> int:
+    def load_dir(self, directory: Path) -> int:
         count = 0
-        if not dir_path.exists():
+        if not directory.exists():
             return 0
-        for f in dir_path.glob("*.yaml"):
+        for f in directory.glob("*.yaml"):
+            if f.name.startswith("_"):
+                continue
             self.load(f)
             count += 1
         return count
 
+    def list_workflows(self) -> list[dict]:
+        return [{"id": w["id"], "name": w.get("name", w["id"])} for w in self._workflows.values()]
+
     async def run(self, workflow_id: str, params: dict | None = None) -> RunContext:
-        ctx = RunContext(workflow_id=workflow_id, params=params or {})
         wf = self._workflows.get(workflow_id)
         if not wf:
-            ctx.status = RunStatus.FAILED
+            ctx = RunContext(workflow_id, params)
+            ctx.status = "failed"
             ctx.errors.append(f"Workflow not found: {workflow_id}")
             return ctx
 
-        ctx.status = RunStatus.RUNNING
-        for step in wf.get("steps", []):
-            skill_id = step["skill"]
-            step_params = self._resolve_params(step.get("params", {}), ctx)
-            result = await self._registry.invoke(skill_id, step_params)
-            if result.success:
-                ctx.set_output(step["id"], result.data)
-            else:
-                ctx.errors.append(f"Step {step['id']} failed: {result.error}")
-                ctx.status = RunStatus.FAILED
-                return ctx
+        ctx = RunContext(workflow_id, params)
+        steps = wf.get("steps", [])
 
-        ctx.status = RunStatus.COMPLETED
+        for step in steps:
+            step_type = step.get("type", "skill")
+            if step_type == "skill":
+                await self._exec_skill(step, ctx)
+            if ctx.status == "failed":
+                break
+
+        if ctx.status != "failed":
+            ctx.status = "completed"
         return ctx
+
+    async def _exec_skill(self, step: dict, ctx: RunContext) -> None:
+        skill_id = step.get("skill")
+        params = self._resolve_params(step.get("params", {}), ctx)
+        output_key = step.get("output", step.get("id", skill_id))
+
+        if not self._registry:
+            ctx.errors.append("No registry")
+            ctx.status = "failed"
+            return
+
+        result = await self._registry.invoke(skill_id, params)
+        if result.success:
+            ctx.set_output(output_key, result.data)
+        else:
+            ctx.errors.append(f"Step {step.get(\'id\')}: {result.error}")
+            ctx.status = "failed"
 
     def _resolve_params(self, params: dict, ctx: RunContext) -> dict:
         resolved = {}
         for k, v in params.items():
-            if isinstance(v, str) and "{{" in v:
-                resolved[k] = self._interpolate(v, ctx)
-            elif isinstance(v, str) and v.startswith("${"):
-                resolved[k] = os.getenv(v[2:-1], v)
+            if isinstance(v, str) and v.startswith("${") and v.endswith("}"):
+                resolved[k] = os.environ.get(v[2:-1], "")
+            elif isinstance(v, str) and "{{" in v:
+                resolved[k] = self._resolve_template(v, ctx)
             else:
                 resolved[k] = v
         return resolved
 
-    def _interpolate(self, template: str, ctx: RunContext) -> Any:
-        match = re.match(r"\\{\\{\\s*outputs\\.(\\w+)\\s*\\}\\}", template)
-        if match:
-            return ctx.outputs.get(match.group(1), {})
+    def _resolve_template(self, template: str, ctx: RunContext) -> any:
+        m = re.match(r"\\{\\{\\s*outputs\\.(\\w+)(?:\\.(\\w+))?\\s*\\}\\}", template)
+        if m:
+            key = m.group(1)
+            sub = m.group(2)
+            val = ctx.outputs.get(key)
+            if sub and isinstance(val, dict):
+                return val.get(sub)
+            return val
         return template
 '''
 
-FILES["src/scheduler/__init__.py"] = 'from src.scheduler.engine import ScheduleEngine\n'
+SCHED_INIT = '"""排程模組。"""\n'
 
-FILES["src/scheduler/engine.py"] = '''"""ScheduleEngine — APScheduler 排程引擎。"""
+SCHED_ENGINE = '''\
+"""ScheduleEngine — APScheduler 排程引擎。"""
+from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 import yaml
 
-from src.workflow.engine import WorkflowEngine
-
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class ScheduleEngine:
-    def __init__(self, workflow_engine: WorkflowEngine) -> None:
-        self._wf = workflow_engine
+    """載入排程定義，使用 APScheduler 執行。"""
+
+    def __init__(self, workflow_engine=None):
+        self._workflow_engine = workflow_engine
         self._schedules: list[dict] = []
         self._scheduler = None
 
-    def load_schedules(self, dir_path: Path) -> int:
-        if not dir_path.exists():
+    def load_schedules(self, directory: Path) -> int:
+        if not directory.exists():
             return 0
-        for f in dir_path.glob("*.yaml"):
+        count = 0
+        for f in directory.glob("*.yaml"):
             data = yaml.safe_load(f.read_text(encoding="utf-8"))
-            self._schedules.append(data)
-        return len(self._schedules)
+            if data:
+                self._schedules.append(data)
+                count += 1
+        return count
 
     def start(self) -> None:
         try:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
             from apscheduler.triggers.cron import CronTrigger
         except ImportError:
-            logger.warning("apscheduler not installed, scheduler disabled")
+            log.warning("apscheduler 未安裝，排程功能停用")
             return
 
         self._scheduler = AsyncIOScheduler()
-        for s in self._schedules:
-            if not s.get("enabled", True):
+        for sched in self._schedules:
+            if not sched.get("enabled", True):
                 continue
-            cron = s.get("cron", "")
+            cron = sched.get("cron", "0 9 * * *")
             parts = cron.split()
-            if len(parts) == 5:
-                trigger = CronTrigger(minute=parts[0], hour=parts[1], day=parts[2], month=parts[3], day_of_week=parts[4])
-                self._scheduler.add_job(self._run_workflow, trigger, args=[s["workflow_id"], s.get("params", {})])
+            if len(parts) >= 5:
+                trigger = CronTrigger(
+                    minute=parts[0], hour=parts[1],
+                    day=parts[2], month=parts[3], day_of_week=parts[4],
+                )
+                self._scheduler.add_job(
+                    self._run_workflow, trigger,
+                    args=[sched.get("workflow_id", ""), sched.get("params", {})],
+                    id=sched.get("id", sched.get("workflow_id")),
+                )
         self._scheduler.start()
-        logger.info(f"Scheduler started with {len(self._schedules)} jobs")
-
-    async def _run_workflow(self, workflow_id: str, params: dict) -> None:
-        ctx = await self._wf.run(workflow_id, params)
-        if ctx.errors:
-            logger.error(f"Workflow {workflow_id} failed: {ctx.errors}")
+        log.info("ScheduleEngine started (%d schedules)", len(self._schedules))
 
     def stop(self) -> None:
         if self._scheduler:
             self._scheduler.shutdown(wait=False)
+            log.info("ScheduleEngine stopped")
+
+    async def _run_workflow(self, workflow_id: str, params: dict) -> None:
+        if self._workflow_engine:
+            ctx = await self._workflow_engine.run(workflow_id, params)
+            log.info("Scheduled %s: %s", workflow_id, ctx.status)
+
+    def list_schedules(self) -> list[dict]:
+        return self._schedules
 '''
 
-FILES["workflows/hello.yaml"] = '''id: hello
-name: 測試工作流
+HELLO_YAML = '''\
+id: hello
+name: Hello World 測試工作流
 steps:
   - id: greet
     type: skill
     skill: echo
     params:
-      message: "Hello from workflow!"
+      message: "Hello from WorkflowEngine!"
     output: greeting
 '''
 
-FILES["workflows/daily_news.yaml"] = '''id: daily_news
-name: 每日科技日報
+DAILY_NEWS_YAML = '''\
+id: daily_news
+name: 科技日報產出
 steps:
   - id: scrape
     type: skill
     skill: news_scraper
     params:
-      config_path: "config/news_sources.yaml"
-    output: scraped
+      url: "https://techcrunch.com/category/artificial-intelligence/"
+    output: raw_html
 
   - id: parse
     type: skill
     skill: news_parser
     params:
-      data: "{{ outputs.scraped }}"
-    output: parsed
+      html: "{{ outputs.raw_html }}"
+    output: markdown
 
   - id: render
     type: skill
     skill: news_renderer
     params:
-      data: "{{ outputs.scraped }}"
+      data: "{{ outputs.markdown }}"
+      template: "templates/tech-daily.html"
     output: html_file
-
-  - id: send
-    type: skill
-    skill: telegram_send_file
-    params:
-      chat_id: "${TELEGRAM_CHAT_ID}"
-      file_path: "{{ outputs.html_file.path }}"
-    output: sent
 '''
 
-FILES["workflows/schedules/daily_news.yaml"] = '''id: daily_news_schedule
+SCHEDULE_YAML = '''\
+id: daily_news_schedule
 workflow_id: daily_news
 cron: "0 9 * * *"
 enabled: true
@@ -246,22 +257,44 @@ timezone: Asia/Taipei
 params: {}
 '''
 
+FILES: dict[str, str] = {
+    "src/workflow/__init__.py": WF_INIT,
+    "src/workflow/engine.py": WF_ENGINE,
+    "src/scheduler/__init__.py": SCHED_INIT,
+    "src/scheduler/engine.py": SCHED_ENGINE,
+    "workflows/hello.yaml": HELLO_YAML,
+    "workflows/daily_news.yaml": DAILY_NEWS_YAML,
+    "workflows/schedules/daily_news.yaml": SCHEDULE_YAML,
+}
+
 
 def scaffold(project_dir: Path) -> list[str]:
-    created = []
-    for rel_path, content in FILES.items():
-        full = project_dir / rel_path
+    """產出 Workflow + 排程檔案。"""
+    created: list[str] = []
+    for rel, content in FILES.items():
+        full = project_dir / rel
         if full.exists():
             continue
         full.parent.mkdir(parents=True, exist_ok=True)
         full.write_text(content, encoding="utf-8")
-        created.append(str(rel_path))
+        created.append(rel)
     return created
 
 
+def main() -> None:
+    if len(sys.argv) < 2:
+        print("使用方式: python scaffold_scheduler.py <project_dir>")
+        sys.exit(1)
+    project_dir = Path(sys.argv[1])
+    project_dir.mkdir(parents=True, exist_ok=True)
+    created = scaffold(project_dir)
+    if created:
+        print(f"✅ 產出 {len(created)} 個檔案：")
+        for f in created:
+            print(f"   • {f}")
+    else:
+        print("✅ 所有檔案已存在。")
+
+
 if __name__ == "__main__":
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
-    files = scaffold(target)
-    print(f"✅ scaffold_scheduler: 產出 {len(files)} 個檔案到 {target}")
-    for f in files:
-        print(f"   {f}")
+    main()
