@@ -245,6 +245,12 @@ python-telegram-bot==21.10
 pyyaml>=6.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+# Step 3 排程
+apscheduler>=3.10.0
+# Step 4 LLM（選配 fallback）
+google-genai>=1.0.0
+# Step 5 爬蟲 JS 渲染（選配）
+playwright>=1.40.0
 """
 
 FILES[".env.example"] = """HOST=0.0.0.0
