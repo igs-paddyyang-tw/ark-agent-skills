@@ -2,215 +2,251 @@
 author: paddyyang
 name: ark-browser-tool
 description: |
-  完整瀏覽器開發測試工具：MCP Server 封裝（agent-browser CLI）+ 視覺測試驗證（Playwright）。
-  提供 7 個 MCP Tools（open/snapshot/click/fill/screenshot/getText/close）+
-  視覺測試工作流（截圖驗證、互動測試、響應式檢查、前後對比）。
-  使用此 Skill 當使用者提及 agent-browser、瀏覽器自動化、MCP browser、
-  browser tool、網頁抓取 MCP、瀏覽器搜尋、web scraping MCP、
-  瀏覽器測試、截圖驗證、visual testing、dev-browser、看一下畫面、
-  確認 UI、E2E 驗證、localhost 預覽、
+  瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。
+  Code-first 範式 — 模型寫 Playwright 腳本而非逐步預測點擊，
+  產出可重用程式 + 截圖 + 日誌。含 self-reflection 驗證機制。
+  同時保留 Playwright MCP 作為輕量互動備選。
+  使用此 Skill 當使用者提及瀏覽器自動化、Webwright、MCP browser、
+  Playwright MCP、browser tool、網頁抓取、瀏覽器搜尋、web scraping、
+  瀏覽器測試、截圖驗證、visual testing、看一下畫面、
+  確認 UI、E2E 驗證、localhost 預覽、craft tool、
   或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
 metadata:
-  version: "2.0"
-  updated: 2026-05-18
+  version: "3.0"
+  updated: 2026-05-31
 ---
 
 # ark-browser-tool
 
-完整瀏覽器開發測試工具 — MCP 自動化 + 視覺測試驗證。
+瀏覽器自動化工具 — 使用 Microsoft Webwright（code-first terminal-native web agent）。
 
 ## 觸發條件
 
-使用者提及以下關鍵字時觸發：
-- 「agent-browser」、「瀏覽器自動化」、「MCP browser」
-- 「browser tool」、「網頁抓取 MCP」
-- 「瀏覽器搜尋」、「web scraping MCP」
+- 「Webwright」、「瀏覽器自動化」、「MCP browser」
+- 「browser tool」、「網頁抓取」、「web scraping」
 - 「瀏覽器測試」、「截圖驗證」、「visual testing」
 - 「看一下畫面」、「確認 UI」、「E2E 驗證」
-- 「localhost 預覽」、「開啟頁面」
+- 「localhost 預覽」、「craft tool」、「可重用腳本」
 - 前端任務完成後的驗證階段
 
-## 輸入參數
-
-| 參數 | 型別 | 必要 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| `project_dir` | `str` | ✅ | — | 專案目錄路徑 |
-
-## 前置條件
-
-- 已安裝 `agent-browser` CLI：`npm install -g agent-browser && agent-browser install`
-- Python 3.12 + `fastmcp` 套件
-
-## 產出指引
-
-### 步驟 1：安裝 agent-browser
-
-```bash
-npm install -g agent-browser
-agent-browser install  # 下載 Chrome for Testing（首次）
-```
-
-Linux 需額外安裝系統依賴：`agent-browser install --with-deps`
-
-### 步驟 2：產出 MCP Server
-
-產出目錄結構：
+## 核心理念
 
 ```
-{project_dir}/
-└── mcp-servers/
-    └── agent-browser/
-        ├── server.py          # FastMCP Server（呼叫 agent-browser CLI）
-        └── requirements.txt   # fastmcp
+傳統 web agent：預測下一個 click → 逐步操作 → 無產出物
+Webwright：寫 Playwright 腳本 → 執行 → 產出可重用程式
 ```
 
-**`server.py`** — 使用 FastMCP 封裝 agent-browser CLI 指令為 MCP Tools：
+**範式轉移**：瀏覽器是可拋棄的工具，程式碼才是持久產出。
 
-| MCP Tool | CLI 指令 | 功能 |
-|----------|---------|------|
-| `browser_open` | `agent-browser open <url>` | 開啟網頁 |
-| `browser_snapshot` | `agent-browser snapshot` | 取得 accessibility tree（AI 最佳格式） |
-| `browser_click` | `agent-browser click <ref>` | 點擊元素（ref 來自 snapshot） |
-| `browser_fill` | `agent-browser fill <ref> <text>` | 填入文字 |
-| `browser_screenshot` | `agent-browser screenshot [path]` | 網頁截圖 |
-| `browser_get_text` | `agent-browser get text <ref>` | 取得元素文字 |
-| `browser_close` | `agent-browser close` | 關閉瀏覽器 |
+---
 
-每個 Tool 透過 `asyncio.create_subprocess_exec` 呼叫 CLI，回傳 stdout 結果。
+## 架構（~1K LoC harness）
 
-### 步驟 3：產出業務 Skill 抽象
+```
+┌─────────────────────────────────────────┐
+│ Runner Loop                              │
+│                                          │
+│  1. Send context（task + workspace）→ Model │
+│  2. Model emit bash command              │
+│  3. Environment 執行 → 回傳 output       │
+│  4. 迭代直到 final_script.py 通過驗證    │
+└─────────────────────────────────────────┘
+```
 
-產出 `src/skills/internal/browser_search.py`：
+三個模組：
+- **Runner** — 迴圈控制、context 組裝
+- **Model** — LLM endpoint（GPT/Claude/Qwen）
+- **Environment** — terminal 執行 + 檔案系統
+
+---
+
+## 兩種操作模式
+
+### 模式 A：`webwright_run`（執行任務）
+
+一次性完成瀏覽器任務，產出結果。
+
+```
+輸入：task description + start_url
+輸出：final_script.py + screenshots/ + trajectory.json
+```
+
+適用：資料擷取、表單填寫、搜尋、驗證
+
+### 模式 B：`webwright_craft`（產出可重用工具）
+
+產出參數化 CLI 工具，可重複使用。
+
+```
+輸入：task description + start_url
+輸出：可重用 CLI 工具（python script with argparse）
+```
+
+適用：重複性任務（航班比價、票務查詢、定期擷取）
+
+---
+
+## Self-Reflection 驗證
+
+任務不是「模型說完成」就完成：
+
+```
+1. 產出 final_script.py
+2. 在 fresh folder 重新執行（排除環境殘留）
+3. 儲存 logs + screenshots
+4. self_reflection 判斷是否真正成功
+5. 失敗 → 回到 Runner Loop 修正
+```
+
+---
+
+## 產出物結構
+
+每次執行產出：
+
+```
+workspace/
+├── final_script.py          # 最終可執行腳本
+├── final_script_log.txt     # 執行日誌
+├── screenshots/             # 關鍵截圖
+├── self_reflect_result.json # 驗證結果
+└── trajectory.json          # 完整操作軌跡
+```
+
+---
+
+## MCP 整合
+
+產出 2 個高階 MCP Tools（取代舊版 7 個細粒度 Tools）：
 
 ```python
-class BrowserSearchSkill(BaseSkill):
-    """透過 agent-browser MCP 執行搜尋。"""
-    skill_id = "browser_search"
-    skill_type = SkillType.MCP
-    description = "透過瀏覽器搜尋引擎查詢資訊"
-    version = "1.0.0"
-    input_schema = BrowserSearchParams
+@mcp.tool()
+async def webwright_run(task: str, start_url: str, max_steps: int = 50) -> dict:
+    """執行瀏覽器任務，回傳結果 + 截圖路徑。"""
 
-    async def execute(self, params: dict) -> SkillResult:
-        # 1. browser_open → 搜尋引擎 URL
-        # 2. browser_fill → 填入搜尋關鍵字
-        # 3. browser_click → 點擊搜尋按鈕
-        # 4. browser_snapshot → 取得結果 accessibility tree
-        # 5. 解析結果回傳
+@mcp.tool()
+async def webwright_craft(task: str, start_url: str) -> dict:
+    """產出可重用 CLI 工具腳本。"""
 ```
 
-底層 MCP Server 提供通用瀏覽器能力，業務邏輯封裝在 Skill 中。
-
-### 步驟 4：產出 MCP 設定
-
-產出或更新 `.kiro/settings/mcp.json`：
+### MCP 設定
 
 ```json
 {
   "mcpServers": {
-    "agent-browser": {
+    "webwright": {
       "command": "python",
-      "args": ["mcp-servers/agent-browser/server.py"],
-      "disabled": false
+      "args": ["-m", "webwright.mcp_server"],
+      "env": {
+        "WEBWRIGHT_MODEL": "gpt-5.4",
+        "WEBWRIGHT_MAX_STEPS": "100"
+      }
     }
   }
 }
 ```
 
-### 步驟 5：驗證
+---
 
-```bash
-# 確認 agent-browser CLI 可用
-agent-browser --version
+## 前置條件
 
-# 測試 MCP Server
-python mcp-servers/agent-browser/server.py
+- Python 3.10+
+- Playwright：`pip install playwright && playwright install chromium`
+- Webwright：`pip install webwright`（或 `pip install -e .` from repo）
+- LLM API Key（使用現有 team 設定）
+
+---
+
+## 與 Playwright MCP 的關係
+
+| | Webwright | Playwright MCP |
+|---|---|---|
+| **範式** | Code-first（寫腳本） | Tool-first（逐步呼叫） |
+| **產出** | 可重用 script + 截圖 + log | 單次操作結果 |
+| **驗證** | self-reflection + fresh rerun | 無 |
+| **Token** | 批次生成，少量迭代 | 每步一次 snapshot |
+| **適用** | 複雜/長任務、重複任務 | 簡單互動、快速預覽 |
+
+**策略**：Webwright 為主要模式，Playwright MCP 作為輕量備選（快速截圖/簡單互動）。
+
+### Playwright MCP 備選設定
+
+```json
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--headless"]
+    }
+  }
+}
 ```
+
+---
+
+## 常用場景
+
+### 網頁資料擷取
+
+```
+webwright_run(
+  task="搜尋 'LLM cost optimization 2026' 並擷取前 5 筆結果標題和連結",
+  start_url="https://www.google.com"
+)
+```
+
+### 產出可重用搜尋工具
+
+```
+webwright_craft(
+  task="建立 Google 搜尋工具，接受 query 參數，回傳前 10 筆結果",
+  start_url="https://www.google.com"
+)
+→ 產出 google_search_tool.py（可重複呼叫）
+```
+
+### 前端視覺驗證
+
+```
+webwright_run(
+  task="開啟頁面，截圖 desktop/tablet/mobile 三種尺寸，確認佈局正確",
+  start_url="http://localhost:3000"
+)
+```
+
+### 表單 E2E 測試
+
+```
+webwright_run(
+  task="填寫註冊表單（name=Test, email=test@example.com），提交並確認成功訊息",
+  start_url="http://localhost:3000/register"
+)
+```
+
+---
+
+## 與開發流程整合
+
+```
+RED → GREEN → REFACTOR → WEBWRIGHT VERIFY → COMMIT
+```
+
+### 視覺檢查清單
+
+Webwright 執行後自動產出截圖，確認：
+- [ ] 頁面正常載入（無白屏/錯誤）
+- [ ] 佈局符合設計
+- [ ] 文字可讀（無溢出/截斷）
+- [ ] 互動元素可操作
+- [ ] 響應式正確
 
 ---
 
 ## 注意事項
 
-- agent-browser 是 Rust CLI，需要 npm 或 cargo 安裝
-- 首次使用需執行 `agent-browser install` 下載 Chrome for Testing
-- MCP Server 透過 `subprocess` 呼叫 CLI，每個 Tool 是獨立的 CLI 呼叫
-- `browser_snapshot` 回傳 accessibility tree，是 AI agent 最佳的頁面理解格式
-- 瀏覽器 session 在 CLI daemon 中維持，多個 Tool 呼叫共享同一個瀏覽器實例
-
----
-
-## 視覺測試驗證（Playwright）
-
-讓 Agent 看見自己的產出，閉合開發回饋迴圈。
-
-### 核心原則
-
-```
-沒有瀏覽器的 Agent = 盲人寫 UI
-→ 寫完 code 必須看到結果才算完成
-```
-
-### 截圖驗證
-
-```python
-from playwright.sync_api import sync_playwright
-
-def screenshot(url: str, output: str = "screenshot.png", width: int = 1280, height: int = 720):
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": width, "height": height})
-        page.goto(url, wait_until="networkidle")
-        page.screenshot(path=output, full_page=True)
-        browser.close()
-```
-
-### 互動測試
-
-```python
-page.click("button#submit")
-page.fill("input[name='email']", "test@example.com")
-assert page.locator(".success-message").is_visible()
-```
-
-### 響應式檢查
-
-```python
-viewports = [
-    {"width": 375, "height": 812, "name": "mobile"},
-    {"width": 768, "height": 1024, "name": "tablet"},
-    {"width": 1280, "height": 720, "name": "desktop"},
-]
-for vp in viewports:
-    page.set_viewport_size({"width": vp["width"], "height": vp["height"]})
-    page.screenshot(path=f"screenshot-{vp['name']}.png")
-```
-
-### 視覺檢查清單
-
-截圖後確認：
-- [ ] 頁面正常載入（無白屏/錯誤）
-- [ ] 佈局符合設計（元素位置正確）
-- [ ] 文字可讀（無溢出/截斷）
-- [ ] 互動元素可見（按鈕/連結）
-- [ ] 響應式正確
-
-### 使用場景
-
-| 場景 | 動作 | 驗證 |
-|------|------|------|
-| 前端開發完成 | 截圖 localhost | 佈局正確 |
-| CSS 修改 | 前後截圖對比 | 無意外變化 |
-| 表單功能 | 填寫 + 提交 | 成功訊息出現 |
-| 響應式 | 多尺寸截圖 | 各斷點正常 |
-
-### 與 ark-superpowers 整合
-
-在 ④ Execute 階段的 TDD 循環中：
-```
-RED → GREEN → REFACTOR → VISUAL VERIFY → COMMIT
-```
-
-### 前置需求
-
-- Playwright：`pip install playwright && playwright install chromium`
-- 截圖存放：`artifacts/screenshots/`（不入版控）
+- Webwright 需要 LLM API Key 才能運作（使用 team 現有設定）
+- 設定 `max_steps` 上限避免 token 失控（預設 50，上限 100）
+- 整合 `cost_guard` 監控每次執行的 token 消耗
+- Pin Webwright 版本（preview 階段 API 可能變動）
+- 長任務自動 context compaction（歷史摘要 + workspace 保留具體產出）
+- 官方 repo：https://github.com/microsoft/Webwright

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""scaffold_scraper.py — 確定性產出爬蟲 + 新聞處理 Skills。
+"""scaffold_scraper.py — 產出 Scrapling 爬蟲 + 新聞處理 Skills。
 
 使用方式：
     python scaffold_scraper.py <project_dir>
@@ -9,8 +9,116 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+WEB_SCRAPER_PY = '''\
+"""web_scraper — 進階網頁爬蟲 Skill（Scrapling）。"""
+from __future__ import annotations
+
+from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
+from pydantic import Field
+
+
+class WebScraperParams(SkillParam):
+    """web_scraper 輸入參數。"""
+    url: str = Field(description="目標網址")
+    selector: str | None = Field(default=None, description="CSS selector")
+    xpath: str | None = Field(default=None, description="XPath selector")
+    extract: str = Field(default="text", description="text/html/attrs")
+    fetcher: str = Field(default="auto", description="fast/stealth/dynamic/auto")
+    adaptive: bool = Field(default=False, description="自適應元素追蹤")
+    auto_save: bool = Field(default=False, description="儲存元素特徵")
+    headless: bool = Field(default=True, description="無頭模式")
+    proxy: str | None = Field(default=None, description="Proxy URL")
+    headers: dict = Field(default_factory=dict, description="自訂 headers")
+    max_items: int = Field(default=50, description="最大提取數量")
+    timeout: int = Field(default=30, description="超時秒數")
+
+
+class WebScraperSkill(BaseSkill):
+    """進階網頁爬蟲（Scrapling）：自適應追蹤 + 反爬繞過 + 三種 Fetcher。"""
+
+    skill_id = "web_scraper"
+    skill_type = SkillType.PYTHON
+    description = "進階網頁爬蟲（Scrapling）：自適應追蹤 + 反爬繞過"
+    version = "2.0.0"
+    input_schema = WebScraperParams
+
+    async def execute(self, params: dict) -> SkillResult:
+        try:
+            p = WebScraperParams(**params)
+            page = await self._fetch(p)
+            items = self._extract(page, p)
+            return SkillResult(success=True, data={
+                "items": items[:p.max_items],
+                "count": min(len(items), p.max_items),
+                "url": p.url,
+                "status_code": page.status,
+                "fetcher_used": p.fetcher,
+            })
+        except Exception as e:
+            return SkillResult(success=False, error=f"爬取失敗: {e}")
+
+    async def _fetch(self, p: WebScraperParams):
+        """根據 fetcher 參數選擇 Scrapling Fetcher。"""
+        from scrapling.fetchers import Fetcher, StealthyFetcher, DynamicFetcher
+
+        kwargs = {}
+        if p.proxy:
+            kwargs["proxy"] = p.proxy
+        if p.headers:
+            kwargs["headers"] = p.headers
+
+        if p.fetcher == "fast":
+            return Fetcher.get(p.url, stealthy_headers=True, timeout=p.timeout, **kwargs)
+        elif p.fetcher == "stealth":
+            return StealthyFetcher.fetch(p.url, headless=p.headless, network_idle=True, **kwargs)
+        elif p.fetcher == "dynamic":
+            return DynamicFetcher.fetch(p.url, headless=p.headless, network_idle=True, **kwargs)
+        else:  # auto
+            try:
+                page = Fetcher.get(p.url, stealthy_headers=True, timeout=p.timeout, **kwargs)
+                if page.status in (403, 503) or len(page.text()) < 100:
+                    raise ValueError("blocked or empty")
+                return page
+            except Exception:
+                return StealthyFetcher.fetch(p.url, headless=p.headless, network_idle=True, **kwargs)
+
+    def _extract(self, page, p: WebScraperParams) -> list[dict]:
+        """從頁面提取元素。"""
+        if p.selector:
+            if p.adaptive:
+                elements = page.css(p.selector, adaptive=True)
+            elif p.auto_save:
+                elements = page.css(p.selector, auto_save=True)
+            else:
+                elements = page.css(p.selector)
+        elif p.xpath:
+            elements = page.xpath(p.xpath)
+        else:
+            return [{"text": page.text()[:5000]}]
+
+        items = []
+        for el in elements:
+            item = {}
+            if p.extract == "text":
+                item["text"] = el.text()
+            elif p.extract == "html":
+                item["html"] = str(el)
+            elif p.extract == "attrs":
+                item["attrs"] = dict(el.attrib) if hasattr(el, "attrib") else {}
+            # 自動提取常用屬性
+            if hasattr(el, "attrib"):
+                href = el.attrib.get("href", "")
+                if href:
+                    item["href"] = href
+                src = el.attrib.get("src", "")
+                if src:
+                    item["src"] = src
+            items.append(item)
+        return items
+'''
+
 NEWS_SCRAPER_PY = '''\
-"""news_scraper — 網頁爬蟲 Skill（httpx + BeautifulSoup）。"""
+"""news_scraper — 新聞爬蟲 Skill（基於 web_scraper）。"""
 from __future__ import annotations
 
 from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
@@ -24,40 +132,34 @@ class NewsScraperParams(SkillParam):
 
 
 class NewsScraperSkill(BaseSkill):
-    """抓取網頁新聞內容。"""
+    """抓取網頁新聞內容（輕量版，使用 Scrapling Fetcher）。"""
 
     skill_id = "news_scraper"
     skill_type = SkillType.PYTHON
-    description = "網頁爬蟲 — httpx + BeautifulSoup 抓取新聞"
-    version = "1.0.0"
+    description = "新聞爬蟲 — Scrapling 快速抓取新聞"
+    version = "2.0.0"
     input_schema = NewsScraperParams
-
-    HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
 
     async def execute(self, params: dict) -> SkillResult:
         try:
-            import httpx
-            from bs4 import BeautifulSoup
+            from scrapling.fetchers import Fetcher
 
             p = NewsScraperParams(**params)
-            async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-                resp = await client.get(p.url, headers=self.HEADERS)
+            page = Fetcher.get(p.url, stealthy_headers=True, timeout=30)
 
-            if resp.status_code >= 400:
-                return SkillResult(success=False, error=f"HTTP {resp.status_code}")
+            if page.status >= 400:
+                return SkillResult(success=False, error=f"HTTP {page.status}")
 
-            soup = BeautifulSoup(resp.text, "html.parser")
-            elements = soup.select(p.selector)[:p.max_items]
-
+            elements = page.css(p.selector)[:p.max_items]
             items = []
             for el in elements:
-                title_el = el.select_one("h2, h3, .title, a")
+                title_el = el.css("h2, h3, .title, a")
+                title_text = title_el[0].text() if title_el else ""
+                href = title_el[0].attrib.get("href", "") if title_el and hasattr(title_el[0], "attrib") else ""
                 items.append({
-                    "title": title_el.get_text(strip=True) if title_el else "",
-                    "text": el.get_text(strip=True)[:500],
-                    "href": title_el.get("href", "") if title_el else "",
+                    "title": title_text,
+                    "text": el.text()[:500],
+                    "href": href,
                 })
 
             return SkillResult(success=True, data={
@@ -167,7 +269,6 @@ class NewsStructurerSkill(BaseSkill):
 
             prompt = self.PROMPT_TEMPLATE.format(content=content[:3000])
 
-            # 呼叫 llm_cli
             from src.skills.internal.llm_cli import LlmCliSkill
             llm = LlmCliSkill()
             result = await llm.execute({"prompt": prompt, "mode": "chat"})
@@ -175,7 +276,6 @@ class NewsStructurerSkill(BaseSkill):
             if not result.success:
                 return SkillResult(success=False, error=f"LLM 失敗: {result.error}")
 
-            # 嘗試解析 JSON
             import re
             output = result.data.get("output", "")
             m = re.search(r"\\{.*\\}", output, re.DOTALL)
@@ -227,7 +327,6 @@ class NewsRendererSkill(BaseSkill):
             template = Template(tmpl_path.read_text(encoding="utf-8"))
             today = date.today().strftime("%Y.%m.%d")
 
-            # data 可以是單一 dict 或 list
             cards = p.data if isinstance(p.data, list) else [p.data]
             html = template.render(date=today, cards=cards)
 
@@ -259,6 +358,7 @@ schedule:
 '''
 
 FILES: dict[str, str] = {
+    "src/skills/internal/web_scraper.py": WEB_SCRAPER_PY,
     "src/skills/internal/news_scraper.py": NEWS_SCRAPER_PY,
     "src/skills/internal/news_parser.py": NEWS_PARSER_PY,
     "src/skills/internal/news_structurer.py": NEWS_STRUCTURER_PY,
