@@ -1,33 +1,122 @@
-# 三層記憶架構規範
+# 三層記憶架構規範 + 跨 Session 記憶搜尋
 
 Phase 2 的記憶系統由三個獨立元件組成，各自負責不同面向的記憶管理。
 三者協同運作，在 `[9] Memory System` 層統一觸發。
+
+**v0.5.0 新增**：FTS5 跨 Session 全文搜尋 + UserProfiler 自動使用者建模。
 
 ## 架構總覽
 
 ```
 對話輪次（Turn）
        ↓
-┌──────────────────────────────────────────────┐
-│              Memory System                    │
-│                                              │
-│  ┌─────────────────┐  ┌──────────────────┐  │
-│  │  EntityMemory    │  │ HierarchicalMemory│  │
-│  │  實體 → Wiki     │  │ L1/L2/L3 壓縮    │  │
-│  │  （背景執行）     │  │ （同步壓縮）      │  │
-│  └─────────────────┘  └──────────────────┘  │
-│                                              │
-│  ┌──────────────────────────────────────┐   │
-│  │     HybridMemoryRetrieval            │   │
-│  │  ChromaDB 向量 + BM25 關鍵字 + RRF   │   │
-│  └──────────────────────────────────────┘   │
-│                                              │
-│  ┌──────────────────────────────────────┐   │
-│  │     memory.md（檔案式記憶）           │   │
-│  │  data/memory/memory_{user_id}.md     │   │
-│  └──────────────────────────────────────┘   │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                     Memory System                         │
+│                                                          │
+│  ┌─────────────────┐  ┌──────────────────┐              │
+│  │  EntityMemory    │  │ HierarchicalMemory│              │
+│  │  實體 → Wiki     │  │ L1/L2/L3 壓縮    │              │
+│  │  （背景執行）     │  │ （同步壓縮）      │              │
+│  └─────────────────┘  └──────────────────┘              │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  MemorySearch（FTS5 跨 Session 全文搜尋）          │   │
+│  │  conversation_history → FTS5 索引 → context 注入   │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │  UserProfiler（自動使用者建模）                     │   │
+│  │  每 10 輪 → LLM 萃取偏好 → 更新 memory.md         │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+│  ┌──────────────────────────────────────┐               │
+│  │     memory.md（檔案式記憶）           │               │
+│  │  data/memory/memory_{user_id}.md     │               │
+│  └──────────────────────────────────────┘               │
+└──────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## NEW: MemorySearch — FTS5 跨 Session 全文搜尋
+
+### 設計目標
+
+使用者問「上次我問過什麼」或提到先前對話的關鍵字時，Bot 能從歷史中找到並回答。
+
+### 資料庫結構
+
+```sql
+-- 儲存所有對話（含群組記錄）
+CREATE TABLE conversation_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL,          -- 'user' | 'assistant'
+    content TEXT NOT NULL,
+    timestamp REAL NOT NULL,
+    session_id TEXT NOT NULL DEFAULT ''
+);
+
+-- FTS5 全文搜尋虛擬表
+CREATE VIRTUAL TABLE conversation_fts
+USING fts5(content, content_rowid='id', tokenize='unicode61');
+```
+
+### 寫入時機
+
+| 場景 | 寫入 |
+|------|------|
+| 群組訊息（不論是否 @mention） | ✅ 記錄到 conversation_history + FTS5 |
+| 私訊（使用者輸入） | ✅ 記錄 |
+| 助理回覆 | ✅ 記錄（限前 500 字） |
+
+### 查詢時機
+
+在 `_llm_answer()` 中，LLM 生成前呼叫：
+
+```python
+recall_ctx = _memory_search.get_context_for_query(text, user_id)
+# 回傳格式：
+# [歷史回憶]
+# - (user) 之前問過的內容...
+# - (assistant) 當時的回答...
+```
+
+注入 system prompt，讓 LLM 能參考歷史對話回答。
+
+---
+
+## NEW: UserProfiler — 自動使用者建模
+
+### 設計目標
+
+每 N 輪對話結束後自動萃取使用者偏好，不需手動設定。
+
+### 觸發邏輯
+
+```python
+PROFILE_INTERVAL = 10
+
+def should_profile(user_id, session) -> bool:
+    return len(session.turns) - last_profiled_count >= PROFILE_INTERVAL
+```
+
+### 萃取 Prompt
+
+```
+分析以下對話，萃取使用者的偏好和習慣。
+只回傳 key: value 格式，可用的 key 有：
+偏好語言、常用指令、關注主題、工作風格、回覆格式、時區、暱稱、
+常用 Skill、專案背景、技術棧、備註
+只輸出有把握的偏好（至少出現 2 次以上的模式），不要猜測。
+```
+
+### 結果
+
+萃取的偏好自動寫入 `data/memory/memory_{user_id}.md`，
+後續 Planner 和 LLM 回答都能讀取並注入 context。
+
+---
 
 ---
 

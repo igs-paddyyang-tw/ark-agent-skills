@@ -18,10 +18,11 @@ from pathlib import Path
 
 # Phase 2 新增的必要檔案清單
 PHASE2_REQUIRED_FILES: list[str] = [
-    # Telegram Bot（4）
+    # Telegram Bot（5）
     "src/bot/__init__.py",
     "src/bot/main.py",
     "src/bot/handlers.py",
+    "src/bot/permissions.py",
     "src/bot/kiro_handlers.py",
     # LLM 整合層（5）
     "src/llm/__init__.py",
@@ -29,19 +30,25 @@ PHASE2_REQUIRED_FILES: list[str] = [
     "src/llm/gemini_adapter.py",
     "src/llm/kiro_adapter.py",
     "src/llm/llm_router.py",
-    # 對話管理（6）
+    # 對話管理（8）
     "src/conversation/__init__.py",
     "src/conversation/session.py",
     "src/conversation/session_manager.py",
     "src/conversation/memory.py",
+    "src/conversation/memory_search.py",
+    "src/conversation/user_profiler.py",
     "src/conversation/planner.py",
     "src/conversation/progress.py",
-    # 新 Skills（3）
-    "src/skills/internal/wiki_trend_linker.py",
-    "src/skills/internal/vibe_analyser.py",
-    "src/skills/internal/telegram_notify.py",
+    # Skill 追蹤（1）
+    "src/skills/tracker.py",
+    # 排程 CRUD API（1）
+    "src/server/api/schedules.py",
+    # 排程引擎（1）
+    "src/scheduler/engine.py",
     # 資料目錄（1）
     "data/memory",
+    # 設定檔（1）
+    "config/telegram.json",
 ]
 
 # Phase 1 前置檔案（必須已存在）

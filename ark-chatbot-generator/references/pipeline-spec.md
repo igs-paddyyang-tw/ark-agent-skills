@@ -12,8 +12,15 @@ Kiro CLI 指令走獨立路徑，不經過對話管線。
 ```
 Telegram 使用者輸入
        ↓
+[0] 群組 @mention 過濾
+    — 群組訊息：一律記錄到 FTS5（conversation_history）
+    — 無 @mention → 不回話（return）
+    — 有 @mention → 移除 @bot_username → 繼續管線
+    — 私訊 → 白名單檢查
+       ↓
 [1] Bot Gateway（TG Adapter）
-    — 接收 Update、驗證 ALLOWED_USER_IDS、提取文字/圖片/指令
+    — 接收 Update、驗證權限、提取文字/圖片/指令
+    — 進階指令（/totp /news /agent）→ 需 is_allowed()（群組+私訊都需白名單）
        ↓
 [2] Intent Router（LLM + Rule Hybrid）
     — 規則優先：/help, /skills, /invoke, /run → 直接路由
@@ -25,7 +32,8 @@ Telegram 使用者輸入
     — Conversational Planner：判斷資訊是否充足
       → 充足：產出 ExecutionPlan（skill_id + params），進入 [4]
       → 不足：產出 ClarifyRequest（追問問題），直接跳到 [8] 回應
-    — memory.md：OpenClaw 風格檔案式記憶（使用者偏好、常用參數）
+    — memory.md：使用者偏好（UserProfiler 自動更新）
+    — MemorySearch：FTS5 跨 session 召回（注入 system prompt）
        ↓
 [4] Skill Resolver（Tool Filter + Ranking）
     — 根據 ExecutionPlan 從 SkillRegistry 篩選候選 Skills
@@ -41,20 +49,21 @@ Telegram 使用者輸入
     — 對 LLM 回傳的 params 做型別校正（str→int、日期格式化）
     — 呼叫 skill.validate_params() 驗證，失敗則回退請使用者補充資訊
        ↓
-[7] Skill Registry（執行）
+[7] Skill Registry（執行 + 追蹤）
     — SkillRegistry.invoke(skill_id, validated_params)
-    — 捕獲例外，回傳 SkillResult
+    — SkillTracker.record(skill_id, success, duration, error)
+    — 連續失敗 3 次 → needs_evolution() → 觸發自動重寫
        ↓
 [8] Response Formatter
     — 根據 skill_type 選擇格式化策略（表格、Markdown、圖片 caption）
     — 處理 TG 訊息長度限制（4096 字元分段、1024 caption 限制）
     — 也處理 ClarifyRequest 的追問格式化
        ↓
-[9] Memory System（3-layer）
-    — 寫入 HybridMemoryRetrieval（向量 + BM25）
-    — 更新 HierarchicalMemory（壓縮摘要）
+[9] Memory System（4-layer）
+    — FTS5 索引（conversation_history + conversation_fts）
+    — MemoryStore 寫入（per-user .md）
+    — UserProfiler（每 10 輪觸發）
     — 背景觸發 EntityMemory（實體提取 → Wiki）
-    — 更新 memory.md（使用者偏好持久化）
        ↓
 Telegram 回應
 ```

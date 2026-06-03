@@ -54,11 +54,13 @@ description: |
 │   │   ├── __init__.py
 │   │   ├── main.py           # Bot 入口（create_app + 指令註冊）
 │   │   ├── handlers.py       # 訊息處理主流程 + 所有指令 handler
+│   │   ├── permissions.py    # 三級權限（admin / user / none）+ 巢狀 JSON 支援
 │   │   └── kiro_handlers.py  # Kiro CLI 操作 + Skill CodeGen 指令
 │   ├── llm/
 │   │   ├── __init__.py
 │   │   ├── adapter.py        # LLMAdapter（Gemini 主 + Ollama 備援）
 │   │   ├── gemini_adapter.py # GeminiAdapter（FC 專用）
+│   │   ├── gemini_chat.py    # Gemini 即時對話（輕量 API 呼叫）
 │   │   ├── kiro_adapter.py   # KiroAdapter（Kiro CLI Agent 後端）
 │   │   ├── llm_router.py     # LLMRouter（統一路由 + fallback chain）
 │   │   └── prompts.py        # Prompt 版本管理 + A/B 測試
@@ -67,18 +69,26 @@ description: |
 │   │   ├── session.py        # Session / Turn dataclass
 │   │   ├── session_manager.py # SessionManager（生命週期 + SQLite 持久化）
 │   │   ├── planner.py        # ConversationPlanner（LLM 意圖解析 + 五層參數填充）
-│   │   ├── memory.py         # MemoryStore + MemoryExtractor（LLM 隱式提取）
+│   │   ├── memory.py         # MemoryStore（per-user MD 檔案式記憶）
+│   │   ├── memory_search.py  # MemorySearch（FTS5 跨 Session 全文搜尋 + 召回）
+│   │   ├── user_profiler.py  # UserProfiler（LLM 自動萃取使用者偏好）
 │   │   └── progress.py       # ProgressReporter + TelegramProgressReporter
-│   └── skills/
-│       ├── base.py            # BaseSkill / SkillParam / SkillResult
-│       ├── registry.py        # SkillRegistry（auto_discover）
-│       ├── python_skills/     # Python Skills（echo, db_query, ...）
-│       ├── llm_skills/        # LLM Skills（parse_intent, llm_qa, ...）
-│       ├── wiki_skills/       # Wiki Skills（wiki_query, wiki_ingest, ...）
-│       └── internal/          # 業務 Skills（auto_discover 掃描此目錄）
+│   ├── skills/
+│   │   ├── base.py            # BaseSkill / SkillParam / SkillResult
+│   │   ├── registry.py        # SkillRegistry（auto_discover + hot_reload）
+│   │   ├── tracker.py         # SkillTracker（執行統計 + 自我改進觸發）
+│   │   └── internal/          # 業務 Skills（auto_discover 掃描此目錄）
+│   ├── scheduler/
+│   │   └── engine.py         # ScheduleEngine（APScheduler + 動態 CRUD）
+│   └── server/
+│       └── api/
+│           └── schedules.py  # REST API：/api/schedules CRUD
+├── config/
+│   └── telegram.json         # 白名單 + 群組 + 排程設定（支援巢狀 {"telegram": {...}}）
 ├── data/
 │   ├── memory/                # 使用者記憶（per-user .md 檔案）
-│   └── sessions.db            # Session 持久化 SQLite
+│   ├── sessions.db            # Session 持久化 + FTS5 索引
+│   └── skill_stats.json       # Skill 執行統計
 ├── prompts/                   # Prompt 模板（含 _meta.yaml 版本管理）
 │   ├── intent_parse/
 │   ├── param_extract/
@@ -90,7 +100,7 @@ description: |
 ### 步驟 2：產出 Bot 模組
 
 依賴注入模式：`init_components()` 在 `server/main.py` lifespan 中呼叫，
-將 SessionManager、ConversationPlanner、MemoryStore 等元件注入 handlers。
+將 SessionManager、ConversationPlanner、MemoryStore、MemorySearch、SkillTracker、UserProfiler 等元件注入 handlers。
 
 #### 2a. `src/bot/handlers.py` — 訊息處理 + 指令 handler
 
@@ -100,6 +110,9 @@ description: |
 _session_manager: SessionManager | None = None
 _planner: ConversationPlanner | None = None
 _memory_store: MemoryStore | None = None
+_memory_search: MemorySearch | None = None
+_user_profiler: UserProfiler | None = None
+_skill_tracker: SkillTracker | None = None
 _memory_extractor: MemoryExtractor | None = None
 _workflow_engine: Any = None
 _llm_adapter: Any = None
@@ -110,25 +123,109 @@ def init_components(
     workflow_engine=None, llm_adapter=None, skill_registry=None,
 ) -> None:
     """初始化共用元件（由 server/main.py lifespan 呼叫）。"""
-    global _session_manager, _planner, ...
+    global _session_manager, _planner, _memory_search, _user_profiler, _skill_tracker, ...
+    # 新增元件自動初始化
+    _memory_search = MemorySearch()
+    _skill_tracker = SkillTracker()
+    _user_profiler = UserProfiler(_memory_store, _llm_adapter)
 ```
 
 **handle_message 主流程**（自然語言訊息）：
 
 ```python
 async def handle_message(update, context):
-    # 0. 檢查 Kiro 寫入模式（pending_write）
-    # 1. SessionManager.get_or_create(user_id) 取得 Session
+    msg = update.effective_message
+    if not msg or not msg.text:
+        return
+
+    user_id = update.effective_user.id
+    text = msg.text.strip()
+    chat = update.effective_chat
+
+    # ── 群組 @mention 模式 ──
+    is_group = chat and chat.type in ("group", "supergroup")
+    if is_group and _memory_search:
+        _memory_search.index_turn(user_id, "user", text, f"group_{chat.id}")
+
+    if is_group:
+        bot_username = context.bot.username or ""
+        mentioned = f"@{bot_username}" in text if bot_username else False
+        if not mentioned:
+            return  # 群組不回話，只記錄到資料庫
+        text = text.replace(f"@{bot_username}", "").strip()
+        if not text:
+            return
+
+    # ── 私訊權限檢查 ──
+    if not is_group and _permissions and not _permissions.is_private_allowed(update):
+        return
+
+    # 1. SessionManager.get_or_create(user_id)
     # 2. session.add_turn("user", text)
-    # 3. ConversationPlanner.parse_intent(session) → LLM 意圖解析
-    # 4. ConversationPlanner.plan(session, intent, memory) → ExecutionPlan
-    # 5. 根據 PlanAction 分派：
-    #    - CLARIFY → 發送釐清問題 + InlineKeyboard 選項
-    #    - EXECUTE → 建立 TelegramProgressReporter → 執行工作流
-    #    - ANSWER  → LLM 生成回答（含 Wiki context + 使用者記憶注入）
-    #    - RESET   → 重置 Session
-    #    - REMEMBER → 寫入記憶
-    # 6. MemoryExtractor.extract() → InlineKeyboard 確認
+    # 3. 索引到 FTS5（私訊）
+    # 4. ConversationPlanner.plan(session, text) → 意圖解析
+    # 5. 根據 PlanAction 分派（含 Skill 追蹤計時）
+    # 6. LLM 回答時注入 memory_search.get_context_for_query() 召回
+    # 7. UserProfiler.should_profile() → 每 10 輪觸發建模
+```
+
+**群組行為規則**：
+
+| 訊息類型 | 行為 |
+|---------|------|
+| 群組一般訊息（無 @mention） | 記錄到 FTS5 資料庫，**不回話** |
+| 群組 `@bot_username 問題` | 記錄 + 移除 @ → 正常對話流程 |
+| 私訊（白名單） | 正常對話 |
+| 私訊（非白名單） | 忽略 |
+
+**進階指令權限**（群組+私訊都需白名單）：
+
+```python
+async def cmd_totp(update, context):
+    if _permissions and not _permissions.is_allowed(update.effective_user.id):
+        return  # 不是白名單，靜默忽略
+
+async def cmd_news(update, context):
+    if _permissions and not _permissions.is_allowed(update.effective_user.id):
+        return
+
+async def cmd_agent(update, context):
+    if _permissions and not _permissions.is_allowed(update.effective_user.id):
+        return
+```
+
+**Skill 執行追蹤**：
+
+```python
+async def _execute_skill(msg, session, skill_id, params):
+    t0 = time.time()
+    result = await _registry.invoke(skill_id, params)
+    duration = time.time() - t0
+
+    # 記錄統計
+    if _skill_tracker:
+        _skill_tracker.record(skill_id, result.success, duration, result.error or "")
+```
+
+**LLM 回答注入記憶召回**：
+
+```python
+async def _llm_answer(msg, session, text, user_id):
+    memory_ctx = _memory.get_context(user_id) if _memory else ""
+    recall_ctx = ""
+    if _memory_search:
+        recall_ctx = _memory_search.get_context_for_query(text, user_id)
+
+    system = "你是智能助理，用繁體中文回答。簡潔有用。"
+    if memory_ctx:
+        system += f"\n\n使用者偏好：\n{memory_ctx}"
+    if recall_ctx:
+        system += f"\n\n{recall_ctx}"
+    # ... LLM 生成 ...
+
+    # 使用者建模（每 10 輪觸發）
+    if _user_profiler and _user_profiler.should_profile(user_id, session):
+        await _user_profiler.profile(user_id, session)
 ```
 
 **指令 handler**（10 個）：
@@ -394,6 +491,160 @@ class TelegramProgressReporter:
 - `TelegramProgressReporter` 在 `handle_message` 的 EXECUTE 分支中建立
 - 透過 `edit_message_text` 即時更新步驟狀態
 - 500ms 節流避免 Telegram API 速率限制
+
+#### 4f. `src/conversation/memory_search.py` — 跨 Session 全文搜尋
+
+```python
+class MemorySearch:
+    """跨 Session 對話全文搜尋（SQLite FTS5）。"""
+
+    def __init__(self, db_path: str = "data/sessions.db") -> None: ...
+
+    def _init_fts(self) -> None:
+        """建立 conversation_history 表 + FTS5 虛擬表。"""
+        # CREATE TABLE conversation_history (id, user_id, role, content, timestamp, session_id)
+        # CREATE VIRTUAL TABLE conversation_fts USING fts5(content, content_rowid='id', tokenize='unicode61')
+
+    def index_turn(self, user_id: int, role: str, content: str, session_id: str = "") -> None:
+        """索引一則對話到 FTS5。每條訊息都記錄（含群組）。"""
+
+    def search(self, query: str, user_id: int | None = None, limit: int = 10) -> list[dict]:
+        """全文搜尋歷史對話。回傳 [{role, content, timestamp, session_id, rank}]。"""
+
+    def get_context_for_query(self, query: str, user_id: int, max_chars: int = 2000) -> str:
+        """搜尋並格式化為可注入 LLM 的 context 字串。
+        格式：'[歷史回憶]\n- (user) snippet\n- (assistant) snippet'"""
+```
+
+**整合流程**：
+- 群組訊息：不論是否 @mention，都呼叫 `index_turn()` 記錄
+- 私訊：`handle_message` 中呼叫 `index_turn()` 記錄
+- LLM 回答前：`_llm_answer()` 中呼叫 `get_context_for_query()` 注入 system prompt
+
+#### 4g. `src/conversation/user_profiler.py` — 動態使用者建模
+
+```python
+PROFILE_INTERVAL = 10  # 每 10 輪觸發一次
+
+EXTRACT_PROMPT = """分析以下對話，萃取使用者的偏好和習慣。
+只回傳 key: value 格式，可用的 key 有：
+偏好語言、常用指令、關注主題、工作風格、回覆格式、時區、暱稱、常用 Skill、專案背景、技術棧、備註
+只輸出有把握的偏好（至少出現 2 次以上的模式），不要猜測。"""
+
+class UserProfiler:
+    """自動萃取使用者偏好，寫入 MemoryStore。"""
+
+    def __init__(self, memory: MemoryStore, llm_router: LLMRouter) -> None: ...
+
+    def should_profile(self, user_id: int, session: Session) -> bool:
+        """每 PROFILE_INTERVAL 輪觸發一次。"""
+
+    async def profile(self, user_id: int, session: Session) -> dict[str, str]:
+        """取最近 20 輪對話 → LLM 萃取 → 寫入 MemoryStore。"""
+```
+
+**觸發時機**：在 `_llm_answer()` 結尾呼叫，每 10 輪觸發一次。
+**失敗處理**：靜默失敗（try/except + logger.debug），不影響對話。
+
+#### 4h. `src/skills/tracker.py` — Skill 執行統計與自我改進
+
+```python
+FAIL_THRESHOLD = 0.3   # 失敗率閾值
+MIN_EXECUTIONS = 3     # 最少執行次數才觸發判斷
+CONSECUTIVE_FAIL_LIMIT = 3  # 連續失敗觸發
+
+@dataclass
+class SkillStats:
+    skill_id: str
+    total: int = 0
+    success: int = 0
+    fail: int = 0
+    consecutive_fails: int = 0
+    total_duration: float = 0.0
+    last_error: str = ""
+    evolved_count: int = 0
+
+    def needs_evolution(self) -> bool:
+        """連續失敗 >= 3 或 fail_rate > 30% 且 consecutive_fails > 0。"""
+
+class SkillTracker:
+    """Skill 執行統計追蹤器（JSON 持久化）。"""
+
+    def __init__(self, data_path: str = "data/skill_stats.json") -> None: ...
+    def record(self, skill_id: str, success: bool, duration: float, error: str = "") -> None: ...
+    def get_evolution_candidates(self) -> list[SkillStats]: ...
+    def mark_evolved(self, skill_id: str) -> None: ...
+```
+
+**持久化**：`data/skill_stats.json`，每次 `record()` 後自動寫入。
+**整合**：`_execute_skill()` 中計時 + 呼叫 `record()`。
+
+#### 4i. `src/scheduler/engine.py` — 動態排程 CRUD
+
+原有 ScheduleEngine 升級為支援動態新增/修改/刪除：
+
+```python
+class ScheduleEngine:
+    """排程引擎（APScheduler + 動態管理）。"""
+
+    def load_schedules(self, dir_path: Path) -> int:
+        """載入 YAML 靜態排程 + JSON 動態排程。"""
+
+    # ── CRUD API ──
+    def list_schedules(self) -> list[dict]: ...
+    def add_schedule(self, data: dict) -> bool: ...
+    def update_schedule(self, schedule_id: str, updates: dict) -> bool: ...
+    def remove_schedule(self, schedule_id: str) -> bool: ...
+    async def run_now(self, schedule_id: str) -> str | None: ...
+```
+
+**動態排程持久化**：`data/schedules_dynamic.json`
+**REST API**：`src/server/api/schedules.py` 提供 CRUD 端點
+
+#### 4j. `src/server/api/schedules.py` — 排程 REST API
+
+```python
+router = APIRouter(prefix="/api/schedules", tags=["schedules"])
+
+GET    /api/schedules              # 列出所有排程
+POST   /api/schedules              # 新增排程（即時生效）
+PATCH  /api/schedules/{id}         # 更新排程
+DELETE /api/schedules/{id}         # 刪除排程
+POST   /api/schedules/{id}/run     # 立即執行
+POST   /api/schedules/{id}/pause   # 暫停
+POST   /api/schedules/{id}/resume  # 恢復
+```
+
+#### 4k. `src/bot/permissions.py` — 三級權限管理
+
+```python
+class PermissionManager:
+    """從 config/telegram.json 載入白名單。支援 {"telegram": {...}} 巢狀結構。"""
+
+    def _load(self) -> None:
+        data = json.loads(self._config_path.read_text(encoding="utf-8"))
+        # 支援巢狀 {"telegram": {...}} 或扁平 {"admin": {...}, "users": [...]}
+        if "telegram" in data:
+            data = data["telegram"]
+        # ...
+
+    def is_allowed(self, user_id: int) -> bool:
+        """admin 或 user 皆回傳 True（不看 chat type）。"""
+
+    def is_private_allowed(self, update: Update) -> bool:
+        """群組放行，私訊需白名單。"""
+
+    def add_user(self, chat_id: int, name: str) -> bool: ...
+    def remove_user(self, chat_id: int) -> bool: ...
+```
+
+**權限模型**：
+
+| 場景 | 基本對話 | 進階指令 | 管理 |
+|------|---------|---------|------|
+| 群組（@mention） | ✅ 開放 | ✅ 需白名單 | ❌ Admin |
+| 私訊（白名單） | ✅ | ✅ | ✅ Admin |
+| 私訊（非白名單） | ❌ | ❌ | ❌ |
 
 ---
 
