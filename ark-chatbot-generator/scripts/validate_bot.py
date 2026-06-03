@@ -47,8 +47,9 @@ PHASE2_REQUIRED_FILES: list[str] = [
     "src/scheduler/engine.py",
     # 資料目錄（1）
     "data/memory",
-    # 設定檔（1）
+    # 設定檔（2）
     "config/telegram.json",
+    "config/llm_prompts.yaml",
 ]
 
 # Phase 1 前置檔案（必須已存在）
@@ -74,6 +75,7 @@ CONFIG_CHECKS: dict[str, list[str]] = {
         "google-genai",
         "python-telegram-bot",
         "chromadb",
+        "pyyaml",
         "mcp",
     ],
 }

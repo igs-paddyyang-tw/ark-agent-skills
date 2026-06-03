@@ -50,11 +50,15 @@ description: |
 ```
 {project_dir}/
 ├── src/
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── logging.py        # structlog trace logging（bind_trace / unbind_trace）
 │   ├── bot/
 │   │   ├── __init__.py
 │   │   ├── main.py           # Bot 入口（create_app + 指令註冊）
 │   │   ├── handlers.py       # 訊息處理主流程 + 所有指令 handler
 │   │   ├── permissions.py    # 三級權限（admin / user / none）+ 巢狀 JSON 支援
+│   │   ├── totp.py           # TOTP 驗證碼產生（/aws /totp 指令）
 │   │   └── kiro_handlers.py  # Kiro CLI 操作 + Skill CodeGen 指令
 │   ├── llm/
 │   │   ├── __init__.py
@@ -84,7 +88,8 @@ description: |
 │       └── api/
 │           └── schedules.py  # REST API：/api/schedules CRUD
 ├── config/
-│   └── telegram.json         # 白名單 + 群組 + 排程設定（支援巢狀 {"telegram": {...}}）
+│   ├── telegram.json         # 白名單 + 群組 + 排程設定（支援巢狀 {"telegram": {...}}）
+│   └── llm_prompts.yaml     # LLM 預設系統提詞（角色 + 格式規範，可修改不需改程式碼）
 ├── data/
 │   ├── memory/                # 使用者記憶（per-user .md 檔案）
 │   ├── sessions.db            # Session 持久化 + FTS5 索引
@@ -207,16 +212,41 @@ async def _execute_skill(msg, session, skill_id, params):
         _skill_tracker.record(skill_id, result.success, duration, result.error or "")
 ```
 
-**LLM 回答注入記憶召回**：
+**LLM 回答注入記憶召回（含 YAML 系統提詞）**：
 
 ```python
+import yaml
+from pathlib import Path
+
+# ── 載入預設系統提詞（從 config/llm_prompts.yaml）──
+_PROMPTS_PATH = Path(__file__).resolve().parents[2] / "config" / "llm_prompts.yaml"
+
+def _load_prompts() -> dict[str, str]:
+    """從 config/llm_prompts.yaml 載入預設系統提詞。"""
+    defaults = {
+        "default": "你是智能助理，用繁體中文回答。簡潔有用。",
+        "agent": "你是智能助理，用繁體中文回答。簡潔有用。",
+    }
+    if not _PROMPTS_PATH.exists():
+        return defaults
+    try:
+        data = yaml.safe_load(_PROMPTS_PATH.read_text(encoding="utf-8"))
+        return {
+            "default": data.get("default_system_prompt", defaults["default"]).strip(),
+            "agent": data.get("agent_system_prompt", defaults["agent"]).strip(),
+        }
+    except Exception:
+        return defaults
+
+_SYSTEM_PROMPTS = _load_prompts()
+
 async def _llm_answer(msg, session, text, user_id):
     memory_ctx = _memory.get_context(user_id) if _memory else ""
     recall_ctx = ""
     if _memory_search:
         recall_ctx = _memory_search.get_context_for_query(text, user_id)
 
-    system = "你是智能助理，用繁體中文回答。簡潔有用。"
+    system = _SYSTEM_PROMPTS["default"]  # 從 YAML 設定檔載入
     if memory_ctx:
         system += f"\n\n使用者偏好：\n{memory_ctx}"
     if recall_ctx:
@@ -710,11 +740,102 @@ def _keyword_fallback(self, text: str) -> dict:
     # 匹配到 → confidence 0.6，未匹配 → rag_chat confidence 0.3
 ```
 
+#### keyword 快速路由（短路 LLM）
+
+命中特定關鍵字時直接路由到 Skill，不呼叫 LLM 解析意圖：
+
+```python
+_QUICK_ROUTE = [
+    (["抓新聞", "爬蟲", "新聞", "scrape news"], "news_scraper", "chat"),
+    (["產出日報", "日報", "render"], "news_renderer", "chat"),
+    (["程式", "code", "寫一個", "generate"], "llm_cli", "codegen"),
+    (["上傳", "傳送", "丟檔案", "send file", "發送檔案", "傳檔", "丟給我"], "telegram_send_file", "chat"),
+    (["echo", "回音"], "echo", "chat"),
+]
+
+def _keyword_quick_route(text, skill_ids) -> ExecutionPlan | None:
+    lower = text.lower()
+    for keywords, skill_id, mode in _QUICK_ROUTE:
+        if skill_id in skill_ids and any(kw in lower for kw in keywords):
+            # telegram_send_file 需要從自然語言抽取 file_path
+            if skill_id == "telegram_send_file":
+                params = _extract_send_file_params(text)
+                return ExecutionPlan(action=PlanAction.EXECUTE, skill_id=skill_id, params=params)
+            return ExecutionPlan(action=PlanAction.EXECUTE, skill_id=skill_id, params={"prompt": text, "mode": mode})
+    return None
+
+def _extract_send_file_params(text: str) -> dict:
+    """從自然語言中抽取 telegram_send_file 的參數（file_path / send_type / caption）。"""
+    # 匹配 'path' / "path" / 裸路徑（含 / 或 \）
+    path_match = re.search(r"['\"]([^'\"]+\.\w+)['\"]", text)
+    if not path_match:
+        path_match = re.search(r"((?:[\w./\\-]+/)?[\w.-]+\.\w+)", text)
+    file_path = path_match.group(1) if path_match else ""
+    # 判斷 send_type: photo / message / document（預設）
+    send_type = "document"
+    if any(k in text.lower() for k in ["圖片", "photo", "image", "png", "jpg"]):
+        send_type = "photo"
+    elif any(k in text.lower() for k in ["訊息", "message", "文字", "text"]):
+        send_type = "message"
+    return {"file_path": file_path, "send_type": send_type, "caption": ""}
+```
+
 ---
 
 ### 步驟 6：更新專案設定檔
 
-#### 6a. 更新 `.env.example`
+#### 6a. 產出 `config/llm_prompts.yaml`（LLM 預設系統提詞）
+
+```yaml
+# LLM 對話預設系統提詞設定
+# 用於 Telegram Bot / FastAPI 對話的 system instruction
+
+default_system_prompt: |
+  你是一位資深 AI 工程師、全端工程師，同時也是報告整理專家。
+
+  ## 核心能力
+  - 精通 Python / TypeScript / Go 等主流語言
+  - 熟悉系統設計、API 架構、雲端部署
+  - 擅長將複雜資訊整理成結構化、易讀的報告
+
+  ## 回答風格
+  - 使用繁體中文回答
+  - 結論先行，簡潔有力
+  - 所有回覆自動套用精美 Markdown 格式：
+    - 使用標題層級（##、###）組織結構
+    - 重點使用 **粗體** 標記
+    - 程式碼使用 `inline` 或 ```code block```
+    - 列表使用 bullet points 或 numbered list
+    - 適時使用表格整理比較資訊
+    - 使用分隔線（---）區分章節
+  - 技術問題附帶程式碼範例
+  - 複雜問題先給摘要再展開細節
+
+  ## 格式規範
+  - 標題不超過 3 層（##、###、####）
+  - 每段不超過 3-4 行
+  - 關鍵數字 / 指標用 `code` 標記
+  - 步驟流程用 1. 2. 3. 編號
+  - 優缺點用 ✅ / ❌ emoji 標記
+
+# Agent CLI 模式的額外提詞
+agent_system_prompt: |
+  你是一位資深 AI 工程師與全端工程師，具備深度分析能力。
+  擅長程式碼產出、架構設計、技術研究。
+  回答使用繁體中文，套用精美 Markdown 格式。
+  複雜問題先列出思考步驟，再給出結論和程式碼。
+
+# FastAPI /api/v1/chat 的預設提詞
+api_system_prompt: |
+  你是智能助理，專業是 AI 工程師與全端工程師。
+  使用繁體中文回答，套用 Markdown 格式輸出。
+  簡潔、精準、附帶程式碼範例。
+```
+
+**使用方式**：handlers.py 啟動時載入，不再 hardcode system prompt。
+修改提詞只需編輯 YAML 檔案，不需改程式碼。
+
+#### 6b. 更新 `.env.example`
 
 ```bash
 # ── Telegram Bot ─────────────────────────────────────────
@@ -744,13 +865,23 @@ KIRO_WORKSPACE=/your/workspace/path
 KIRO_CHAT_TIMEOUT=120
 # 檔案操作超時（秒）
 KIRO_FILE_TIMEOUT=30
+
+# ── TOTP Secrets（不進版控）─────────────────────────────
+KIRO_SECRET_AWS=your_base32_totp_secret
+
+# ── Logging ──────────────────────────────────────────────
+# true = JSON 輸出（生產），false = Console 漂亮格式（開發）
+LOG_JSON=false
 ```
 
-#### 6b. 更新 `requirements.txt`
+#### 6c. 更新 `requirements.txt`
 
 ```
 google-genai>=1.0.0
 python-telegram-bot[ext]>=21.0
+structlog>=24.0.0
+pyotp>=2.9.0
+pyyaml>=6.0.0
 mcp>=1.2.0
 ```
 
@@ -827,6 +958,60 @@ await bot_app.updater.start_polling(drop_pending_updates=True)
 
 ## 踩坑紀錄
 
+### LLM 預設系統提詞外部化（2026-06-03）
+
+System prompt 從 hardcode 改為 `config/llm_prompts.yaml` 載入，好處：
+- 修改提詞不需改程式碼（運維友善）
+- 支援多角色提詞（default / agent / api）
+- YAML 格式易讀易修改
+
+**注意**：handlers.py 模組載入時就讀取 YAML（module-level `_load_prompts()`），
+Bot 啟動後修改 YAML 需重啟才生效。未來可改為 hot-reload。
+
+**依賴**：`pyyaml>=6.0.0`
+
+### md_formatter Skill（2026-06-03）
+
+`src/skills/internal/md_formatter.py` — 將任意文字轉換為精美 Markdown 格式。
+- 4 種風格：`default` / `report` / `notes` / `comparison`
+- LLM 驅動格式化 + basic fallback（LLM 不可用時仍可基本排版）
+- 可透過對話自然語言觸發（如「幫我格式化這段文字」）
+- 也可由其他 Skill 呼叫，用於美化報告輸出
+
+### structlog trace logging（2026-06-03）
+
+使用 `structlog` + `contextvars` 實現 per-conversation trace，解決多人同時對話時 log 混亂問題：
+
+```python
+# src/core/logging.py
+from src.core.logging import setup_logging, get_logger, bind_trace, unbind_trace
+
+# 啟動時
+setup_logging(json_mode=os.getenv("LOG_JSON", "false") == "true")
+
+# 每次收到訊息
+bind_trace(user_id=937896656, channel="telegram")
+log = get_logger()
+log.info("收到訊息", text="你好")
+# → 自動帶 trace_id + user_id + channel
+```
+
+**依賴**：`structlog>=24.0.0`
+**環境變數**：`LOG_JSON=true`（生產切 JSON 輸出）
+
+### TOTP 驗證碼功能（2026-06-03）
+
+從 ninja-bot 移植的 TOTP 快捷指令，讓團隊透過 Bot 取得 MFA 驗證碼：
+
+```python
+# src/bot/totp.py — TotpManager
+# config/telegram.json — kiro_tokens 設定（secret 用 ${ENV_VAR}）
+# 指令：/aws（快捷）、/totp <name>（通用）
+```
+
+**依賴**：`pyotp>=2.9.0`
+**安全性**：Secret 只透過環境變數注入，不進版控。
+
 ### GeminiAdapter 延遲初始化（2026-04-16）
 
 `GeminiAdapter` 不能在模組層級實例化（`handlers.py` 的全域變數），因為此時 `load_dotenv()` 尚未執行，`GEMINI_API_KEY` 會是空字串。
@@ -853,6 +1038,29 @@ Telegram Bot polling 會大量輸出 `INFO:httpx:HTTP Request: POST .../getUpdat
 
 ```python
 logging.getLogger("httpx").setLevel(logging.WARNING)
+```
+
+### LLM CLI subprocess_shell + 容錯修正（2026-06-03）
+
+**問題 1**：Windows 上 `asyncio.create_subprocess_exec` 無法直接執行 `.cmd` 批次檔（`[WinError 2]`）。
+**解法**：改用 `asyncio.create_subprocess_shell`，shell 會自動解析 `.cmd` 副檔名。
+
+**問題 2**：Gemini CLI stderr 有 `Ripgrep is not available` 警告導致 exit code = 1，Bot 誤判為失敗。
+**解法**：`_chat` 模式改為「有 stdout 輸出就視為成功」，不再單純以 exit code 判斷。
+
+**問題 3**：Agent 模式下自然語言觸發 `telegram_send_file` 被路由到 Gemini CLI 對話而非 Skill 執行。
+**解法**：Planner `_QUICK_ROUTE` 新增 `telegram_send_file` 關鍵字 + `_extract_send_file_params()` 從訊息中抽取 file_path/send_type。
+
+```python
+# _run_cli 改用 shell
+cmd_str = " ".join(cmd)
+process = await asyncio.create_subprocess_shell(cmd_str, ...)
+
+# _chat 容錯
+if out:  # 有 stdout 就算成功
+    return SkillResult(success=True, data={"output": out, ...})
+if code != 0:
+    return SkillResult(success=False, error=...)
 ```
 
 ### KiroAdapter 可用性檢查（2026-04-24）
