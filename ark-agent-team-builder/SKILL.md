@@ -619,4 +619,4 @@ python scripts/validate_team.py
 ### 卡關時
 
 - 直接複製 `team.example.yaml` 改名為 `team.yaml`
-- 手動建目錄：`mkdir agents\leader-agent\docs agents\leader-agent\output agents\leader-agent\knowledge`
+- 手動建目錄：`mkdir agents\pm-agent\docs agents\pm-agent\output agents\pm-agent\knowledge`

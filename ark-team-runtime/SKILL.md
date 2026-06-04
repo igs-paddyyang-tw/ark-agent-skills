@@ -219,7 +219,7 @@ python start.py
 
 ### 下一步
 
-完成後告訴 AI：`為 leader-agent 配置 .kiro/，角色是專案經理`（觸發 ark-kiro-init）
+完成後告訴 AI：`為 pm-agent 配置 .kiro/，角色是專案經理`（觸發 ark-kiro-init）
 
 ### 卡關時
 

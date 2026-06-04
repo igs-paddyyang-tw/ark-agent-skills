@@ -613,7 +613,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 ### 觸發提詞（逐一配置）
 
 ```
-為 leader-agent 配置 .kiro/，角色是專案經理
+為 pm-agent 配置 .kiro/，角色是專案經理
 ```
 
 ```

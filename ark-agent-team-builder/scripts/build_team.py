@@ -195,8 +195,8 @@ instances:
     role: admin
     skip_resume: true
 
-  leader-agent:
-    working_directory: agents/leader-agent
+  pm-agent:
+    working_directory: agents/pm-agent
     description: "🧠 Leader — 需求分析、派工、驗收"
     role: leader
     skip_resume: true
@@ -222,7 +222,7 @@ health_port: 13030
 
 def _write_scheduler_yaml(output_dir: Path, cfg: dict) -> None:
     """產出 scheduler.yaml（對齊 GA Team 格式：id + reply_to）。"""
-    leader = "leader-agent"
+    leader = "pm-agent"
     admin = "admin-agent"
     for name, inst in cfg.get("instances", {}).items():
         inst = inst or {}

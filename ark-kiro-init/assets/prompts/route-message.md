@@ -2,7 +2,7 @@
 
 收到使用者訊息後，判斷意圖並路由：
 
-- 分析/業務需求 → `send_to_instance("leader-agent", 訊息)`
+- 分析/業務需求 → `send_to_instance("pm-agent", 訊息)`
 - 服務問題/技術決策 → 自己處理
 - 不確定 → 詢問使用者意圖
 
