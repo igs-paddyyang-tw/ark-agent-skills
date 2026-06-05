@@ -60,7 +60,7 @@ Agent 間通訊：
 ```
 基礎系統（ark-agent-teams-builder 產出）
   │
-  ├── 加 Telegram → 在 leader-agent/ 下跑 /ark-chatbot
+  ├── 加 Telegram → 在 pm-agent/ 下跑 /ark-chatbot
   ├── 加 Web UI → 在某 agent/ 下跑 /ark-webapp
   ├── 加工作流 → 在某 agent/ 下跑 /ark-scheduler
   └── 加知識庫 → 跑 /ark-wiki-engine

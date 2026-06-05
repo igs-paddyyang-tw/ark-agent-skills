@@ -5,20 +5,20 @@
 ### 最小團隊（2 人）
 | 角色 | instance_name | role | emoji | 描述 |
 |------|--------------|------|-------|------|
-| Tech Lead | leader-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
+| Tech Lead | pm-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
 | Developer | dev-agent | worker | 🧑‍💻 | 編寫程式碼、實現功能、重構 |
 
 ### 標準團隊（3 人）— 預設
 | 角色 | instance_name | role | emoji | 描述 |
 |------|--------------|------|-------|------|
-| Tech Lead | leader-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
+| Tech Lead | pm-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
 | Developer | dev-agent | worker | 🧑‍💻 | 編寫程式碼、實現功能、重構 |
 | QA Engineer | qa-agent | worker | 🧪 | 測試策略、自動化測試、Code Review |
 
 ### 全端團隊（4 人）
 | 角色 | instance_name | role | emoji | 描述 |
 |------|--------------|------|-------|------|
-| Tech Lead | leader-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
+| Tech Lead | pm-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
 | Frontend | frontend-agent | worker | 👁️ | 前端開發、UI/UX、動畫 |
 | Backend | backend-agent | worker | 🐛 | 後端開發、API、資料庫 |
 | DevOps | devops-agent | worker | ⚙️ | CI/CD、部署、基礎設施 |
@@ -26,7 +26,7 @@
 ### 遊戲團隊（5 人）
 | 角色 | instance_name | role | emoji | 描述 |
 |------|--------------|------|-------|------|
-| Tech Lead | leader-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
+| Tech Lead | pm-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
 | Game Dev | gamedev-agent | worker | 🎮 | 遊戲系統、前後端整合 |
 | Frontend | frontend-agent | worker | 👁️ | 前端渲染、動畫、UI |
 | Backend | backend-agent | worker | 🐛 | 後端邏輯、WebSocket、API |
@@ -35,7 +35,7 @@
 ### 完整團隊（6 人）
 | 角色 | instance_name | role | emoji | 描述 |
 |------|--------------|------|-------|------|
-| Tech Lead | leader-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
+| Tech Lead | pm-agent | leader | 🔱 | 架構規劃、任務拆解、品質把關 |
 | Developer | dev-agent | worker | 🧑‍💻 | 編寫程式碼、實現功能 |
 | QA | qa-agent | worker | 🧪 | 測試策略、自動化測試 |
 | DevOps | devops-agent | worker | ⚙️ | CI/CD、部署、監控 |

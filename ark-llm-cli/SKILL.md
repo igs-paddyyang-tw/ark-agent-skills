@@ -216,7 +216,9 @@ async def execute(self, params: dict) -> SkillResult:
 
 ```python
 async def _run_cli(self, prompt: str, backend: str, model: str, timeout: int) -> tuple[str, str, int]:
-    """執行 CLI，回傳 (stdout, stderr, returncode)。"""
+    """執行 CLI，回傳 (stdout, stderr, returncode)。
+    注意：Windows 上 .cmd 檔必須用 subprocess_shell。
+    """
     cfg = BACKENDS[backend]
     cmd = cfg["cmd"]
     m = model or cfg["default_model"]
@@ -224,13 +226,16 @@ async def _run_cli(self, prompt: str, backend: str, model: str, timeout: int) ->
     env = os.environ.copy()
     env.update(cfg.get("env_extra", {}))
 
-    import tempfile
-    process = await asyncio.create_subprocess_exec(
-        *args,
+    cwd = os.getenv("AI_BOT_WORKSPACE", str(Path(__file__).resolve().parents[3]))
+
+    # Windows .cmd 檔必須用 shell 模式
+    cmd_str = " ".join(args)
+    process = await asyncio.create_subprocess_shell(
+        cmd_str,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         env=env,
-        cwd=tempfile.gettempdir(),
+        cwd=cwd,
     )
     stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
     return (
@@ -250,6 +255,9 @@ async def _run_cli(self, prompt: str, backend: str, model: str, timeout: int) ->
 async def _chat(self, p, backend):
     prompt = f"{p.system_prompt}\n\n{p.prompt}" if p.system_prompt else p.prompt
     out, err, code = await self._run_cli(prompt, backend, p.model, p.timeout)
+    # 有 stdout 輸出就視為成功（CLI stderr 警告不影響結果）
+    if out:
+        return SkillResult(success=True, data={"output": out, "backend": backend, "model": p.model or BACKENDS[backend]["default_model"]})
     if code != 0:
         return SkillResult(success=False, error=f"CLI 失敗 (code {code}): {err[:300]}")
     return SkillResult(success=True, data={"output": out, "backend": backend, "model": p.model or BACKENDS[backend]["default_model"]})
@@ -419,7 +427,8 @@ ANTHROPIC_API_KEY=your_key
 
 ## 注意事項
 
-- 所有 CLI 使用 `asyncio.create_subprocess_exec`，非阻塞
+- Windows 上 `.cmd` 檔必須用 `asyncio.create_subprocess_shell`（`exec` 無法直接執行 .cmd 批次檔）
+- `_chat` 模式容錯：有 stdout 輸出就視為成功（Gemini CLI stderr 警告不影響結果）
 - `_availability_cache` 快取可用性結果，避免重複檢查
 - Kiro CLI 不支援 codegen/skill_gen 模式（僅 chat + evaluate）
 - timeout 依後端調整：Kiro 預設 120s，其他 60s
@@ -512,3 +521,23 @@ python -c "from src.llm.llm_router import LLMRouter; print('OK')"
 **與 LLM 的分工：**
 - scaffold 產出固定骨架（介面、fallback chain、CLI 封裝）
 - 使用者透過 Bot 對話擴充新後端或客製模式
+
+---
+
+## 踩坑紀錄
+
+### Windows .cmd 無法用 subprocess_exec（2026-05-29）
+
+**問題**：`asyncio.create_subprocess_exec("gemini.cmd", ...)` 在 Windows 上拋出 `[WinError 2] 系統找不到指定的檔案`。
+**原因**：npm 全域安裝的 CLI 是 `.cmd` 批次檔，`exec` 無法直接執行。
+**解法**：改用 `asyncio.create_subprocess_shell(cmd_str, ...)`。
+
+### Gemini CLI stderr 警告導致誤判失敗（2026-06-03）
+
+**問題**：Gemini CLI 輸出 `Ripgrep is not available. Falling back to GrepTool.` 到 stderr，exit code = 1，Bot 誤判為 CLI 呼叫失敗。
+**解法**：`_chat` 模式改為「有 stdout 輸出就視為成功」，exit code 僅在無 stdout 時才作為失敗依據。
+
+### cwd 必須用絕對路徑（2026-06-03）
+
+**問題**：`_run_cli` 的 `cwd` 用相對路徑或 `tempfile.gettempdir()` 時，Gemini CLI 找不到專案檔案。
+**解法**：設定環境變數 `AI_BOT_WORKSPACE` 為專案絕對路徑，`_run_cli` 優先使用此變數。

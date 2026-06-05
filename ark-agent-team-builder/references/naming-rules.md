@@ -11,7 +11,7 @@
 
 | 使用者輸入 | 轉換結果 |
 |-----------|---------|
-| Tech Lead | leader-agent |
+| Tech Lead | pm-agent |
 | Frontend Developer | frontend-agent |
 | QA Engineer | qa-agent |
 | 資料工程師 | data-engineer-agent |
@@ -21,7 +21,7 @@
 ## Working Directory
 
 - 格式：`agents/{instance_name}`
-- 範例：`agents/leader-agent`
+- 範例：`agents/pm-agent`
 
 ## Description
 
