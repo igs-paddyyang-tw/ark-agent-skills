@@ -1,6 +1,6 @@
 # ark-kiro-skills
 
-**52 個** Kiro Skills 食譜集，用自然語言觸發產出智能助理功能。
+**55 個** Kiro Skills 食譜集，用自然語言觸發產出智能助理功能。
 
 ## 安裝
 
@@ -184,6 +184,25 @@ Step 4: 啟動
 ---
 
 ## 版本異動
+
+### v2.5 (2026-06-05) — Script 化 Wiki Engine + 新增 3 Skills
+
+**新增 Skills（52 → 55）：**
+- `ark-ai-bot-builder`：一鍵產出完整 AI Agent Bot Workspace（build_bot.py + assets + templates）
+- `ark-team-runtime`：Agent Team runtime 啟動程式產出
+- `ark-executive-assistant`：部長個人助理（工作紀錄 + 5 維度追問 + 日誌提醒）
+
+**Script 化：**
+- `ark-wiki-engine`：新增 `build_wiki.py`（一鍵產出 8 Skills + 知識庫 schema）+ `validate_wiki.py`
+- `ark-ai-bot-builder`：完整 assets/scripts/templates（18 個檔案）
+- `ark-chatbot-generator`：SKILL.md 大幅更新（permissions、memory_search、user_profiler、skill_tracker、排程 CRUD）
+
+**更新 Skills：**
+- `ark-agent-team-builder`（SKILL + refs + build_team.py）
+- `ark-kiro-init`（SKILL + SOUL-admin + route-message）
+- `ark-telegram-bot`（SKILL）
+- `ark-llm-cli`（SKILL）
+- `ark-md-to-pixi-ast`（7 個 Python 腳本）
 
 ### v2.4 (2026-05-27) — build_team/build_kiro Script 化 + 新增 2 Skills
 
