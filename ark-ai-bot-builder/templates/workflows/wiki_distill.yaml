@@ -1,0 +1,9 @@
+id: wiki_distill
+name: 知識庫蒸餾（raw → wiki）
+steps:
+  - id: distill
+    type: skill
+    skill: wiki_distill
+    params:
+      timeout: 300
+    output: result

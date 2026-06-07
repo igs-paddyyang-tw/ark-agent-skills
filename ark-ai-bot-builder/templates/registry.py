@@ -1,4 +1,6 @@
 """SkillRegistry — 註冊、查詢、執行 Skills。"""
+from __future__ import annotations
+
 import importlib
 import logging
 import pkgutil

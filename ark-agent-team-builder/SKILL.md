@@ -620,3 +620,82 @@ python scripts/validate_team.py
 
 - 直接複製 `team.example.yaml` 改名為 `team.yaml`
 - 手動建目錄：`mkdir agents\pm-agent\docs agents\pm-agent\output agents\pm-agent\knowledge`
+
+---
+
+## Bot 整合升級（ark-ai-bot-builder → Team）
+
+團隊骨架產出後，可整合完整 Telegram Bot 能力。
+
+### 整合步驟
+
+```bash
+# 1. 複製 ark-ai-bot-builder 的 src/ 到團隊專案
+cp -r <bot-project>/src/ ./src/
+mkdir -p config && cp <bot-project>/config/llm_prompts.yaml config/
+
+# 2. 修改 3 個整合點
+#    - src/bot/main.py: create_app(daemon=daemon) + /team 指令
+#    - src/bot/handlers.py: init_components(daemon=) + cmd_team + handle_message 轉發
+#    - start.py: asyncio Bot + Daemon 共存
+
+# 3. 清理舊檔
+rm runtime/telegram_bot.py  # 舊 urllib bot（已被 src/bot 取代）
+
+# 4. 更新依賴
+#    requirements.txt 合併：python-telegram-bot, google-genai, openai, fastapi, uvicorn...
+```
+
+### 整合後架構
+
+```
+使用者 → Telegram Bot (python-telegram-bot)
+  ├── /chat → LLM Router (Gemini/OpenAI, 1-3s)
+  ├── /team status → 查詢 6 agent 狀態
+  ├── /team send @agent msg → 派工
+  ├── /ask → 知識庫搜尋
+  ├── /skills → 列出 Skills
+  └── 直接打字 → daemon → mc-agent（深度處理）
+```
+
+### Event Bus + Dashboard
+
+整合後自動獲得：
+
+- **Event Bus**（`runtime/event_bus.py`）：全域事件匯流排，連接 Bot、Daemon、Dashboard
+- **Web Dashboard**（`runtime/dashboard/index.html`）：暗黑科技風即時面板
+- **SSE API**（`runtime/api.py`）：FastAPI + `/api/events` 即時推送
+- **Agent 回覆閉環**：stdout → reply_fn → notify_fn → Telegram
+
+Dashboard 端點：`http://localhost:{health_port}/dashboard`
+
+### start.py 範本（整合版）
+
+```python
+async def main():
+    daemon = TeamDaemon("team.yaml")
+    daemon_task = asyncio.create_task(daemon.run())
+    await asyncio.sleep(2)  # 等 agent 子程序就緒
+
+    app = create_app(daemon=daemon)
+    await asyncio.wait_for(app.initialize(), timeout=15)
+    await app.start()
+    await app.updater.start_polling(drop_pending_updates=True)
+
+    # 注入通知 callback
+    chat_id = int(os.environ.get("TELEGRAM_CHAT_ID", "0"))
+    async def _notify(text):
+        await app.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+    daemon.set_notify_fn(_notify)
+
+    await daemon_task
+```
+
+### 踩坑紀錄
+
+| 問題 | 解法 |
+|------|------|
+| Bot initialize timeout | `asyncio.wait_for(timeout=15)` + 重試 |
+| httpx 日誌噪音 | `logging.getLogger("httpx").setLevel(WARNING)` |
+| 舊 telegram_bot.py 衝突 | 刪除，由 src/bot 接管 |
+| Agent 回覆使用者看不到 | process.py 加 stdout reader + reply_fn |

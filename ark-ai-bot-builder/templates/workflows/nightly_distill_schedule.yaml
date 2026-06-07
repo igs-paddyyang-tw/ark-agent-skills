@@ -1,0 +1,6 @@
+id: nightly_distill
+workflow_id: wiki_distill
+cron: "0 22 * * *"
+enabled: true
+params: {}
+notify_chat_id: "${TELEGRAM_CHAT_ID}"
