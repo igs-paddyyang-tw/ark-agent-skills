@@ -1,4 +1,6 @@
 """ConversationPlanner — 自然語言 → 意圖路由（三層降級）。"""
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -19,10 +21,12 @@ class ExecutionPlan:
 
 # ── keyword 快速路由（毫秒級，不呼叫 LLM）──
 _QUICK_ROUTE: list[tuple[list[str], str, dict]] = [
-    (["新聞", "日報", "news", "daily"], "news_scraper", {"config_path": "config/news_sources.yaml"}),
     (["程式", "code", "寫一個", "generate", "codegen"], "llm_cli", {"mode": "codegen"}),
     (["echo", "回音", "測試"], "echo", {}),
 ]
+
+# 觸發完整 daily 流程的關鍵字（由 handlers 特殊處理）
+DAILY_KEYWORDS = ["新聞", "日報", "news", "daily", "科技日報"]
 
 
 class ConversationPlanner:

@@ -22,13 +22,19 @@ async def chat(message: str, system_prompt: str = "") -> str:
     if not is_available():
         return ""
     try:
-        client = _get_client()
-        config = {"system_instruction": system_prompt} if system_prompt else None
-        response = client.models.generate_content(
-            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-            contents=message,
-            config=config,
-        )
-        return response.text or ""
+        import asyncio
+        return await asyncio.to_thread(_sync_chat, message, system_prompt)
     except Exception:
         return ""
+
+
+def _sync_chat(message: str, system_prompt: str) -> str:
+    """同步 Gemini API 呼叫（由 to_thread 包裝）。"""
+    client = _get_client()
+    config = {"system_instruction": system_prompt} if system_prompt else None
+    response = client.models.generate_content(
+        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        contents=message,
+        config=config,
+    )
+    return response.text or ""

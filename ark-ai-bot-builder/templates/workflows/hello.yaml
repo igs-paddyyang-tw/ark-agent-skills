@@ -1,0 +1,9 @@
+id: hello
+name: Hello World 測試工作流
+steps:
+  - id: greet
+    type: skill
+    skill: echo
+    params:
+      message: "Hello from WorkflowEngine!"
+    output: greeting
