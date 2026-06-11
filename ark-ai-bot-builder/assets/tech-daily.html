@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{DATE}} 科技日報</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  background: #e8edf5;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 32px; padding: 24px; min-height: 100vh;
+}
+.card {
+  width: 860px; background: #fff; border-radius: 18px;
+  overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+/* Header */
+.header {
+  background: linear-gradient(135deg, #dde8ff, #c8daff);
+  padding: 22px 32px 18px; text-align: center;
+}
+.header-title { font-size: 38px; font-weight: 900; color: #0d1b5e; letter-spacing: 2px; }
+/* Subtitle */
+.subtitle-bar {
+  background: #f0f4ff; border-bottom: 2px solid #d0daf5;
+  text-align: center; padding: 13px 20px;
+  font-size: 19px; color: #1e3a8a; font-weight: 800;
+}
+.subtitle-bar span { color: #0d1b5e; }
+/* Main */
+.main { display: flex; padding: 20px 24px; background: #fff; }
+/* Left */
+.left-panel {
+  flex: 0 0 310px; background: linear-gradient(160deg, #dde8ff, #c8daff);
+  border-radius: 14px; display: flex; flex-direction: column;
+  align-items: center; padding: 20px 16px 16px; margin-right: 20px; min-height: 240px;
+}
+.cover-img { width: 100%; flex: 1; min-height: 0; border-radius: 10px; object-fit: cover; margin-bottom: 10px; }
+.source-info { width: 100%; margin-top: auto; }
+.source-row {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 13px; font-weight: 700; color: #0d1b5e;
+  background: rgba(255,255,255,0.6); border-radius: 8px; padding: 8px 10px;
+}
+.source-line { display: flex; align-items: center; gap: 8px; }
+.source-icon {
+  width: 26px; height: 26px; background: #1e3a8a; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+}
+/* Right */
+.right-panel { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.info-box { border: 1.5px solid #d0daf5; border-radius: 12px; padding: 14px 16px; }
+.info-box-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.info-icon {
+  width: 32px; height: 32px; border-radius: 50%; background: #1e3a8a;
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.info-box-title { font-size: 20px; font-weight: 900; color: #1e40af; letter-spacing: 1px; }
+.info-box-body { font-size: 13.5px; font-weight: 700; color: #0d1b5e; line-height: 1.7; }
+.hl { color: #e03030; font-weight: 900; }
+/* Quote */
+.quote-bar {
+  border: 2px solid #4a7fff; border-radius: 10px;
+  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+}
+.quote-text { font-size: 14.5px; font-weight: 900; color: #0d1b5e; letter-spacing: 0.5px; }
+/* Inspiration */
+.inspiration-bar {
+  background: #f0f4ff; border-top: 1.5px solid #d0daf5;
+  padding: 12px 24px; display: flex; align-items: center; flex-wrap: wrap;
+}
+.inspiration-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 800; color: #0d1b5e; margin-right: 20px;
+}
+.bulb-icon {
+  width: 32px; height: 32px; background: #fffbeb; border: 2px solid #f59e0b;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.tags { display: flex; gap: 10px; flex-wrap: wrap; }
+.tag {
+  display: flex; align-items: center; gap: 6px;
+  background: #fff; border: 1.5px solid #c7d5f5; border-radius: 20px;
+  padding: 5px 14px; font-size: 13px; color: #1e3a8a; font-weight: 600;
+}
+.tag-icon { font-size: 15px; }
+/* Footer */
+.footer {
+  background: linear-gradient(135deg, #dde8ff, #c8daff);
+  padding: 9px 24px; display: flex; align-items: center; justify-content: flex-end;
+}
+.footer-right { display: flex; align-items: center; gap: 20px; }
+.page-num { color: #1e3a8a; font-size: 13px; font-weight: 700; }
+.brand { color: #e03030; font-weight: 900; font-size: 18px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║  科技日報模板 — 使用說明                                  ║
+  ║                                                          ║
+  ║  1. 複製下方 <div class="card">...</div> 區塊            ║
+  ║  2. 替換 {{變數}} 為實際內容                              ║
+  ║  3. 每則新聞一張卡片，可堆疊多張                          ║
+  ║  4. 圖片放 imgs/ 資料夾，src 指向相對路徑                 ║
+  ╚══════════════════════════════════════════════════════════╝
+
+  變數清單：
+  {{DATE}}        — 日期（格式：2026.05.20）
+  {{TOPIC}}       — 焦點主題分類（如：AI 焦點）
+  {{TITLE}}       — 新聞標題
+  {{IMG_SRC}}     — 封面圖路徑
+  {{IMG_ALT}}     — 圖片替代文字
+  {{SOURCE}}      — 來源
+  {{NEWS_DATE}}   — 新聞日期
+  {{WHAT}}        — 發生了什麼（內文，可用 <span class="hl">關鍵詞</span> 標紅）
+  {{WHY}}         — 為什麼重要（內文）
+  {{SUMMARY}}     — 一句話總結
+  {{TAG1_ICON}}   — 啟發標籤 1 emoji
+  {{TAG1_TEXT}}   — 啟發標籤 1 文字
+  {{TAG2_ICON}}   — 啟發標籤 2 emoji
+  {{TAG2_TEXT}}   — 啟發標籤 2 文字
+  {{TAG3_ICON}}   — 啟發標籤 3 emoji
+  {{TAG3_TEXT}}   — 啟發標籤 3 文字
+  {{PAGE}}        — 頁碼（如：1 / 3）
+-->
+
+<!-- ══════════════ 卡片模板開始 ══════════════ -->
+<div class="card">
+
+  <div class="header">
+    <div class="header-title">{{DATE}} 科技日報</div>
+  </div>
+
+  <div class="subtitle-bar">
+    {{TOPIC}} ｜ <span>{{TITLE}}</span>
+  </div>
+
+  <div class="main">
+    <div class="left-panel">
+      <img class="cover-img" src="{{IMG_SRC}}" alt="{{IMG_ALT}}">
+      <div class="source-info">
+        <div class="source-row">
+          <div class="source-line">
+            <span class="source-icon">📄</span>
+            <span><strong>來源：</strong>{{SOURCE}}</span>
+          </div>
+          <div class="source-line">
+            <span class="source-icon">📅</span>
+            <span><strong>日期：</strong>{{NEWS_DATE}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="info-box">
+        <div class="info-box-header">
+          <div class="info-icon">📋</div>
+          <div class="info-box-title">發生了什麼</div>
+        </div>
+        <div class="info-box-body">{{WHAT}}</div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-box-header">
+          <div class="info-icon">⭐</div>
+          <div class="info-box-title">為什麼重要</div>
+        </div>
+        <div class="info-box-body">{{WHY}}</div>
+      </div>
+
+      <div class="quote-bar">
+        <div class="quote-text">一句話總結：{{SUMMARY}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="inspiration-bar">
+    <div class="inspiration-label">
+      <div class="bulb-icon">💡</div>
+      對團隊的啟發
+    </div>
+    <div class="tags">
+      <div class="tag"><span class="tag-icon">{{TAG1_ICON}}</span> {{TAG1_TEXT}}</div>
+      <div class="tag"><span class="tag-icon">{{TAG2_ICON}}</span> {{TAG2_TEXT}}</div>
+      <div class="tag"><span class="tag-icon">{{TAG3_ICON}}</span> {{TAG3_TEXT}}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-right">
+      <span class="page-num">{{PAGE}}</span>
+      <span class="brand">IGS</span>
+    </div>
+  </div>
+
+</div>
+<!-- ══════════════ 卡片模板結束 ══════════════ -->
+
+</body>
+</html>

@@ -48,6 +48,7 @@ def build_bot(output_dir: Path, project_name: str = "ai-bot") -> list[str]:
         "start.bat": "start.bat",
         "env.example": ".env.example",
         "gitignore.txt": ".gitignore",
+        "tech-daily.html": "templates/tech-daily.html",
     }
     for src_name, dst_path in asset_map.items():
         src = ASSETS_DIR / src_name
