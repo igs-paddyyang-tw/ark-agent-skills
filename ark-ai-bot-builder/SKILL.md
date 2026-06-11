@@ -10,299 +10,812 @@ description: |
   快速建 Agent Bot、或任何需要從零建構 Telegram AI Agent Bot 的場景。
 ---
 
-# ark-ai-bot-builder — One Pager 執行計畫
+# ark-ai-bot-builder
 
-> 快速產出 AI Agent Bot Workspace，6 階段漸進式建構，掛載 Agent CLI 用自然語言對話讓 Bot 做事。
+> 快速產出 AI Agent Bot Workspace。核心：Agent CLI 為大腦 + Telegram 自然語言對話 + 自動產日報。
 
-## 目標
+## 定位
 
-一鍵產出可運行的 AI Agent Bot 專案，架構源自 ninja-bot 實戰驗證：
-- **Telegram Bot** 作為使用者入口
-- **Agent CLI**（Gemini/Kiro/Claude）作為 AI 大腦
-- **BaseSkill 插件系統** 支援動態擴充
-- **自然語言對話** → 意圖路由 → 自動執行任務
+使用者說話 → Bot 理解意圖 → Agent CLI 做事 → 回報結果。就這麼簡單。
+
+```
+使用者（Telegram）
+    │ 自然語言
+    ▼
+ConversationPlanner（意圖路由）
+    │
+    ├── "今天有什麼新聞" → news_scraper → news_renderer → HTML 日報
+    ├── "幫我寫一個 XXX" → llm_cli（codegen）→ 產出 .py
+    └── "什麼是 RAG"     → llm_cli（chat）→ Agent CLI 回答
+```
+
+---
 
 ## 觸發條件
 
-使用者提及以下關鍵字時觸發：
-- 「ark-ai-bot-builder」、「建立 AI Bot」、「產出 Bot workspace」
-- 「快速建 Agent Bot」、「ai-workspace」
-- 「gen ai bot」、「建立 Telegram Agent」
-- 「新 Bot 專案」、「從零建 Bot」
+「ark-ai-bot-builder」、「建立 AI Bot」、「產出 Bot workspace」、「快速建 Agent Bot」、「ai-workspace」
 
 ## 輸入參數
 
 | 參數 | 型別 | 必要 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| `project_name` | `str` | ✅ | — | 專案名稱（用於建立根目錄） |
-| `output_dir` | `str` | ❌ | `"./output"` | 輸出目錄路徑 |
-| `stages` | `str` | ❌ | `"1-6"` | 要產出的階段範圍（如 `"1-3"` 只產基礎） |
-| `llm_backend` | `str` | ❌ | `"gemini"` | 預設 LLM 後端（gemini/kiro/claude） |
-| `bot_name` | `str` | ❌ | `project_name` | Bot 顯示名稱 |
+| `project_name` | `str` | ✅ | — | 專案名稱 |
+| `output_dir` | `str` | ❌ | `"./output"` | 輸出目錄 |
+| `stages` | `str` | ❌ | `"1-6"` | 階段範圍 |
 
-## 架構概覽（參考 ninja-bot）
+---
+
+## 最終產出結構
 
 ```
 {project_name}/
 ├── src/
-│   ├── skills/           # BaseSkill 插件系統
-│   │   ├── base.py       # BaseSkill / SkillParam / SkillResult
-│   │   ├── registry.py   # SkillRegistry（auto_discover + hot_reload）
-│   │   ├── tracker.py    # 執行統計 + 自我改進
-│   │   └── internal/     # 所有 Skill 放這裡
-│   ├── bot/              # Telegram Bot
-│   │   ├── main.py       # 入口（create_app）
-│   │   ├── handlers.py   # 指令 + 自然語言路由
-│   │   └── permissions.py # 權限管理
-│   ├── llm/              # LLM 整合
-│   │   ├── gemini_adapter.py  # Gemini API
-│   │   ├── llm_router.py     # 統一路由 + fallback
-│   │   └── gemini_chat.py    # 輕量即時對話
-│   ├── conversation/     # 對話系統
-│   │   ├── planner.py        # 意圖路由（keyword + LLM）
-│   │   ├── session.py        # Session / Turn
-│   │   ├── session_manager.py # SQLite 持久化
-│   │   ├── memory.py         # 使用者記憶
-│   │   └── memory_search.py  # FTS5 跨 Session 搜尋
-│   ├── agent/            # Agent 自進化
-│   │   ├── orchestrator.py   # 四階段流程（evaluate → generate → execute → deliver）
-│   │   └── delivery.py       # 結果交付
-│   └── server/           # FastAPI（可選）
-│       └── main.py
+│   ├── __init__.py
+│   ├── skills/
+│   │   ├── base.py                 # BaseSkill 介面
+│   │   ├── registry.py             # auto_discover + hot_reload
+│   │   └── internal/
+│   │       ├── echo.py             # 測試用
+│   │       ├── llm_cli.py          # ★ Agent CLI 大腦
+│   │       ├── news_scraper.py     # 爬蟲
+│   │       └── news_renderer.py    # HTML 日報渲染
+│   ├── bot/
+│   │   ├── main.py                 # Telegram Bot 入口
+│   │   └── handlers.py             # 自然語言 → 意圖路由 → 做事
+│   ├── llm/
+│   │   └── gemini_chat.py          # Gemini API 即時對話
+│   └── conversation/
+│       ├── session.py              # Session / Turn
+│       ├── planner.py              # ★ 三層意圖路由
+│       └── memory_search.py        # FTS5 記憶
 ├── config/
-│   ├── telegram.json     # 白名單 + 群組設定
-│   └── llm_prompts.yaml  # LLM 系統提詞（外部化）
-├── data/                 # 執行期資料
+│   ├── news_sources.yaml           # 新聞來源
+│   └── llm_prompts.yaml            # 系統提詞
+├── templates/
+│   └── tech-daily.html             # 日報 HTML 模板
+├── output/                         # 產出目錄
+├── data/                           # 執行期資料
 ├── .env.example
 ├── requirements.txt
-└── README.md
+└── start.bat
 ```
 
 ---
 
-## 六階段漸進式產出
+## 六階段產出
 
-### Stage 1：Skill 插件系統（骨架）
+| Stage | 產出 | 一句話 |
+|-------|------|--------|
+| 1 | Skill 系統 | BaseSkill + Registry + echo |
+| 2 | Agent CLI | llm_cli.py（Gemini/Kiro/Claude） |
+| 3 | 對話路由 | Planner 三層降級 + Session + Memory |
+| 4 | Telegram Bot | handlers.py 自然語言入口 |
+| 5 | 爬蟲 | news_scraper（httpx + BS4） |
+| 6 | 日報 | news_renderer + 模板 + /daily 指令 |
 
-**產出檔案：**
-- `src/__init__.py`
-- `src/skills/__init__.py`
-- `src/skills/base.py` — BaseSkill / SkillParam / SkillResult / SkillType
-- `src/skills/registry.py` — SkillRegistry（register / invoke / auto_discover / hot_reload）
-- `src/skills/internal/__init__.py`
-- `src/skills/internal/echo.py` — 回聲測試 Skill
+---
 
-**核心介面（源自 ninja-bot）：**
+## ★ 核心範例程式碼
+
+以下是完整可運行的程式碼，直接複製即可使用。
+
+---
+
+### 1. `src/skills/base.py` — Skill 介面
 
 ```python
+"""BaseSkill 插件系統。"""
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from enum import Enum
+from pydantic import BaseModel
+
+
+class SkillType(str, Enum):
+    PYTHON = "python"
+    LLM = "llm"
+
+
+class SkillParam(BaseModel):
+    """Skill 輸入參數基底。"""
+    pass
+
+
+@dataclass
+class SkillResult:
+    """Skill 執行結果。"""
+    success: bool
+    data: dict = field(default_factory=dict)
+    error: str = ""
+
+
 class BaseSkill(ABC):
+    """Skill 基底類別。"""
     skill_id: str = ""
     skill_type: SkillType = SkillType.PYTHON
     description: str = ""
     version: str = "1.0.0"
     input_schema: type[SkillParam] | None = None
 
+    def validate_params(self, params: dict) -> bool:
+        if not self.input_schema:
+            return True
+        try:
+            self.input_schema(**params)
+            return True
+        except Exception:
+            return False
+
     @abstractmethod
-    async def execute(self, params: dict) -> SkillResult: ...
-
-class SkillRegistry:
-    def register(self, skill: BaseSkill) -> None: ...
-    async def invoke(self, skill_id: str, params: dict) -> SkillResult: ...
-    def auto_discover(self, package_name: str) -> int: ...
-    def hot_reload(self, skill_id: str) -> bool: ...
+    async def execute(self, params: dict) -> SkillResult:
+        ...
 ```
-
-**驗證：** `pytest tests/test_skills.py` — register / invoke / auto_discover 正常
 
 ---
 
-### Stage 2：LLM 整合層（Agent CLI 大腦）
-
-**產出檔案：**
-- `src/llm/__init__.py`
-- `src/llm/gemini_adapter.py` — Gemini API 封裝（generate + available 檢查）
-- `src/llm/gemini_chat.py` — 輕量即時對話（單輪 API 呼叫）
-- `src/llm/llm_router.py` — 統一路由 + fallback chain
-- `src/skills/internal/llm_cli.py` — Agent CLI Skill（多後端 + 多模式）
-
-**LLMRouter fallback chain（源自 ninja-bot）：**
-
-```
-Gemini API → Gemini CLI → Kiro CLI → Claude CLI → 靜態回應
-```
-
-**llm_cli Skill 模式：**
-
-| 模式 | 說明 | 用途 |
-|------|------|------|
-| `chat` | 一般對話 | 自然語言回答 |
-| `codegen` | 程式碼產出 | 產出 .py 檔案 |
-| `evaluate` | 意圖判斷 | Planner 呼叫，回傳 JSON |
-| `skill_gen` | Skill 產出 | 自進化用，產出完整 BaseSkill |
-
-**CLI subprocess 重點（踩坑經驗）：**
-- Windows 使用 `create_subprocess_shell`（.cmd 相容）
-- 有 stdout 就視為成功（CLI stderr 警告不誤判）
-- cwd 設為 `AI_BOT_WORKSPACE` 確保路徑正確
-- timeout 預設 60s（agent 模式 120s）
-
-**驗證：** `pytest tests/test_llm.py` — generate / fallback 正常
-
----
-
-### Stage 3：對話系統（意圖路由 + 記憶）
-
-**產出檔案：**
-- `src/conversation/__init__.py`
-- `src/conversation/session.py` — Session / Turn / SessionState dataclass
-- `src/conversation/session_manager.py` — SQLite 持久化 + TTL 過期
-- `src/conversation/planner.py` — ConversationPlanner（三層降級）
-- `src/conversation/memory.py` — MemoryStore（per-user MD）
-- `src/conversation/memory_search.py` — FTS5 跨 Session 全文搜尋
-
-**ConversationPlanner 三層降級（源自 ninja-bot）：**
-
-```
-1. keyword 快速路由（毫秒級，短路 LLM）
-2. LLM 意圖解析（llm_cli evaluate 模式）
-3. keyword fallback（離線兜底）
-```
-
-**PlanAction 路由結果：**
-
-| Action | 說明 | 目標 |
-|--------|------|------|
-| EXECUTE | 參數充足 | → SkillRegistry.invoke() |
-| ANSWER | 一般問答 | → LLMRouter.generate() |
-| CLARIFY | 缺參數 | → 追問使用者 |
-| RESET | 重置 | → Session 清除 |
-
-**MemorySearch 跨 Session 記憶（源自 ninja-bot）：**
-- SQLite FTS5 索引所有對話
-- LLM 回答前自動召回相關歷史
-- 格式化為 `[歷史回憶]` 注入 system prompt
-
-**驗證：** `pytest tests/test_conversation.py` — planner / session / memory 正常
-
----
-
-### Stage 4：Telegram Bot（入口 + 指令）
-
-**產出檔案：**
-- `src/bot/__init__.py`
-- `src/bot/main.py` — create_app + graceful shutdown
-- `src/bot/handlers.py` — 指令 handlers + handle_message 主流程
-- `src/bot/permissions.py` — 白名單權限（支援巢狀 JSON）
-- `config/telegram.json` — 白名單設定
-
-**handle_message 主流程（源自 ninja-bot）：**
+### 2. `src/skills/registry.py` — Skill 管理
 
 ```python
-async def handle_message(update, context):
-    # 群組：@mention 才回話，否則只記錄到 FTS5
-    # 私訊：白名單檢查
-    # 1. Session 管理
-    # 2. Agent CLI 模式 → 直接走 CLI（跳過 Planner）
-    # 3. API 模式 → Planner 意圖解析
-    # 4. 根據 PlanAction 分派：RESET / EXECUTE / ANSWER / CLARIFY
-    # 5. 記憶召回注入 + 使用者建模
+"""SkillRegistry — 註冊、查詢、執行。"""
+import importlib
+import pkgutil
+import logging
+import sys
+from src.skills.base import BaseSkill, SkillResult
+
+logger = logging.getLogger(__name__)
+
+
+class SkillRegistry:
+    def __init__(self) -> None:
+        self._skills: dict[str, BaseSkill] = {}
+
+    def register(self, skill: BaseSkill) -> None:
+        self._skills[skill.skill_id] = skill
+
+    def get(self, skill_id: str) -> BaseSkill | None:
+        return self._skills.get(skill_id)
+
+    def list_skills(self) -> list[dict]:
+        return [{"id": s.skill_id, "description": s.description} for s in self._skills.values()]
+
+    async def invoke(self, skill_id: str, params: dict) -> SkillResult:
+        skill = self.get(skill_id)
+        if not skill:
+            return SkillResult(success=False, error=f"Skill not found: {skill_id}")
+        if not skill.validate_params(params):
+            return SkillResult(success=False, error=f"Invalid params: {skill_id}")
+        try:
+            return await skill.execute(params)
+        except Exception as e:
+            return SkillResult(success=False, error=str(e))
+
+    def auto_discover(self, package_name: str) -> int:
+        count = 0
+        try:
+            pkg = importlib.import_module(package_name)
+        except ImportError:
+            return 0
+        for _, module_name, _ in pkgutil.iter_modules(pkg.__path__):
+            try:
+                mod = importlib.import_module(f"{package_name}.{module_name}")
+                for attr_name in dir(mod):
+                    attr = getattr(mod, attr_name)
+                    if isinstance(attr, type) and issubclass(attr, BaseSkill) and attr is not BaseSkill and attr.skill_id:
+                        self.register(attr())
+                        count += 1
+            except Exception as e:
+                logger.warning("Failed to load %s: %s", module_name, e)
+        return count
+
+    def hot_reload(self, skill_id: str) -> bool:
+        module_name = f"src.skills.internal.{skill_id}"
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+        try:
+            mod = importlib.import_module(module_name)
+            for attr_name in dir(mod):
+                attr = getattr(mod, attr_name)
+                if isinstance(attr, type) and issubclass(attr, BaseSkill) and attr is not BaseSkill and attr.skill_id:
+                    self.register(attr())
+                    return True
+        except Exception:
+            pass
+        return False
 ```
-
-**雙模式切換：**
-
-| 模式 | 指令 | 延遲 | 能力 |
-|------|------|------|------|
-| API | `/llm` | 1-5 秒 | Gemini API 即時對話 |
-| Agent CLI | `/agent` | 30-120 秒 | 完整 Agent 能力（codegen / research） |
-
-**基礎指令（10 個）：**
-`/start` `/help` `/status` `/skills` `/reset` `/chat` `/mode` `/llm` `/agent` `/cost`
-
-**驗證：** Bot 可啟動（`python -m src.bot.main`）+ 基本對話正常
 
 ---
 
-### Stage 5：Agent 自進化（動態產出 Skill）
+### 3. `src/skills/internal/llm_cli.py` — ★ Agent CLI 大腦（完整版）
 
-**產出檔案：**
-- `src/agent/__init__.py`
-- `src/agent/orchestrator.py` — 四階段流程控制
-- `src/agent/delivery.py` — 結果交付（文字/檔案分段）
-- `src/skills/tracker.py` — 執行統計 + 失敗偵測
+```python
+"""llm_cli — Agent CLI 封裝（Gemini/Kiro/Claude/Antigravity）。"""
+import asyncio
+import json
+import os
+import re
+from pathlib import Path
+from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
 
-**AgentOrchestrator 四階段（源自 ninja-bot）：**
 
+class LlmCliParams(SkillParam):
+    prompt: str
+    mode: str = "chat"           # chat / codegen / evaluate / skill_gen
+    model: str = "gemini-2.5-flash"
+    timeout: int = 120
+    backend: str = ""            # gemini / kiro / claude（空=自動偵測）
+    output_path: str = ""
+    skill_id: str = ""
+
+
+class LlmCliSkill(BaseSkill):
+    skill_id = "llm_cli"
+    skill_type = SkillType.PYTHON
+    description = "Agent CLI 大腦 — 對話、CodeGen、Skill 產出（Gemini/Kiro/Claude）"
+    version = "2.0.0"
+    input_schema = LlmCliParams
+
+    # 後端設定：每個 CLI 的指令格式
+    BACKENDS = {
+        "gemini": {
+            "cmd_env": "GEMINI_CLI_CMD",
+            "cmd_default": "gemini.cmd" if os.name == "nt" else "gemini",
+            "args": lambda p, m: ["-p", p, "-m", m, "--skip-trust"],
+        },
+        "kiro": {
+            "cmd_env": "KIRO_CLI_CMD",
+            "cmd_default": "kiro-cli",
+            "args": lambda p, m: ["chat", "--no-interactive", "-a", "--legacy-ui", "--model", m, p],
+        },
+        "claude": {
+            "cmd_env": "CLAUDE_CLI_CMD",
+            "cmd_default": "claude",
+            "args": lambda p, m: ["-p", p, "--model", m],
+        },
+    }
+
+    @classmethod
+    def is_available(cls, backend: str) -> bool:
+        """檢查 CLI 是否已安裝。"""
+        import shutil
+        cfg = cls.BACKENDS.get(backend)
+        if not cfg:
+            return False
+        cmd = os.getenv(cfg["cmd_env"], cfg["cmd_default"])
+        return shutil.which(cmd) is not None
+
+    async def execute(self, params: dict) -> SkillResult:
+        p = LlmCliParams(**params)
+        match p.mode:
+            case "chat":     return await self._chat(p)
+            case "codegen":  return await self._codegen(p)
+            case "evaluate": return await self._evaluate(p)
+            case "skill_gen": return await self._skill_gen(p)
+            case _:          return SkillResult(success=False, error=f"不支援: {p.mode}")
+
+    def _resolve_backend(self, preferred: str) -> str:
+        """Fallback chain: preferred → gemini → kiro → claude。"""
+        if preferred and self.is_available(preferred):
+            return preferred
+        for b in ("gemini", "kiro", "claude"):
+            if self.is_available(b):
+                return b
+        return "gemini"
+
+    async def _run_cli(self, prompt: str, model: str, timeout: int, backend: str) -> tuple[str, str, int]:
+        """執行 CLI subprocess。"""
+        resolved = self._resolve_backend(backend)
+        cfg = self.BACKENDS[resolved]
+        cmd_path = os.getenv(cfg["cmd_env"], cfg["cmd_default"])
+        args = cfg["args"](prompt, model)
+
+        import subprocess as _sp
+        cmd_str = _sp.list2cmdline([cmd_path] + args)
+        cwd = os.getenv("AI_BOT_WORKSPACE", str(Path(__file__).resolve().parents[3]))
+
+        try:
+            process = await asyncio.create_subprocess_shell(
+                cmd_str,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=cwd,
+            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+            return (
+                stdout.decode("utf-8").strip() if stdout else "",
+                stderr.decode("utf-8").strip() if stderr else "",
+                process.returncode,
+            )
+        except asyncio.TimeoutError:
+            return ("", f"超時（{timeout}s）", 124)
+        except FileNotFoundError:
+            return ("", f"{cmd_path} 未安裝", 127)
+
+    async def _chat(self, p: LlmCliParams) -> SkillResult:
+        prompt = f"直接回答，不要自我介紹：{p.prompt}"
+        out, err, code = await self._run_cli(prompt, p.model, p.timeout, p.backend)
+        if out:
+            return SkillResult(success=True, data={"output": out, "backend": self._resolve_backend(p.backend)})
+        return SkillResult(success=False, error=f"CLI 失敗: {err[:300]}")
+
+    async def _codegen(self, p: LlmCliParams) -> SkillResult:
+        prompt = f"只輸出程式碼，不要解釋。需求：{p.prompt}"
+        out, err, code = await self._run_cli(prompt, p.model, p.timeout, p.backend)
+        if code != 0:
+            return SkillResult(success=False, error=err[:300])
+        source = self._extract_code(out)
+        if p.output_path:
+            Path(p.output_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(p.output_path).write_text(source, encoding="utf-8")
+        return SkillResult(success=True, data={"code": source, "path": p.output_path})
+
+    async def _evaluate(self, p: LlmCliParams) -> SkillResult:
+        prompt = (
+            f'分析意圖，回傳純 JSON：{{"action":"answer|invoke|generate","skill_id":"..."}}\n'
+            f"用戶：{p.prompt}\n只回傳 JSON。"
+        )
+        out, _, code = await self._run_cli(prompt, p.model, p.timeout, p.backend)
+        parsed = self._extract_json(out)
+        return SkillResult(success=True, data=parsed or {"action": "answer", "raw": out})
+
+    async def _skill_gen(self, p: LlmCliParams) -> SkillResult:
+        sid = p.skill_id or "generated_skill"
+        prompt = (
+            f"產出 Python Skill，繼承 BaseSkill（from src.skills.base import ...），"
+            f'skill_id="{sid}"，需求：{p.prompt}\n只輸出程式碼。'
+        )
+        out, err, code = await self._run_cli(prompt, p.model, p.timeout, p.backend)
+        if code != 0:
+            return SkillResult(success=False, error=err[:300])
+        source = self._extract_code(out)
+        path = p.output_path or f"src/skills/internal/{sid}.py"
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).write_text(source, encoding="utf-8")
+        return SkillResult(success=True, data={"skill_id": sid, "path": path})
+
+    @staticmethod
+    def _extract_code(output: str) -> str:
+        match = re.search(r"```(?:python)?\n(.*?)```", output, re.DOTALL)
+        return match.group(1).strip() if match else output
+
+    @staticmethod
+    def _extract_json(output: str) -> dict:
+        match = re.search(r"\{.*\}", output, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError:
+                return {}
+        return {}
 ```
-Phase 1: evaluate   → LLM 判斷：直接回答 / invoke 已有 Skill / 產出新 Skill
-Phase 2: generate   → llm_cli skill_gen 模式產出 .py
-Phase 3: execute    → hot_reload + invoke
-Phase 4: deliver    → 回傳結果到 Telegram
-```
-
-**SkillTracker 自我改進：**
-- 連續失敗 ≥ 3 次 → 標記需要進化
-- 失敗率 > 30% → 觸發重新產出
-- 統計持久化到 `data/skill_stats.json`
-
-**驗證：** `pytest tests/test_agent.py` — evaluate / generate / hot_reload 正常
 
 ---
 
-### Stage 6：進階功能（排程 + Workflow + 完善）
+### 4. `src/conversation/planner.py` — ★ 三層意圖路由
 
-**產出檔案：**
-- `src/scheduler/__init__.py`
-- `src/scheduler/engine.py` — ScheduleEngine（APScheduler 動態 CRUD）
-- `src/workflow/__init__.py`
-- `src/workflow/engine.py` — WorkflowEngine（YAML 工作流）
-- `src/conversation/user_profiler.py` — LLM 自動萃取使用者偏好
-- `src/server/main.py` — FastAPI + lifespan 整合
-- `config/llm_prompts.yaml` — LLM 系統提詞（外部化）
+```python
+"""ConversationPlanner — 自然語言 → 做什麼。"""
+import re
+from dataclasses import dataclass, field
+from enum import Enum
 
-**WorkflowEngine YAML 工作流：**
+
+class PlanAction(Enum):
+    EXECUTE = "execute"   # 執行 Skill
+    ANSWER = "answer"     # LLM 回答
+    RESET = "reset"       # 重置
+
+
+@dataclass
+class ExecutionPlan:
+    action: PlanAction
+    skill_id: str = ""
+    params: dict = field(default_factory=dict)
+
+
+# ── keyword 快速路由（毫秒級，不呼叫 LLM）──
+_QUICK_ROUTE = [
+    (["新聞", "日報", "news", "daily"], "news_scraper", {"config_path": "config/news_sources.yaml"}),
+    (["程式", "code", "寫一個", "generate"], "llm_cli", {"mode": "codegen"}),
+    (["echo", "回音"], "echo", {}),
+]
+
+
+class ConversationPlanner:
+    def __init__(self, skill_ids: list[str] | None = None) -> None:
+        self._skill_ids = skill_ids or []
+
+    def set_skills(self, skill_ids: list[str]) -> None:
+        self._skill_ids = skill_ids
+
+    async def plan(self, text: str) -> ExecutionPlan:
+        # 1. /reset
+        if re.match(r"^(取消|重來|reset)$", text.strip(), re.I):
+            return ExecutionPlan(action=PlanAction.RESET)
+
+        # 2. /skill_id 指令
+        cmd = re.match(r"^/(\w+)\s*(.*)", text.strip())
+        if cmd and cmd.group(1) in self._skill_ids:
+            return ExecutionPlan(action=PlanAction.EXECUTE, skill_id=cmd.group(1),
+                                params={"prompt": cmd.group(2)} if cmd.group(2) else {})
+
+        # 3. keyword 快速路由
+        lower = text.lower()
+        for keywords, skill_id, extra_params in _QUICK_ROUTE:
+            if skill_id in self._skill_ids and any(k in lower for k in keywords):
+                params = {**extra_params, "prompt": text}
+                return ExecutionPlan(action=PlanAction.EXECUTE, skill_id=skill_id, params=params)
+
+        # 4. 預設：LLM 回答
+        return ExecutionPlan(action=PlanAction.ANSWER)
+```
+
+---
+
+### 5. `src/bot/handlers.py` — Telegram 自然語言入口
+
+```python
+"""Telegram Bot handlers — 自然語言進 CLI。"""
+import os
+from telegram import Update
+from telegram.ext import ContextTypes
+from src.skills.registry import SkillRegistry
+from src.conversation.planner import ConversationPlanner, PlanAction
+
+_registry: SkillRegistry | None = None
+_planner: ConversationPlanner | None = None
+
+
+def init_components(registry: SkillRegistry) -> None:
+    global _registry, _planner
+    _registry = registry
+    _planner = ConversationPlanner(skill_ids=[s["id"] for s in registry.list_skills()])
+
+
+async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "🤖 AI Agent Bot 就緒！\n\n"
+        "直接打字跟我說話，我會用 Agent CLI 幫你做事。\n\n"
+        "試試看：\n"
+        "• 「今天有什麼科技新聞」→ 自動抓取產日報\n"
+        "• 「幫我寫一個計算機 Skill」→ 自動產出程式碼\n"
+        "• 任何問題 → Agent CLI 深度回答\n\n"
+        "/daily — 手動觸發日報\n"
+        "/skills — 列出已載入 Skills"
+    )
+
+
+async def cmd_skills(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    skills = _registry.list_skills() if _registry else []
+    lines = [f"📦 {len(skills)} 個 Skills\n"]
+    for s in skills:
+        lines.append(f"  • {s['id']} — {s['description'][:40]}")
+    await update.message.reply_text("\n".join(lines))
+
+
+async def cmd_daily(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """手動觸發日報：scrape → render → 發送。"""
+    await update.message.reply_text("📡 抓取新聞中...")
+    # Step 1: 抓取
+    result = await _registry.invoke("news_scraper", {"config_path": "config/news_sources.yaml"})
+    if not result.success:
+        await update.message.reply_text(f"❌ 抓取失敗：{result.error[:200]}")
+        return
+    # Step 2: 渲染
+    articles = []
+    for cat, items in result.data.get("categories", {}).items():
+        for item in items[:3]:
+            articles.append({
+                "topic": cat, "title": item["title"],
+                "what": item.get("description", item["title"]),
+                "why": "", "summary": item["title"][:30],
+                "tags": [], "source": "auto", "emoji": "📰",
+            })
+    render_result = await _registry.invoke("news_renderer", {"articles": articles[:5]})
+    if render_result.success:
+        path = render_result.data["path"]
+        await update.message.reply_document(document=open(path, "rb"), filename=path.split("/")[-1])
+    else:
+        await update.message.reply_text(f"❌ 渲染失敗：{render_result.error[:200]}")
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """自然語言主流程：text → Planner → 做事。"""
+    msg = update.effective_message
+    if not msg or not msg.text:
+        return
+    text = msg.text.strip()
+
+    # 意圖路由
+    plan = await _planner.plan(text)
+
+    if plan.action == PlanAction.RESET:
+        await msg.reply_text("🔄 已重置")
+        return
+
+    if plan.action == PlanAction.EXECUTE:
+        # 執行 Skill
+        result = await _registry.invoke(plan.skill_id, plan.params)
+        if result.success:
+            output = result.data.get("output") or result.data.get("code") or str(result.data)
+            if len(output) > 4000:
+                output = output[:3900] + "\n\n📎 已截斷"
+            await msg.reply_text(output)
+        else:
+            await msg.reply_text(f"❌ {plan.skill_id} 失敗：{result.error[:200]}")
+        return
+
+    # ANSWER — 直接走 Agent CLI
+    wait_msg = await msg.reply_text("🤖 思考中...")
+    result = await _registry.invoke("llm_cli", {"prompt": text, "mode": "chat"})
+    if result.success:
+        reply = result.data.get("output", "")
+        if len(reply) > 4000:
+            reply = reply[:3900] + "\n\n📎 已截斷"
+        await wait_msg.edit_text(reply or "🤔 沒有回應")
+    else:
+        await wait_msg.edit_text(f"❌ {result.error[:300]}")
+```
+
+---
+
+### 6. `src/bot/main.py` — Bot 入口
+
+```python
+"""Telegram Bot 入口。"""
+import os
+from dotenv import load_dotenv
+from telegram import BotCommand
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
+from src.bot.handlers import cmd_start, cmd_skills, cmd_daily, handle_message, init_components
+from src.skills.registry import SkillRegistry
+
+load_dotenv()
+
+
+def create_app():
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not token:
+        raise ValueError("TELEGRAM_BOT_TOKEN 未設定")
+
+    registry = SkillRegistry()
+    registry.auto_discover("src.skills.internal")
+    init_components(registry)
+
+    app = ApplicationBuilder().token(token).post_init(_post_init).build()
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("skills", cmd_skills))
+    app.add_handler(CommandHandler("daily", cmd_daily))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    return app
+
+
+async def _post_init(application) -> None:
+    await application.bot.set_my_commands([
+        BotCommand("start", "歡迎"),
+        BotCommand("skills", "列出 Skills"),
+        BotCommand("daily", "產出日報"),
+    ])
+
+
+if __name__ == "__main__":
+    print("🤖 Bot started...")
+    create_app().run_polling(drop_pending_updates=True)
+```
+
+---
+
+### 7. `src/skills/internal/news_scraper.py` — 爬蟲（精簡版）
+
+```python
+"""news_scraper — httpx + BeautifulSoup 爬蟲。"""
+import asyncio
+import logging
+from pathlib import Path
+import httpx
+import yaml
+from bs4 import BeautifulSoup
+from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
+
+logger = logging.getLogger(__name__)
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0.0.0"}
+
+
+class NewsScraperParams(SkillParam):
+    url: str = ""
+    config_path: str = ""
+    max_items: int = 5
+
+
+class NewsScraperSkill(BaseSkill):
+    skill_id = "news_scraper"
+    skill_type = SkillType.PYTHON
+    description = "科技新聞抓取（httpx + BS4 併發）"
+    version = "2.0.0"
+    input_schema = NewsScraperParams
+
+    async def execute(self, params: dict) -> SkillResult:
+        p = NewsScraperParams(**params)
+        if p.config_path:
+            return await self._from_config(p.config_path)
+        if p.url:
+            items = await self._fetch(p.url, "a", p.max_items)
+            return SkillResult(success=True, data={"items": items, "count": len(items)})
+        return SkillResult(success=False, error="需提供 url 或 config_path")
+
+    async def _from_config(self, config_path: str) -> SkillResult:
+        cfg = yaml.safe_load(Path(config_path).read_text(encoding="utf-8"))
+        sources = cfg.get("sources", [])
+        max_items = cfg.get("output", {}).get("max_items_per_source", 5)
+        sem = asyncio.Semaphore(3)
+        all_data: dict[str, list] = {}
+
+        async def _fetch_one(src):
+            async with sem:
+                try:
+                    items = await self._fetch(src["url"], src.get("selector", "a"), max_items)
+                    return src.get("category", "news"), items
+                except Exception as e:
+                    logger.warning("抓取 %s 失敗: %s", src.get("name"), e)
+                    return src.get("category", "news"), []
+
+        results = await asyncio.gather(*[_fetch_one(s) for s in sources])
+        for cat, items in results:
+            all_data.setdefault(cat, []).extend(items)
+
+        return SkillResult(success=True, data={
+            "categories": all_data,
+            "total": sum(len(v) for v in all_data.values()),
+        })
+
+    async def _fetch(self, url: str, selector: str, max_items: int) -> list[dict]:
+        async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True, timeout=30) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        items = []
+        for el in soup.select(selector)[:max_items * 3]:
+            title = el.get_text(strip=True)
+            link = el.get("href", "")
+            if title and len(title) > 8 and len(title) < 200:
+                items.append({"title": title, "link": link})
+            if len(items) >= max_items:
+                break
+        return items
+```
+
+---
+
+### 8. `src/skills/internal/news_renderer.py` — HTML 日報渲染
+
+```python
+"""news_renderer — 結構化新聞 → 精美 HTML 卡片。"""
+from datetime import datetime
+from pathlib import Path
+from jinja2 import Template
+from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
+
+# 模板直接內嵌（見下方 templates/tech-daily.html）
+CARD_TEMPLATE = Path("templates/tech-daily.html").read_text(encoding="utf-8") if Path("templates/tech-daily.html").exists() else "<html><body>{% for a in articles %}<h2>{{a.title}}</h2>{% endfor %}</body></html>"
+
+
+class NewsRendererParams(SkillParam):
+    articles: list[dict] = []
+    output_path: str = ""
+
+
+class NewsRendererSkill(BaseSkill):
+    skill_id = "news_renderer"
+    skill_type = SkillType.PYTHON
+    description = "結構化新聞渲染為精美 HTML 日報"
+    version = "2.0.0"
+    input_schema = NewsRendererParams
+
+    async def execute(self, params: dict) -> SkillResult:
+        p = NewsRendererParams(**params)
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+
+        for art in p.articles:
+            art.setdefault("emoji", "📰")
+            art.setdefault("source", "auto")
+            art.setdefault("what", art.get("title", ""))
+            art.setdefault("why", "")
+            art.setdefault("summary", art.get("title", "")[:30])
+            art.setdefault("tags", [])
+
+        template = Template(CARD_TEMPLATE)
+        html = template.render(articles=p.articles, date_display=now.strftime("%Y.%m.%d"))
+
+        output_path = p.output_path or f"output/news/daily_{date_str}.html"
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text(html, encoding="utf-8")
+
+        return SkillResult(success=True, data={"path": output_path, "count": len(p.articles)})
+```
+
+---
+
+### 9. `src/llm/gemini_chat.py` — Gemini API 即時對話（選配）
+
+```python
+"""Gemini API 即時對話（1-5 秒）。"""
+import os
+
+_client = None
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        from google import genai
+        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    return _client
+
+
+def is_available() -> bool:
+    return bool(os.getenv("GEMINI_API_KEY"))
+
+
+async def chat(message: str, system_prompt: str = "") -> str:
+    """單輪 Gemini API 對話。"""
+    client = _get_client()
+    config = {"system_instruction": system_prompt} if system_prompt else None
+    response = client.models.generate_content(
+        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        contents=message,
+        config=config,
+    )
+    return response.text or ""
+```
+
+---
+
+## ★ 設定檔樣板
+
+### `config/news_sources.yaml`
 
 ```yaml
-id: daily_report
-steps:
-  - id: fetch
-    skill: news_scraper
-    params:
-      sources: "${NEWS_SOURCES}"
-  - id: render
-    skill: news_renderer
-    params:
-      articles: "{{ outputs.fetch.articles }}"
+sources:
+  - name: "Hacker News"
+    url: "https://news.ycombinator.com/"
+    type: html
+    selector: ".titleline a"
+    category: tech_general
+
+  - name: "TechCrunch AI"
+    url: "https://techcrunch.com/category/artificial-intelligence/feed/"
+    type: rss
+    category: ai_focus
+
+schedule:
+  cron: "0 9 * * *"
+  timezone: "Asia/Taipei"
+
+output:
+  max_items_per_source: 5
 ```
 
-**ScheduleEngine 動態 CRUD：**
-- `add_schedule()` / `update_schedule()` / `remove_schedule()`
-- 靜態（YAML）+ 動態（JSON）排程共存
-- `run_now()` 支援手動觸發
+### `config/llm_prompts.yaml`
 
-**UserProfiler：**
-- 每 10 輪對話觸發一次 LLM 建模
-- 自動萃取偏好寫入 MemoryStore
-- 靜默失敗不影響對話
+```yaml
+default_system_prompt: |
+  你是資深 AI 工程師，使用繁體中文回答。
+  結論先行，簡潔有力，附帶程式碼範例。
+  回覆套用 Markdown 格式（標題/粗體/程式碼區塊）。
 
-**驗證：** 全部 `pytest tests/ -q` 通過
-
----
-
-## 產出設定檔
+agent_system_prompt: |
+  你是資深 AI 工程師，擅長深度分析與程式碼產出。
+  使用繁體中文，複雜問題先列步驟再給結論。
+```
 
 ### `.env.example`
 
 ```bash
-# ── Telegram Bot ──
 TELEGRAM_BOT_TOKEN=your_token
-
-# ── LLM 後端 ──
-LLM_BACKEND=gemini          # gemini / kiro / claude
-GEMINI_API_KEY=your_key
-GEMINI_CLI_CMD=gemini.cmd   # Windows: gemini.cmd / Linux: gemini
-
-# ── Agent 工作目錄 ──
-AI_BOT_WORKSPACE=.          # CLI subprocess 的 cwd
+GEMINI_API_KEY=your_key              # 選配，有就用 API 即時對話
+GEMINI_CLI_CMD=gemini.cmd            # Windows: gemini.cmd / Linux: gemini
+AI_BOT_WORKSPACE=.
 ```
 
 ### `requirements.txt`
@@ -310,73 +823,130 @@ AI_BOT_WORKSPACE=.          # CLI subprocess 的 cwd
 ```
 python-telegram-bot[ext]>=21.0
 google-genai>=1.0.0
-pydantic>=2.0.0
 httpx>=0.27.0
+beautifulsoup4>=4.12.0
+jinja2>=3.1.0
 pyyaml>=6.0.0
 python-dotenv>=1.0.0
-apscheduler>=3.10.0
-pytest>=8.0.0
-pytest-asyncio>=0.24.0
+```
+
+### `start.bat`
+
+```bat
+@echo off
+chcp 65001 >nul
+echo 🤖 AI Agent Bot 啟動中...
+py -m src.bot.main
+pause
 ```
 
 ---
 
-## 驗收條件
-
-| # | 條件 | 驗證方式 |
-|---|------|----------|
-| 1 | Skill 系統可用 | echo Skill invoke 成功 |
-| 2 | LLM 對話可用 | Gemini API 或 CLI 回答正常 |
-| 3 | 意圖路由正確 | keyword + LLM 兩層都能路由 |
-| 4 | Bot 可啟動 | `python -m src.bot.main` 不報錯 |
-| 5 | 自然語言觸發 Skill | 對話「echo hello」→ 呼叫 echo Skill |
-| 6 | Agent CLI 模式 | `/agent` 切換後 CLI 回答正常 |
-| 7 | 自進化 | 「幫我寫一個 XXX Skill」→ 產出 + hot_reload |
-| 8 | 記憶持久化 | 重啟後歷史對話可搜尋 |
-| 9 | pytest 全過 | `pytest tests/ -q` exit code 0 |
-
----
-
-## 使用方式
+## 啟動步驟
 
 ```bash
-# 觸發產出
-「ark-ai-bot-builder，專案名稱 my-agent-bot」
+# 1. 產出
+「ark-ai-bot-builder，專案名稱 my-bot」
 
-# 只產出前 3 階段（Skill + LLM + 對話）
-「ark-ai-bot-builder，專案名稱 my-bot，stages 1-3」
-
-# 產出後啟動
-cd output/my-agent-bot
+# 2. 設定
+cd output/my-bot
 cp .env.example .env
-# 填入 TELEGRAM_BOT_TOKEN + GEMINI_API_KEY
+# 填入 TELEGRAM_BOT_TOKEN（必要）+ GEMINI_API_KEY（選配）
+
+# 3. 安裝
 pip install -r requirements.txt
-python -m src.bot.main
+
+# 4. 啟動
+start.bat
+# 或 python -m src.bot.main
+```
+
+## 使用
+
+```
+📱 Telegram 對話：
+  「今天有什麼科技新聞」 → 自動抓取 + 渲染 HTML 日報
+  「幫我寫一個 HTTP 健康檢查 Skill」 → Agent CLI 產出 .py
+  「什麼是 Vector Database」 → Agent CLI 深度回答
+  /daily → 手動觸發完整日報
+  /skills → 列出已載入 Skills
 ```
 
 ---
 
-## 與 ninja-bot 的差異
+---
 
-| 項目 | ninja-bot（完整版） | ark-ai-bot-builder（骨架） |
-|------|---------------------|---------------------------|
-| Skills | 12 個業務 Skill | 2 個基礎（echo + llm_cli） |
-| LLM | Hermes + Gemini + CLI | Gemini + CLI（精簡版） |
-| 新聞日報 | 完整 pipeline | 不含（用獨立 Skill 擴充） |
-| Workflow | 已有多個定義 | 引擎 + 範例模板 |
-| 測試 | 101 passed | ~30 基礎測試 |
-| 文件 | 完整文件 | README + .env.example |
+## 附帶資源結構
 
-**設計哲學：** 產出最小可運行骨架，業務邏輯透過獨立 Skill 漸進式擴充。
+```
+ark-ai-bot-builder/
+├── SKILL.md                      # 本文件（執行計畫）
+├── assets/                       # 直接複製到目標的靜態資源
+│   ├── news_sources.yaml         # → config/news_sources.yaml
+│   ├── llm_prompts.yaml          # → config/llm_prompts.yaml
+│   ├── requirements.txt          # → requirements.txt
+│   ├── start.bat                 # → start.bat
+│   ├── env.example               # → .env.example
+│   └── gitignore.txt             # → .gitignore
+├── templates/                    # 程式碼樣板（複製為 .py）
+│   ├── base.py                   # → src/skills/base.py
+│   ├── registry.py               # → src/skills/registry.py
+│   ├── echo.py                   # → src/skills/internal/echo.py
+│   ├── llm_cli.py                # → src/skills/internal/llm_cli.py（見 SKILL.md 範例）
+│   ├── news_scraper.py           # → src/skills/internal/news_scraper.py（見 SKILL.md 範例）
+│   ├── news_renderer.py          # → src/skills/internal/news_renderer.py（見 SKILL.md 範例）
+│   ├── session.py                # → src/conversation/session.py
+│   ├── planner.py                # → src/conversation/planner.py
+│   ├── memory_search.py          # → src/conversation/memory_search.py（見 ninja-bot）
+│   ├── gemini_chat.py            # → src/llm/gemini_chat.py
+│   ├── bot_main.py              # → src/bot/main.py
+│   ├── handlers.py               # → src/bot/handlers.py
+│   └── tech-daily.html           # → templates/tech-daily.html（見 ninja-bot）
+└── scripts/                      # 產出 + 驗證腳本
+    ├── build_bot.py              # 一鍵產出整個專案
+    └── validate_bot.py           # 驗證結構完整性
+```
+
+### scripts/ 使用方式
+
+```bash
+# 一鍵產出專案
+python .kiro/skills/ark-ai-bot-builder/scripts/build_bot.py ./output/my-bot
+
+# 驗證已有專案
+python .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./output/my-bot
+```
+
+### assets/ 規則
+
+| 檔案 | 目標路徑 | 說明 |
+|------|---------|------|
+| `news_sources.yaml` | `config/` | 新聞來源（HN + TechCrunch + Ars） |
+| `llm_prompts.yaml` | `config/` | 系統提詞（修改不需改程式碼） |
+| `requirements.txt` | 根目錄 | pip 依賴 |
+| `start.bat` | 根目錄 | Windows 一鍵啟動 |
+| `env.example` | `.env.example` | 環境變數範本 |
+| `gitignore.txt` | `.gitignore` | Git 忽略 |
+
+### templates/ 規則
+
+| 檔案 | 目標路徑 | 核心功能 |
+|------|---------|----------|
+| `base.py` | `src/skills/base.py` | BaseSkill 介面 |
+| `registry.py` | `src/skills/registry.py` | auto_discover + hot_reload |
+| `echo.py` | `src/skills/internal/echo.py` | 測試 Skill |
+| `llm_cli.py` | `src/skills/internal/llm_cli.py` | Agent CLI 大腦 |
+| `planner.py` | `src/conversation/planner.py` | 三層意圖路由 |
+| `handlers.py` | `src/bot/handlers.py` | 自然語言入口 |
+| `bot_main.py` | `src/bot/main.py` | Bot 啟動 |
+| `gemini_chat.py` | `src/llm/gemini_chat.py` | Gemini API 即時對話 |
 
 ---
 
-## 注意事項
+## 設計原則
 
-- Python 3.12 語法（`str | None`、`match`、`type[X]`）
-- 所有 I/O 使用 `async/await`
-- Docstring 繁體中文
-- 路徑操作用 `pathlib.Path`
-- Token 從環境變數讀取，不硬編碼
-- Skill 內部捕獲所有例外，不逃逸
-- Windows / Linux 雙平台相容（CLI subprocess）
+- **自然語言進 CLI** — 不用記指令，說話就好
+- **Agent CLI 為大腦** — Gemini/Kiro/Claude 自動偵測 + fallback
+- **Skill 即功能** — 新功能 = 新 .py 放入 internal/ 即自動載入
+- **零配置啟動** — 只需 TELEGRAM_BOT_TOKEN 就能跑（CLI 自己有授權）
+- **資源即程式碼** — `assets/` 直接複製、`templates/` 就是最終 .py
