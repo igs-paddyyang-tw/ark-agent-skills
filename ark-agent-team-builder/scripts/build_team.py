@@ -61,13 +61,31 @@ def build_team(output_dir: Path, team_yaml_path: Path | None = None) -> list[str
         _vendor_core(core_dst)
     created.append("src/ark_team_core/")
 
-    # 3b. src/{pkg}/（業務層：telegram_adapter + api + event_log + mcp_setup + tools/）
+    # 3b. src/{pkg}/（業務層：event_log + api + mcp_setup + tools/）
     biz_created = _vendor_business_layer(output_dir, cfg)
     created.extend(biz_created)
 
-    # 4. start.py
+    # 3c. src/backend/（完整平台 API + DB + Events + Services）
+    try:
+        from generators.backend import write_backend
+        created.extend(write_backend(output_dir))
+    except ImportError:
+        pass  # generators 不可用時跳過
+
+    # 3d. src/tg_ui/（Telegram UI：11 指令 + 通知 + InlineKeyboard）
+    try:
+        from generators.tg_ui import write_tg_ui
+        created.extend(write_tg_ui(output_dir))
+    except ImportError:
+        pass
+
+    # 4. start.py（統一入口：API + TG + Daemon + EventBus + Scheduler）
     if not (output_dir / "start.py").exists():
-        _write_start_py(output_dir, cfg)
+        try:
+            from generators.start_py import write_start_py
+            write_start_py(output_dir)
+        except ImportError:
+            _write_start_py(output_dir, cfg)
     created.append("start.py")
 
     # 5. Watchdog scripts
@@ -131,7 +149,24 @@ def build_team(output_dir: Path, team_yaml_path: Path | None = None) -> list[str
     knowledge_created = _scaffold_team_knowledge(output_dir)
     created.extend(knowledge_created)
 
-    # 16. README.md
+    # 16. Dockerfile + docker-compose.prod.yml
+    try:
+        from generators.docker import write_docker
+        write_docker(output_dir)
+        created.append("Dockerfile")
+        created.append("docker-compose.prod.yml")
+    except ImportError:
+        pass
+
+    # 17. tests/
+    try:
+        from generators.tests import write_tests
+        write_tests(output_dir)
+        created.append("tests/test_api.py")
+    except ImportError:
+        pass
+
+    # 18. README.md
     if not (output_dir / "README.md").exists():
         _write_readme(output_dir, cfg)
     created.append("README.md")
@@ -820,10 +855,10 @@ def _vendor_business_layer(output_dir: Path, cfg: dict) -> list[str]:
         _write_api_py(biz_dst / "api.py", cfg, pkg_name)
         created.append(f"src/{pkg_name}/api.py")
 
-    # telegram_adapter.py — 通用，動態替換 codenames
-    if not (biz_dst / "telegram_adapter.py").exists():
-        _write_telegram_adapter_py(biz_dst / "telegram_adapter.py", cfg, pkg_name)
-        created.append(f"src/{pkg_name}/telegram_adapter.py")
+    # telegram_adapter.py — 已被 src/tg_ui/ 取代，不再產出
+    # if not (biz_dst / "telegram_adapter.py").exists():
+    #     _write_telegram_adapter_py(biz_dst / "telegram_adapter.py", cfg, pkg_name)
+    #     created.append(f"src/{pkg_name}/telegram_adapter.py")
 
     # mcp_setup.py — 空骨架（業務工具由 ark-mcp-builder 疊加）
     if not (biz_dst / "mcp_setup.py").exists():
