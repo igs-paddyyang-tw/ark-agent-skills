@@ -699,3 +699,28 @@ async def main():
 | httpx 日誌噪音 | `logging.getLogger("httpx").setLevel(WARNING)` |
 | 舊 telegram_bot.py 衝突 | 刪除，由 src/bot 接管 |
 | Agent 回覆使用者看不到 | process.py 加 stdout reader + reply_fn |
+| `_write_minimal_core` 只產 `__init__.py` | 補上 config/process/daemon/mcp_registry/scheduler 5 模組（282 行） |
+| TelegramAdapter `channel.bot_token_env` AttributeError | `config.channel` 是 dict，改用 `.get()` |
+| kiro-cli 不支援 `--prompt` | 用 positional arg：`kiro-cli chat ... "message"` |
+| kiro-cli `--no-interactive` 不讀 stdin | 改為每次 send() spawn 新進程，完成後回傳 |
+| team.yaml 預設 4 人 | 改為 5 人（admin + pm + ai-dev + coder + qa） |
+| `skip_resume: true` 導致失憶 | 預設改為 `false`，保留 session |
+| 多個 bot instance 衝突 | `Conflict: terminated by other getUpdates request`，確保只有一個進程 |
+| `start-team.sh` 呼叫 `ark_team_agent` | 應為 `python start.py` |
+
+### 上下文壓縮建議
+
+`skip_resume: false` 時 agent 保留 session，長期運作必然觸發 context compaction。建議壓縮觸發百分比：
+
+| Agent 角色 | 觸發點 | 理由 |
+|------------|--------|------|
+| leader (pm-agent) | **70%** | 派工決策鏈最珍貴，早壓縮保留摘要空間 |
+| worker (dev/coder/qa) | **75%** | 保留當前任務上下文，完成的任務可壓縮 |
+| admin | **85%** | 多為短指令，歷史價值低 |
+
+壓縮策略（建議寫入各 agent 的 `.kiro/steering/KIRO.md`）：
+- 保留：當前未完成任務、最近 5 輪對話、關鍵決策
+- 丟棄：已完成任務詳細對話、重複系統訊息、舊 tool output
+- 持久化：壓縮後摘要寫入 MEMORY.md
+
+> 詳細修正記錄見 `references/changelog-2026-06-17.md`

@@ -9,7 +9,7 @@ export ARK_TEAM_AGENT_HOME="${ARK_TEAM_AGENT_HOME:-$(pwd)}"
 
 while true; do
     echo "[$(date)] Starting team-agent..."
-    python3 -m ark_team_agent team start
+    python3 start.py
 
     if [ -f "$ARK_TEAM_AGENT_HOME/restart.flag" ]; then
         rm -f "$ARK_TEAM_AGENT_HOME/restart.flag"

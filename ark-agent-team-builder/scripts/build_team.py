@@ -176,6 +176,13 @@ access:
 defaults:
   backend: kiro-cli
   model: auto
+  skip_resume: false
+
+# 上下文壓縮觸發百分比（建議值）
+# context_compaction:
+#   leader: 70       # 派工決策鏈珍貴，早壓縮
+#   worker: 75       # 保留當前任務，完成的可丟
+#   admin: 85        # 短指令為主，最晚觸發
 
 cost_guard:
   daily_limit_usd: 30.0
@@ -193,25 +200,31 @@ instances:
     description: "⚙️ Admin — 服務監控、重啟、成本控制"
     private_chat: 123456789
     role: admin
-    skip_resume: true
+    skip_resume: false
 
   pm-agent:
     working_directory: agents/pm-agent
     description: "🧠 Leader — 需求分析、派工、驗收"
     role: leader
-    skip_resume: true
+    skip_resume: false
 
-  dev-agent:
-    working_directory: agents/dev-agent
-    description: "💻 Developer — 全端開發"
+  ai-dev-agent:
+    working_directory: agents/ai-dev-agent
+    description: "🤖 AI Dev — AI/ML 架構、Prompt 工程、Agent 設計"
     role: worker
-    skip_resume: true
+    skip_resume: false
+
+  coder-agent:
+    working_directory: agents/coder-agent
+    description: "💻 Coder — 全端開發、API 實作、程式碼產出"
+    role: worker
+    skip_resume: false
 
   qa-agent:
     working_directory: agents/qa-agent
-    description: "🧪 QA — 測試、品質保證"
+    description: "🧪 QA — 測試、品質保證、Code Review"
     role: worker
-    skip_resume: true
+    skip_resume: false
 
 health_port: 13030
 """
@@ -858,7 +871,7 @@ def _vendor_core(dst: Path) -> None:
 
 
 def _write_minimal_core(dst: Path) -> None:
-    """產出最小可運作的 ark_team_core。"""
+    """產出最小可運作的 ark_team_core（5 模組）。"""
     (dst / "__init__.py").write_text(
         '"""ark_team_core — 多 Agent 團隊管理核心引擎。"""\n'
         "from __future__ import annotations\n\n"
@@ -871,6 +884,305 @@ def _write_minimal_core(dst: Path) -> None:
         '"AgentProcess", "CoreDaemon", "McpRegistry", "ToolDefinition"]\n',
         encoding="utf-8",
     )
+
+    # ── config.py ──
+    (dst / "config.py").write_text('''\
+from __future__ import annotations
+from dataclasses import dataclass, field
+from pathlib import Path
+import yaml
+
+@dataclass
+class InstanceConfig:
+    working_directory: str = "."
+    description: str = ""
+    role: str = "worker"
+    model: str = "auto"
+    skip_resume: bool = False
+    private_chat: int | None = None
+
+@dataclass
+class TeamConfig:
+    name: str = "Agent Team"
+    instances: dict[str, InstanceConfig] = field(default_factory=dict)
+    health_port: int = 13030
+    model: str = "auto"
+    channel: dict = field(default_factory=dict)
+    access: dict = field(default_factory=dict)
+    cost_guard: dict = field(default_factory=dict)
+    hang_detector: dict = field(default_factory=dict)
+    examples: list[str] = field(default_factory=list)
+
+def load_config(path: str | Path) -> TeamConfig:
+    p = Path(path)
+    data = yaml.safe_load(p.read_text(encoding="utf-8"))
+    instances = {}
+    for name, cfg in data.get("instances", {}).items():
+        instances[name] = InstanceConfig(
+            working_directory=cfg.get("working_directory", "."),
+            description=cfg.get("description", ""),
+            role=cfg.get("role", "worker"),
+            model=cfg.get("model", data.get("defaults", {}).get("model", "auto")),
+            skip_resume=cfg.get("skip_resume", False),
+            private_chat=cfg.get("private_chat"),
+        )
+    return TeamConfig(
+        name=data.get("name", "Agent Team"),
+        instances=instances,
+        health_port=data.get("health_port", 13030),
+        model=data.get("defaults", {}).get("model", "auto"),
+        channel=data.get("channel", {}),
+        access=data.get("access", {}),
+        cost_guard=data.get("cost_guard", {}),
+        hang_detector=data.get("hang_detector", {}),
+        examples=data.get("examples", []),
+    )
+''', encoding="utf-8")
+
+    # ── process.py ──
+    (dst / "process.py").write_text('''\
+from __future__ import annotations
+import asyncio
+import logging
+from pathlib import Path
+
+log = logging.getLogger("process")
+
+class AgentProcess:
+    def __init__(self, name: str, working_dir: str = ".", model: str = "auto", skip_resume: bool = False):
+        self.name = name
+        self.working_dir = working_dir
+        self.model = model
+        self.skip_resume = skip_resume
+        self._proc: asyncio.subprocess.Process | None = None
+        self._running = False
+
+    def _build_cmd(self) -> list[str]:
+        cmd = ["kiro-cli", "chat", "--no-interactive", "--trust-all-tools", "--model", self.model]
+        if not self.skip_resume:
+            cmd.append("--resume")
+        return cmd
+
+    async def start(self) -> None:
+        cwd = Path(self.working_dir).resolve()
+        cwd.mkdir(parents=True, exist_ok=True)
+        cmd = self._build_cmd()
+        log.info("Starting %s: %s (cwd=%s)", self.name, " ".join(cmd), cwd)
+        try:
+            self._proc = await asyncio.create_subprocess_exec(
+                *cmd, stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                cwd=str(cwd),
+            )
+            self._running = True
+        except Exception as e:
+            log.error("Failed to start %s: %s", self.name, e)
+            self._running = False
+
+    async def send(self, text: str) -> str | None:
+        if not self._proc or not self._proc.stdin:
+            return None
+        try:
+            self._proc.stdin.write((text + "\\n").encode())
+            await self._proc.stdin.drain()
+            return "sent"
+        except Exception as e:
+            log.error("Send to %s failed: %s", self.name, e)
+            return None
+
+    def is_alive(self) -> bool:
+        if not self._proc:
+            return False
+        return self._proc.returncode is None
+
+    async def kill(self) -> None:
+        if self._proc and self.is_alive():
+            self._proc.terminate()
+            try:
+                await asyncio.wait_for(self._proc.wait(), timeout=5)
+            except asyncio.TimeoutError:
+                self._proc.kill()
+        self._running = False
+''', encoding="utf-8")
+
+    # ── mcp_registry.py ──
+    (dst / "mcp_registry.py").write_text('''\
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Callable
+
+@dataclass
+class ToolDefinition:
+    name: str
+    description: str
+    handler: Callable | None = None
+    parameters: dict = field(default_factory=dict)
+
+class McpRegistry:
+    def __init__(self):
+        self._tools: dict[str, ToolDefinition] = {}
+
+    def register(self, name: str, description: str, handler: Callable | None = None, parameters: dict | None = None) -> None:
+        self._tools[name] = ToolDefinition(name=name, description=description, handler=handler, parameters=parameters or {})
+
+    def get(self, name: str) -> ToolDefinition | None:
+        return self._tools.get(name)
+
+    def list_tools(self) -> list[ToolDefinition]:
+        return list(self._tools.values())
+''', encoding="utf-8")
+
+    # ── daemon.py ──
+    (dst / "daemon.py").write_text('''\
+from __future__ import annotations
+import asyncio
+import logging
+import time
+
+from .config import TeamConfig, load_config
+from .process import AgentProcess
+from .mcp_registry import McpRegistry
+
+log = logging.getLogger("daemon")
+
+class CoreDaemon:
+    def __init__(self, config_path: str = "team.yaml"):
+        self.config = load_config(config_path)
+        self.mcp_registry = McpRegistry()
+        self._agents: dict[str, AgentProcess] = {}
+        self._running = False
+        self._last_activity: dict[str, float] = {}
+        self._restart_count: dict[str, int] = {}
+        self.event_log = None
+
+    async def send_to(self, instance_name: str, message: str) -> bool:
+        agent = self._agents.get(instance_name)
+        if not agent:
+            log.warning("Agent not found: %s", instance_name)
+            return False
+        result = await agent.send(message)
+        if result:
+            self._last_activity[instance_name] = time.time()
+        return result is not None
+
+    def get_status(self) -> dict:
+        status = {}
+        for name, agent in self._agents.items():
+            status[name] = {
+                "alive": agent.is_alive(),
+                "role": self.config.instances[name].role if name in self.config.instances else "unknown",
+                "last_activity": self._last_activity.get(name, 0),
+                "restarts": self._restart_count.get(name, 0),
+            }
+        return status
+
+    async def _health_check(self) -> None:
+        for name, agent in list(self._agents.items()):
+            if not agent.is_alive() and self._running:
+                log.warning("Agent %s is dead, restarting...", name)
+                self._restart_count[name] = self._restart_count.get(name, 0) + 1
+                await agent.start()
+                self._last_activity[name] = time.time()
+
+    async def shutdown(self) -> None:
+        self._running = False
+        log.info("Shutting down %d agents...", len(self._agents))
+        for name, agent in self._agents.items():
+            await agent.kill()
+        log.info("All agents stopped.")
+''', encoding="utf-8")
+
+    # ── scheduler.py ──
+    (dst / "scheduler.py").write_text('''\
+from __future__ import annotations
+import asyncio
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Callable
+import yaml
+
+log = logging.getLogger("scheduler")
+
+class Scheduler:
+    def __init__(self, send_fn: Callable, timezone_name: str = "Asia/Taipei", on_schedule: Callable | None = None):
+        self.send_fn = send_fn
+        self.timezone_name = timezone_name
+        self.on_schedule = on_schedule
+        self._jobs: list[dict] = []
+        self._task: asyncio.Task | None = None
+        self._running = False
+
+    def load_yaml(self, path: str) -> int:
+        p = Path(path)
+        if not p.exists():
+            return 0
+        data = yaml.safe_load(p.read_text(encoding="utf-8"))
+        self._jobs = data.get("schedules", []) if data else []
+        return len(self._jobs)
+
+    def start(self) -> None:
+        self._running = True
+        self._task = asyncio.ensure_future(self._loop())
+
+    def stop(self) -> None:
+        self._running = False
+        if self._task:
+            self._task.cancel()
+
+    async def _loop(self) -> None:
+        while self._running:
+            await asyncio.sleep(60)
+            now = datetime.now()
+            for job in self._jobs:
+                if not job.get("enabled", True):
+                    continue
+                if self._should_run(job, now):
+                    target = job.get("target", "")
+                    prompt = job.get("prompt", "")
+                    if target and prompt:
+                        log.info("Scheduler triggering: %s", target)
+                        if self.on_schedule:
+                            self.on_schedule(target)
+                        await self.send_fn(target, prompt)
+
+    def _should_run(self, job: dict, now: datetime) -> bool:
+        cron = job.get("cron", "")
+        if not cron:
+            return False
+        parts = cron.split()
+        if len(parts) != 5:
+            return False
+        minute, hour, dom, mon, dow = parts
+        if not self._match(minute, now.minute):
+            return False
+        if not self._match(hour, now.hour):
+            return False
+        if not self._match(dom, now.day):
+            return False
+        if not self._match(mon, now.month):
+            return False
+        if not self._match(dow, now.isoweekday() % 7):
+            return False
+        return True
+
+    def _match(self, field: str, value: int) -> bool:
+        if field == "*":
+            return True
+        for part in field.split(","):
+            if "-" in part:
+                lo, hi = part.split("-", 1)
+                if int(lo) <= value <= int(hi):
+                    return True
+            elif part.startswith("*/"):
+                step = int(part[2:])
+                if value % step == 0:
+                    return True
+            else:
+                if int(part) == value:
+                    return True
+        return False
+''', encoding="utf-8")
 
 
 def _write_start_team_sh(output_dir: Path) -> None:
