@@ -149,6 +149,13 @@ def build_team(output_dir: Path, team_yaml_path: Path | None = None) -> list[str
     knowledge_created = _scaffold_team_knowledge(output_dir)
     created.extend(knowledge_created)
 
+    # 15b. apps/web/（Web Dashboard — Next.js）
+    try:
+        from generators.web import write_web
+        created.extend(write_web(output_dir))
+    except ImportError:
+        pass
+
     # 16. Dockerfile + docker-compose.prod.yml
     try:
         from generators.docker import write_docker
@@ -231,8 +238,8 @@ hang_detector:
 
 instances:
   admin-agent:
-    working_directory: "."
-    description: "⚙️ Admin — 服務監控、重啟、成本控制"
+    working_directory: agents/admin-agent
+    description: "👑 Admin — 服務管理、開發維護、團隊指揮"
     private_chat: 123456789
     role: admin
     skip_resume: false
@@ -502,6 +509,12 @@ def _write_env_example(output_dir: Path, cfg: dict) -> None:
     content = f"""\
 # Agent Team 環境變數
 {token_env}=your-bot-token-here
+
+# Backend API Port
+API_PORT=33333
+
+# RBAC (format: key:role,key:role)
+# PLATFORM_API_KEYS=abc123:admin,def456:member
 
 # LLM API Keys (optional)
 # GEMINI_API_KEY=your-key-here
