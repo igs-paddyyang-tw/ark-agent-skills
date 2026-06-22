@@ -32,14 +32,14 @@ language: zh-TW
 
 ## Step 0：取得 Skills + 環境確認
 
-### 取得 ark-kiro-skills
+### 取得 ark-agent-skills
 
 ```bash
 # Kiro 使用者
-git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills .kiro/skills/
+git clone https://github.com/igs-paddyyang-tw/ark-agent-skills .kiro/skills/
 
 # Antigravity 使用者
-git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills .agents/skills/
+git clone https://github.com/igs-paddyyang-tw/ark-agent-skills .agents/skills/
 ```
 
 ### 安裝 Agent CLI（擇一或都裝）

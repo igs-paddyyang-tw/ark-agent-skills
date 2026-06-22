@@ -569,7 +569,7 @@ def clone_skills(project_dir: Path) -> str:
     """Clone 或更新 skills/ 倉庫。"""
     import subprocess
     skills_dir = project_dir / "skills"
-    repo_url = "https://github.com/igs-paddyyang-tw/ark-kiro-skills.git"
+    repo_url = "https://github.com/igs-paddyyang-tw/ark-agent-skills.git"
 
     if skills_dir.exists() and (skills_dir / ".git").exists():
         result = subprocess.run(

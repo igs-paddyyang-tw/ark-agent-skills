@@ -1,4 +1,4 @@
-# ark-kiro-skills
+# ark-agent-skills
 
 **55 個** Kiro Skills 食譜集，用自然語言觸發產出智能助理功能。
 
@@ -6,7 +6,7 @@
 
 ```bash
 # 直接 clone 為 .kiro/skills（repo root = skills 目錄）
-git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git .kiro/skills
+git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git .kiro/skills
 
 # 更新
 cd .kiro/skills && git pull
@@ -176,7 +176,7 @@ Step 4: 啟動
 
 | 資源 | 連結 | 說明 |
 |------|------|------|
-| **ark-kiro-skills**（本 repo） | https://github.com/igs-paddyyang-tw/ark-kiro-skills | 52 個基礎 Skills |
+| **ark-agent-skills**（本 repo） | https://github.com/igs-paddyyang-tw/ark-agent-skills | 52 個基礎 Skills |
 | **agency-agents** | https://github.com/msitarzewski/agency-agents | AI 配置能力參考（Agent 角色定義模式） |
 | **Skills Hub** | https://skills-hub.ai/ | 4,700+ Skills 聚合平台 |
 | **Anthropic Skills（官方）** | https://github.com/anthropics/skills | Anthropic 官方 Skills 公開 repo |
@@ -258,7 +258,7 @@ MIT
 
 ```bash
 # 直接 clone 為 .kiro/skills（repo root = skills 目錄）
-git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git .kiro/skills
+git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git .kiro/skills
 
 # 更新
 cd .kiro/skills && git pull
@@ -428,7 +428,7 @@ cd .kiro/skills && git pull
 
 | 資源 | 連結 | 說明 |
 |------|------|------|
-| **ark-kiro-skills**（本 repo） | https://github.com/igs-paddyyang-tw/ark-kiro-skills | 50 個基礎 Skills |
+| **ark-agent-skills**（本 repo） | https://github.com/igs-paddyyang-tw/ark-agent-skills | 50 個基礎 Skills |
 | **agency-agents** | https://github.com/msitarzewski/agency-agents | AI 配置能力參考（Agent 角色定義模式） |
 | **Skills Hub** | https://skills-hub.ai/ | 4,700+ Skills 聚合平台 |
 | **Anthropic Skills（官方）** | https://github.com/anthropics/skills | Anthropic 官方 Skills 公開 repo |

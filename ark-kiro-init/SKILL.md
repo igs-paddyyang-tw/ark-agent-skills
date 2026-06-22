@@ -67,7 +67,7 @@ metadata:
 │       ├── USER.md                    #   使用者百科
 │       └── TEAM.md                    #   團隊運作規範（daemon 自動產生）
 │
-├── skills/                            # 共用 Skills 倉庫（git clone ark-kiro-skills）
+├── skills/                            # 共用 Skills 倉庫（git clone ark-agent-skills）
 │   ├── ark-superpowers/SKILL.md
 │   ├── ark-wiki-engine/SKILL.md
 │   ├── ark-skill-creator/SKILL.md
@@ -412,13 +412,13 @@ metadata:
 - 輸出格式
 - 品質要求
 
-**Skills 來源：** 從 `https://github.com/igs-paddyyang-tw/ark-kiro-skills` clone 到**專案根目錄的 `skills/`**。
+**Skills 來源：** 從 `https://github.com/igs-paddyyang-tw/ark-agent-skills` clone 到**專案根目錄的 `skills/`**。
 
 **Clone 流程：**
 
 ```bash
 # Clone 到專案根目錄（與 agents/ 同層）
-git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
+git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git skills/
 
 # 結構：
 # {project}/
@@ -443,7 +443,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 **分配流程：**
 
 ```
-1. git clone ark-kiro-skills → {project}/skills/（共用倉庫）
+1. git clone ark-agent-skills → {project}/skills/（共用倉庫）
 2. 建立根目錄 .kiro/（管理者 workspace，skills/ 放全套）
 3. 對每個 agent：
    a. 掃描 skills/ 下所有 SKILL.md 的 name + description
