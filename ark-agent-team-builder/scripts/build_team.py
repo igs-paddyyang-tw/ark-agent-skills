@@ -55,29 +55,56 @@ def build_team(output_dir: Path, team_yaml_path: Path | None = None, level: str 
         _write_scheduler_yaml(output_dir, cfg)
     created.append("scheduler.yaml")
 
-    # 3. src/ark_team_core/（vendored 核心引擎）
-    core_dst = output_dir / "src" / "ark_team_core"
-    if not core_dst.exists():
-        _vendor_core(core_dst)
-    created.append("src/ark_team_core/")
+    # 3. src/ 核心模組
+    if level == "team":
+        # team 模式：產出舊結構（ark_team_core + 業務層）
+        core_dst = output_dir / "src" / "ark_team_core"
+        if not core_dst.exists():
+            _vendor_core(core_dst)
+        created.append("src/ark_team_core/")
 
-    # 3b. src/{pkg}/（業務層：event_log + api + mcp_setup + tools/）
-    biz_created = _vendor_business_layer(output_dir, cfg)
-    created.extend(biz_created)
+        biz_created = _vendor_business_layer(output_dir, cfg)
+        created.extend(biz_created)
+    # full 模式：由 generators 產出四層架構（gateway/coordinator/runtime/business）
 
-    # 3c. src/backend/（完整平台 API + DB + Events + Services）
+    # 3c. src/gateway/（入口層：API + Telegram + Gemini Chat）
     if level == "full":
         try:
-            from generators.backend import write_backend
-            created.extend(write_backend(output_dir))
+            from generators.gateway import write_gateway
+            created.extend(write_gateway(output_dir))
         except ImportError:
             pass
 
-    # 3d. src/tg_ui/（Telegram UI：11 指令 + 通知 + InlineKeyboard）
+    # 3d. src/coordinator/（協調層：A2A + DB + Events + Services）
     if level == "full":
         try:
-            from generators.tg_ui import write_tg_ui
-            created.extend(write_tg_ui(output_dir))
+            from generators.coordinator import write_coordinator
+            created.extend(write_coordinator(output_dir))
+        except ImportError:
+            pass
+
+    # 3e. src/runtime/（執行層）
+    if level == "full":
+        try:
+            from generators.runtime import write_runtime
+            created.extend(write_runtime(output_dir))
+        except ImportError:
+            pass
+
+    # 3f. src/business/（業務技能）
+    if level == "full":
+        try:
+            from generators.business import write_business
+            created.extend(write_business(output_dir))
+        except ImportError:
+            pass
+
+    # 3g. src/bootstrap.py（統一入口邏輯）
+    if level == "full":
+        try:
+            from generators.bootstrap import write_bootstrap
+            write_bootstrap(output_dir)
+            created.append("src/bootstrap.py")
         except ImportError:
             pass
 
