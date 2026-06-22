@@ -22,11 +22,48 @@ description: |
 使用者（Telegram）
     │ 自然語言
     ▼
-ConversationPlanner（意圖路由）
+Gateway（即時回饋 👀 + typing）
     │
-    ├── "今天有什麼新聞" → news_scraper → news_renderer → HTML 日報
-    ├── "幫我寫一個 XXX" → llm_cli（codegen）→ 產出 .py
-    └── "什麼是 RAG"     → llm_cli（chat）→ Agent CLI 回答
+    ▼
+ConversationPlanner（六層意圖路由，零 LLM 消耗）
+    │
+    ├── L1: /reset → 重置
+    ├── L2: /skill_id args → Skill 直接執行
+    ├── L3: keyword 命中 → 本地 Skill
+    │       「新聞」→ news_scraper → news_renderer
+    │       「寫程式」→ llm_cli（codegen）
+    ├── L4: keyword → 直達 team agent（測試→qa / 部署→admin）
+    ├── L5: 深度關鍵字 → pm-agent 派工（規劃/分析/架構）
+    └── L6: 預設 → Gemini API 快速回答（2-3s）
+                ↓ 失敗
+            → llm_cli CLI fallback（5-30s）
+    │
+    ▼
+回覆 + 👍 Reaction
+```
+
+### 三級回應速度
+
+| 級別 | 觸發 | 後端 | 延遲 |
+|------|------|------|------|
+| ⚡ 即時 | keyword / /cmd / Gemini API | Python Skill / Gemini REST | 1-5s |
+| 🔄 標準 | 一般問答（API 不可用） | CLI subprocess（gemini/kiro/claude） | 5-30s |
+| 🧠 深度 | 深度關鍵字 / @mention agent | kiro-cli multi-agent 派工 | 30-120s |
+
+### 即時回饋機制
+
+```
+使用者發訊
+ → [< 1 秒] 👀 Reaction（已收到）
+ → [持續] typing...（每 4 秒重送，不斷線）
+ → [完成]
+   ├── 成功：👀 → 👍 + 回覆文字
+   └── 失敗：👀 → 👎 + 錯誤摘要（不暴露 stack trace）
+
+特點：
+• 無「收到！正在處理...」中間訊息
+• typing 不斷線（Telegram 5 秒超時 → 4 秒重送）
+• 結案後 Timer 自動 cancel（無資源洩漏）
 ```
 
 ---
@@ -44,54 +81,70 @@ ConversationPlanner（意圖路由）
 | `stages` | `str` | ❌ | `"1-6"` | 階段範圍 |
 
 ---
-
 ## 最終產出結構
 
 ```
 {project_name}/
+├── start.py                        # 入口（~20 行）
 ├── src/
-│   ├── __init__.py
-│   ├── skills/
-│   │   ├── base.py                 # BaseSkill 介面
-│   │   ├── registry.py             # auto_discover + hot_reload
-│   │   └── internal/
-│   │       ├── echo.py             # 測試用
-│   │       ├── llm_cli.py          # ★ Agent CLI 大腦
-│   │       ├── news_scraper.py     # 爬蟲
-│   │       └── news_renderer.py    # HTML 日報渲染
-│   ├── bot/
-│   │   ├── main.py                 # Telegram Bot 入口
-│   │   └── handlers.py             # 自然語言 → 意圖路由 → 做事
-│   ├── llm/
-│   │   └── gemini_chat.py          # Gemini API 即時對話
-│   └── conversation/
-│       ├── session.py              # Session / Turn
-│       ├── planner.py              # ★ 三層意圖路由
-│       └── memory_search.py        # FTS5 記憶
-├── config/
-│   ├── news_sources.yaml           # 新聞來源
-│   └── llm_prompts.yaml            # 系統提詞
-├── templates/
-│   └── tech-daily.html             # 日報 HTML 模板
-├── output/                         # 產出目錄
-├── data/                           # 執行期資料
+│   ├── bootstrap.py                # 啟動邏輯（四層順序）
+│   ├── gateway/                    # 入口層
+│   │   ├── telegram/handlers/      #   messages.py（六層路由 + 即時回饋）
+│   │   ├── api/                    #   FastAPI（agents/issues/costs/schedules）
+│   │   └── gemini_chat.py          #   Gemini API 快速路徑
+│   ├── coordinator/                # 協調層
+│   │   ├── db/                     #   SQLite + migrations
+│   │   ├── events/                 #   EventBus pub/sub
+│   │   ├── services/              #   cost_tracker + audit_logger
+│   │   └── a2a/                   #   Agent 協作（router/graph/memory）
+│   ├── runtime/                    # 執行層
+│   │   ├── process.py              #   AgentProcess（kiro/gemini/claude）
+│   │   ├── config.py              #   team.yaml 解析（含 backend）
+│   │   └── scheduler.py           #   APScheduler
+│   └── business/                   # 業務 Skills
+│       ├── news_scraper.py
+│       └── news_renderer.py
+├── agents/                         # Agent 工作空間（各有 .kiro/）
+├── skills/                         # 共用 Skills（git clone）
+├── team.yaml                       # 團隊配置（含 backend 欄位）
+├── scheduler.yaml                  # 排程定義
+├── data/                           # SQLite DBs
 ├── .env.example
-├── requirements.txt
-└── start.bat
+└── requirements.txt
+```
 ```
 
 ---
 
-## 六階段產出
+## 產出階段
 
 | Stage | 產出 | 一句話 |
 |-------|------|--------|
-| 1 | Skill 系統 | BaseSkill + Registry + echo |
-| 2 | Agent CLI | llm_cli.py（Gemini/Kiro/Claude） |
-| 3 | 對話路由 | Planner 三層降級 + Session + Memory |
-| 4 | Telegram Bot | handlers.py 自然語言入口 |
-| 5 | 爬蟲 | news_scraper（httpx + BS4） |
-| 6 | 日報 | news_renderer + 模板 + /daily 指令 |
+| 1 | 四層目錄結構 | gateway + coordinator + runtime + business |
+| 2 | Runtime 層 | process.py 多後端（kiro/gemini/claude fallback） |
+| 3 | Gateway 六層路由 | Planner 零 LLM + Gemini API 快速路徑 |
+| 4 | Telegram Bot + 即時回饋 | 👀/typing/👍 + 12 slash commands |
+| 5 | Coordinator | EventBus + DB + A2A Router + Scheduler |
+| 6 | 業務 Skills | news_scraper + news_renderer + team.yaml |
+
+### Output 清洗（必做）
+
+所有 CLI output 送到使用者前必須清洗：
+
+```python
+# 1. Strip ANSI escape codes
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+text = _ANSI_RE.sub("", raw)
+
+# 2. 過濾工具執行日誌
+_TOOL_PREFIXES = ("Searching the web", "Reading content", "Fetching",
+                  "✓ Found", "- Completed in", "(using tool:")
+
+# 3. 提取結論（_extract_conclusion）
+# 策略：[DONE] marker → reply() 提取 → 尾部反向掃描非工具行
+
+# 4. Strip kiro-cli '> ' prompt 前綴
+```
 
 ---
 
@@ -950,3 +1003,46 @@ python .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./output/my-bot
 - **Skill 即功能** — 新功能 = 新 .py 放入 internal/ 即自動載入
 - **零配置啟動** — 只需 TELEGRAM_BOT_TOKEN 就能跑（CLI 自己有授權）
 - **資源即程式碼** — `assets/` 直接複製、`templates/` 就是最終 .py
+
+---
+
+## 踩坑紀錄（2026-06-22 驗證通過）
+
+### Telegram Reaction 支援清單
+
+`✅` `❌` 不在 Telegram 支援的 Reaction emoji 中。可用：
+- 👍 👎 ❤️ 🔥 🎉 😢 👀 🤔 💯
+
+已驗證方案：👀（收到）→ 👍（完成）/ 👎（失敗）
+
+### EventBus 單一實例
+
+FastAPI `lifespan` 會建立自己的 EventBus 覆蓋 `app.state.bus`。
+必須在 lifespan 前設定 `app.state.bus = bus` + `app.state._external_bus = True`。
+
+### kiro-cli output 帶 `> ` 前綴
+
+所有 kiro-cli 回覆以 `\x1b[38;5;141m> \x1b[0m` 開頭。
+`_extract_conclusion` 不能把 `> ` 當成工具行過濾。
+
+### agent.send() + on_output 重複回覆
+
+`AgentProcess.send()` 內部呼叫 `on_output` callback（觸發 _tg_reply），
+同時 handle_message 拿到 return value 又 reply 一次。
+解法：`_tg_handled_agents` set 標記正在被 TG handler 處理的 agent。
+
+### filters.COMMAND 攔截 /skill_id
+
+`MessageHandler(filters.TEXT & ~filters.COMMAND)` 會過濾掉 `/` 開頭訊息。
+未註冊的 `/echo hello` 不會進入 handle_message。
+解法：加 `MessageHandler(filters.COMMAND, handle_message)` 作為 fallback。
+
+### DB agents 表需同步 team.yaml
+
+`start.py` 啟動時必須把 team.yaml instances 寫入 SQLite `agents` 表，
+否則 `/api/agents` 回傳空陣列 → TG handler 報「無可用 Agent」。
+
+### typing action 語言
+
+`send_chat_action(action="typing")` 顯示的「正在輸入...」由 Telegram 客戶端語言決定，
+Bot 端無法控制。使用者需將 TG App 設為繁中才會顯示中文。

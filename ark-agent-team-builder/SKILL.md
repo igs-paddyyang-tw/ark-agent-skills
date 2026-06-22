@@ -92,8 +92,8 @@ metadata:
         └── knowledge/（同上五件套）
 ```
 
-> **注意：** admin 不在 `agents/` 下。admin 的 `working_directory: .`，
-> 其 `.kiro/` 就是根目錄的 `.kiro/`（由 `ark-kiro-init` 產出）。
+> **注意：** admin 預設 `working_directory: agents/admin-agent`（獨立 workspace）。
+> 根目錄 `.kiro/` 作為 Kiro CLI 開發用，不與 daemon 的 admin-agent 衝突。
 >
 > 以下由其他 Skill 在後續 Phase 產出（本 Skill 不負責）：
 > - `.kiro/`（根目錄 admin workspace）→ `ark-kiro-init`（Phase A2）
@@ -155,7 +155,7 @@ access:
 instances:
   # Admin — 服務管理（獨立目錄，不接業務）
   {admin-name}-agent:
-    working_directory: {admin-name}-agent
+    working_directory: agents/{admin-name}-agent
     description: "👑 {描述}"
     private_chat: 123456789          # 使用者 ID（reply 出口）
     role: admin
@@ -177,8 +177,8 @@ health_port: 13030                   # 第二個團隊用 23030 避免衝突
 
 **填充規則：**
 - `description` 從 `references/role-presets.md` 查對應 emoji + 描述
-- admin 的 `working_directory` **必須是 `.`**（根目錄 = admin 的工作目錄）
-- admin 的 `.kiro/` 就是根目錄的 `.kiro/`（不在 agents/ 下）
+- admin 的 `working_directory` 預設 `agents/admin-agent`
+- 根目錄 `.kiro/` 作為 Kiro CLI 開發 workspace（不影響 daemon）
 - admin 的 `private_chat` = 使用者 Telegram ID（reply 回覆出口）
 - 非 admin 的 `working_directory` 格式為 `agents/{name}-agent`
 - 純私聊模式：不設 `group_id`，使用者用 @mention 指定 agent
@@ -395,7 +395,7 @@ if agents/{name}/ 已存在:
 
 - [ ] `team.yaml` 有 defaults + cost_guard + hang_detector + instances + health_port
 - [ ] 每個 instance 有 working_directory + description + role
-- [ ] 恰好 1 個 role: admin（working_directory 必須是 `.`）
+- [ ] 恰好 1 個 role: admin
 - [ ] 恰好 1 個 role: leader
 - [ ] instance 命名符合 `^[a-z][a-z0-9-]*-agent$`
 - [ ] `scheduler.yaml` 有 timezone + 至少 2 個 jobs
