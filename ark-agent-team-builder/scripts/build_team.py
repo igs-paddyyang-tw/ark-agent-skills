@@ -35,8 +35,8 @@ TODAY = date.today().isoformat()
 
 # ── 主函式 ────────────────────────────────────────────────────
 
-def build_team(output_dir: Path, team_yaml_path: Path | None = None) -> list[str]:
-    """產出完整 Agent Team 專案。回傳已建立的檔案清單。"""
+def build_team(output_dir: Path, team_yaml_path: Path | None = None, level: str = "full") -> list[str]:
+    """產出完整 Agent Team 專案。level: 'team'=基礎 / 'full'=完整平台。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     created: list[str] = []
 
@@ -66,18 +66,20 @@ def build_team(output_dir: Path, team_yaml_path: Path | None = None) -> list[str
     created.extend(biz_created)
 
     # 3c. src/backend/（完整平台 API + DB + Events + Services）
-    try:
-        from generators.backend import write_backend
-        created.extend(write_backend(output_dir))
-    except ImportError:
-        pass  # generators 不可用時跳過
+    if level == "full":
+        try:
+            from generators.backend import write_backend
+            created.extend(write_backend(output_dir))
+        except ImportError:
+            pass
 
     # 3d. src/tg_ui/（Telegram UI：11 指令 + 通知 + InlineKeyboard）
-    try:
-        from generators.tg_ui import write_tg_ui
-        created.extend(write_tg_ui(output_dir))
-    except ImportError:
-        pass
+    if level == "full":
+        try:
+            from generators.tg_ui import write_tg_ui
+            created.extend(write_tg_ui(output_dir))
+        except ImportError:
+            pass
 
     # 4. start.py（統一入口：API + TG + Daemon + EventBus + Scheduler）
     if not (output_dir / "start.py").exists():
@@ -150,28 +152,31 @@ def build_team(output_dir: Path, team_yaml_path: Path | None = None) -> list[str
     created.extend(knowledge_created)
 
     # 15b. apps/web/（Web Dashboard — Next.js）
-    try:
-        from generators.web import write_web
-        created.extend(write_web(output_dir))
-    except ImportError:
-        pass
+    if level == "full":
+        try:
+            from generators.web import write_web
+            created.extend(write_web(output_dir))
+        except ImportError:
+            pass
 
     # 16. Dockerfile + docker-compose.prod.yml
-    try:
-        from generators.docker import write_docker
-        write_docker(output_dir)
-        created.append("Dockerfile")
-        created.append("docker-compose.prod.yml")
-    except ImportError:
-        pass
+    if level == "full":
+        try:
+            from generators.docker import write_docker
+            write_docker(output_dir)
+            created.append("Dockerfile")
+            created.append("docker-compose.prod.yml")
+        except ImportError:
+            pass
 
     # 17. tests/
-    try:
-        from generators.tests import write_tests
-        write_tests(output_dir)
-        created.append("tests/test_api.py")
-    except ImportError:
-        pass
+    if level == "full":
+        try:
+            from generators.tests import write_tests
+            write_tests(output_dir)
+            created.append("tests/test_api.py")
+        except ImportError:
+            pass
 
     # 18. README.md
     if not (output_dir / "README.md").exists():
@@ -2227,10 +2232,16 @@ def main() -> None:
         return
 
     output = Path(sys.argv[1])
-    team_yaml = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+    team_yaml = Path(sys.argv[2]) if len(sys.argv) > 2 and not sys.argv[2].startswith("--") else None
 
-    created = build_team(output, team_yaml)
-    print(f"\n✅ 團隊專案已建立: {output}\n")
+    # 解析 --level team/full
+    level = "full"
+    for i, arg in enumerate(sys.argv):
+        if arg == "--level" and i + 1 < len(sys.argv):
+            level = sys.argv[i + 1]
+
+    created = build_team(output, team_yaml, level=level)
+    print(f"\n✅ 團隊專案已建立: {output} (level={level})\n")
     print(f"📁 產出 {len(created)} 項:")
     for f in created:
         print(f"  • {f}")
