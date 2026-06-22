@@ -8,6 +8,9 @@ description: |
   LLMRouter fallback chain + AgentOrchestrator 自進化 + MemorySearch 跨 Session 記憶。
   使用此 Skill 當使用者提及 ai-bot-builder、建立 AI Bot、產出 Bot workspace、
   快速建 Agent Bot、或任何需要從零建構 Telegram AI Agent Bot 的場景。
+metadata:
+  version: "2.0"
+  updated: 2026-06-22
 ---
 
 # ark-ai-bot-builder
@@ -1005,6 +1008,9 @@ python .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./output/my-bot
 - **資源即程式碼** — `assets/` 直接複製、`templates/` 就是最終 .py
 
 ---
+metadata:
+  version: "2.0"
+  updated: 2026-06-22
 
 ## 踩坑紀錄（2026-06-22 驗證通過）
 
