@@ -1,16 +1,15 @@
 ---
-name: ark-agent-team-init
+name: ark-agent-team-builder
 description: |
-  產出多 Agent 團隊骨架（team.yaml + scheduler.yaml + 目錄結構 + prompts），
-  支援 2-12 人團隊，預設 4 人（admin + leader + dev + qa）。
-  只管團隊架構，不管 AI 配置（.kiro/ 由 ark-kiro-init 產出）。
-  使用此 Skill 當使用者提及 建立團隊、team init、agent teams、
-  多 agent 配置、團隊骨架、ark-team-agent init、
-  或任何需要從零建立多 Agent 協作環境的場景。
+  一鍵產出完整 AI Agent 團隊平台（四層架構：Gateway + Coordinator + Runtime + Business）。
+  預設 5 人團隊（admin + leader + ai-dev + coder + qa），支援 --level team（33 項基礎）或 full（110 項完整平台）。
+  產出含 REST API（21 端點）、Telegram Bot（11 指令 + 智慧路由）、Web Dashboard、A2A 協作、Docker 部署。
+  使用此 Skill 當使用者提及 建立團隊、build team、agent team、多 agent 平台、
+  AI 團隊協作、ark-agent-team、或任何需要從零建立多 Agent 協作平台的場景。
 metadata:
   author: paddyyang
   version: "1.1"
-  updated: 2026-05-15
+  updated: 2026-06-22
 ---
 
 # ark-agent-team-init
