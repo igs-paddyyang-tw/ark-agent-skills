@@ -856,11 +856,51 @@ def _scaffold_secrets(output_dir: Path) -> list[str]:
 
 
 def _scaffold_team_knowledge(output_dir: Path) -> list[str]:
-    """建立團隊級知識庫（根目錄 knowledge/）。"""
+    """建立團隊級知識庫（根目錄 knowledge/shared/）含預設 wiki 頁面。"""
     created: list[str] = []
-    knowledge_dir = output_dir / "knowledge"
+    knowledge_dir = output_dir / "knowledge" / "shared"
     _ensure_knowledge(knowledge_dir, "team")
-    created.append("knowledge/ (團隊級知識庫五件套)")
+    created.append("knowledge/shared/ (團隊級知識庫五件套)")
+
+    # 寫入預設知識庫 wiki 頁面（從 templates/knowledge/ 載入）
+    wiki_created = _write_shared_knowledge(knowledge_dir)
+    created.extend(wiki_created)
+    return created
+
+
+def _write_shared_knowledge(knowledge_dir: Path) -> list[str]:
+    """從 references/templates/knowledge/ 載入預設 wiki 頁面到 knowledge/shared/wiki/。"""
+    created: list[str] = []
+    templates_dir = SKILL_ROOT / "references" / "templates" / "knowledge"
+    wiki_dir = knowledge_dir / "wiki"
+    wiki_dir.mkdir(parents=True, exist_ok=True)
+
+    # 預設頁面（schema/index/log 放根層，wiki pages 放 wiki/）
+    root_files = ("schema.md", "index.md", "log.md")
+    wiki_files = (
+        "team-architecture.md",
+        "mcp-tools-reference.md",
+        "communication-patterns.md",
+        "upgrade-roadmap.md",
+        "troubleshooting.md",
+    )
+
+    for fname in root_files:
+        src = templates_dir / fname
+        dst = knowledge_dir / fname
+        if src.exists() and not dst.exists():
+            content = src.read_text(encoding="utf-8").replace("{{TODAY}}", TODAY)
+            dst.write_text(content, encoding="utf-8")
+            created.append(f"knowledge/shared/{fname}")
+
+    for fname in wiki_files:
+        src = templates_dir / fname
+        dst = wiki_dir / fname
+        if src.exists() and not dst.exists():
+            content = src.read_text(encoding="utf-8").replace("{{TODAY}}", TODAY)
+            dst.write_text(content, encoding="utf-8")
+            created.append(f"knowledge/shared/wiki/{fname}")
+
     return created
 
 

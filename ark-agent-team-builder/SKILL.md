@@ -93,12 +93,29 @@ metadata:
 
 > **注意：** admin 預設 `working_directory: agents/admin-agent`（獨立 workspace）。
 > 根目錄 `.kiro/` 作為 Kiro CLI 開發用，不與 daemon 的 admin-agent 衝突。
->
+
+### 團隊共享知識庫（根目錄 knowledge/shared/）
+
+產出時自動寫入 5 篇預設 wiki 頁面，供所有 agent 透過 `wiki_query` 搜尋：
+
+```
+knowledge/shared/
+├── schema.md                       # Wiki Schema v3.0 規則
+├── index.md                        # 知識庫索引
+├── log.md                          # 操作日誌（append-only）
+├── raw/.gitkeep                    # 唯讀原始資料
+└── wiki/
+    ├── team-architecture.md        # 系統架構總覽
+    ├── mcp-tools-reference.md      # MCP 工具使用指南
+    ├── communication-patterns.md   # 跨 Agent 通訊模式
+    ├── upgrade-roadmap.md          # 系統升級路徑
+    └── troubleshooting.md          # 常見問題排除
+```
+
 > 以下由其他 Skill 在後續 Phase 產出（本 Skill 不負責）：
 > - `.kiro/`（根目錄 admin workspace）→ `ark-kiro-init`（Phase A2）
 > - `skills/`（共用 Skills 倉庫）→ `ark-kiro-init`（Phase A2）
 > - `docs/spec.md` → `ark-superpowers`（Phase A3）
-> - `knowledge/`（團隊級知識庫）→ `ark-wiki-engine`（Phase A4）
 > - `src/{pkg}/` + `mcp_setup.py` → `ark-mcp-builder`（Phase B1）
 > - `start.py` → `ark-team-runtime`（Phase B3）
 > - `tests/` → `ark-test-runner`（Phase D1）
