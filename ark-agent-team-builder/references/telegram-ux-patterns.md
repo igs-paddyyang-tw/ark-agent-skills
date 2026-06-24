@@ -19,16 +19,26 @@
 ```
 使用者發訊
   → 👀 mark_received（第一時間，Planner 之前）
-  → ⏳ mark_processing（確認目標 agent 後）
-  → 🔄 mark_delegating（派工給子 Agent 時，team-builder 專用）
-  → 👍/👎 mark_done（完成或失敗）
+  → 🔥 mark_processing（確認目標 agent 後）
+  → ⚡ mark_delegating（派工給子 Agent 時，team-builder 專用）
+  → 👍/💔 mark_done（完成或失敗）
 ```
 
 **關鍵規則：** `mark_received` 必須在任何路由/判斷邏輯之前觸發。
 
-**Telegram 支援的 Reaction emoji（完整清單）：**
-- 👍 👎 ❤️ 🔥 🎉 😢 👀 🤔 💯
-- ⚠️ `✅` `❌` **不在官方支援清單中**，會靜默失敗。必須用 👍/👎 替代。
+**Telegram 合法 Reaction emoji（完整清單）：**
+- 👍 👎 ❤️ 🔥 🎉 😢 👀 🤔 💯 ⚡ 💔
+- ⚠️ `✅` `❌` **不在官方支援清單中**，會靜默失敗。
+
+**本系統使用：**
+
+| 常數 | emoji | 階段 |
+|------|-------|------|
+| REACTION_RECEIVED | 👀 | 已收到 |
+| REACTION_PROCESSING | 🔥 | 處理中 |
+| REACTION_DELEGATING | ⚡ | 派工中 |
+| REACTION_SUCCESS | 👍 | 完成 |
+| REACTION_FAILURE | 💔 | 失敗 |
 
 ---
 
@@ -64,22 +74,22 @@ class ReactionManager:
         await self._set_reaction(chat_id, message_id, "👀")
 
     async def mark_processing(self, instance: str) -> None:
-        """開始處理 → ⏳。"""
+        """開始處理 → 🔥。"""
         target = self._targets.get(instance)
         if target:
-            await self._set_reaction(*target, "⏳")
+            await self._set_reaction(*target, "🔥")
 
     async def mark_delegating(self, instance: str) -> None:
-        """派工給子 Agent → 🔄。"""
+        """派工給子 Agent → ⚡。"""
         target = self._targets.get(instance)
         if target:
-            await self._set_reaction(*target, "🔄")
+            await self._set_reaction(*target, "⚡")
 
     async def mark_done(self, instance: str, success: bool = True) -> None:
-        """完成 → 👍 或 👎。"""
+        """完成 → 👍 或 💔。"""
         target = self._targets.pop(instance, None)
         if target:
-            emoji = "👍" if success else "👎"
+            emoji = "👍" if success else "💔"
             await self._set_reaction(*target, emoji)
 
     async def _set_reaction(self, chat_id: int, message_id: int, emoji: str) -> None:

@@ -1,5 +1,8 @@
 """reaction_manager.py — Telegram 表情反應 + Typing 生命週期管理。
 
+使用 Telegram 合法 Reaction emoji：👀→🔥→👍/💔
+不可用 ✅❌（不在官方支援清單）。
+
 用法：
     rm = ReactionManager(bot)
     await rm.mark_received(chat_id, msg_id)
@@ -8,9 +11,6 @@
     # ... 執行 ...
     await rm.mark_done(chat_id, msg_id, success=True)
     rm.stop_typing("main")
-
-Reaction 生命週期：👀→⏳→✅/❌
-Typing：4 秒一次 send_chat_action，支援 typing/upload_photo/upload_document
 """
 from __future__ import annotations
 
@@ -22,6 +22,13 @@ from telegram import Bot, ReactionTypeEmoji
 from telegram.constants import ChatAction
 
 log = logging.getLogger(__name__)
+
+# Telegram 合法 Reaction emoji
+REACTION_RECEIVED = "👀"
+REACTION_PROCESSING = "🔥"
+REACTION_DELEGATING = "⚡"
+REACTION_SUCCESS = "👍"
+REACTION_FAILURE = "💔"
 
 # Typing action 類型
 TypingAction = Literal["typing", "upload_photo", "upload_document"]
@@ -38,15 +45,19 @@ class ReactionManager:
 
     async def mark_received(self, chat_id: int, msg_id: int) -> None:
         """收到訊息 → 👀。"""
-        await self._set_reaction(chat_id, msg_id, "👀")
+        await self._set_reaction(chat_id, msg_id, REACTION_RECEIVED)
 
     async def mark_processing(self, chat_id: int, msg_id: int) -> None:
-        """開始處理 → ⏳。"""
-        await self._set_reaction(chat_id, msg_id, "⏳")
+        """開始處理 → 🔥。"""
+        await self._set_reaction(chat_id, msg_id, REACTION_PROCESSING)
+
+    async def mark_delegating(self, chat_id: int, msg_id: int) -> None:
+        """派工中 → ⚡。"""
+        await self._set_reaction(chat_id, msg_id, REACTION_DELEGATING)
 
     async def mark_done(self, chat_id: int, msg_id: int, success: bool = True) -> None:
-        """完成 → 👍 或 👎。"""
-        emoji = "👍" if success else "👎"
+        """完成 → 👍 或 💔。"""
+        emoji = REACTION_SUCCESS if success else REACTION_FAILURE
         await self._set_reaction(chat_id, msg_id, emoji)
 
     async def _set_reaction(self, chat_id: int, msg_id: int, emoji: str) -> None:
@@ -113,7 +124,7 @@ class ReactionManager:
             self.stop_typing(key)
 
 
-def get_reaction_manager(context) -> ReactionManager:
+def get_reaction_manager(context) -> "ReactionManager":
     """從 bot_data 取得 ReactionManager instance。"""
     if "reaction_manager" not in context.bot_data:
         context.bot_data["reaction_manager"] = ReactionManager(context.bot)
