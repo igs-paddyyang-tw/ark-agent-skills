@@ -45,8 +45,8 @@ class ReactionManager:
         await self._set_reaction(chat_id, msg_id, "⏳")
 
     async def mark_done(self, chat_id: int, msg_id: int, success: bool = True) -> None:
-        """完成 → ✅ 或 ❌。"""
-        emoji = "✅" if success else "❌"
+        """完成 → 👍 或 👎。"""
+        emoji = "👍" if success else "👎"
         await self._set_reaction(chat_id, msg_id, emoji)
 
     async def _set_reaction(self, chat_id: int, msg_id: int, emoji: str) -> None:

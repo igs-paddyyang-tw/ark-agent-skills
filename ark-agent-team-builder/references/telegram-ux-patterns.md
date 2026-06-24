@@ -21,10 +21,14 @@
   → 👀 mark_received（第一時間，Planner 之前）
   → ⏳ mark_processing（確認目標 agent 後）
   → 🔄 mark_delegating（派工給子 Agent 時，team-builder 專用）
-  → ✅/❌ mark_done（完成或失敗）
+  → 👍/👎 mark_done（完成或失敗）
 ```
 
 **關鍵規則：** `mark_received` 必須在任何路由/判斷邏輯之前觸發。
+
+**Telegram 支援的 Reaction emoji（完整清單）：**
+- 👍 👎 ❤️ 🔥 🎉 😢 👀 🤔 💯
+- ⚠️ `✅` `❌` **不在官方支援清單中**，會靜默失敗。必須用 👍/👎 替代。
 
 ---
 
@@ -72,10 +76,10 @@ class ReactionManager:
             await self._set_reaction(*target, "🔄")
 
     async def mark_done(self, instance: str, success: bool = True) -> None:
-        """完成 → ✅ 或 ❌。"""
+        """完成 → 👍 或 👎。"""
         target = self._targets.pop(instance, None)
         if target:
-            emoji = "✅" if success else "❌"
+            emoji = "👍" if success else "👎"
             await self._set_reaction(*target, emoji)
 
     async def _set_reaction(self, chat_id: int, message_id: int, emoji: str) -> None:
@@ -230,7 +234,7 @@ await msg.reply_text(result)         # 唯一出口
 Telegram Bot API 支援的 Reaction emoji：
 - 👍 👎 ❤️ 🔥 🎉 😢 👀 🤔 💯
 
-**✅ ❌ 可能在部分 client 不顯示**，但 Bot API 接受。若需要最大相容，改用 👍/👎。
+**`✅` `❌` 不在官方支援清單中**，Bot API 可能接受但部分 client 不顯示。統一使用 👍/👎。
 
 ### 4. 群組禁用 Reaction
 
