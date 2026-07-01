@@ -1,15 +1,16 @@
 ---
 name: ark-agent-team-builder
 description: |
-  一鍵產出完整 AI Agent 團隊平台（四層架構：Gateway + Coordinator + Runtime + Business）。
-  預設 5 人團隊（admin + leader + ai-dev + coder + qa），支援 --level team（33 項基礎）或 full（110 項完整平台）。
-  產出含 REST API（21 端點）、Telegram Bot（11 指令 + 智慧路由）、Web Dashboard、A2A 協作、Docker 部署。
+  一鍵產出完整 AI Agent 團隊平台（五層架構：Entry + OS + Collaboration + Execution + Knowledge）。
+  預設 5 人團隊（admin + leader + ai-dev + coder + qa），支援 --level team（基礎）或 full（117 項完整平台）。
+  含 7 狀態任務生命週期、多 Runtime（kiro-cli/claude/codex/multica auto-detect + fallback）、
+  Kanban Web UI、Autopilot 排程、REST API（21+ 端點）、Telegram Bot（14 指令）、Docker 部署。
   使用此 Skill 當使用者提及 建立團隊、build team、agent team、多 agent 平台、
   AI 團隊協作、ark-agent-team、或任何需要從零建立多 Agent 協作平台的場景。
 metadata:
   author: paddyyang
-  version: "1.1"
-  updated: 2026-06-22
+  version: "2.1"
+  updated: 2026-06-25
 ---
 
 # ark-agent-team-init
@@ -639,14 +640,14 @@ python scripts/validate_team.py
 
 ---
 
-## Bot 整合升級（ark-ai-bot-builder → Team）
+## Bot 整合升級（ark-agent-builder → Team）
 
 團隊骨架產出後，可整合完整 Telegram Bot 能力。
 
 ### 整合步驟
 
 ```bash
-# 1. 複製 ark-ai-bot-builder 的 src/ 到團隊專案
+# 1. 複製 ark-agent-builder 的 src/ 到團隊專案
 cp -r <bot-project>/src/ ./src/
 mkdir -p config && cp <bot-project>/config/llm_prompts.yaml config/
 

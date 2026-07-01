@@ -1,4 +1,4 @@
-# ark-ai-bot-builder
+# ark-agent-builder
 
 > 一鍵產出 AI Agent Bot Workspace — Agent CLI 為大腦，Telegram 自然語言對話讓 Bot 做事。
 
@@ -6,10 +6,10 @@
 
 ```bash
 # 產出專案
-py scripts/build_bot.py ./output/my-bot
+py scripts/build_agent.py ./output/my-bot
 
 # 驗證結構
-py scripts/validate_bot.py ./output/my-bot
+py scripts/validate_agent.py ./output/my-bot
 
 # 設定 + 啟動
 cd output/my-bot
@@ -21,7 +21,7 @@ python -m src.bot.main
 ## 目錄結構
 
 ```
-ark-ai-bot-builder/
+ark-agent-builder/
 ├── SKILL.md              # 執行計畫 + 完整範例程式碼
 ├── README.md             # 本文件
 ├── assets/               # 靜態資源（直接複製到目標）
@@ -45,8 +45,8 @@ ark-ai-bot-builder/
 │   ├── bot_main.py       # → src/bot/main.py
 │   └── handlers.py       # → src/bot/handlers.py
 ├── scripts/              # 產出 + 驗證腳本
-│   ├── build_bot.py      # 一鍵產出整個專案（19 個檔案）
-│   └── validate_bot.py   # 驗證結構完整性
+│   ├── build_agent.py      # 一鍵產出整個專案（19 個檔案）
+│   └── validate_agent.py   # 驗證結構完整性
 └── docs/                 # 教學文件
     ├── guide.md          # 建置教學（Markdown）
     └── guide.html        # 建置教學（HTML，暗黑風格）

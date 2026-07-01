@@ -2,7 +2,8 @@
 name: ark-kiro-init
 description: |
   產出完整的 .kiro/ workspace 配置（agents、steering、prompts、skills、settings），
-  根據使用者指定的角色自動生成。預設為全端工程師 + 系統分析與設計師（SA/SD）。
+  根據使用者指定的角色自動生成。含角色對應 Skills 預裝、知識庫自我成長規則、
+  多層知識庫架構（私有→共用→團隊）。
   支援自訂角色：上網搜尋該角色的最佳實踐並整理成配置。
   使用此 Skill 當使用者提及 建立 .kiro、產生 workspace、初始化 kiro 配置、
   kiro init、kiro-init、設定角色的 .kiro、幫我建 agent 配置、新增角色、
@@ -10,8 +11,8 @@ description: |
   或任何需要產出 .kiro 目錄結構的場景。
 metadata:
   author: paddyyang
-  version: "1.1"
-  updated: 2026-05-15
+  version: "2.1"
+  updated: 2026-06-25
 ---
 
 # ark-kiro-init

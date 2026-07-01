@@ -1,5 +1,5 @@
 ---
-title: "AI Agent Bot 建置教學 — 使用 ark-ai-bot-builder"
+title: "AI Agent Bot 建置教學 — 使用 ark-agent-builder"
 type: guide
 created: 2026-06-05
 language: zh-TW
@@ -7,7 +7,7 @@ language: zh-TW
 
 # 🤖 AI Agent Bot 建置教學
 
-> 用 `ark-ai-bot-builder` 一鍵產出完整 AI Agent Bot，5 分鐘內 Telegram 能對話 + 產科技日報。
+> 用 `ark-agent-builder` 一鍵產出完整 AI Agent Bot，5 分鐘內 Telegram 能對話 + 產科技日報。
 
 **操作位置圖示說明：**
 - 📝 = 在 **AI IDE 聊天框**（Kiro / Antigravity）輸入
@@ -67,12 +67,12 @@ kiro-cli login    # 瀏覽器授權
 
 ## Step 1：一鍵產出專案
 
-### 方法 A：用 build_bot.py 腳本（推薦）
+### 方法 A：用 build_agent.py 腳本（推薦）
 
 **💻 在終端機執行：**
 
 ```bash
-py .kiro/skills/ark-ai-bot-builder/scripts/build_bot.py ./my-bot
+py .kiro/skills/ark-agent-builder/scripts/build_agent.py ./my-bot
 ```
 
 自動產出 19 個檔案，結構完整可直接啟動。
@@ -82,7 +82,7 @@ py .kiro/skills/ark-ai-bot-builder/scripts/build_bot.py ./my-bot
 **📝 在 AI IDE 聊天框輸入：**
 
 ```
-ark-ai-bot-builder，專案名稱 my-bot
+ark-agent-builder，專案名稱 my-bot
 ```
 
 AI 會根據 SKILL.md 的指引逐步產出所有檔案。
@@ -299,7 +299,7 @@ _QUICK_ROUTE = [
 ### validate 不通過
 
 ```bash
-py .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./my-bot
+py .kiro/skills/ark-agent-builder/scripts/validate_agent.py ./my-bot
 ```
 
 按照錯誤提示補齊缺少的檔案。
@@ -308,9 +308,9 @@ py .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./my-bot
 
 ## 與舊版 ai-bot-workshop 的差異
 
-| | ai-bot-workshop（7 步驟） | ark-ai-bot-builder（一鍵） |
+| | ai-bot-workshop（7 步驟） | ark-agent-builder（一鍵） |
 |---|---|---|
-| 觸發方式 | 7 個獨立 Skill 分步觸發 | 1 個 `build_bot.py` 全部產出 |
+| 觸發方式 | 7 個獨立 Skill 分步觸發 | 1 個 `build_agent.py` 全部產出 |
 | 耗時 | 2 堂 × 50 分鐘 | 5 分鐘 |
 | 適合 | 學習者（逐步理解架構） | 熟手（快速產出 workspace） |
 | 日報 | 需 LLM 結構化（Step 6） | 純 Python 直出（不需 LLM） |
@@ -322,10 +322,10 @@ py .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./my-bot
 
 ```bash
 # 產出
-py .kiro/skills/ark-ai-bot-builder/scripts/build_bot.py ./my-bot
+py .kiro/skills/ark-agent-builder/scripts/build_agent.py ./my-bot
 
 # 驗證
-py .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./my-bot
+py .kiro/skills/ark-agent-builder/scripts/validate_agent.py ./my-bot
 
 # 設定
 cd my-bot && cp .env.example .env

@@ -1,11 +1,11 @@
-"""build_bot.py — 一鍵產出完整 AI Agent Bot 專案。
+"""build_agent.py — 一鍵產出完整 AI Agent Bot 專案。
 
 從 assets/ 複製樣板資源，從 templates/ 產出程式碼。
 產出後可直接 `python -m src.bot.main` 或 `start.bat` 啟動。
 
 Usage:
-    python build_bot.py <output_dir> [project_name]
-    python build_bot.py --validate <project_dir>
+    python build_agent.py <output_dir> [project_name]
+    python build_agent.py --validate <project_dir>
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ ASSETS_DIR = SKILL_ROOT / "assets"
 TEMPLATES_DIR = SKILL_ROOT / "templates"
 
 
-def build_bot(output_dir: Path, project_name: str = "ai-bot") -> list[str]:
+def build_agent(output_dir: Path, project_name: str = "ai-bot") -> list[str]:
     """產出完整 AI Agent Bot 專案。回傳已建立的檔案清單。"""
     output_dir.mkdir(parents=True, exist_ok=True)
     created: list[str] = []
@@ -132,8 +132,8 @@ def validate(project_dir: Path) -> list[str]:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python build_bot.py <output_dir> [project_name]")
-        print("       python build_bot.py --validate <project_dir>")
+        print("Usage: python build_agent.py <output_dir> [project_name]")
+        print("       python build_agent.py --validate <project_dir>")
         sys.exit(1)
 
     if sys.argv[1] == "--validate":
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     else:
         out = Path(sys.argv[1])
         name = sys.argv[2] if len(sys.argv) > 2 else out.name
-        files = build_bot(out, name)
+        files = build_agent(out, name)
         print(f"✅ 產出完成（{len(files)} 個檔案）")
         for f in files:
             print(f"  📁 {f}")

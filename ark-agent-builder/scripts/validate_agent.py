@@ -1,7 +1,7 @@
-"""validate_bot.py — 驗證 AI Agent Bot 專案結構完整性。
+"""validate_agent.py — 驗證 AI Agent 專案結構完整性。
 
 Usage:
-    python validate_bot.py [project_dir]
+    python validate_agent.py [project_dir]
 """
 from __future__ import annotations
 

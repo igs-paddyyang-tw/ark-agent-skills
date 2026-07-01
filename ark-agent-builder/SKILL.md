@@ -1,6 +1,6 @@
 ---
 author: paddyyang
-name: ark-ai-bot-builder
+name: ark-agent-builder
 description: |
   快速產出完整 AI Agent Bot Workspace（1~6 階段漸進式）。
   掛載 Agent CLI（Gemini/Kiro/Claude）為大腦，透過 Telegram 自然語言對話讓 Bot 做事。
@@ -13,7 +13,7 @@ metadata:
   updated: 2026-06-22
 ---
 
-# ark-ai-bot-builder
+# ark-agent-builder
 
 > 快速產出 AI Agent Bot Workspace。核心：Agent CLI 為大腦 + Telegram 自然語言對話 + 自動產日報。
 
@@ -73,7 +73,7 @@ ConversationPlanner（六層意圖路由，零 LLM 消耗）
 
 ## 觸發條件
 
-「ark-ai-bot-builder」、「建立 AI Bot」、「產出 Bot workspace」、「快速建 Agent Bot」、「ai-workspace」
+「ark-agent-builder」、「建立 AI Bot」、「產出 Bot workspace」、「快速建 Agent Bot」、「ai-workspace」
 
 ## 輸入參數
 
@@ -902,7 +902,7 @@ pause
 
 ```bash
 # 1. 產出
-「ark-ai-bot-builder，專案名稱 my-bot」
+「ark-agent-builder，專案名稱 my-bot」
 
 # 2. 設定
 cd output/my-bot
@@ -935,7 +935,7 @@ start.bat
 ## 附帶資源結構
 
 ```
-ark-ai-bot-builder/
+ark-agent-builder/
 ├── SKILL.md                      # 本文件（執行計畫）
 ├── assets/                       # 直接複製到目標的靜態資源
 │   ├── news_sources.yaml         # → config/news_sources.yaml
@@ -959,18 +959,18 @@ ark-ai-bot-builder/
 │   ├── handlers.py               # → src/bot/handlers.py
 │   └── tech-daily.html           # → templates/tech-daily.html（見 ninja-bot）
 └── scripts/                      # 產出 + 驗證腳本
-    ├── build_bot.py              # 一鍵產出整個專案
-    └── validate_bot.py           # 驗證結構完整性
+    ├── build_agent.py              # 一鍵產出整個專案
+    └── validate_agent.py           # 驗證結構完整性
 ```
 
 ### scripts/ 使用方式
 
 ```bash
 # 一鍵產出專案
-python .kiro/skills/ark-ai-bot-builder/scripts/build_bot.py ./output/my-bot
+python .kiro/skills/ark-agent-builder/scripts/build_agent.py ./output/my-bot
 
 # 驗證已有專案
-python .kiro/skills/ark-ai-bot-builder/scripts/validate_bot.py ./output/my-bot
+python .kiro/skills/ark-agent-builder/scripts/validate_agent.py ./output/my-bot
 ```
 
 ### assets/ 規則
