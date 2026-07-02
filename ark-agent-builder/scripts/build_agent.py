@@ -147,6 +147,18 @@ if __name__ == "__main__":
         out = Path(sys.argv[1])
         name = sys.argv[2] if len(sys.argv) > 2 else out.name
         files = build_agent(out, name)
-        print(f"✅ 產出完成（{len(files)} 個檔案）")
-        for f in files:
-            print(f"  📁 {f}")
+
+        # ── 補建 agents/ + knowledge/ 目錄 ──
+        agents_dir = out / "agents" / "admin-agent"
+        for sub in ("docs", "knowledge/raw", "output", "skills"):
+            (agents_dir / sub).mkdir(parents=True, exist_ok=True)
+        (out / "knowledge" / "raw").mkdir(parents=True, exist_ok=True)
+        (out / "knowledge" / "wiki").mkdir(parents=True, exist_ok=True)
+
+        print(f"\n✅ 產出完成（{len(files)} 個檔案）→ {out}/")
+        print(f"\n📋 下一步：")
+        print(f"  1. python .kiro/skills/ark-kiro-init/scripts/build_kiro.py --standalone {out}")
+        print(f"     → 產出 .kiro/ 配置（SOUL + KIRO + MEMORY + mcp.json）")
+        print(f"  2. 編輯 {out}/.kiro/steering/SOUL.md 設計你的 Bot 人格")
+        print(f"  3. cp {out}/.env.example {out}/.env  # 填入 Token")
+        print(f"  4. cd {out} && pip install -r requirements.txt && python start.py")
