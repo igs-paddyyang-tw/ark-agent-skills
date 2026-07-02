@@ -80,12 +80,14 @@ def build_kiro(team_path: Path, output_base: Path | None = None) -> list[str]:
         wd = inst.get("working_directory", f"agents/{name}")
         description = inst.get("description", f"{name}")
 
-        if wd == "." or role == "admin":
-            # Admin → 根目錄 .kiro/
+        if wd == ".":
+            # 根目錄 .kiro/（僅當明確指定 working_directory: "." 時）
             kiro_dir = base / ".kiro"
             is_admin = True
         else:
-            # 其他 agent → agents/{name}/.kiro/
+            # 所有 agent（含 admin）→ agents/{name}/.kiro/
+            kiro_dir = base / wd / ".kiro"
+            is_admin = (role == "admin")
             kiro_dir = base / wd / ".kiro"
             is_admin = False
 
@@ -514,7 +516,7 @@ def validate_kiro(project_dir: Path) -> list[str]:
         role = inst.get("role", "worker")
         wd = inst.get("working_directory", f"agents/{name}")
 
-        if wd == "." or role == "admin":
+        if wd == ".":
             kiro_dir = project_dir / ".kiro"
         else:
             kiro_dir = project_dir / wd / ".kiro"
