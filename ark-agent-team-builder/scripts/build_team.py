@@ -627,12 +627,6 @@ def _scaffold_agents(output_dir: Path, cfg: dict) -> list[str]:
     agents_dir = output_dir / "agents"
     agents_dir.mkdir(exist_ok=True)
 
-    # AGENTS.md（完整版）
-    agents_md = agents_dir / "AGENTS.md"
-    if not agents_md.exists():
-        _write_agents_md(agents_md, cfg)
-        created.append("agents/AGENTS.md")
-
     # 每個 agent 的目錄
     for name, inst in cfg.get("instances", {}).items():
         inst = inst or {}
@@ -2139,17 +2133,6 @@ def validate_project(project_dir: Path) -> list[str]:
     # tasks/board.json
     if not (p / "tasks" / "board.json").exists():
         errors.append("❌ 缺少: tasks/board.json")
-
-    # agents/AGENTS.md
-    agents_md = p / "agents" / "AGENTS.md"
-    if agents_md.exists():
-        content = agents_md.read_text(encoding="utf-8")
-        if "reply" not in content.lower():
-            errors.append("agents/AGENTS.md: 缺少 reply kind 規則")
-        if "錯誤" not in content:
-            errors.append("agents/AGENTS.md: 缺少錯誤處理段落")
-    else:
-        errors.append("❌ 缺少: agents/AGENTS.md")
 
     # .gitignore 完整性
     gi = p / ".gitignore"
