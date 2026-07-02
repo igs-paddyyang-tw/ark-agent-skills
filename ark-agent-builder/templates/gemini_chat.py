@@ -1,40 +1,31 @@
-"""Gemini API 即時對話（1-5 秒，選配）。"""
+"""Gemini API 即時對話（最快路徑，不經 CLI）。"""
+from __future__ import annotations
+
 import os
-
-_client = None
-
-
-def _get_client():
-    global _client
-    if _client is None:
-        from google import genai
-        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    return _client
+import httpx
 
 
-def is_available() -> bool:
-    """檢查 Gemini API Key 是否有設定。"""
-    return bool(os.getenv("GEMINI_API_KEY"))
+async def gemini_chat(prompt: str, system: str = "") -> str | None:
+    """直接呼叫 Gemini API（跳過 CLI，2-3 秒回覆）。"""
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    if not api_key:
+        return None
 
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
-async def chat(message: str, system_prompt: str = "") -> str:
-    """單輪 Gemini API 對話。無 Key 時回傳空字串。"""
-    if not is_available():
-        return ""
-    try:
-        import asyncio
-        return await asyncio.to_thread(_sync_chat, message, system_prompt)
-    except Exception:
-        return ""
+    contents = []
+    if system:
+        contents.append({"role": "user", "parts": [{"text": f"[System] {system}"}]})
+        contents.append({"role": "model", "parts": [{"text": "了解。"}]})
+    contents.append({"role": "user", "parts": [{"text": prompt}]})
 
-
-def _sync_chat(message: str, system_prompt: str) -> str:
-    """同步 Gemini API 呼叫（由 to_thread 包裝）。"""
-    client = _get_client()
-    config = {"system_instruction": system_prompt} if system_prompt else None
-    response = client.models.generate_content(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-        contents=message,
-        config=config,
-    )
-    return response.text or ""
+    async with httpx.AsyncClient(timeout=30) as client:
+        try:
+            r = await client.post(url, json={"contents": contents})
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception:
+            return None
