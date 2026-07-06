@@ -205,3 +205,96 @@ Chat 收到訊息後的 Wiki 操作判斷：
 - 不確定內容用 `(?)` 標記
 - 禁止自行解決矛盾，只能標記
 - 禁止刪除 `log.md` 舊記錄（append-only）
+
+---
+
+## 使用現有 Wiki（操作層）
+
+> 當專案已有 knowledge/ 目錄和 FastAPI server 在跑時，用以下方式操作（不是建新系統）。
+
+### 觸發條件（使用層）
+
+- 「匯入知識」「ingest」「把 raw 匯入 wiki」
+- 「查詢 Wiki」「搜尋知識庫」「Wiki 有沒有 XXX」
+- 「檢查 Wiki」「Wiki 健康度」「lint」
+
+### 操作方式
+
+**確認 server 在跑**（port 8000）後，用終端執行：
+
+#### Ingest（匯入 raw/ → wiki/）
+```bash
+curl -X POST http://localhost:8000/api/v1/wiki/ingest
+```
+✅ 回傳：`{"ingested": ["file1.md", "file2.md"], "count": 2}`
+
+#### Query（查詢）
+```bash
+curl -X POST http://localhost:8000/api/v1/wiki/query \
+  -H "Content-Type: application/json" \
+  -d '{"q": "搜尋關鍵字"}'
+```
+✅ 回傳：`{"results": [...], "answer": "..."}`
+
+#### Lint（健康檢查）
+```bash
+curl http://localhost:8000/api/v1/wiki/lint
+```
+✅ 回傳：`{"issues": [], "healthy": true}`
+
+### 不跑 server 時的替代方式
+
+```python
+# 直接用 Python 執行
+import asyncio
+from src.wiki.engine import WikiEngine
+engine = WikiEngine()
+
+# Ingest
+engine.ingest()
+
+# Query
+result = asyncio.run(engine.query("Ocean King", use_rag=True))
+print(result)
+
+# Lint
+issues = engine.lint()
+print(issues)
+```
+
+### 判斷規則
+
+| 使用者說的 | 要做什麼 |
+|-----------|---------|
+| 「建立 Wiki 系統」「產出 Wiki 引擎」 | → 走上面的「產出指引」（建新系統） |
+| 「匯入知識」「查 Wiki」「lint」 | → 走這段「使用層」（操作現有系統） |
+
+### 三種執行模式（依環境選擇）
+
+| 模式 | 條件 | 方式 |
+|------|------|------|
+| API 模式 | server 在跑（port 8000） | curl 呼叫 API |
+| Python 模式 | 有 Python 環境 | 直接 import WikiEngine |
+| LLM 模式 | 都沒有（純 IDE 操作） | 按 SOP 讀寫檔案 |
+
+### LLM 模式 SOP（不需要 server 也不需要跑 Python）
+
+#### Ingest SOP
+1. 列出 `knowledge/raw/*.md` 所有檔案
+2. 逐檔讀取，檢查是否有 frontmatter（`---` 開頭）
+3. 沒有 frontmatter → 補上（title / type / tags / created / updated）
+4. 寫入 `knowledge/wiki/{filename}`（保持同名）
+5. 更新 `knowledge/index.md`（表格列出所有 wiki 頁面）
+6. 追加 `knowledge/log.md`（格式：`- [日期時間] ingest: file1, file2`）
+
+#### Query SOP
+1. 讀 `knowledge/index.md` 找到可能相關的頁面
+2. 讀對應 `knowledge/wiki/{page}.md`
+3. 擷取包含關鍵字的段落
+4. 組合回答，結尾附：`📚 參考：{page1}, {page2}`
+
+#### Lint SOP
+1. 列出 `knowledge/wiki/*.md` 所有頁面
+2. 逐檔檢查 frontmatter 必要欄位（title / type / tags / created / updated）
+3. 回報缺少欄位的頁面清單
+4. 檢查孤立頁面（沒被 index.md 列出的）
