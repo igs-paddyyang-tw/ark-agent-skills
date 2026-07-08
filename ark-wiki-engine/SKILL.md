@@ -108,9 +108,9 @@ status: seedling | developing | mature
 
 | Skill | skill_id | 功能 |
 |-------|----------|------|
-| WikiQuerySkill | wiki_query | 讀 index.md 定位 → 全文搜尋 → 排序回傳 |
-| WikiIngestSkill | wiki_ingest | raw/ 匯入 → 萃取 → 建立/更新頁面 → 更新 index + log |
-| WikiLintSkill | wiki_lint | 檢查 frontmatter 必要欄位、孤立頁面、斷裂連結 |
+| WikiQuerySkill | wiki_query | 讀 index.md 定位 → 全文搜尋（跳過 frontmatter，summary 只從正文擷取）→ 排序回傳 |
+| WikiIngestSkill | wiki_ingest | raw/ 匯入 → 萃取 → 建立/更新頁面 → 更新 index + log（title 優先從內容 H1 抓取；re-ingest 時若 H1 比現有 title 更語意化則更新） |
+| WikiLintSkill | wiki_lint | 檢查 frontmatter 必要欄位、孤立頁面、斷裂連結（連結目標包含 wiki/ 內頁面 + knowledge 根目錄 .md） |
 | WikiSchemaSkill | wiki_schema | 依 schema.md 驗證 type/status 合法值 |
 | WikiGraphSkill | wiki_graph | 分析 `[[wikilink]]` 知識圖譜（節點、邊、hub/orphan） |
 | WikiHybridSearchSkill | wiki_hybrid_search | BM25 關鍵字 + 全文 + RRF 融合 |
@@ -121,7 +121,7 @@ status: seedling | developing | mature
 
 ```python
 # src/server/api/files.py
-GET /api/files              # 列出 ARTIFACTS_DIR 下所有 .md 檔案
+GET /api/files              # 列出 ARTIFACTS_DIR 下 .md 檔案（排除 raw/ 目錄）
 GET /api/files/{path:path}  # 讀取指定檔案內容
 
 # src/server/api/wiki.py
@@ -201,6 +201,7 @@ Chat 收到訊息後的 Wiki 操作判斷：
 - 修改 wiki 頁面後必須同步 `index.md` + `log.md`
 - `wiki_lint` 檢查 frontmatter 必要欄位（title、type、created、updated）
 - `wiki_graph` 使用 `[[page_name]]` 雙向連結建構圖譜
+- `_extract_summary` 必須跳過 frontmatter 區段（`---` 之間），只在正文中搜尋關鍵字並擷取摘要
 - 矛盾標記：`> ⚠️ **矛盾**：來源 A 說 X，來源 B 說 Y，待釐清。`
 - 不確定內容用 `(?)` 標記
 - 禁止自行解決矛盾，只能標記
@@ -282,7 +283,7 @@ print(issues)
 #### Ingest SOP
 1. 列出 `knowledge/raw/*.md` 所有檔案
 2. 逐檔讀取，檢查是否有 frontmatter（`---` 開頭）
-3. 沒有 frontmatter → 補上（title / type / tags / created / updated）
+3. 沒有 frontmatter → 補上（title / type / tags / created / updated）；title 優先取內容中第一個 H1 標題
 4. 寫入 `knowledge/wiki/{filename}`（保持同名）
 5. 更新 `knowledge/index.md`（表格列出所有 wiki 頁面）
 6. 追加 `knowledge/log.md`（格式：`- [日期時間] ingest: file1, file2`）
