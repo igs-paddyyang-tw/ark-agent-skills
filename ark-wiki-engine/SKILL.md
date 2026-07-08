@@ -108,7 +108,7 @@ status: seedling | developing | mature
 
 | Skill | skill_id | 功能 |
 |-------|----------|------|
-| WikiQuerySkill | wiki_query | 讀 index.md 定位 → 全文搜尋（跳過 frontmatter，summary 只從正文擷取）→ 排序回傳 |
+| WikiQuerySkill | wiki_query | 讀 index.md 定位 → 全文搜尋（跳過 frontmatter，summary 只從正文擷取）→ 排序回傳。**搜尋細節**：(1) 關鍵字提取時過濾中文停用詞（的、是、了、在、有、什麼、嗎、呢）；(2) 以段落（paragraph，連續非空行）為擷取單位，非單行；(3) summary 根據 query 擷取最相關段落（含關鍵字最多的段落優先），非固定取第一段 |
 | WikiIngestSkill | wiki_ingest | raw/ 匯入 → 萃取 → 建立/更新頁面 → 更新 index + log（title 優先從內容 H1 抓取；re-ingest 時若 H1 比現有 title 更語意化則更新） |
 | WikiLintSkill | wiki_lint | 檢查 frontmatter 必要欄位、孤立頁面、斷裂連結（連結目標包含 wiki/ 內頁面 + knowledge 根目錄 .md） |
 | WikiSchemaSkill | wiki_schema | 依 schema.md 驗證 type/status 合法值 |
@@ -167,7 +167,13 @@ POST /api/v1/wiki/lint      # Wiki 健康檢查
 
 ```python
 async def _get_wiki_context(request, query: str) -> str:
-    """從 wiki_query Skill 取得相關 context 注入 LLM。"""
+    """從 wiki_query Skill 取得相關 context 注入 LLM。
+
+    擷取規則：
+    - 以段落（paragraph）為單位，非單行
+    - 選擇與 query 關鍵字匹配度最高的段落
+    - 最多取 top_k 個結果，每個結果含完整段落
+    """
     result = await registry.invoke("wiki_query", {"query": query, "top_k": 3})
     if result.success and result.data:
         snippets = [f"[{r['title']}] {r['summary']}" for r in result.data["results"][:3]]
@@ -187,8 +193,15 @@ Chat 收到訊息後的 Wiki 操作判斷：
 | Update | 「存下來」、「記錄」、「更新 [頁面]」 | 讀取 → 整合 → 更新 updated |
 
 **Query 回答格式**：
+
+合成回答的規則：
+1. 從匹配的 wiki 頁面中擷取相關段落（paragraph，非單行）
+2. 根據 query 重新組織語句，用自己的話回答（非直接拼接 title + summary）
+3. 若多個頁面有互補資訊，整合成一段連貫回答
+4. 結尾附上參考來源
+
 ```
-[回答內容]
+[根據 Wiki 內容合成的回答，用完整句子回覆使用者的問題]
 ---
 📚 參考頁面：[[page1]]、[[page2]]
 ```
@@ -289,10 +302,12 @@ print(issues)
 6. 追加 `knowledge/log.md`（格式：`- [日期時間] ingest: file1, file2`）
 
 #### Query SOP
-1. 讀 `knowledge/index.md` 找到可能相關的頁面
-2. 讀對應 `knowledge/wiki/{page}.md`
-3. 擷取包含關鍵字的段落
-4. 組合回答，結尾附：`📚 參考：{page1}, {page2}`
+1. 從 query 提取關鍵字（過濾停用詞：的、是、了、在、有、什麼、嗎、呢、可以、怎麼）
+2. 讀 `knowledge/index.md` 找到標題或 tags 包含關鍵字的頁面
+3. 讀對應 `knowledge/wiki/{page}.md`，跳過 frontmatter（`---` 之間）
+4. 以段落為單位擷取（段落 = 連續非空行，以空行分隔），選擇包含最多關鍵字的段落（最多取 3 段）
+5. 根據擷取的段落，用自己的話合成回答（非直接拼接），回答要直接對應 query 的問題
+6. 結尾附：`📚 參考：{page1}, {page2}`
 
 #### Lint SOP
 1. 列出 `knowledge/wiki/*.md` 所有頁面
