@@ -30,12 +30,18 @@ knowledge/{project-name}/          # Wiki 知識庫（多專案支援）
 ├── wiki/                          # 結構化知識頁面
 │   ├── overview.md                # 專案總覽（必要）
 │   └── {category}/               # 分類目錄
+├── .index/                        # 持久化搜尋索引（自動生成，加入 .gitignore）
+│   ├── metadata.json              # slug/title/aliases/tags 快速查表
+│   ├── userdict.txt               # jieba 自定義詞典（從 aliases + title 產生）
+│   ├── manifest.json              # 索引版本 + 最後重建時間 + 頁面數
+│   └── bm25s/                     # bm25s 持久化索引目錄
 ├── schema.md                      # Schema 規則（v3.0）
 ├── index.md                       # 索引目錄
 └── log.md                         # 操作日誌（append-only）
 
-src/skills/wiki_skills/            # 8 個 Runtime Skills
+src/skills/wiki_skills/            # 8 個 Runtime Skills + 索引建置器
 ├── __init__.py
+├── wiki_indexer.py                 # 索引建置器（bm25s + metadata + userdict + embeddings）
 ├── wiki_query.py
 ├── wiki_ingest.py
 ├── wiki_lint.py
@@ -98,6 +104,7 @@ status: seedling | developing | mature
 | tags | ✅ | 分類標籤 |
 | sources | 建議 | 來源 raw 檔案 |
 | related | 建議 | 相關頁面（用於圖譜） |
+| aliases | 建議 | 頁面別名（中英對照詞，用於精確查找和 query expansion） |
 | created | ✅ | 建立日期 |
 | updated | ✅ | 最後更新日期 |
 | status | 建議 | 頁面成熟度 |
@@ -108,12 +115,12 @@ status: seedling | developing | mature
 
 | Skill | skill_id | 功能 |
 |-------|----------|------|
-| WikiQuerySkill | wiki_query | 讀 index.md 定位 → 全文搜尋（跳過 frontmatter，summary 只從正文擷取）→ 排序回傳。**搜尋細節**：(1) 關鍵字提取時過濾中文停用詞（的、是、了、在、有、什麼、嗎、呢）；(2) 以段落（paragraph，連續非空行）為擷取單位，非單行；(3) summary 根據 query 擷取最相關段落（含關鍵字最多的段落優先），非固定取第一段 |
-| WikiIngestSkill | wiki_ingest | raw/ 匯入 → 萃取 → 建立/更新頁面 → 更新 index + log（title 優先從內容 H1 抓取；re-ingest 時若 H1 比現有 title 更語意化則更新） |
+| WikiQuerySkill | wiki_query | metadata 精確查找（slug/title/aliases 命中直接回頁面）→ BM25 持久化索引搜尋 → 空結果走子字串掃描兜底 → 段落摘要擷取 → 排序回傳。**搜尋細節**：(1) 關鍵字提取時過濾中文停用詞（的、是、了、在、有、什麼、嗎、呢）；(2) 以段落（paragraph，連續非空行）為擷取單位，非單行；(3) summary 根據 query 擷取最相關段落（含關鍵字最多的段落優先），非固定取第一段 |
+| WikiIngestSkill | wiki_ingest | raw/ 匯入 → 萃取 → 建立/更新頁面 → 更新 index + log → 觸發索引重建（bm25s + metadata + userdict）（title 優先從內容 H1 抓取；re-ingest 時若 H1 比現有 title 更語意化則更新） |
 | WikiLintSkill | wiki_lint | 檢查 frontmatter 必要欄位、孤立頁面、斷裂連結（連結目標包含 wiki/ 內頁面 + knowledge 根目錄 .md） |
 | WikiSchemaSkill | wiki_schema | 依 schema.md 驗證 type/status 合法值 |
 | WikiGraphSkill | wiki_graph | 分析 `[[wikilink]]` 知識圖譜（節點、邊、hub/orphan） |
-| WikiHybridSearchSkill | wiki_hybrid_search | BM25 關鍵字 + 全文 + RRF 融合 |
+| WikiHybridSearchSkill | wiki_hybrid_search | 四層搜尋管線：metadata 精確層 + bm25s 持久化索引 + 語意向量 + 圖譜擴散 → RRF 融合（Layer 0 保底永不掛零） |
 | WikiRagBridgeSkill | wiki_rag_bridge | LLM 呼叫前自動注入相關 Wiki context |
 | WikiTemplateSkill | wiki_template | 產生標準化頁面（entity/concept/source 模板） |
 
@@ -211,6 +218,9 @@ Chat 收到訊息後的 Wiki 操作判斷：
 ## 注意事項
 
 - Wiki `raw/` 目錄為唯讀（LLM 只讀不改）
+- `.index/` 目錄為自動生成（加入 .gitignore），不手動修改
+- ingest 完成後必須觸發索引重建（metadata + bm25s + userdict）
+- 查詢流程：metadata 精確匹配 → BM25 索引搜尋 → 子字串兜底（保證不掛零）
 - 修改 wiki 頁面後必須同步 `index.md` + `log.md`
 - `wiki_lint` 檢查 frontmatter 必要欄位（title、type、created、updated）
 - `wiki_graph` 使用 `[[page_name]]` 雙向連結建構圖譜
@@ -303,11 +313,13 @@ print(issues)
 
 #### Query SOP
 1. 從 query 提取關鍵字（過濾停用詞：的、是、了、在、有、什麼、嗎、呢、可以、怎麼）
-2. 讀 `knowledge/index.md` 找到標題或 tags 包含關鍵字的頁面
-3. 讀對應 `knowledge/wiki/{page}.md`，跳過 frontmatter（`---` 之間）
-4. 以段落為單位擷取（段落 = 連續非空行，以空行分隔），選擇包含最多關鍵字的段落（最多取 3 段）
-5. 根據擷取的段落，用自己的話合成回答（非直接拼接），回答要直接對應 query 的問題
-6. 結尾附：`📚 參考：{page1}, {page2}`
+2. **Layer 0 精確匹配**：查 `.index/metadata.json`，slug/title/aliases 命中 → 直接回該頁面
+3. **Layer 1 BM25**：查 `.index/bm25s/` 持久化索引，取 top 5
+4. **Layer 0 兜底**：若 Layer 1 無結果，逐檔子字串掃描（保證不掛零）
+5. 讀對應 `knowledge/wiki/{page}.md`，跳過 frontmatter（`---` 之間）
+6. 以段落為單位擷取（段落 = 連續非空行，以空行分隔），選擇包含最多關鍵字的段落（最多取 3 段）
+7. 根據擷取的段落，用自己的話合成回答（非直接拼接），回答要直接對應 query 的問題
+8. 結尾附：`📚 參考：{page1}, {page2}`
 
 #### Lint SOP
 1. 列出 `knowledge/wiki/*.md` 所有頁面
