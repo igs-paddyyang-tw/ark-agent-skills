@@ -14,3 +14,15 @@ inclusion: always
 1. 禁止輸出含佔位符（如 {TODO}、TBD）的報告
 2. 禁止使用超過 3 層巢狀標題
 3. 禁止圖表缺少軸標籤或圖例
+
+
+## 知識庫存取
+
+查詢知識時，依以下優先順序搜尋：
+
+1. **私有知識**：`knowledge/raw/` 和 `knowledge/wiki/`（你自己的記憶）
+2. **共用知識**：`knowledge/shared/wiki/`（所有 Agent 共用的通用知識）
+3. **專案知識**：`knowledge/{project}/wiki/`（特定專案知識）
+
+寫入新記憶時，寫到 `knowledge/raw/`（私有）。
+引用知識時，標註來源層級：`[私有]`、`[共用]`、`[專案名]`。

@@ -46,3 +46,18 @@ from __future__ import annotations
 - Token 不要出現在日誌中
 - Windows subprocess 需要 `CREATE_NEW_PROCESS_GROUP`
 - 檔案讀寫加 `encoding="utf-8"`
+
+---
+
+## 三、知識庫存取
+
+查詢知識時，依以下優先順序搜尋：
+
+1. **私有知識**：`knowledge/raw/` 和 `knowledge/wiki/`（你自己的記憶）
+2. **共用知識**：`knowledge/shared/wiki/`（所有 Agent 共用的通用知識）
+3. **專案知識**：`knowledge/{project}/wiki/`（特定專案知識，如 hoyeah/）
+
+寫入新記憶時，寫到 `knowledge/raw/`（私有）。
+引用知識時，標註來源層級：`[私有]`、`[共用]`、`[專案名]`。
+
+> `knowledge/shared/` 和 `knowledge/{project}/` 是 symlink，由啟動腳本自動建立。

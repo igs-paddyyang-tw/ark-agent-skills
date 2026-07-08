@@ -101,12 +101,29 @@ metadata:
 ├── docs/                              # 團隊文件
 ├── src/                               # 業務程式碼
 ├── tests/                             # 測試
-├── knowledge/                         # 團隊知識庫
+├── knowledge/                         # 全域知識庫（三層架構）
+│   ├── shared/                        #   共用知識（所有 Agent 可查）
+│   │   ├── raw/
+│   │   ├── wiki/
+│   │   ├── .index/                    #   搜尋索引（自動生成）
+│   │   ├── schema.md
+│   │   ├── index.md
+│   │   └── log.md
+│   └── {project}/                     #   專案知識（如 hoyeah/）
+│       ├── raw/
+│       ├── wiki/
+│       ├── .index/
+│       ├── schema.md
+│       ├── index.md
+│       └── log.md
 ├── team.yaml                          # 團隊配置
 ├── scheduler.yaml                     # 排程
 ├── start.py                           # 啟動腳本
 └── .env                               # 環境變數
 ```
+
+> **知識庫三層查詢**：Agent 私有（agents/*/knowledge/）→ 共用（knowledge/shared/）→ 專案（knowledge/{project}/）。
+> 啟動時 bootstrap.py 自動建 symlink 讓每個 Agent 的 knowledge/ 下能看到 shared/ 和 {project}/。
 
 > **注意：** `product.md`、`tech.md`、`structure.md` 不在 init 預設產出中。
 > 這些是專案特定檔案，由使用者依需求手動建立（或後續用 ark-superpowers 產出）。
