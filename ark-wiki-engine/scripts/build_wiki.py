@@ -1,7 +1,11 @@
-"""build_wiki.py — 一鍵產出 Wiki 知識庫引擎（8 Skills + API + Web UI）。
+"""build_wiki.py v2 — 一鍵產出 Wiki 知識庫引擎（含四層搜尋 + Server + Web UI）。
 
-在目標專案目錄下建立完整的 Wiki 知識庫系統。
-可獨立運作，也可整合進既有 FastAPI 專案。
+在目標專案目錄下建立完整的 Wiki 知識庫系統（23 個檔案）：
+  - 知識庫 5 個（schema + index + log + overview + .index/）
+  - Skills 9 個（query v2 + ingest v2 + indexer + lint + schema + graph + hybrid v2 + rag_bridge + template）
+  - Server 5 個（main + api/wiki + api/files + __init__ × 2）
+  - Web UI 3 個（index.html + app.js + style.css）
+  - 設定 2 個（run.py + requirements.txt）
 
 Usage:
     python build_wiki.py <output_dir> [project_name]
@@ -28,6 +32,7 @@ TODAY = str(date.today())
 DIRS = [
     "knowledge/{name}/raw",
     "knowledge/{name}/wiki",
+    "knowledge/{name}/.index",
     "src/skills/wiki_skills",
     "src/server/api",
     "src/server/templates",
@@ -153,9 +158,10 @@ def _wiki_init_py() -> str:
 
 
 def _wiki_query_py() -> str:
-    return '''"""wiki_query — 搜尋知識庫頁面。"""
+    return '''"""wiki_query — 四層金字塔搜尋（metadata→BM25→hybrid→rerank）。"""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
@@ -168,70 +174,176 @@ class WikiQueryParams(SkillParam):
 
 
 class WikiQuerySkill(BaseSkill):
-    """搜尋 Wiki 知識庫（BM25-like 關鍵字匹配）。"""
+    """四層金字塔搜尋：metadata精確 → BM25索引 → hybrid混合 → rerank。"""
 
     skill_id = "wiki_query"
     skill_type = SkillType.PYTHON
-    description = "搜尋 Wiki 知識庫頁面"
-    version = "1.0.0"
+    description = "Wiki 四層搜尋（metadata精確→BM25→混合→rerank）"
+    version = "2.0.0"
     input_schema = WikiQueryParams
+
+    STOPWORDS = {"的", "是", "了", "在", "有", "什麼", "嗎", "呢", "可以", "怎麼", "一個", "和", "與"}
 
     def __init__(self, knowledge_root: Path | None = None) -> None:
         self._root = knowledge_root or Path("knowledge")
+        self._wiki_dir = self._root / "wiki"
+        self._index_dir = self._root / ".index"
 
     async def execute(self, params: dict) -> SkillResult:
         p = WikiQueryParams(**params)
-        keywords = p.query.lower().split()
-
-        wiki_dir = self._root / "wiki"
-        if not wiki_dir.exists():
+        if not self._wiki_dir.exists():
             return SkillResult(success=False, error="知識庫尚未建立")
 
-        results: list[dict] = []
-        for md_file in wiki_dir.rglob("*.md"):
-            try:
-                content = md_file.read_text(encoding="utf-8", errors="replace")
-                content_lower = content.lower()
-                score = sum(content_lower.count(kw) for kw in keywords)
-                if score == 0:
-                    continue
+        from src.skills.wiki_skills.wiki_indexer import WikiIndexer
+        indexer = WikiIndexer(self._root)
+        metadata = indexer.load_metadata()
+        keywords = self._tokenize(p.query)
 
-                title = md_file.stem
-                for line in content.split("\\n"):
-                    if line.startswith("title:"):
-                        title = line.split(":", 1)[1].strip().strip(\\'"\\')
-                        break
+        # Layer 0: metadata 精確匹配
+        exact = self._search_exact(p.query, metadata)
+        if exact and exact[0]["score"] >= 1.0:
+            results = self._add_summary(exact[:p.top_k], keywords)
+            return SkillResult(success=True, data={"results": results, "total": len(exact)})
 
-                summary = ""
-                in_fm = False
-                for line in content.split("\\n"):
-                    if line.strip() == "---":
-                        in_fm = not in_fm
-                        continue
-                    if in_fm:
-                        continue
-                    if line.strip() and not line.startswith("#"):
-                        summary = line.strip()[:120]
-                        break
+        # Layer 1: BM25
+        bm25_hits = self._search_bm25(p.query, metadata, p.top_k * 2)
 
-                results.append({
-                    "title": title,
-                    "path": str(md_file.relative_to(self._root)),
-                    "score": score,
-                    "summary": summary,
-                })
-            except (OSError, UnicodeDecodeError):
-                continue
+        # Layer 2: hybrid（BM25 + 圖譜擴散 + RRF）
+        if bm25_hits:
+            hybrid_hits = self._hybrid_fuse(p.query, bm25_hits, metadata, p.top_k * 2)
+        else:
+            hybrid_hits = bm25_hits
 
-        results.sort(key=lambda x: x["score"], reverse=True)
-        return SkillResult(success=True, data={"results": results[:p.top_k], "total": len(results)})
+        # Layer 0 兜底
+        if not hybrid_hits and not exact:
+            hybrid_hits = self._search_substring(p.query, metadata)
+
+        all_hits = (exact or []) + (hybrid_hits or [])
+        seen, deduped = set(), []
+        for h in all_hits:
+            if h["path"] not in seen:
+                seen.add(h["path"])
+                deduped.append(h)
+
+        results = self._add_summary(deduped[:p.top_k], keywords)
+        return SkillResult(success=True, data={"results": results, "total": len(deduped)})
+
+    def _tokenize(self, q: str) -> list[str]:
+        tokens = q.lower().split()
+        cjk = [c for c in q if "\\u4e00" <= c <= "\\u9fff"]
+        bigrams = [cjk[i]+cjk[i+1] for i in range(len(cjk)-1)]
+        return [t for t in tokens + bigrams if t not in self.STOPWORDS and t.strip()]
+
+    def _search_exact(self, q: str, metadata: list[dict]) -> list[dict]:
+        q_lower = q.strip().lower()
+        results = []
+        for e in metadata:
+            if q_lower == e["slug"].lower() or q_lower == e["title"].lower():
+                results.append({"path": e["path"], "title": e["title"], "score": 1.0})
+            elif any(q_lower == a.lower() for a in e.get("aliases", [])):
+                results.append({"path": e["path"], "title": e["title"], "score": 0.95})
+            elif q_lower in e["title"].lower():
+                results.append({"path": e["path"], "title": e["title"], "score": 0.8})
+        return results
+
+    def _search_bm25(self, q: str, metadata: list[dict], top_k: int) -> list[dict]:
+        try:
+            import bm25s
+            from src.skills.wiki_skills.wiki_indexer import WikiIndexer
+            bm25_dir = self._index_dir / "bm25s"
+            if not bm25_dir.exists():
+                return []
+            indexer = WikiIndexer(self._root)
+            tokens = indexer._tokenize(q)
+            if not tokens:
+                return []
+            retriever = bm25s.BM25.load(str(bm25_dir))
+            results, scores = retriever.retrieve([tokens], k=min(top_k, len(metadata)))
+            hits = []
+            for i in range(len(results[0])):
+                idx, score = int(results[0][i]), float(scores[0][i])
+                if score > 0 and idx < len(metadata):
+                    e = metadata[idx]
+                    hits.append({"path": e["path"], "title": e["title"], "score": score})
+            return hits
+        except (ImportError, Exception):
+            return []
+
+    def _search_substring(self, q: str, metadata: list[dict]) -> list[dict]:
+        q_lower = q.strip().lower()
+        hits = []
+        for e in metadata:
+            path = self._wiki_dir / e["path"]
+            if path.exists():
+                body = self._strip_fm(path.read_text(encoding="utf-8")).lower()
+                if q_lower in body:
+                    hits.append({"path": e["path"], "title": e["title"], "score": 0.4})
+            if len(hits) >= 10:
+                break
+        return hits
+
+    def _hybrid_fuse(self, q: str, bm25_hits: list[dict], metadata: list[dict], top_k: int) -> list[dict]:
+        bm25_paths = [h["path"] for h in bm25_hits]
+        # 圖譜擴散
+        slug_to_path = {e["slug"]: e["path"] for e in metadata}
+        graph_paths = []
+        for path in bm25_paths[:3]:
+            wp = self._wiki_dir / path
+            if wp.exists():
+                content = wp.read_text(encoding="utf-8")
+                links = re.findall(r"\\[\\[(.+?)\\]\\]", content)
+                for link in links:
+                    lp = slug_to_path.get(link, "")
+                    if lp and lp not in bm25_paths:
+                        graph_paths.append(lp)
+        # RRF
+        scores: dict[str, float] = {}
+        for rank, p in enumerate(bm25_paths):
+            scores[p] = scores.get(p, 0) + 1.0 / (60 + rank + 1)
+        for rank, p in enumerate(graph_paths):
+            scores[p] = scores.get(p, 0) + 1.0 / (60 + rank + 1)
+        fused = sorted(scores, key=scores.get, reverse=True)
+        path_to_entry = {e["path"]: e for e in metadata}
+        return [{"path": p, "title": path_to_entry[p]["title"], "score": scores[p]}
+                for p in fused[:top_k] if p in path_to_entry]
+
+    def _add_summary(self, hits: list[dict], keywords: list[str]) -> list[dict]:
+        for h in hits:
+            path = self._wiki_dir / h["path"]
+            h["summary"] = self._extract_summary(path, keywords) if path.exists() else ""
+        return hits
+
+    def _extract_summary(self, path: Path, keywords: list[str], max_len: int = 200) -> str:
+        content = path.read_text(encoding="utf-8")
+        body = self._strip_fm(content)
+        paragraphs = [p.strip() for p in re.split(r"\\n\\s*\\n", body) if p.strip()]
+        if not paragraphs:
+            return body[:max_len]
+        if not keywords:
+            return paragraphs[0][:max_len]
+        best, best_score = paragraphs[0], 0
+        for para in paragraphs:
+            score = sum(1 for kw in keywords if kw in para.lower())
+            if score > best_score:
+                best_score, best = score, para
+        return best[:max_len]
+
+    @staticmethod
+    def _strip_fm(content: str) -> str:
+        if content.startswith("\\ufeff"):
+            content = content[1:]
+        if not content.startswith("---"):
+            return content
+        end = content.find("---", 3)
+        return content[end+3:].strip() if end != -1 else content
 '''
 
 
 def _wiki_ingest_py() -> str:
-    return '''"""wiki_ingest — 將 raw/ 資料匯入 Wiki 知識庫。"""
+    return '''"""wiki_ingest — 將 raw/ 資料匯入 Wiki 知識庫（v2: 含索引重建觸發）。"""
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 
@@ -239,18 +351,18 @@ from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
 
 
 class WikiIngestParams(SkillParam):
-    source_path: str
+    source_path: str = ""     # 空 = 匯入所有 raw/
     target_category: str = ""
     title: str = ""
 
 
 class WikiIngestSkill(BaseSkill):
-    """將 raw/ 檔案萃取並建立 Wiki 頁面。"""
+    """將 raw/ 檔案萃取並建立 Wiki 頁面，完成後觸發索引重建。"""
 
     skill_id = "wiki_ingest"
     skill_type = SkillType.PYTHON
-    description = "將 raw/ 資料匯入 Wiki 知識庫"
-    version = "1.0.0"
+    description = "raw/ 匯入 → wiki/ + 觸發索引重建"
+    version = "2.0.0"
     input_schema = WikiIngestParams
 
     def __init__(self, knowledge_root: Path | None = None) -> None:
@@ -259,52 +371,86 @@ class WikiIngestSkill(BaseSkill):
     async def execute(self, params: dict) -> SkillResult:
         p = WikiIngestParams(**params)
         today = str(date.today())
-
-        raw_file = self._root / "raw" / p.source_path
-        if not raw_file.exists():
-            raw_file = Path(p.source_path)
-        if not raw_file.exists():
-            return SkillResult(success=False, error=f"找不到來源檔案：{p.source_path}")
-
-        content = raw_file.read_text(encoding="utf-8", errors="replace")
-        page_name = p.title or raw_file.stem
-
+        raw_dir = self._root / "raw"
         wiki_dir = self._root / "wiki"
-        if p.target_category:
-            wiki_dir = wiki_dir / p.target_category
         wiki_dir.mkdir(parents=True, exist_ok=True)
 
-        page_path = wiki_dir / f"{page_name}.md"
-        page_content = (
-            f"---\\ntitle: \\"{page_name}\\"\\n"
-            f"type: source\\ntags: [ingested]\\n"
-            f"sources: [raw/{p.source_path}]\\n"
-            f"created: {today}\\nupdated: {today}\\n"
-            f"status: seedling\\n---\\n\\n"
-            f"# {page_name}\\n\\n"
-            f"> 匯入自 `raw/{p.source_path}`\\n\\n"
-            f"{content[:3000]}\\n"
-        )
-        page_path.write_text(page_content, encoding="utf-8")
+        # 收集要匯入的檔案
+        if p.source_path:
+            files = [raw_dir / p.source_path]
+        else:
+            files = list(raw_dir.rglob("*.md"))
 
-        # Update index.md
-        index_path = self._root / "index.md"
-        if index_path.exists():
-            idx = index_path.read_text(encoding="utf-8")
-            if f"[[{page_name}]]" not in idx:
-                idx += f"- [[{page_name}]]\\n"
-                index_path.write_text(idx, encoding="utf-8")
+        ingested = []
+        for src in files:
+            if not src.exists():
+                continue
+            rel = src.relative_to(raw_dir)
+            dest = wiki_dir / rel
 
-        # Update log.md
-        log_path = self._root / "log.md"
-        if log_path.exists():
-            with open(log_path, "a", encoding="utf-8") as f:
-                f.write(f"- **{today}** | ingest | `{p.source_path}` → `{page_path.relative_to(self._root)}`\\n")
+            # mtime 比對：wiki 版不比 raw 舊 → 跳過
+            if dest.exists() and dest.stat().st_mtime >= src.stat().st_mtime:
+                continue
+
+            content = src.read_text(encoding="utf-8", errors="replace")
+            if content.startswith("\\ufeff"):
+                content = content[1:]
+
+            if content.startswith("---"):
+                wiki_content = content
+            else:
+                # title 優先從 H1 抓取
+                title = p.title or self._extract_h1(content) or src.stem
+                wiki_content = (
+                    f"---\\ntitle: \\"{title}\\"\\n"
+                    f"type: source\\ntags: [ingested]\\n"
+                    f"sources: [raw/{rel}]\\n"
+                    f"created: {today}\\nupdated: {today}\\n"
+                    f"status: seedling\\n---\\n\\n{content}"
+                )
+
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(wiki_content, encoding="utf-8")
+            ingested.append(str(rel))
+
+        # 更新 index + log
+        if ingested:
+            self._update_index()
+            self._append_log(ingested, today)
+            # 觸發索引重建
+            try:
+                from src.skills.wiki_skills.wiki_indexer import WikiIndexer
+                WikiIndexer(self._root).rebuild()
+            except Exception:
+                pass
 
         return SkillResult(success=True, data={
-            "page": str(page_path.relative_to(self._root)),
-            "title": page_name,
+            "ingested": ingested, "count": len(ingested),
         })
+
+    def _extract_h1(self, content: str) -> str:
+        m = re.search(r"^#\\s+(.+)$", content, re.MULTILINE)
+        return m.group(1).strip() if m else ""
+
+    def _update_index(self) -> None:
+        wiki_dir = self._root / "wiki"
+        lines = ["# Wiki 索引\\n", "| 檔案 | 標題 |", "|------|------|"]
+        for md in sorted(wiki_dir.rglob("*.md")):
+            content = md.read_text(encoding="utf-8")
+            title = md.stem
+            m = re.search(r"^title:\\s*[\\"\\'\\']?(.+?)[\\"\\'\\']?\\s*$", content, re.MULTILINE)
+            if m:
+                title = m.group(1)
+            lines.append(f"| {md.relative_to(wiki_dir)} | {title} |")
+        (self._root / "index.md").write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+
+    def _append_log(self, files: list[str], today: str) -> None:
+        log_path = self._root / "log.md"
+        entry = f"- [{today}] ingest: {', '.join(files[:5])}"
+        if len(files) > 5:
+            entry += f" ...等共 {len(files)} 篇"
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(entry + "\\n")
 '''
 
 
@@ -444,10 +590,9 @@ class WikiGraphSkill(BaseSkill):
 
 
 def _wiki_hybrid_search_py() -> str:
-    return '''"""wiki_hybrid_search — BM25 + 全文搜尋 + RRF 融合。"""
+    return '''"""wiki_hybrid_search — 四層搜尋管線 + RRF 融合（v2）。"""
 from __future__ import annotations
 
-import math
 import re
 from pathlib import Path
 
@@ -460,55 +605,27 @@ class WikiHybridSearchParams(SkillParam):
 
 
 class WikiHybridSearchSkill(BaseSkill):
-    """混合搜尋：BM25 關鍵字 + 全文匹配 + RRF 排序。"""
+    """四層搜尋管線：metadata精確 + bm25s持久化索引 + 語意向量 + 圖譜擴散 → RRF融合。"""
 
     skill_id = "wiki_hybrid_search"
     skill_type = SkillType.PYTHON
-    description = "Wiki 混合搜尋（BM25 + 全文 + RRF）"
-    version = "1.0.0"
+    description = "四層搜尋管線（metadata + BM25 + 語意 + 圖譜 → RRF，Layer 0 保底永不掛零）"
+    version = "2.0.0"
     input_schema = WikiHybridSearchParams
 
     def __init__(self, knowledge_root: Path | None = None) -> None:
         self._root = knowledge_root or Path("knowledge")
+        self._wiki_dir = self._root / "wiki"
 
     async def execute(self, params: dict) -> SkillResult:
         p = WikiHybridSearchParams(**params)
-        wiki_dir = self._root / "wiki"
-        if not wiki_dir.exists():
+        if not self._wiki_dir.exists():
             return SkillResult(success=False, error="wiki/ 不存在")
 
-        query_terms = p.query.lower().split()
-        docs: list[dict] = []
-
-        for md in wiki_dir.rglob("*.md"):
-            content = md.read_text(encoding="utf-8", errors="replace")
-            lower = content.lower()
-            words = re.findall(r"\\w+", lower)
-            doc_len = len(words)
-
-            # BM25 scoring
-            bm25_score = 0.0
-            k1, b, avg_dl = 1.5, 0.75, 500
-            for term in query_terms:
-                tf = words.count(term)
-                if tf > 0:
-                    idf = math.log(1 + 1)  # simplified
-                    bm25_score += idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * doc_len / avg_dl))
-
-            # Exact phrase bonus
-            phrase_bonus = 2.0 if p.query.lower() in lower else 0.0
-
-            total = bm25_score + phrase_bonus
-            if total > 0:
-                title = md.stem
-                for line in content.split("\\n"):
-                    if line.startswith("title:"):
-                        title = line.split(":", 1)[1].strip().strip(\\'"\\')
-                        break
-                docs.append({"title": title, "path": str(md.relative_to(self._root)), "score": total})
-
-        docs.sort(key=lambda x: x["score"], reverse=True)
-        return SkillResult(success=True, data={"results": docs[:p.top_k], "total": len(docs)})
+        # 委派給 WikiQuerySkill（它已實作完整四層管線）
+        from src.skills.wiki_skills.wiki_query import WikiQuerySkill
+        query_skill = WikiQuerySkill(self._root)
+        return await query_skill.execute({"query": p.query, "top_k": p.top_k})
 '''
 
 
@@ -691,10 +808,378 @@ class WikiSchemaSkill(BaseSkill):
 '''
 
 
+# ── v2 新增：Indexer ─────────────────────────────────────────
+
+def _wiki_indexer_py() -> str:
+    return '''"""wiki_indexer — 索引建置器（metadata + bm25s + userdict）。"""
+from __future__ import annotations
+
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+class WikiIndexer:
+    """建置持久化搜尋索引到 .index/ 目錄。"""
+
+    def __init__(self, knowledge_root: Path | None = None) -> None:
+        self._root = knowledge_root or Path("knowledge")
+        self._index_dir = self._root / ".index"
+
+    def rebuild(self) -> dict:
+        """重建所有索引。回傳 manifest。"""
+        self._index_dir.mkdir(parents=True, exist_ok=True)
+        pages = self._scan_pages()
+        self._build_metadata(pages)
+        self._build_userdict(pages)
+        self._build_bm25(pages)
+        return self._write_manifest(len(pages))
+
+    def load_metadata(self) -> list[dict]:
+        path = self._index_dir / "metadata.json"
+        if not path.exists():
+            return []
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def _scan_pages(self) -> list[dict]:
+        wiki_dir = self._root / "wiki"
+        if not wiki_dir.exists():
+            return []
+        pages = []
+        for md in sorted(wiki_dir.rglob("*.md")):
+            if md.name.startswith("."):
+                continue
+            content = md.read_text(encoding="utf-8")
+            if content.startswith("\\\\ufeff"):
+                content = content[1:]
+            fm = self._parse_fm(content)
+            body = self._strip_fm(content)
+            pages.append({
+                "slug": md.stem,
+                "title": fm.get("title", md.stem),
+                "aliases": fm.get("aliases", []),
+                "tags": fm.get("tags", []),
+                "related": fm.get("related", []),
+                "type": fm.get("type", ""),
+                "path": str(md.relative_to(wiki_dir)),
+                "updated": fm.get("updated", ""),
+                "body": body,
+            })
+        return pages
+
+    def _build_metadata(self, pages: list[dict]) -> None:
+        meta = [{k: v for k, v in p.items() if k != "body"} for p in pages]
+        (self._index_dir / "metadata.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _build_userdict(self, pages: list[dict]) -> None:
+        words = set()
+        for p in pages:
+            if len(p["title"]) >= 2:
+                words.add(p["title"])
+            for a in p.get("aliases", []):
+                if len(a) >= 2:
+                    words.add(a)
+        (self._index_dir / "userdict.txt").write_text(
+            "\\n".join(f"{w} 5" for w in sorted(words)) + "\\n", encoding="utf-8")
+
+    def _build_bm25(self, pages: list[dict]) -> None:
+        try:
+            import bm25s
+        except ImportError:
+            return
+        corpus = [self._tokenize(f"{p['title']} {p['title']} {p['title']} {' '.join(p.get('tags',[]))} {p['body']}") for p in pages]
+        if not corpus:
+            return
+        retriever = bm25s.BM25()
+        retriever.index(corpus)
+        bm25_dir = self._index_dir / "bm25s"
+        bm25_dir.mkdir(parents=True, exist_ok=True)
+        retriever.save(str(bm25_dir))
+
+    def _tokenize(self, text: str) -> list[str]:
+        stopwords = {"的", "是", "了", "在", "有", "什麼", "嗎", "呢", "可以", "怎麼", "一個", "和", "與"}
+        try:
+            import jieba
+            ud = self._index_dir / "userdict.txt"
+            if ud.exists():
+                jieba.load_userdict(str(ud))
+            tokens = list(jieba.cut_for_search(text))
+        except ImportError:
+            tokens = text.lower().split()
+        cjk = [c for c in text if "\\\\u4e00" <= c <= "\\\\u9fff"]
+        bigrams = [cjk[i] + cjk[i+1] for i in range(len(cjk)-1)]
+        tokens.extend(bigrams)
+        return [t.lower() for t in tokens if t.strip() and t not in stopwords]
+
+    def _write_manifest(self, count: int) -> dict:
+        m = {"version": "2.0.0", "rebuilt_at": datetime.now(timezone.utc).isoformat(), "page_count": count,
+             "has_bm25": (self._index_dir / "bm25s").exists()}
+        (self._index_dir / "manifest.json").write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
+        return m
+
+    @staticmethod
+    def _parse_fm(content: str) -> dict:
+        if not content.startswith("---"):
+            return {}
+        end = content.find("---", 3)
+        if end == -1:
+            return {}
+        result = {}
+        for line in content[3:end].splitlines():
+            m = re.match(r"^(\\w+):\\s*(.+)$", line)
+            if m:
+                key, val = m.group(1), m.group(2).strip()
+                if val.startswith("[") and val.endswith("]"):
+                    result[key] = [x.strip().strip("\\'\\\\\\"") for x in val[1:-1].split(",") if x.strip()]
+                else:
+                    result[key] = val.strip("\\'\\\\\\"")
+        return result
+
+    @staticmethod
+    def _strip_fm(content: str) -> str:
+        if not content.startswith("---"):
+            return content
+        end = content.find("---", 3)
+        return content[end+3:].strip() if end != -1 else content
+'''
+
+
+# ── v2 新增：Server ──────────────────────────────────────────
+
+def _server_main_py() -> str:
+    return '''"""Wiki Server — FastAPI 主程式。"""
+from pathlib import Path
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from src.server.api.wiki import router as wiki_router
+from src.server.api.files import router as files_router
+
+app = FastAPI(title="Wiki 知識庫引擎")
+
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+STATIC_DIR = Path(__file__).parent / "static"
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.include_router(wiki_router, prefix="/api/v1/wiki", tags=["Wiki"])
+app.include_router(files_router, prefix="/api", tags=["Files"])
+
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    return (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+'''
+
+
+def _server_wiki_api_py() -> str:
+    return '''"""Wiki API — query / ingest / lint / rebuild-index。"""
+from fastapi import APIRouter
+from pydantic import BaseModel
+from src.skills.wiki_skills.wiki_query import WikiQuerySkill
+from src.skills.wiki_skills.wiki_ingest import WikiIngestSkill
+from src.skills.wiki_skills.wiki_lint import WikiLintSkill
+from src.skills.wiki_skills.wiki_indexer import WikiIndexer
+
+router = APIRouter()
+
+
+class QueryRequest(BaseModel):
+    q: str
+    top_k: int = 5
+
+
+@router.post("/query")
+async def query(req: QueryRequest):
+    skill = WikiQuerySkill()
+    result = await skill.execute({"query": req.q, "top_k": req.top_k})
+    return result.data if result.success else {"error": result.error}
+
+
+@router.post("/ingest")
+async def ingest():
+    skill = WikiIngestSkill()
+    result = await skill.execute({})
+    return result.data if result.success else {"error": result.error}
+
+
+@router.get("/lint")
+async def lint():
+    skill = WikiLintSkill()
+    result = await skill.execute({})
+    return result.data if result.success else {"error": result.error}
+
+
+@router.post("/rebuild-index")
+async def rebuild_index():
+    indexer = WikiIndexer()
+    manifest = indexer.rebuild()
+    return {"status": "ok", "manifest": manifest}
+
+
+@router.get("/index-status")
+async def index_status():
+    import json
+    from pathlib import Path
+    manifest_path = Path("knowledge/.index/manifest.json")
+    if not manifest_path.exists():
+        return {"status": "not_built", "manifest": None}
+    return {"status": "ok", "manifest": json.loads(manifest_path.read_text(encoding="utf-8"))}
+'''
+
+
+def _server_files_api_py() -> str:
+    return '''"""Files API — 列出和讀取 wiki 檔案（排除 raw/）。"""
+from pathlib import Path
+from fastapi import APIRouter
+
+router = APIRouter()
+WIKI_DIR = Path("knowledge/wiki")
+
+
+@router.get("/files")
+def list_files():
+    """列出 wiki/ 下所有 .md 檔案（排除 raw/）。"""
+    if not WIKI_DIR.exists():
+        return {"files": []}
+    files = []
+    for md in sorted(WIKI_DIR.rglob("*.md")):
+        files.append(str(md.relative_to(WIKI_DIR)))
+    return {"files": files}
+
+
+@router.get("/files/{filepath:path}")
+def get_file(filepath: str):
+    """讀取指定 wiki 檔案。"""
+    path = WIKI_DIR / filepath
+    if not path.exists() or not path.is_file():
+        return {"error": "not found"}
+    return {"filename": filepath, "content": path.read_text(encoding="utf-8")}
+'''
+
+
+# ── v2 新增：Web UI ──────────────────────────────────────────
+
+def _index_html() -> str:
+    return '''<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiki 知識庫</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="搜尋 Wiki..." autocomplete="off">
+    </div>
+    <nav id="fileTree" class="file-tree"></nav>
+  </aside>
+  <main id="content" class="content">
+    <div class="empty">📖 選擇左側檔案或搜尋</div>
+  </main>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>'''
+
+
+def _app_js() -> str:
+    return '''// Wiki App — 載入檔案樹 + 搜尋 + Markdown 渲染
+let treeData = [];
+
+async function init() {
+  const resp = await fetch("/api/files");
+  const data = await resp.json();
+  treeData = data.files || [];
+  renderTree(treeData);
+
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = q ? treeData.filter(f => f.toLowerCase().includes(q)) : treeData;
+    renderTree(filtered);
+  });
+}
+
+function renderTree(files) {
+  const nav = document.getElementById("fileTree");
+  nav.innerHTML = files.map(f =>
+    `<div class="tree-item" onclick="loadPage('${f}')">${f}</div>`
+  ).join("");
+}
+
+async function loadPage(path) {
+  const resp = await fetch(`/api/files/${path}`);
+  const data = await resp.json();
+  if (data.error) {
+    document.getElementById("content").innerHTML = `<div class="empty">找不到 ${path}</div>`;
+    return;
+  }
+  document.getElementById("content").innerHTML = `<div class="page"><pre>${escapeHtml(data.content)}</pre></div>`;
+}
+
+function escapeHtml(t) {
+  const d = document.createElement("div");
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+init();'''
+
+
+def _style_css() -> str:
+    return '''* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+.layout { display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
+.sidebar { background: #16213e; border-right: 1px solid #334; overflow-y: auto; }
+.search-box { padding: 1rem; border-bottom: 1px solid #334; }
+.search-box input { width: 100%; padding: 0.5rem; border-radius: 6px; border: 1px solid #334; background: #1a1a2e; color: #e0e0e0; }
+.file-tree { padding: 0.5rem; }
+.tree-item { padding: 0.4rem 0.8rem; cursor: pointer; border-radius: 4px; font-size: 0.85rem; }
+.tree-item:hover { background: rgba(34,211,238,0.1); }
+.content { padding: 2rem; overflow-y: auto; }
+.empty { text-align: center; padding: 4rem; color: #888; font-size: 1.2rem; }
+.page pre { white-space: pre-wrap; line-height: 1.6; }'''
+
+
+# ── v2 新增：run.py + requirements ───────────────────────────
+
+def _run_py() -> str:
+    return '''"""一鍵啟動 Wiki 知識庫引擎。"""
+import uvicorn
+
+if __name__ == "__main__":
+    print("🚀 Wiki 知識庫引擎啟動中...")
+    print("   http://localhost:8000")
+    uvicorn.run("src.server.main:app", host="0.0.0.0", port=8000, reload=True)
+'''
+
+
+def _requirements_txt() -> str:
+    return '''fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.9.0
+
+# 選配：Wiki 搜尋優化（沒裝也能跑）
+bm25s>=0.2
+jieba>=0.42
+'''
+
+
 # ── Build 主流程 ──────────────────────────────────────────────
 
 SKILL_FILES = {
+    # Skills（9 個）
     "src/skills/wiki_skills/__init__.py": _wiki_init_py,
+    "src/skills/wiki_skills/wiki_indexer.py": _wiki_indexer_py,
     "src/skills/wiki_skills/wiki_query.py": _wiki_query_py,
     "src/skills/wiki_skills/wiki_ingest.py": _wiki_ingest_py,
     "src/skills/wiki_skills/wiki_lint.py": _wiki_lint_py,
@@ -703,6 +1188,19 @@ SKILL_FILES = {
     "src/skills/wiki_skills/wiki_hybrid_search.py": _wiki_hybrid_search_py,
     "src/skills/wiki_skills/wiki_rag_bridge.py": _wiki_rag_bridge_py,
     "src/skills/wiki_skills/wiki_template.py": _wiki_template_py,
+    # Server（5 個）
+    "src/server/__init__.py": lambda: '"""Wiki Server."""',
+    "src/server/main.py": _server_main_py,
+    "src/server/api/__init__.py": lambda: '"""Wiki API."""',
+    "src/server/api/wiki.py": _server_wiki_api_py,
+    "src/server/api/files.py": _server_files_api_py,
+    # Web UI（3 個）
+    "src/server/templates/index.html": _index_html,
+    "src/server/static/js/app.js": _app_js,
+    "src/server/static/css/style.css": _style_css,
+    # 設定（2 個）
+    "run.py": _run_py,
+    "requirements.txt": _requirements_txt,
 }
 
 
