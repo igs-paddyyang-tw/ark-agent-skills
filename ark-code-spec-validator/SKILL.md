@@ -105,3 +105,31 @@ py -m ark_team_agent.skills.code_spec_validator --full .
 - 詳細維度說明：`references/dimensions.md`
 - Python module：`src/ark_team_agent/skills/code_spec_validator/`
 - One Pager：`docs/one-pagers/ark-code-spec-validator.md`
+
+---
+
+## 🔄 工作流鏈串接（Loop Engineering）
+
+此 Skill 是四段鏈的最終驗證：
+
+```
+ark-grill-me → ark-superpowers → ark-spec-executor → 【ark-code-spec-validator】
+                                                              │
+                                       score ≥ 90 → ✅ Ship   │
+                                       score 70-89 → ⚠️ 回 spec-executor 修復失敗項
+                                       score < 70  → 🛑 回 ark-grill-me 重新釐清需求
+```
+
+### 迴圈規則
+
+| Drift Score | 動作 |
+|-------------|------|
+| ≥ 90 | ✅ 標記 milestone 完成 |
+| 70-89 | ⚠️ 產出修復任務 → 建議跑 `ark-spec-executor` 修復 |
+| < 70 | 🛑 禁止繼續開發，建議 `ark-grill-me` 重新釐清 |
+
+### 銜接提示
+
+- drift check 完成後，如果有偏移項，主動建議：「要自動修復嗎？（觸發 spec-executor）」
+- 修復完後再跑一次 validator，直到 score ≥ 90
+

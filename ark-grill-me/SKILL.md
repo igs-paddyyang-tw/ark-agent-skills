@@ -141,16 +141,22 @@ Q3：日報的輸出格式應該是什麼？
 ## 與其他 Skill 的串接
 
 ```
-ark-grill-me（拷問設計）
+【ark-grill-me】（拷問設計）
     ↓ 產出「決策摘要」
-ark-superpowers（產出 Spec）
-    ↓ 產出 spec.md
-ark-skill-creator（產出 Skill）
-    ↓ 根據 Spec 實作
+ark-superpowers（產出 Spec/Design/Plan）
+    ↓ 產出 plan.md
+ark-spec-executor（自動執行）
+    ↓ 程式碼 + 驗收報告
 ark-code-spec-validator（驗證一致性）
     ↓ Drift Report
-修復 → 重新驗證 → Ship
+    ↓ score < 70 → 回到 ark-grill-me 重新釐清
 ```
+
+### 🔄 Loop Engineering
+
+- 拷問完成後，主動提示：「要根據決策摘要產出 spec 嗎？（觸發 ark-superpowers）」
+- 如果 validator drift score < 70，下游會建議使用者回到 grill-me 重新釐清
+- 形成正向迴圈：**拷問 → 文件 → 執行 → 驗證 → (如需) 回到拷問**
 
 ---
 

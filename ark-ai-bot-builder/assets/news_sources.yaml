@@ -1,0 +1,28 @@
+# 科技日報來源配置
+sources:
+  # ─── RSS 來源（最穩定）───────────────────
+  - name: "TechCrunch AI"
+    url: "https://techcrunch.com/category/artificial-intelligence/feed/"
+    type: rss
+    category: ai_focus
+
+  - name: "Ars Technica"
+    url: "https://feeds.arstechnica.com/arstechnica/technology-lab"
+    type: rss
+    category: dev_tools
+
+  # ─── HTML 來源 ─────────────────────────────
+  - name: "Hacker News"
+    url: "https://news.ycombinator.com/"
+    type: html
+    selector: ".titleline a"
+    category: tech_general
+
+schedule:
+  cron: "0 9 * * *"
+  timezone: "Asia/Taipei"
+  chat_id: "${TELEGRAM_CHAT_ID}"
+
+output:
+  dir: "output/news"
+  max_items_per_source: 5

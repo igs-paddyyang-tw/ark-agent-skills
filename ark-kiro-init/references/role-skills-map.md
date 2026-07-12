@@ -8,15 +8,15 @@
 
 | 角色 | 預裝 Skills | 說明 |
 |------|------------|------|
-| **全員** | `ark-wiki-engine` | 知識庫管理（自我成長核心） |
-| admin | （無額外） | 輕量管理 |
-| leader | `ark-superpowers` `ark-code-spec-validator` `ark-project-planning` `ark-uml-generator` `ark-doc-coauthoring` | 規格+驗證+規劃 |
-| ai-dev | `ark-skill-creator` `ark-grill-me` `ark-superpowers` | Skill 開發+設計拷問 |
+| **全員（Loop 五件套）** | `ark-grill-me` `ark-superpowers` `ark-spec-executor` `ark-code-spec-validator` `ark-wiki-engine` | 需求→文件→執行→驗證→知識（迴圈工程核心） |
+| admin | `ark-planning-with-files` | 輕量管理+持久任務 |
+| leader | `ark-project-planning` `ark-uml-generator` `ark-doc-coauthoring` | 規劃+圖表+共筆 |
+| ai-dev | `ark-skill-creator` `ark-mcp-builder` `ark-llm-tools` | Skill 開發+MCP+LLM |
 | coder | `ark-skill-creator` `ark-code-review` | 開發+審查 |
-| qa | `ark-code-spec-validator` `ark-code-review` | 驗證+審查 |
-| devops | `ark-docker-deploy` | 部署 |
-| designer | `ark-frontend-design` `ark-canvas-design` | 設計 |
-| analyst | `ark-kpi-calculator` `ark-chart-generator` | 分析+圖表 |
+| qa | `ark-code-review` `ark-test-runner` | 審查+測試 |
+| devops | `ark-docker-deploy` `ark-env-doctor` | 部署+環境 |
+| designer | `ark-frontend-design` `ark-canvas-design` `ark-ui-design-system` | 設計 |
+| analyst | `ark-kpi-calculator` `ark-chart-generator` `ark-etl-pipeline` | 分析+圖表+ETL |
 
 ## 來源優先順序
 

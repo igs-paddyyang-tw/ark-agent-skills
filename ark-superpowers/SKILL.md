@@ -200,3 +200,20 @@ One Pager 的 frontmatter 有 `upgraded_to` 欄位，升級後指向完整文件
 - One Pager 適合初期構想，正式提案建議升級為完整版
 - 「全套文件」模式下，後續文件自動引用前序文件（spec → design → plan）
 - 檔名一律 kebab-case，遵循專案命名規範
+
+---
+
+## 🔄 工作流鏈串接
+
+產出 plan.md 後，可直接銜接 `ark-spec-executor` 自動執行：
+
+```
+ark-grill-me（拷問）→ 【ark-superpowers（產文件）】→ ark-spec-executor（自動執行）→ ark-code-spec-validator（驗證）
+```
+
+### 銜接提示
+
+- 產出 plan 後，主動詢問：「要自動執行這份計畫嗎？」
+- 如果使用者說「跑」、「執行」、「go」→ 觸發 ark-spec-executor
+- plan.md 的 frontmatter `related_spec` / `related_design` 欄位讓 executor 可回溯完整 context
+

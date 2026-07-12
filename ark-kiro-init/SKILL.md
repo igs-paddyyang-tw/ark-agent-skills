@@ -2,8 +2,7 @@
 name: ark-kiro-init
 description: |
   產出完整的 .kiro/ workspace 配置（agents、steering、prompts、skills、settings），
-  根據使用者指定的角色自動生成。含角色對應 Skills 預裝、知識庫自我成長規則、
-  多層知識庫架構（私有→共用→團隊）。
+  根據使用者指定的角色自動生成。預設為全端工程師 + 系統分析與設計師（SA/SD）。
   支援自訂角色：上網搜尋該角色的最佳實踐並整理成配置。
   使用此 Skill 當使用者提及 建立 .kiro、產生 workspace、初始化 kiro 配置、
   kiro init、kiro-init、設定角色的 .kiro、幫我建 agent 配置、新增角色、
@@ -11,8 +10,8 @@ description: |
   或任何需要產出 .kiro 目錄結構的場景。
 metadata:
   author: paddyyang
-  version: "2.1"
-  updated: 2026-06-25
+  version: "1.1"
+  updated: 2026-05-15
 ---
 
 # ark-kiro-init
@@ -68,7 +67,7 @@ metadata:
 │       ├── USER.md                    #   使用者百科
 │       └── TEAM.md                    #   團隊運作規範（daemon 自動產生）
 │
-├── skills/                            # 共用 Skills 倉庫（git clone ark-agent-skills）
+├── skills/                            # 共用 Skills 倉庫（git clone ark-kiro-skills）
 │   ├── ark-superpowers/SKILL.md
 │   ├── ark-wiki-engine/SKILL.md
 │   ├── ark-skill-creator/SKILL.md
@@ -101,29 +100,12 @@ metadata:
 ├── docs/                              # 團隊文件
 ├── src/                               # 業務程式碼
 ├── tests/                             # 測試
-├── knowledge/                         # 全域知識庫（三層架構）
-│   ├── shared/                        #   共用知識（所有 Agent 可查）
-│   │   ├── raw/
-│   │   ├── wiki/
-│   │   ├── .index/                    #   搜尋索引（自動生成）
-│   │   ├── schema.md
-│   │   ├── index.md
-│   │   └── log.md
-│   └── {project}/                     #   專案知識（如 hoyeah/）
-│       ├── raw/
-│       ├── wiki/
-│       ├── .index/
-│       ├── schema.md
-│       ├── index.md
-│       └── log.md
+├── knowledge/                         # 團隊知識庫
 ├── team.yaml                          # 團隊配置
 ├── scheduler.yaml                     # 排程
 ├── start.py                           # 啟動腳本
 └── .env                               # 環境變數
 ```
-
-> **知識庫三層查詢**：Agent 私有（agents/*/knowledge/）→ 共用（knowledge/shared/）→ 專案（knowledge/{project}/）。
-> 啟動時 bootstrap.py 自動建 symlink 讓每個 Agent 的 knowledge/ 下能看到 shared/ 和 {project}/。
 
 > **注意：** `product.md`、`tech.md`、`structure.md` 不在 init 預設產出中。
 > 這些是專案特定檔案，由使用者依需求手動建立（或後續用 ark-superpowers 產出）。
@@ -430,13 +412,13 @@ metadata:
 - 輸出格式
 - 品質要求
 
-**Skills 來源：** 從 `https://github.com/igs-paddyyang-tw/ark-agent-skills` clone 到**專案根目錄的 `skills/`**。
+**Skills 來源：** 從 `https://github.com/igs-paddyyang-tw/ark-kiro-skills` clone 到**專案根目錄的 `skills/`**。
 
 **Clone 流程：**
 
 ```bash
 # Clone 到專案根目錄（與 agents/ 同層）
-git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git skills/
+git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 
 # 結構：
 # {project}/
@@ -461,7 +443,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git skills/
 **分配流程：**
 
 ```
-1. git clone ark-agent-skills → {project}/skills/（共用倉庫）
+1. git clone ark-kiro-skills → {project}/skills/（共用倉庫）
 2. 建立根目錄 .kiro/（管理者 workspace，skills/ 放全套）
 3. 對每個 agent：
    a. 掃描 skills/ 下所有 SKILL.md 的 name + description
@@ -474,10 +456,10 @@ git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git skills/
 | 角色類型 | 建議 Skills | 說明 |
 |---------|------------|------|
 | Admin / CEO（根目錄 .kiro） | 全部 | 管理者擁有全套能力 |
-| 全員必備 | ark-wiki-engine, ark-skill-creator, ark-code-spec-validator, ark-planning-with-files | 知識管理 + Skill 成長 + 品質驗證 |
-| Leader / PM | ark-superpowers, ark-project-planning, ark-doc-coauthoring, ark-game-design-doc | 文件產出 + 任務規劃 |
-| AI Dev | ark-mcp-builder, ark-chatbot-generator, ark-llm-tools, ark-ab-testing, ark-git-ops | AI/LLM 開發 |
-| Coder / 全端 | ark-webapp-generator, ark-db-query, ark-etl-pipeline, ark-chart-generator, ark-frontend-design | 全端工程 |
+| 全員必備（Loop 五件套） | ark-grill-me, ark-superpowers, ark-spec-executor, ark-code-spec-validator, ark-wiki-engine | 需求→文件→執行→驗證→知識（迴圈工程核心） |
+| Leader / PM | ark-project-planning, ark-doc-coauthoring, ark-uml-generator | 規劃+共筆+圖表 |
+| AI Dev | ark-skill-creator, ark-mcp-builder, ark-llm-tools | Skill 開發+MCP+LLM |
+| Coder / 全端 | ark-skill-creator, ark-code-review, ark-webapp-generator, ark-db-query | 開發+審查+全端 |
 | QA / 測試 | ark-test-runner, ark-security-audit, ark-code-review | 品質保證 |
 | DevOps | ark-docker-deploy, ark-env-doctor, ark-scheduler-generator | 部署運維 |
 | 數據分析 | ark-db-query, ark-etl-pipeline, ark-chart-generator, ark-kpi-calculator, ark-anomaly-detector, ark-retention-analysis | 數據工程 |
@@ -487,7 +469,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git skills/
 **匹配邏輯：**
 
 1. 根目錄 .kiro/skills/ → 全套（admin 全能力覆蓋）
-2. 每個 agent 先分配「全員必備」4 個
+2. 每個 agent 先分配「全員必備 Loop 五件套」
 3. 根據角色類型分配對應 Skills
 4. 如角色跨多類型（如「全端 + DevOps」），合併兩組
 5. 自訂角色 → 根據 SOUL.md 的 Core Mission 關鍵字匹配 Skill description
