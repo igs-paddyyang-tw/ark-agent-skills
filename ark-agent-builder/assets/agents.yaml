@@ -1,0 +1,79 @@
+# ═══════════════════════════════════════════════════════
+# Agent 定義檔 — 所有可用 Agent 的唯一來源
+# ═══════════════════════════════════════════════════════
+#
+# TG Bot、Web API、dispatch_to_agent tool 都讀這份檔案。
+# 新增/移除 Agent 只需修改這裡。
+#
+# 欄位說明：
+#   dir:   working directory（相對於專案根目錄）
+#   name:  顯示名稱
+#   emoji: TG 顯示 emoji
+#   desc:  一句話描述
+#   dispatchable: 是否可被 Ark Agent 自動派工（dispatch_to_agent）
+#
+
+# ── 預設（Ark Agent，走 Gemini ReAct）──
+default:
+  dir: "."
+  name: "Ark Agent"
+  emoji: "🚀"
+  desc: "通用 AI 助手（Gemini ReAct + 自動派工）"
+  dispatchable: false
+
+# ── 專業 Agent（透過 CLI 執行）──
+admin:
+  dir: "agents/admin-agent"
+  name: "Admin Agent"
+  emoji: "👑"
+  desc: "系統管理、監控、費控、SOP"
+  dispatchable: true
+
+leader:
+  dir: "agents/leader-agent"
+  name: "Leader Agent"
+  emoji: "📋"
+  desc: "需求分析、任務拆解、派工驗收"
+  dispatchable: false  # 派工由 Ark Agent 統一處理
+
+ai-dev:
+  dir: "agents/ai-dev-agent"
+  name: "AI Dev Agent"
+  emoji: "🧠"
+  desc: "AI 工程師、Prompt 設計、RAG、MCP"
+  dispatchable: true
+
+coder:
+  dir: "agents/coder-agent"
+  name: "Coder Agent"
+  emoji: "💻"
+  desc: "全端開發、API、DB、程式碼實作"
+  dispatchable: true
+
+qa:
+  dir: "agents/qa-agent"
+  name: "QA Agent"
+  emoji: "🧪"
+  desc: "品質保證、測試、Code Review"
+  dispatchable: true
+
+data:
+  dir: "agents/data-agent"
+  name: "Data Agent"
+  emoji: "📊"
+  desc: "數據分析、KPI 追蹤、趨勢洞察"
+  dispatchable: true
+
+market:
+  dir: "agents/market-agent"
+  name: "Market Agent"
+  emoji: "🗺️"
+  desc: "市場研究、競品分析、社群輿情"
+  dispatchable: true
+
+report:
+  dir: "agents/report-agent"
+  name: "Report Agent"
+  emoji: "📝"
+  desc: "報告產出、圖表渲染、定期摘要"
+  dispatchable: true

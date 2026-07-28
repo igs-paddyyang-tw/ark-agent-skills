@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🤖 AI Bot — Chat</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --accent: #22d3ee; --green: #4ade80; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+/* Header */
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 1.2rem; color: var(--accent); }
+header nav a { color: var(--muted); text-decoration: none; margin-left: 1rem; font-size: 0.9rem; }
+header nav a:hover { color: var(--accent); }
+header nav a.active { color: var(--accent); }
+
+/* Chat Area */
+.chat-container { flex: 1; overflow-y: auto; padding: 1.5rem; max-width: 800px; margin: 0 auto; width: 100%; }
+.message { margin-bottom: 1rem; display: flex; gap: 0.8rem; }
+.message.user { justify-content: flex-end; }
+.message .bubble { max-width: 75%; padding: 0.8rem 1rem; border-radius: 12px; line-height: 1.5; font-size: 0.95rem; }
+.message.user .bubble { background: #1d4ed8; color: white; border-bottom-right-radius: 4px; }
+.message.bot .bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.message .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+.message.bot .avatar { background: var(--surface); border: 1px solid var(--border); }
+.message .source { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+
+/* Agent Selector */
+.agent-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.5rem 1.5rem; display: flex; gap: 0.5rem; overflow-x: auto; }
+.agent-btn { padding: 0.3rem 0.8rem; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 0.85rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+.agent-btn:hover { border-color: var(--accent); color: var(--accent); }
+.agent-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+
+/* Input Area */
+.input-area { background: var(--surface); border-top: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; gap: 0.8rem; max-width: 800px; margin: 0 auto; width: 100%; }
+.input-area input { flex: 1; padding: 0.7rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 1rem; outline: none; }
+.input-area input:focus { border-color: var(--accent); }
+.input-area button { padding: 0.7rem 1.5rem; border-radius: 8px; border: none; background: var(--accent); color: var(--bg); font-weight: 600; cursor: pointer; }
+.input-area button:hover { opacity: 0.9; }
+.input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Status */
+.status { font-size: 0.8rem; color: var(--green); padding: 0.3rem 1.5rem; background: var(--surface); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🤖 AI Bot</h1>
+  <nav>
+    <a href="/" class="active">💬 Chat</a>
+    <a href="/admin">⚙️ Dashboard</a>
+    <a href="/wiki">📖 Wiki</a>
+    <a href="/graph">🕸️ Graph</a>
+    <a href="/builder">🏗️ Builder</a>
+    <a href="/api-docs">📡 API</a>
+  </nav>
+</header>
+
+<div class="agent-bar" id="agentBar">
+  <button class="agent-btn active" data-agent="default">🚀 Ark Agent</button>
+  <button class="agent-btn" data-agent="admin">👑 Admin</button>
+  <button class="agent-btn" data-agent="pm">📋 PM</button>
+  <button class="agent-btn" data-agent="ai-dev">🧠 AI Dev</button>
+  <button class="agent-btn" data-agent="coder">💻 Coder</button>
+  <button class="agent-btn" data-agent="qa">🧪 QA</button>
+  <button class="agent-btn" data-agent="data">📊 Data</button>
+  <button class="agent-btn" data-agent="market">🗺️ Market</button>
+  <button class="agent-btn" data-agent="report">📝 Report</button>
+</div>
+
+<div class="status" id="status">● 已連線 — 🚀 Ark Agent（Gemini）</div>
+
+<div class="chat-container" id="chatContainer">
+  <div class="message bot">
+    <div class="avatar">🤖</div>
+    <div>
+      <div class="bubble">你好！我是 Ark Agent 🚀 選擇上方的角色跟我對話。預設走 Gemini，切到 Agent 分身走 Agent CLI。</div>
+    </div>
+  </div>
+</div>
+
+<div class="input-area">
+  <input type="text" id="msgInput" placeholder="輸入訊息..." autocomplete="off">
+  <button id="sendBtn" onclick="sendMessage()">傳送</button>
+</div>
+
+<script>
+let currentAgent = 'default';
+
+// Agent 切換
+document.querySelectorAll('.agent-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.agent-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentAgent = btn.dataset.agent;
+    const label = btn.textContent;
+    const mode = currentAgent === 'default' ? '（Gemini）' : '（Agent CLI）';
+    document.getElementById('status').textContent = `● 已連線 — ${label}${mode}`;
+  });
+});
+
+// 傳送訊息
+async function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // 顯示 user 訊息
+  appendMessage('user', text);
+  input.value = '';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('status').textContent = `● 處理中...`;
+
+  try {
+    const resp = await fetch('/api/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, agent_id: currentAgent })
+    });
+    const data = await resp.json();
+    appendMessage('bot', data.reply, data.sources, data.source);
+    document.getElementById('status').textContent = `● 已連線 — Agent: ${document.querySelector('.agent-btn.active').textContent}`;
+  } catch (e) {
+    appendMessage('bot', `⚠️ 連線錯誤: ${e.message}`);
+    document.getElementById('status').textContent = `● 連線錯誤`;
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function appendMessage(role, text, sources, source) {
+  const container = document.getElementById('chatContainer');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+
+  if (role === 'user') {
+    div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+  } else {
+    let sourceHtml = '';
+    if (sources && sources.length > 0) {
+      sourceHtml = `<div class="source">📚 參考：${sources.join(', ')}</div>`;
+    } else if (source && source !== 'fallback') {
+      sourceHtml = `<div class="source">⚡ via ${source}</div>`;
+    }
+    div.innerHTML = `<div class="avatar">🤖</div><div><div class="bubble">${escapeHtml(text)}</div>${sourceHtml}</div>`;
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+}
+
+// Enter 鍵傳送
+document.getElementById('msgInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+</script>
+
+</body>
+</html>

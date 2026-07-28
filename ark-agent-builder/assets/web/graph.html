@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🕸️ AI Bot — Wiki Graph</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --accent: #22d3ee; --green: #4ade80; --yellow: #fbbf24; --purple: #a78bfa; --orange: #fb923c; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 1.2rem; color: var(--accent); }
+header nav a { color: var(--muted); text-decoration: none; margin-left: 1rem; font-size: 0.9rem; transition: color 0.2s; }
+header nav a:hover { color: var(--accent); }
+header nav a.active { color: var(--accent); }
+
+.main { flex: 1; display: flex; overflow: hidden; }
+.graph-area { flex: 1; position: relative; }
+canvas { display: block; width: 100%; height: 100%; }
+
+.sidebar { width: 300px; background: var(--surface); border-left: 1px solid var(--border); padding: 1rem; overflow-y: auto; }
+.sidebar h3 { color: var(--accent); font-size: 1rem; margin-bottom: 0.8rem; }
+.stat { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.stat span:last-child { color: var(--accent); font-weight: 600; }
+
+.detail-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; margin: 0.5rem 0; display: none; }
+.detail-card.show { display: block; }
+.detail-card h4 { color: var(--text); font-size: 0.9rem; margin-bottom: 0.3rem; }
+.detail-card .field { font-size: 0.8rem; color: var(--muted); margin: 0.2rem 0; }
+.detail-card .field b { color: var(--text); }
+
+.legend { margin-top: 1rem; }
+.legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin: 0.3rem 0; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+.legend-line { width: 24px; height: 2px; }
+.legend-line.dashed { border-top: 2px dashed var(--accent); background: none; }
+
+.toolbar { position: absolute; top: 1rem; left: 1rem; display: flex; gap: 0.5rem; z-index: 10; }
+.toolbar button { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.toolbar button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🕸️ Wiki Graph — 知識全貌</h1>
+  <nav>
+    <a href="/">💬 Chat</a>
+    <a href="/admin">⚙️ Dashboard</a>
+    <a href="/wiki">📖 Wiki</a>
+    <a href="/graph" class="active">🕸️ Graph</a>
+    <a href="/builder">🏗️ Builder</a>
+    <a href="/api-docs">📡 API</a>
+  </nav>
+</header>
+
+<div class="main">
+  <div class="graph-area">
+    <canvas id="graphCanvas"></canvas>
+    <div class="toolbar">
+      <button class="active" data-view="all">全部</button>
+      <button data-view="agent">只看 Agent</button>
+      <button data-view="skill">只看 Skill</button>
+      <button data-view="wiki">只看 Wiki</button>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <h3>📊 統計</h3>
+    <div class="stat"><span>Agent 節點</span><span id="statAgents">-</span></div>
+    <div class="stat"><span>Skill 節點</span><span id="statSkills">-</span></div>
+    <div class="stat"><span>Wiki 節點</span><span id="statWiki">-</span></div>
+    <div class="stat"><span>總連線</span><span id="statLinks">-</span></div>
+
+    <h3 style="margin-top:1rem;">🔍 選中節點</h3>
+    <div class="detail-card" id="detailCard">
+      <h4 id="detailLabel">-</h4>
+      <div class="field"><b>ID:</b> <span id="detailId">-</span></div>
+      <div class="field"><b>Type:</b> <span id="detailType">-</span></div>
+      <div class="field"><b>Meta:</b> <span id="detailMeta">-</span></div>
+    </div>
+    <div id="detailHint" style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;">點擊節點查看詳情</div>
+
+    <div class="legend">
+      <h3>🎨 圖例</h3>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--purple);width:24px;height:24px;"></div> Agent（大）</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--orange);width:16px;height:16px;"></div> Skill（中）</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent);width:12px;height:12px;"></div> Wiki（小）</div>
+      <div style="margin-top:0.5rem;"></div>
+      <div class="legend-item"><div class="legend-line" style="background:var(--purple);"></div> has_skill</div>
+      <div class="legend-item"><div class="legend-line" style="background:var(--orange);"></div> reads_wiki</div>
+      <div class="legend-item"><div class="legend-line dashed"></div> shared_tag</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────
+let nodes = [];
+let links = [];
+let currentView = 'all';
+let selectedNode = null;
+let hoveredNode = null;
+let dragNode = null;
+let animId = null;
+
+const NODE_STYLE = {
+  agent:  { color: '#a78bfa', radius: 24 },
+  skill:  { color: '#fb923c', radius: 16 },
+  wiki:   { color: '#22d3ee', radius: 12 },
+};
+
+const LINK_STYLE = {
+  has_skill:  { color: '#a78bfa', dash: [] },
+  reads_wiki: { color: '#fb923c', dash: [] },
+  shared_tag: { color: '#22d3ee', dash: [4, 4] },
+};
+
+// ─── Data Loading ────────────────────────────────────
+async function loadGraph() {
+  try {
+    const resp = await fetch('/api/v1/graph');
+    const data = await resp.json();
+
+    const canvas = document.getElementById('graphCanvas');
+    const W = canvas.parentElement.clientWidth;
+    const H = canvas.parentElement.clientHeight;
+
+    nodes = data.nodes.map((n, i) => ({
+      ...n,
+      x: W * 0.2 + Math.random() * W * 0.6,
+      y: H * 0.2 + Math.random() * H * 0.6,
+      vx: 0,
+      vy: 0,
+    }));
+
+    links = data.links.map(l => ({
+      ...l,
+      sourceIdx: nodes.findIndex(n => n.id === l.source),
+      targetIdx: nodes.findIndex(n => n.id === l.target),
+    })).filter(l => l.sourceIdx >= 0 && l.targetIdx >= 0);
+
+    updateStats();
+    startSimulation();
+  } catch (e) {
+    console.error('Failed to load graph:', e);
+  }
+}
+
+function updateStats() {
+  document.getElementById('statAgents').textContent = nodes.filter(n => n.type === 'agent').length;
+  document.getElementById('statSkills').textContent = nodes.filter(n => n.type === 'skill').length;
+  document.getElementById('statWiki').textContent = nodes.filter(n => n.type === 'wiki').length;
+  document.getElementById('statLinks').textContent = links.length;
+}
+
+// ─── Force Simulation ────────────────────────────────
+function simulate() {
+  const repulsion = 8000;
+  const springLen = 180;
+  const springK = 0.005;
+  const damping = 0.85;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  const centerGravity = 0.0005;
+
+  const visible = getVisibleNodes();
+  const visibleSet = new Set(visible.map(n => n.id));
+
+  // Repulsion between visible nodes
+  for (let i = 0; i < visible.length; i++) {
+    for (let j = i + 1; j < visible.length; j++) {
+      const a = visible[i], b = visible[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+      const f = repulsion / (dist * dist);
+      const fx = f * dx / dist;
+      const fy = f * dy / dist;
+      a.vx -= fx; a.vy -= fy;
+      b.vx += fx; b.vy += fy;
+    }
+  }
+
+  // Spring forces on visible links
+  for (const link of links) {
+    const s = nodes[link.sourceIdx];
+    const t = nodes[link.targetIdx];
+    if (!visibleSet.has(s.id) || !visibleSet.has(t.id)) continue;
+    const dx = t.x - s.x;
+    const dy = t.y - s.y;
+    const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+    const f = springK * (dist - springLen);
+    const fx = f * dx / dist;
+    const fy = f * dy / dist;
+    s.vx += fx; s.vy += fy;
+    t.vx -= fx; t.vy -= fy;
+  }
+
+  // Center gravity + damping + update
+  for (const n of visible) {
+    if (n === dragNode) continue;
+    n.vx += (centerX - n.x) * centerGravity;
+    n.vy += (centerY - n.y) * centerGravity;
+    n.vx *= damping;
+    n.vy *= damping;
+    n.x += n.vx;
+    n.y += n.vy;
+    n.x = Math.max(40, Math.min(canvas.width - 40, n.x));
+    n.y = Math.max(40, Math.min(canvas.height - 40, n.y));
+  }
+}
+
+// ─── Rendering ───────────────────────────────────────
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+
+function getVisibleNodes() {
+  if (currentView === 'all') return nodes;
+  return nodes.filter(n => n.type === currentView);
+}
+
+function getVisibleLinks() {
+  const visibleSet = new Set(getVisibleNodes().map(n => n.id));
+  return links.filter(l => visibleSet.has(nodes[l.sourceIdx].id) && visibleSet.has(nodes[l.targetIdx].id));
+}
+
+function render() {
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+
+  simulate();
+
+  // Clear
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const visibleNodes = getVisibleNodes();
+  const visibleLinks = getVisibleLinks();
+  const visibleSet = new Set(visibleNodes.map(n => n.id));
+
+  // Determine highlighted links (connected to hovered node)
+  const highlightedLinks = new Set();
+  if (hoveredNode) {
+    for (let i = 0; i < visibleLinks.length; i++) {
+      const l = visibleLinks[i];
+      const s = nodes[l.sourceIdx];
+      const t = nodes[l.targetIdx];
+      if (s.id === hoveredNode.id || t.id === hoveredNode.id) {
+        highlightedLinks.add(i);
+      }
+    }
+  }
+
+  // Draw links
+  for (let i = 0; i < visibleLinks.length; i++) {
+    const link = visibleLinks[i];
+    const s = nodes[link.sourceIdx];
+    const t = nodes[link.targetIdx];
+    const style = LINK_STYLE[link.relation] || LINK_STYLE.shared_tag;
+    const highlighted = highlightedLinks.has(i);
+
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = highlighted ? 2.5 : 1;
+    ctx.globalAlpha = highlighted ? 1 : 0.35;
+    ctx.setLineDash(style.dash);
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(t.x, t.y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+
+  // Draw nodes
+  for (const n of visibleNodes) {
+    const style = NODE_STYLE[n.type] || NODE_STYLE.wiki;
+    const r = style.radius;
+    const isSelected = selectedNode && selectedNode.id === n.id;
+    const isHovered = hoveredNode && hoveredNode.id === n.id;
+
+    // Glow
+    if (isSelected || isHovered) {
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = style.color;
+    }
+
+    // Circle
+    ctx.fillStyle = style.color;
+    ctx.globalAlpha = (isSelected || isHovered) ? 1 : 0.85;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Border for selected
+    if (isSelected) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = `${n.type === 'agent' ? '12' : '10'}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    const label = n.label.length > 22 ? n.label.substring(0, 20) + '…' : n.label;
+    ctx.fillText(label, n.x, n.y + r + 14);
+  }
+
+  animId = requestAnimationFrame(render);
+}
+
+function startSimulation() {
+  if (animId) cancelAnimationFrame(animId);
+  render();
+}
+
+// ─── Interaction ─────────────────────────────────────
+function getNodeAt(x, y) {
+  const visible = getVisibleNodes();
+  for (let i = visible.length - 1; i >= 0; i--) {
+    const n = visible[i];
+    const r = NODE_STYLE[n.type].radius;
+    const dx = x - n.x, dy = y - n.y;
+    if (dx * dx + dy * dy <= (r + 4) * (r + 4)) return n;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const node = getNodeAt(x, y);
+  if (node) {
+    dragNode = node;
+    selectNode(node);
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  if (dragNode) {
+    dragNode.x = x;
+    dragNode.y = y;
+    dragNode.vx = 0;
+    dragNode.vy = 0;
+  } else {
+    const node = getNodeAt(x, y);
+    hoveredNode = node;
+    canvas.style.cursor = node ? 'pointer' : 'default';
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  dragNode = null;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  dragNode = null;
+  hoveredNode = null;
+});
+
+function selectNode(node) {
+  selectedNode = node;
+  const card = document.getElementById('detailCard');
+  const hint = document.getElementById('detailHint');
+  card.classList.add('show');
+  hint.style.display = 'none';
+  document.getElementById('detailLabel').textContent = node.label;
+  document.getElementById('detailId').textContent = node.id;
+  document.getElementById('detailType').textContent = node.type;
+  document.getElementById('detailMeta').textContent = node.meta || '(none)';
+}
+
+// ─── Toolbar ─────────────────────────────────────────
+document.querySelectorAll('.toolbar button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+  });
+});
+
+// ─── Init ────────────────────────────────────────────
+loadGraph();
+</script>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏗️ AI Bot — Agent Builder</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --accent: #22d3ee; --green: #4ade80; --yellow: #fbbf24; --red: #f87171; --purple: #a78bfa; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 1.2rem; color: var(--accent); }
+header nav a { color: var(--muted); text-decoration: none; margin-left: 1rem; font-size: 0.9rem; }
+header nav a:hover { color: var(--accent); }
+header nav a.active { color: var(--accent); }
+
+.container { max-width: 1000px; margin: 0 auto; padding: 1.5rem; }
+h2 { color: var(--accent); font-size: 1.2rem; margin: 1.5rem 0 0.8rem; }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; margin: 1rem 0; }
+.section-title { font-size: 1rem; color: var(--accent); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+
+/* Form Elements */
+label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+select, input[type="text"] { width: 100%; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none; }
+select:focus, input[type="text"]:focus { border-color: var(--accent); }
+textarea { width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; font-family: 'JetBrains Mono', monospace, -apple-system, sans-serif; line-height: 1.6; outline: none; resize: vertical; }
+textarea:focus { border-color: var(--accent); }
+
+/* Grid */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* Checkbox list */
+.checkbox-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; max-height: 200px; overflow-y: auto; padding: 0.5rem; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); }
+.checkbox-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; padding: 0.3rem 0.5rem; border-radius: 4px; cursor: pointer; }
+.checkbox-item:hover { background: var(--surface); }
+.checkbox-item input[type="checkbox"] { accent-color: var(--accent); }
+
+/* Buttons */
+.btn { padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { opacity: 0.9; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 0.8rem; margin-top: 1rem; }
+
+/* Preview Chat */
+.preview-section { margin-top: 1.5rem; }
+.chat-preview { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; min-height: 200px; max-height: 400px; overflow-y: auto; padding: 1rem; margin: 0.8rem 0; }
+.chat-msg { margin-bottom: 0.8rem; display: flex; gap: 0.6rem; }
+.chat-msg.user { justify-content: flex-end; }
+.chat-msg .bubble { max-width: 70%; padding: 0.6rem 0.9rem; border-radius: 10px; font-size: 0.9rem; line-height: 1.5; }
+.chat-msg.user .bubble { background: #1d4ed8; color: white; border-bottom-right-radius: 4px; }
+.chat-msg.bot .bubble { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-msg .avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; background: var(--surface); border: 1px solid var(--border); flex-shrink: 0; }
+.chat-msg .source-tag { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+.chat-input-row { display: flex; gap: 0.6rem; }
+.chat-input-row input { flex: 1; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none; }
+.chat-input-row input:focus { border-color: var(--accent); }
+
+/* Template info */
+.template-info { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.8rem; margin-top: 0.8rem; font-size: 0.85rem; color: var(--muted); display: none; }
+.template-info .label { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏗️ AI Bot — Agent Builder</h1>
+  <nav>
+    <a href="/">💬 Chat</a>
+    <a href="/admin">⚙️ Dashboard</a>
+    <a href="/wiki">📖 Wiki</a>
+    <a href="/graph">🕸️ Graph</a>
+    <a href="/builder" class="active">🏗️ Builder</a>
+    <a href="/api-docs">📡 API</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- Agent Template Selection -->
+  <div class="section">
+    <div class="section-title">🤖 選擇 Agent 模板</div>
+    <div class="grid-2">
+      <div>
+        <label>Agent 模板</label>
+        <select id="agentTemplate" onchange="onTemplateChange()">
+          <option value="">— 建立新 Agent —</option>
+          <option value="admin">👑 Admin（管家）</option>
+          <option value="pm">📋 PM（專案經理）</option>
+          <option value="ai-dev">🧠 AI Dev（AI 工程師）</option>
+          <option value="coder">💻 Coder（全端開發）</option>
+          <option value="qa">🧪 QA（品質保證）</option>
+          <option value="data">📊 Data（數據分析）</option>
+          <option value="market">🗺️ Market（市場研究）</option>
+          <option value="report">📝 Report（報告產出）</option>
+        </select>
+      </div>
+      <div>
+        <label>Agent ID</label>
+        <input type="text" id="agentId" placeholder="輸入自訂 Agent ID（如：my-agent）">
+      </div>
+    </div>
+    <div class="template-info" id="templateInfo">
+      <span class="label">模板路徑：</span> <span id="templatePath"></span>
+    </div>
+  </div>
+
+  <!-- SOUL Editor -->
+  <div class="section">
+    <div class="section-title">🧬 SOUL 人格設定</div>
+    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:0.8rem;">定義 Agent 的身份、語氣、輸出格式和邊界規則</p>
+    <textarea id="soulEditor" rows="16" placeholder="# SOUL — Agent 人格設定
+
+## 身份 (Identity)
+你是一個...
+
+## 語氣 (Tone)
+- 專業但友善
+- 簡潔有力
+
+## 輸出格式 (Format)
+- 使用 Markdown
+- 重點加粗
+
+## 邊界 (Boundaries)
+- 不回答與工作無關的問題
+- 不提供法律/醫療建議"></textarea>
+  </div>
+
+  <!-- Knowledge Binding -->
+  <div class="section">
+    <div class="section-title">📚 知識庫綁定</div>
+    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:0.8rem;">選擇要綁定到此 Agent 的 Wiki 頁面</p>
+    <div class="checkbox-list" id="wikiCheckboxes">
+      <div style="padding:0.5rem; color:var(--muted); font-size:0.85rem;">載入中...</div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="btn-row">
+    <button class="btn primary" onclick="scrollToPreview()">💬 預覽對話</button>
+    <button class="btn" onclick="exportSOUL()">📋 匯出 SOUL</button>
+    <button class="btn" onclick="resetForm()">🔄 重設</button>
+  </div>
+
+  <!-- Preview Chat Section -->
+  <div class="preview-section" id="previewSection">
+    <div class="section">
+      <div class="section-title">💬 預覽對話</div>
+      <p style="font-size:0.8rem; color:var(--muted); margin-bottom:0.8rem;">用目前的 SOUL 設定測試 Agent 回覆</p>
+      <div class="chat-preview" id="chatPreview">
+        <div class="chat-msg bot">
+          <div class="avatar">🤖</div>
+          <div>
+            <div class="bubble">準備好了！輸入訊息來測試 Agent 回覆。</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="previewInput" placeholder="輸入測試訊息..." autocomplete="off">
+        <button class="btn primary" id="previewSendBtn" onclick="sendPreview()">傳送</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const AGENTS = [
+  {id:'admin', emoji:'👑', role:'admin', desc:'管家'},
+  {id:'pm', emoji:'📋', role:'leader', desc:'專案經理'},
+  {id:'ai-dev', emoji:'🧠', role:'worker', desc:'AI 工程師'},
+  {id:'coder', emoji:'💻', role:'worker', desc:'全端開發'},
+  {id:'qa', emoji:'🧪', role:'worker', desc:'品質保證'},
+  {id:'data', emoji:'📊', role:'worker', desc:'數據分析'},
+  {id:'market', emoji:'🗺️', role:'worker', desc:'市場研究'},
+  {id:'report', emoji:'📝', role:'worker', desc:'報告產出'},
+];
+
+// 載入 Wiki 頁面到 checkbox
+async function loadWikiPages() {
+  try {
+    const resp = await fetch('/api/v1/wiki/pages');
+    const data = await resp.json();
+    const pages = data.pages || [];
+    const container = document.getElementById('wikiCheckboxes');
+    if (pages.length === 0) {
+      container.innerHTML = '<div style="padding:0.5rem; color:var(--muted);">目前沒有 Wiki 頁面</div>';
+      return;
+    }
+    container.innerHTML = pages.map(p => `
+      <label class="checkbox-item">
+        <input type="checkbox" value="${p.filename}">
+        <span>📄 ${p.title || p.filename}</span>
+      </label>
+    `).join('');
+  } catch (e) {
+    document.getElementById('wikiCheckboxes').innerHTML = `<div style="padding:0.5rem; color:var(--red);">載入失敗</div>`;
+  }
+}
+
+// 模板切換
+function onTemplateChange() {
+  const val = document.getElementById('agentTemplate').value;
+  const info = document.getElementById('templateInfo');
+  const pathEl = document.getElementById('templatePath');
+  const idInput = document.getElementById('agentId');
+
+  if (val) {
+    info.style.display = 'block';
+    pathEl.textContent = `agents/${val}-agent/.kiro/steering/SOUL.md`;
+    idInput.value = val;
+    // 載入模板 SOUL（模擬）
+    const agent = AGENTS.find(a => a.id === val);
+    if (agent) {
+      document.getElementById('soulEditor').value = `# SOUL — ${agent.emoji} ${agent.id}-agent\n\n## 身份 (Identity)\n你是「${agent.desc}」Agent，專職於${agent.desc}相關任務。\n\n## 語氣 (Tone)\n- 專業、${agent.role === 'admin' ? '管理導向' : '執行導向'}\n- 簡潔明確\n\n## 輸出格式 (Format)\n- Markdown 格式\n- 重點加粗\n- 適當使用列表\n\n## 邊界 (Boundaries)\n- 專注於${agent.desc}領域\n- 超出範圍的問題轉介其他 Agent`;
+    }
+  } else {
+    info.style.display = 'none';
+    idInput.value = '';
+    document.getElementById('soulEditor').value = '';
+  }
+}
+
+// 滾動到預覽區
+function scrollToPreview() {
+  document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('previewInput').focus();
+}
+
+// 傳送預覽訊息
+async function sendPreview() {
+  const input = document.getElementById('previewInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const agentId = document.getElementById('agentId').value || document.getElementById('agentTemplate').value || 'admin';
+
+  // 顯示用戶訊息
+  appendPreviewMsg('user', text);
+  input.value = '';
+  document.getElementById('previewSendBtn').disabled = true;
+
+  try {
+    const resp = await fetch('/api/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, agent_id: agentId })
+    });
+    const data = await resp.json();
+    appendPreviewMsg('bot', data.reply, data.source);
+  } catch (e) {
+    appendPreviewMsg('bot', `⚠️ 錯誤: ${e.message}`);
+  }
+
+  document.getElementById('previewSendBtn').disabled = false;
+}
+
+function appendPreviewMsg(role, text, source) {
+  const container = document.getElementById('chatPreview');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+
+  if (role === 'user') {
+    div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+  } else {
+    const sourceTag = source && source !== 'fallback' ? `<div class="source-tag">⚡ via ${source}</div>` : '';
+    div.innerHTML = `<div class="avatar">🤖</div><div><div class="bubble">${escapeHtml(text)}</div>${sourceTag}</div>`;
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+}
+
+// 匯出 SOUL
+function exportSOUL() {
+  const soul = document.getElementById('soulEditor').value;
+  if (!soul.trim()) {
+    alert('SOUL 內容為空！');
+    return;
+  }
+  const blob = new Blob([soul], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `SOUL-${document.getElementById('agentId').value || 'custom'}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 重設表單
+function resetForm() {
+  document.getElementById('agentTemplate').value = '';
+  document.getElementById('agentId').value = '';
+  document.getElementById('soulEditor').value = '';
+  document.getElementById('templateInfo').style.display = 'none';
+  document.querySelectorAll('#wikiCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+  document.getElementById('chatPreview').innerHTML = `
+    <div class="chat-msg bot">
+      <div class="avatar">🤖</div>
+      <div><div class="bubble">準備好了！輸入訊息來測試 Agent 回覆。</div></div>
+    </div>`;
+}
+
+// Enter 鍵傳送
+document.getElementById('previewInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendPreview();
+});
+
+// 初始載入
+loadWikiPages();
+</script>
+</body>
+</html>

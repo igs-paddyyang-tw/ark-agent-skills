@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📖 AI Bot — API Docs</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --accent: #22d3ee; --green: #4ade80; --yellow: #fbbf24; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 1.2rem; color: var(--accent); }
+header nav a { color: var(--muted); text-decoration: none; margin-left: 1rem; font-size: 0.9rem; }
+header nav a:hover { color: var(--accent); }
+header nav a.active { color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 2px; }
+
+.container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+h2 { color: var(--accent); font-size: 1.3rem; margin: 2rem 0 0.8rem; }
+h3 { color: #f1f5f9; font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+p { margin: 0.4rem 0; color: var(--muted); font-size: 0.9rem; }
+
+.endpoint { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; margin: 0.8rem 0; }
+.endpoint .method { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-right: 0.5rem; }
+.endpoint .method.get { background: #064e3b; color: #6ee7b7; }
+.endpoint .method.post { background: #1e3a5f; color: #93c5fd; }
+.endpoint .path { font-family: monospace; color: var(--text); font-size: 0.95rem; }
+.endpoint .desc { color: var(--muted); font-size: 0.85rem; margin-top: 0.3rem; }
+.endpoint .try-btn { float: right; padding: 0.3rem 0.7rem; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 0.75rem; cursor: pointer; }
+.endpoint .try-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.response-box { background: #030712; border: 1px solid var(--border); border-radius: 6px; padding: 0.8rem; margin-top: 0.5rem; font-family: monospace; font-size: 0.8rem; color: var(--green); white-space: pre-wrap; display: none; max-height: 200px; overflow-y: auto; }
+
+.section-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem; }
+.section-badge.core { background: #064e3b; color: #6ee7b7; }
+.section-badge.wiki { background: #1e3a5f; color: #93c5fd; }
+.section-badge.skill { background: #4c1d95; color: #c4b5fd; }
+
+a.swagger-link { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+a.swagger-link:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📖 AI Bot — API</h1>
+  <nav>
+    <a href="/">💬 Chat</a>
+    <a href="/admin">⚙️ Dashboard</a>
+    <a href="/wiki">📖 Wiki</a>
+    <a href="/graph">🕸️ Graph</a>
+    <a href="/builder">🏗️ Builder</a>
+    <a href="/api-docs" class="active">📡 API</a>
+  </nav>
+</header>
+
+<div class="container">
+
+<p style="color: var(--text); font-size: 1rem; margin-bottom: 1.5rem;">專家 Agent 的 RESTful API。所有端點都在 <code>http://localhost:8000</code> 下。</p>
+
+<a href="/docs" class="swagger-link">🔗 Swagger UI（互動式測試）</a>
+<a href="/redoc" class="swagger-link">🔗 ReDoc（完整文件）</a>
+
+<h2>🏥 Core <span class="section-badge core">基礎</span></h2>
+
+<div class="endpoint">
+  <span class="method get">GET</span>
+  <span class="path">/health</span>
+  <button class="try-btn" onclick="tryApi(this, 'GET', '/health')">Try</button>
+  <div class="desc">健康檢查</div>
+  <div class="response-box"></div>
+</div>
+
+<div class="endpoint">
+  <span class="method get">GET</span>
+  <span class="path">/api/v1/health</span>
+  <button class="try-btn" onclick="tryApi(this, 'GET', '/api/v1/health')">Try</button>
+  <div class="desc">健康檢查（含服務名稱）</div>
+  <div class="response-box"></div>
+</div>
+
+<h2>🛠️ Skills <span class="section-badge skill">技能</span></h2>
+
+<div class="endpoint">
+  <span class="method get">GET</span>
+  <span class="path">/api/v1/skills</span>
+  <button class="try-btn" onclick="tryApi(this, 'GET', '/api/v1/skills')">Try</button>
+  <div class="desc">列出所有已註冊的 Skills</div>
+  <div class="response-box"></div>
+</div>
+
+<h2>📚 Wiki <span class="section-badge wiki">知識庫</span></h2>
+
+<div class="endpoint">
+  <span class="method post">POST</span>
+  <span class="path">/api/v1/chat</span>
+  <button class="try-btn" onclick="tryChat(this)">Try</button>
+  <div class="desc">統一對話 API（走完整路由：CLI → Wiki → Gemini）— Body: <code>{"message": "...", "agent_id": "admin"}</code></div>
+  <div class="response-box"></div>
+</div>
+
+<div class="endpoint">
+  <span class="method post">POST</span>
+  <span class="path">/api/v1/wiki/query</span>
+  <button class="try-btn" onclick="tryWikiQuery(this)">Try</button>
+  <div class="desc">查詢知識庫（RAG）— Body: <code>{"q": "搜尋關鍵字"}</code></div>
+  <div class="response-box"></div>
+</div>
+
+<div class="endpoint">
+  <span class="method post">POST</span>
+  <span class="path">/api/v1/wiki/ingest</span>
+  <button class="try-btn" onclick="tryApi(this, 'POST', '/api/v1/wiki/ingest')">Try</button>
+  <div class="desc">匯入 knowledge/raw/ → wiki/（執行 ingest）</div>
+  <div class="response-box"></div>
+</div>
+
+<div class="endpoint">
+  <span class="method get">GET</span>
+  <span class="path">/api/v1/wiki/lint</span>
+  <button class="try-btn" onclick="tryApi(this, 'GET', '/api/v1/wiki/lint')">Try</button>
+  <div class="desc">檢查 Wiki 健康度（frontmatter 完整性）</div>
+  <div class="response-box"></div>
+</div>
+
+<div class="endpoint">
+  <span class="method get">GET</span>
+  <span class="path">/api/v1/wiki/pages</span>
+  <button class="try-btn" onclick="tryApi(this, 'GET', '/api/v1/wiki/pages')">Try</button>
+  <div class="desc">列出所有 wiki 頁面（filename + title）</div>
+  <div class="response-box"></div>
+</div>
+
+<div class="endpoint">
+  <span class="method get">GET</span>
+  <span class="path">/api/v1/wiki/pages/{filename}</span>
+  <button class="try-btn" onclick="tryWikiPage(this)">Try</button>
+  <div class="desc">取得指定頁面的完整 Markdown 內容</div>
+  <div class="response-box"></div>
+</div>
+
+</div>
+
+<script>
+async function tryApi(btn, method, path) {
+  const box = btn.parentElement.querySelector('.response-box');
+  box.style.display = 'block';
+  box.textContent = '載入中...';
+  try {
+    const opts = method === 'POST' ? { method: 'POST' } : {};
+    const resp = await fetch(path, opts);
+    const data = await resp.json();
+    box.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    box.textContent = `❌ 錯誤: ${e.message}`;
+    box.style.color = '#f87171';
+  }
+}
+
+async function tryWikiQuery(btn) {
+  const q = prompt('輸入搜尋關鍵字：', 'Ocean King');
+  if (!q) return;
+  const box = btn.parentElement.querySelector('.response-box');
+  box.style.display = 'block';
+  box.textContent = '載入中...';
+  try {
+    const resp = await fetch('/api/v1/wiki/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q })
+    });
+    const data = await resp.json();
+    box.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    box.textContent = `❌ 錯誤: ${e.message}`;
+    box.style.color = '#f87171';
+  }
+}
+
+async function tryChat(btn) {
+  const msg = prompt('輸入訊息：', '什麼是 Ocean King？');
+  if (!msg) return;
+  const agent = prompt('Agent ID（admin/market/qa/...）：', 'admin');
+  const box = btn.parentElement.querySelector('.response-box');
+  box.style.display = 'block';
+  box.textContent = '處理中...';
+  try {
+    const resp = await fetch('/api/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, agent_id: agent || 'admin' })
+    });
+    const data = await resp.json();
+    box.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    box.textContent = `❌ 錯誤: ${e.message}`;
+    box.style.color = '#f87171';
+  }
+}
+
+async function tryWikiPage(btn) {
+  const filename = prompt('輸入檔名：', 'ocean-king-analysis.md');
+  if (!filename) return;
+  const box = btn.parentElement.querySelector('.response-box');
+  box.style.display = 'block';
+  box.textContent = '載入中...';
+  try {
+    const resp = await fetch(`/api/v1/wiki/pages/${filename}`);
+    const data = await resp.json();
+    box.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    box.textContent = `❌ 錯誤: ${e.message}`;
+    box.style.color = '#f87171';
+  }
+}
+</script>
+
+</body>
+</html>

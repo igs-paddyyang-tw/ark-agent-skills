@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════
+# 營運團隊（Operations Team）
+# 用途：市場監控 + 數據分析 + 報告產出
+# 啟用：cp team-ops.yaml team.yaml && python start.py
+# ═══════════════════════════════════════════════════════
+
+channel:
+  bot_token_env: TELEGRAM_BOT_TOKEN
+
+access:
+  mode: locked
+  allowed_users: []              # 填入你的 Telegram user_id
+
+defaults:
+  backend: kiro-cli
+  model: auto
+  persistent: true
+
+startup:
+  concurrency: 2
+  stagger_delay_ms: 3000
+
+cost_guard:
+  daily_limit_usd: 15.0
+  warn_at_percentage: 80
+  timezone: Asia/Taipei
+
+hang_detector:
+  enabled: true
+  timeout_minutes: 60
+  escalation_minutes: 180
+
+# ── 完整 8 Agent 團隊 ─────────────────────────────────────────
+# admin + pm = 常駐（persistent: true，預設繼承）
+# workers = 動態（persistent: false，需求觸發才啟動）
+# 簡化配置：cp team-ops.yaml team.yaml（只跑營運 5 人）
+#           cp team-dev.yaml team.yaml（只跑研發 5 人）
+
+instances:
+  admin-agent:
+    working_directory: agents/admin-agent
+    description: "👑 Admin — 預設入口、服務監控、成本控制、開發維護"
+    role: admin
+    skip_resume: true
+
+  leader-agent:
+    working_directory: agents/leader-agent
+    description: "🧠 Leader — 需求分析、任務拆解、派工、驗收"
+    role: leader
+    skip_resume: true
+
+  coder-agent:
+    working_directory: agents/coder-agent
+    description: "💻 Coder — 全端開發、API 實作、資料庫設計"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+  qa-agent:
+    working_directory: agents/qa-agent
+    description: "🧪 QA — 測試策略、自動化測試、Code Review"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+  ai-dev-agent:
+    working_directory: agents/ai-dev-agent
+    description: "🤖 AI Dev — LLM 整合、Prompt 工程、MCP 開發、Agent 設計"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+  market-agent:
+    working_directory: agents/market-agent
+    description: "📰 Market — 競品監控、輿情分析、產業新聞爬取"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+  data-agent:
+    working_directory: agents/data-agent
+    description: "📊 Data — 數據分析、KPI 追蹤、遊戲指標洞察"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+  report-agent:
+    working_directory: agents/report-agent
+    description: "📋 Report — Markdown/HTML 報告產出、圖表渲染、定期摘要"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+health_port: 33333

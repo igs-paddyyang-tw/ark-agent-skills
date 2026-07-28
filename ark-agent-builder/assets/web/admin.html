@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚙️ AI Bot — Dashboard</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --accent: #22d3ee; --green: #4ade80; --yellow: #fbbf24; --red: #f87171; --purple: #a78bfa; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 1.2rem; color: var(--accent); }
+header nav a { color: var(--muted); text-decoration: none; margin-left: 1rem; font-size: 0.9rem; }
+header nav a:hover { color: var(--accent); }
+header nav a.active { color: var(--accent); }
+.container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+h2 { color: var(--accent); font-size: 1.2rem; margin: 1.5rem 0 0.8rem; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; }
+.card .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 1.8rem; font-weight: 700; }
+.card .sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; font-size: 0.9rem; }
+th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; }
+th { background: var(--surface); color: var(--accent); font-size: 0.8rem; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; }
+.dot.green { background: var(--green); }
+.dot.yellow { background: var(--yellow); }
+.btn { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.8rem; cursor: pointer; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; margin: 1rem 0; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ AI Bot — Dashboard</h1>
+  <nav>
+    <a href="/">💬 Chat</a>
+    <a href="/admin" class="active">⚙️ Dashboard</a>
+    <a href="/wiki">📖 Wiki</a>
+    <a href="/graph">🕸️ Graph</a>
+    <a href="/builder">🏗️ Builder</a>
+    <a href="/api-docs">📡 API</a>
+  </nav>
+</header>
+
+<div class="container">
+
+<div class="cards">
+  <div class="card"><div class="label">Agent 數量</div><div class="value" style="color:var(--accent)" id="agentCount">8</div><div class="sub">全部在線</div></div>
+  <div class="card"><div class="label">Skills</div><div class="value" style="color:var(--green)" id="skillCount">5</div><div class="sub">internal</div></div>
+  <div class="card"><div class="label">知識庫</div><div class="value" style="color:var(--yellow)" id="wikiCount">-</div><div class="sub">wiki 頁面</div></div>
+  <div class="card"><div class="label">Wiki 健康度</div><div class="value" style="color:var(--green)" id="wikiHealth">-</div><div class="sub">lint 狀態</div></div>
+  <div class="card"><div class="label">Kiro Skills</div><div class="value" style="color:var(--purple)">5</div><div class="sub">IDE 用</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="section">
+    <h2>🤖 Agent 列表</h2>
+    <table>
+      <thead><tr><th>Agent</th><th>Role</th><th>SOUL</th><th>狀態</th></tr></thead>
+      <tbody id="agentBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>📚 知識庫</h2>
+    <div style="margin-bottom:0.8rem">
+      <button class="btn primary" onclick="doIngest()">⬆️ Ingest</button>
+      <button class="btn" onclick="doLint()">🔍 Lint</button>
+      <a href="/wiki" class="btn" style="text-decoration:none;margin-left:0.3rem">📖 開 Wiki 瀏覽器</a>
+    </div>
+    <div id="wikiSummary" style="margin-bottom:0.8rem;font-size:0.85rem;color:var(--muted)"></div>
+    <div id="wikiFolders"></div>
+    <div id="lintResult" style="display:none;margin-top:1rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem;max-height:300px;overflow-y:auto;font-size:0.85rem;"></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🛠️ 系統資訊</h2>
+  <table>
+    <tr><td>平台</td><td>AI Bot — AI Agent 專家開發平台</td></tr>
+    <tr><td>Web UI</td><td>Chat · Dashboard · Wiki · Graph · Builder · API Docs</td></tr>
+    <tr><td>Tier</td><td>0: Prompts+Skills+Wiki+MCP | 1: +TG | 2: +Gemini | 3: +Agent CLI</td></tr>
+    <tr><td>知識庫</td><td>shared（knowledge/shared/wiki/）+ 私有（agents/*/knowledge/wiki/）· 四層搜尋</td></tr>
+    <tr><td>對話路由</td><td>L1(/reset) → L2(/skill) → L3(keyword) → L4(ReAct Agent Loop + 5 tools)</td></tr>
+  </table>
+</div>
+
+</div>
+
+<script>
+const AGENTS = [
+  {id:'admin', emoji:'👑', role:'admin', desc:'管家'},
+  {id:'pm', emoji:'📋', role:'leader', desc:'專案經理'},
+  {id:'ai-dev', emoji:'🧠', role:'worker', desc:'AI 工程師'},
+  {id:'coder', emoji:'💻', role:'worker', desc:'全端開發'},
+  {id:'qa', emoji:'🧪', role:'worker', desc:'品質保證'},
+  {id:'data', emoji:'📊', role:'worker', desc:'數據分析'},
+  {id:'market', emoji:'🗺️', role:'worker', desc:'市場研究'},
+  {id:'report', emoji:'📝', role:'worker', desc:'報告產出'},
+];
+
+function loadAgents() {
+  const tbody = document.getElementById('agentBody');
+  tbody.innerHTML = AGENTS.map(a => `<tr>
+    <td>${a.emoji} ${a.id}-agent</td>
+    <td>${a.role}</td>
+    <td>agents/${a.id}-agent/.kiro/steering/SOUL.md</td>
+    <td><span class="dot green"></span>在線</td>
+  </tr>`).join('');
+}
+
+async function loadWiki() {
+  try {
+    const resp = await fetch('/api/v1/wiki/lint');
+    const data = await resp.json();
+    document.getElementById('wikiHealth').textContent = data.healthy ? '✅' : `⚠️ ${data.issues?.length || ''}`;
+  } catch(e) { document.getElementById('wikiHealth').textContent = '?'; }
+
+  try {
+    const resp = await fetch('/api/v1/wiki/pages');
+    const data = await resp.json();
+    const pages = data.pages || [];
+    let totalFiles = 0;
+    const folderCounts = [];
+    let rootCount = 0;
+    function countTree(items) {
+      for (const item of items) {
+        if (item.type === 'file') { totalFiles++; rootCount++; }
+        else if (item.type === 'folder') {
+          const c = countChildren(item.children || []);
+          folderCounts.push({name: item.name, count: c});
+          totalFiles += c;
+        } else if (item.filename) { totalFiles++; rootCount++; }
+      }
+    }
+    function countChildren(items) {
+      let c = 0;
+      for (const item of items) {
+        if (item.type === 'file' || item.filename) c++;
+        else if (item.type === 'folder') c += countChildren(item.children || []);
+      }
+      return c;
+    }
+    countTree(pages);
+    document.getElementById('wikiCount').textContent = totalFiles;
+    document.getElementById('wikiSummary').textContent = `共 ${totalFiles} 篇（${folderCounts.length} 個資料夾 + ${rootCount} 篇根層）`;
+    const fd = document.getElementById('wikiFolders');
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem;">';
+    for (const f of folderCounts.sort((a,b) => b.count - a.count)) {
+      html += `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.8rem;font-size:0.85rem;">📁 ${f.name} <span style="color:var(--accent);float:right">${f.count}</span></div>`;
+    }
+    if (rootCount > 0) {
+      html += `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.8rem;font-size:0.85rem;">📄 根層 <span style="color:var(--accent);float:right">${rootCount}</span></div>`;
+    }
+    html += '</div>';
+    fd.innerHTML = html;
+  } catch(e) {
+    document.getElementById('wikiCount').textContent = '?';
+    document.getElementById('wikiFolders').innerHTML = '<div style="color:#f87171">API 連線失敗</div>';
+  }
+}
+
+async function doIngest() {
+  try {
+    const resp = await fetch('/api/v1/wiki/ingest', {method:'POST'});
+    const data = await resp.json();
+    if (data.count === 0) alert('✅ 沒有新檔案需要匯入（全部都是最新的）');
+    else alert(`✅ 匯入 ${data.count} 篇：\n${data.ingested.slice(0,10).join('\n')}${data.count > 10 ? '\n...' : ''}`);
+    loadWiki();
+  } catch(e) { alert('❌ ' + e.message); }
+}
+
+async function doLint() {
+  const rd = document.getElementById('lintResult');
+  rd.style.display = 'block';
+  rd.innerHTML = '檢查中...';
+  try {
+    const resp = await fetch('/api/v1/wiki/lint');
+    const data = await resp.json();
+    if (data.healthy) { rd.innerHTML = '<div style="color:#4ade80">✅ Wiki 健康！所有頁面 frontmatter 完整。</div>'; return; }
+    const issues = data.issues || [];
+    const byField = {};
+    for (const issue of issues) {
+      for (const field of issue.missing_fields) {
+        if (!byField[field]) byField[field] = [];
+        byField[field].push(issue.file);
+      }
+    }
+    let html = `<div style="color:var(--yellow);margin-bottom:0.5rem;">⚠️ ${issues.length} 個頁面有問題</div>`;
+    for (const [field, files] of Object.entries(byField).sort((a,b) => b[1].length - a[1].length)) {
+      html += `<details style="margin:0.3rem 0;"><summary style="cursor:pointer;">缺 <code>${field}</code>（${files.length} 篇）</summary><div style="padding-left:1rem;color:var(--muted);max-height:100px;overflow-y:auto;">`;
+      for (const f of files.slice(0, 20)) html += `<div style="font-size:0.8rem;">📄 ${f}</div>`;
+      if (files.length > 20) html += `<div style="font-size:0.8rem;">...還有 ${files.length - 20} 篇</div>`;
+      html += '</div></details>';
+    }
+    html += '<div style="margin-top:0.8rem;"><button class="btn" onclick="document.getElementById(\'lintResult\').style.display=\'none\'">❌ 關閉</button></div>';
+    rd.innerHTML = html;
+  } catch(e) { rd.innerHTML = `<div style="color:#f87171">❌ ${e.message}</div>`; }
+}
+
+loadAgents();
+loadWiki();
+</script>
+</body>
+</html>

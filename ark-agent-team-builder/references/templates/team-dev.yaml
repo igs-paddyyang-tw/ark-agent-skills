@@ -1,0 +1,67 @@
+# ═══════════════════════════════════════════════════════
+# 研發團隊（Development Team）
+# 用途：AI 開發 + 全端實作 + 品質保證
+# 啟用：cp team-dev.yaml team.yaml && python start.py
+# ═══════════════════════════════════════════════════════
+
+channel:
+  bot_token_env: TELEGRAM_BOT_TOKEN
+
+access:
+  mode: locked
+  allowed_users: []              # 填入你的 Telegram user_id
+
+defaults:
+  backend: kiro-cli
+  model: auto
+  persistent: true
+
+startup:
+  concurrency: 2
+  stagger_delay_ms: 3000
+
+cost_guard:
+  daily_limit_usd: 15.0
+  warn_at_percentage: 80
+  timezone: Asia/Taipei
+
+hang_detector:
+  enabled: true
+  timeout_minutes: 60
+  escalation_minutes: 180
+
+instances:
+  admin-agent:
+    working_directory: agents/admin-agent
+    description: "👑 Admin — 預設入口、服務監控、成本控制"
+    role: admin
+    skip_resume: true
+
+  leader-agent:
+    working_directory: agents/leader-agent
+    description: "🧠 Leader — 需求分析、任務拆解、派工驗收"
+    role: leader
+    skip_resume: true
+
+  ai-dev-agent:
+    working_directory: agents/ai-dev-agent
+    description: "🤖 AI Dev — LLM 整合、Prompt 工程、MCP 開發"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+  coder-agent:
+    working_directory: agents/coder-agent
+    description: "💻 Coder — 全端開發、API 實作、資料庫設計"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+  qa-agent:
+    working_directory: agents/qa-agent
+    description: "🧪 QA — 測試策略、自動化測試、Code Review"
+    role: worker
+    persistent: false
+    skip_resume: true
+
+health_port: 33333

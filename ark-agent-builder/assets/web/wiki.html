@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📖 AI Bot — Wiki</title>
+<style>
+:root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --accent: #22d3ee; --text: #e2e8f0; --muted: #94a3b8; --green: #4ade80; --yellow: #fbbf24; --red: #f87171; --purple: #a78bfa; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.8rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 1.2rem; color: var(--accent); }
+header nav a { color: var(--muted); text-decoration: none; margin-left: 1rem; font-size: 0.9rem; transition: color 0.2s; }
+header nav a:hover { color: var(--accent); }
+header nav a.active { color: var(--accent); font-weight: 600; }
+
+.wiki-layout { flex: 1; display: grid; grid-template-columns: 280px 1fr; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.search-box { padding: 1rem; border-bottom: 1px solid var(--border); }
+.search-box input { width: 100%; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none; }
+.search-box input:focus { border-color: var(--accent); }
+.search-box input::placeholder { color: var(--muted); }
+
+.file-tree { flex: 1; overflow-y: auto; padding: 0.5rem; }
+.tree-folder { margin: 0; }
+.tree-folder-header { padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; color: var(--text); display: flex; align-items: center; gap: 0.4rem; user-select: none; transition: background 0.15s; }
+.tree-folder-header:hover { background: var(--bg); }
+.tree-folder-header .arrow { font-size: 0.7rem; transition: transform 0.2s; display: inline-block; width: 1rem; text-align: center; color: var(--muted); }
+.tree-folder-header .arrow.open { transform: rotate(90deg); }
+.tree-folder-children { margin-left: 1rem; display: none; }
+.tree-folder-children.open { display: block; }
+.tree-file { padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem; transition: all 0.15s; margin-left: 1rem; }
+.tree-file:hover { background: var(--bg); color: var(--text); }
+.tree-file.active { background: var(--bg); color: var(--accent); border: 1px solid var(--border); }
+.tree-file.root-file { margin-left: 0; }
+
+.file-count { padding: 0.5rem 1rem; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--border); }
+
+/* Content */
+.content-area { flex: 1; overflow-y: auto; padding: 2rem 3rem; }
+.content-area .empty { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+.content-area .empty .icon { font-size: 3rem; margin-bottom: 1rem; }
+
+.page-title { font-size: 1.6rem; color: var(--accent); margin-bottom: 0.5rem; }
+.page-path { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+
+.page-body { line-height: 1.8; font-size: 0.95rem; }
+.page-body h1 { font-size: 1.5rem; color: var(--accent); margin: 1.8rem 0 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+.page-body h2 { font-size: 1.25rem; color: var(--accent); margin: 1.5rem 0 0.6rem; }
+.page-body h3 { font-size: 1.1rem; color: var(--accent); margin: 1.2rem 0 0.5rem; }
+.page-body p { margin: 0.6rem 0; }
+.page-body strong { color: var(--text); font-weight: 700; }
+.page-body code { background: var(--bg); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85rem; color: var(--green); font-family: 'Fira Code', monospace; }
+.page-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 1rem 0; }
+.page-body pre code { background: none; padding: 0; color: var(--text); }
+.page-body ul, .page-body ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+.page-body li { margin: 0.3rem 0; }
+.page-body blockquote { border-left: 3px solid var(--accent); padding: 0.5rem 1rem; color: var(--muted); margin: 1rem 0; background: rgba(34,211,238,0.05); border-radius: 0 6px 6px 0; }
+.page-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+.page-body th, .page-body td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; }
+.page-body th { background: var(--surface); color: var(--accent); font-weight: 600; }
+.page-body a { color: var(--accent); text-decoration: none; }
+.page-body a:hover { text-decoration: underline; }
+.page-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+.page-frontmatter { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.page-frontmatter h4 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.fm-grid { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.fm-item { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.82rem; }
+.fm-item .label { color: var(--muted); margin-right: 0.4rem; }
+.fm-item .value { color: var(--accent); }
+.fm-tag { background: var(--accent); color: var(--bg); border-radius: 12px; padding: 0.2rem 0.6rem; font-size: 0.75rem; font-weight: 600; display: inline-block; margin: 0.1rem; }
+
+/* Search results */
+.search-results { margin-top: 1rem; }
+.search-result-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.search-result-item:hover { border-color: var(--accent); background: rgba(34,211,238,0.05); }
+.search-result-title { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.3rem; }
+.search-result-path { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; }
+.search-result-snippet { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+.search-result-snippet mark, .search-result-title mark { background: rgba(251, 191, 36, 0.3); color: var(--yellow); border-radius: 2px; padding: 0 2px; }
+
+@media (max-width: 768px) {
+  .wiki-layout { grid-template-columns: 1fr; }
+  .sidebar { max-height: 280px; }
+  .content-area { padding: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📖 AI Bot — Wiki</h1>
+  <nav>
+    <a href="/">💬 Chat</a>
+    <a href="/admin">⚙️ Dashboard</a>
+    <a href="/wiki" class="active">📖 Wiki</a>
+    <a href="/graph">🕸️ Graph</a>
+    <a href="/builder">🏗️ Builder</a>
+    <a href="/api-docs">📡 API</a>
+  </nav>
+</header>
+
+<div class="wiki-layout">
+  <div class="sidebar">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="🔍 搜尋 Wiki 頁面..." autocomplete="off">
+    </div>
+    <div class="file-tree" id="fileTree">
+      <div style="padding:1rem; color:var(--muted); font-size:0.85rem;">載入中...</div>
+    </div>
+    <div class="file-count" id="fileCount"></div>
+  </div>
+
+  <div class="content-area" id="contentArea">
+    <div class="empty">
+      <div class="icon">📖</div>
+      <p style="font-size:1.1rem; margin-bottom:0.5rem;">歡迎使用 Wiki 知識庫瀏覽器</p>
+      <p style="font-size:0.9rem;">選擇左側的檔案來閱讀內容，或使用搜尋框查找知識</p>
+      <p style="font-size:0.8rem; margin-top:1rem; color:var(--accent);">📁 支援資料夾展開收合 &nbsp;|&nbsp; 🔍 即時搜尋過濾 &nbsp;|&nbsp; 📝 Markdown 渲染</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let treeData = [];
+let currentFile = null;
+let totalFiles = 0;
+
+// ─── Load tree data ─────────────────────────────────
+async function loadPages() {
+  try {
+    const resp = await fetch('/api/v1/wiki/pages');
+    const data = await resp.json();
+    treeData = data.pages || [];
+    totalFiles = countFiles(treeData);
+    renderTree(treeData);
+  } catch (e) {
+    document.getElementById('fileTree').innerHTML = `<div style="padding:1rem; color:var(--red); font-size:0.85rem;">❌ 載入失敗: ${e.message}</div>`;
+  }
+}
+
+function countFiles(items) {
+  let count = 0;
+  for (const item of items) {
+    if (item.type === 'file') count++;
+    else if (item.children) count += countFiles(item.children);
+  }
+  return count;
+}
+
+// ─── Render tree ────────────────────────────────────
+function renderTree(items, filter = '') {
+  const container = document.getElementById('fileTree');
+  const html = buildTreeHTML(items, filter, true);
+  container.innerHTML = html || '<div style="padding:1rem; color:var(--muted); font-size:0.85rem;">沒有找到頁面</div>';
+  const shown = countVisible(items, filter);
+  document.getElementById('fileCount').textContent = filter ? `搜尋結果: ${shown} / ${totalFiles} 頁` : `共 ${totalFiles} 個頁面`;
+}
+
+function countVisible(items, filter) {
+  let count = 0;
+  for (const item of items) {
+    if (item.type === 'file') {
+      if (!filter || matchesFilter(item, filter)) count++;
+    } else if (item.children) {
+      count += countVisible(item.children, filter);
+    }
+  }
+  return count;
+}
+
+function matchesFilter(item, filter) {
+  const q = filter.toLowerCase();
+  if (item.type === 'file') {
+    return (item.title || '').toLowerCase().includes(q) || (item.filename || '').toLowerCase().includes(q);
+  }
+  if (item.type === 'folder') {
+    return (item.name || '').toLowerCase().includes(q) || (item.children || []).some(c => matchesFilter(c, filter));
+  }
+  return false;
+}
+
+function folderHasMatch(item, filter) {
+  if (!filter) return true;
+  if (item.type === 'file') return matchesFilter(item, filter);
+  if (item.type === 'folder') return (item.children || []).some(c => folderHasMatch(c, filter));
+  return false;
+}
+
+function buildTreeHTML(items, filter, isRoot = false) {
+  let html = '';
+  for (const item of items) {
+    if (item.type === 'folder') {
+      if (filter && !folderHasMatch(item, filter)) continue;
+      const isOpen = !!filter; // auto-expand when searching
+      html += `<div class="tree-folder">
+        <div class="tree-folder-header" onclick="toggleFolder(this)">
+          <span class="arrow ${isOpen ? 'open' : ''}">▶</span>
+          <span>📁 ${item.name}</span>
+        </div>
+        <div class="tree-folder-children ${isOpen ? 'open' : ''}">
+          ${buildTreeHTML(item.children || [], filter)}
+        </div>
+      </div>`;
+    } else if (item.type === 'file') {
+      if (filter && !matchesFilter(item, filter)) continue;
+      const active = currentFile === item.filename ? 'active' : '';
+      const rootClass = isRoot ? 'root-file' : '';
+      html += `<div class="tree-file ${active} ${rootClass}" onclick="loadPage('${item.filename.replace(/'/g, "\\'")}')">
+        <span>📄</span>
+        <span>${item.title || item.filename}</span>
+      </div>`;
+    }
+  }
+  return html;
+}
+
+function toggleFolder(el) {
+  const arrow = el.querySelector('.arrow');
+  const children = el.nextElementSibling;
+  arrow.classList.toggle('open');
+  children.classList.toggle('open');
+}
+
+// ─── Load page content ──────────────────────────────
+async function loadPage(filepath) {
+  currentFile = filepath;
+  renderTree(treeData, document.getElementById('searchInput').value.trim());
+
+  const area = document.getElementById('contentArea');
+  area.innerHTML = '<div style="padding:2rem; color:var(--muted);">載入中...</div>';
+
+  try {
+    const resp = await fetch(`/api/v1/wiki/pages/${filepath}`);
+    const data = await resp.json();
+    if (data.error) {
+      area.innerHTML = `<div class="empty"><div class="icon">❌</div><p>${data.error}</p></div>`;
+      return;
+    }
+    const content = data.content || '';
+    const { body, frontmatter } = parseFrontmatter(content);
+    const title = frontmatter.title || filepath.split('/').pop().replace('.md', '');
+    const rendered = renderMarkdown(body);
+    const fmHTML = renderFrontmatterSection(frontmatter);
+
+    area.innerHTML = `
+      <div class="page-title">${escapeHtml(title)}</div>
+      <div class="page-path">📁 knowledge/wiki/${escapeHtml(filepath)}</div>
+      <div class="page-body">${rendered}</div>
+      ${fmHTML}
+    `;
+  } catch (e) {
+    area.innerHTML = `<div class="empty"><div class="icon">❌</div><p>載入失敗: ${e.message}</p></div>`;
+  }
+}
+
+// ─── Frontmatter parsing ────────────────────────────
+function parseFrontmatter(content) {
+  const fm = {};
+  if (!content.startsWith('---')) return { body: content, frontmatter: fm };
+  const endIdx = content.indexOf('---', 3);
+  if (endIdx === -1) return { body: content, frontmatter: fm };
+  const fmBlock = content.substring(3, endIdx).trim();
+  const body = content.substring(endIdx + 3).trim();
+
+  for (const line of fmBlock.split('\n')) {
+    const match = line.match(/^(\w+):\s*(.+)$/);
+    if (match) {
+      let val = match[2].trim();
+      // Parse array [a, b, c]
+      if (val.startsWith('[') && val.endsWith(']')) {
+        val = val.slice(1, -1).split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
+      } else {
+        val = val.replace(/^['"]|['"]$/g, '');
+      }
+      fm[match[1]] = val;
+    }
+  }
+  return { body, frontmatter: fm };
+}
+
+function renderFrontmatterSection(fm) {
+  const keys = ['tags', 'type', 'created', 'updated'];
+  const hasAny = keys.some(k => fm[k]);
+  if (!hasAny) return '';
+
+  let html = '<div class="page-frontmatter"><h4>📋 頁面資訊</h4><div class="fm-grid">';
+  if (fm.type) {
+    html += `<div class="fm-item"><span class="label">類型:</span><span class="value">${escapeHtml(String(fm.type))}</span></div>`;
+  }
+  if (fm.created) {
+    html += `<div class="fm-item"><span class="label">建立:</span><span class="value">${escapeHtml(String(fm.created))}</span></div>`;
+  }
+  if (fm.updated) {
+    html += `<div class="fm-item"><span class="label">更新:</span><span class="value">${escapeHtml(String(fm.updated))}</span></div>`;
+  }
+  if (fm.tags) {
+    const tags = Array.isArray(fm.tags) ? fm.tags : [fm.tags];
+    html += `<div class="fm-item"><span class="label">標籤:</span>${tags.map(t => `<span class="fm-tag">${escapeHtml(t)}</span>`).join(' ')}</div>`;
+  }
+  html += '</div></div>';
+  return html;
+}
+
+// ─── Markdown rendering ─────────────────────────────
+function renderMarkdown(md) {
+  // Code blocks first (protect from other transforms)
+  const codeBlocks = [];
+  md = md.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    codeBlocks.push(`<pre><code>${escapeHtml(code.trimEnd())}</code></pre>`);
+    return `__CODEBLOCK_${codeBlocks.length - 1}__`;
+  });
+
+  // Tables
+  const tableBlocks = [];
+  md = md.replace(/((?:^\|.+\|$\n?)+)/gm, (match) => {
+    const rows = match.trim().split('\n').filter(r => r.trim());
+    if (rows.length < 2) return match;
+    let table = '<table>';
+    rows.forEach((row, idx) => {
+      // Skip separator row
+      if (row.match(/^\|[\s\-:|]+\|$/)) return;
+      const cells = row.split('|').filter((_, i, a) => i > 0 && i < a.length - 1);
+      const tag = idx === 0 ? 'th' : 'td';
+      const wrap = idx === 0 ? 'thead' : (idx === 1 || (idx === 2 && rows[1].match(/^\|[\s\-:|]+\|$/)) ? 'tbody' : '');
+      if (idx === 0) table += '<thead>';
+      if (idx === 1 || (idx === 2 && rows[1].match(/^\|[\s\-:|]+\|$/))) { if (idx === 1 || idx === 2) table += '</thead><tbody>'; }
+      table += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+    });
+    table += '</tbody></table>';
+    tableBlocks.push(table);
+    return `__TABLEBLOCK_${tableBlocks.length - 1}__`;
+  });
+
+  let html = md
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Headers
+    .replace(/^#### (.+)$/gm, '<h4 style="color:var(--accent); margin:1rem 0 0.4rem; font-size:1rem;">$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold & italic
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Blockquote
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    // Unordered list
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // Ordered list
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    // HR
+    .replace(/^---$/gm, '<hr>')
+    // Paragraphs
+    .replace(/^(?!<[hluobtaprs]|__)((?!^\s*$).+)$/gm, '<p>$1</p>');
+
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, '<ul>$&</ul>');
+
+  // Merge consecutive blockquotes
+  html = html.replace(/(<\/blockquote>\s*<blockquote>)/g, '<br>');
+
+  // Restore code blocks
+  codeBlocks.forEach((block, i) => {
+    html = html.replace(`__CODEBLOCK_${i}__`, block);
+    // Also clean wrapper <p> if any
+    html = html.replace(`<p>__CODEBLOCK_${i}__</p>`, block);
+  });
+
+  // Restore tables
+  tableBlocks.forEach((block, i) => {
+    html = html.replace(`__TABLEBLOCK_${i}__`, block);
+    html = html.replace(`<p>__TABLEBLOCK_${i}__</p>`, block);
+  });
+
+  return html;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ─── Highlight keywords ─────────────────────────────
+function highlightKeywords(text, query) {
+  if (!query || !text) return escapeHtml(text);
+  const escaped = escapeHtml(text);
+  const keywords = query.trim().split(/\s+/).filter(k => k.length > 0);
+  if (keywords.length === 0) return escaped;
+  // Build regex matching all keywords (case-insensitive)
+  const pattern = keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const regex = new RegExp(`(${pattern})`, 'gi');
+  return escaped.replace(regex, '<mark>$1</mark>');
+}
+
+// Extract a paragraph snippet around the first keyword match
+function extractSnippet(content, query, maxLen = 150) {
+  if (!query || !content) return '';
+  // Remove frontmatter
+  let text = content;
+  if (text.startsWith('---')) {
+    const endIdx = text.indexOf('---', 3);
+    if (endIdx !== -1) text = text.substring(endIdx + 3);
+  }
+  // Clean markdown syntax for plain-text search
+  const plain = text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^[>\-|]/gm, '')
+    .trim();
+
+  const keywords = query.trim().split(/\s+/).filter(k => k.length > 0);
+  const lowerPlain = plain.toLowerCase();
+  let bestIdx = -1;
+
+  // Find the first keyword occurrence in the plain text
+  for (const kw of keywords) {
+    const idx = lowerPlain.indexOf(kw.toLowerCase());
+    if (idx !== -1 && (bestIdx === -1 || idx < bestIdx)) {
+      bestIdx = idx;
+    }
+  }
+
+  if (bestIdx === -1) {
+    // No match in content, return first paragraph as fallback
+    const lines = plain.split('\n').filter(l => l.trim().length > 10);
+    return lines.length > 0 ? lines[0].substring(0, maxLen) : plain.substring(0, maxLen);
+  }
+
+  // Extract snippet around the match
+  const start = Math.max(0, bestIdx - 40);
+  const end = Math.min(plain.length, bestIdx + maxLen - 40);
+  let snippet = plain.substring(start, end).replace(/\n/g, ' ').trim();
+  if (start > 0) snippet = '...' + snippet;
+  if (end < plain.length) snippet = snippet + '...';
+  return snippet;
+}
+
+// ─── Search with content results ────────────────────
+let searchTimeout = null;
+let searchCache = {}; // Cache loaded page contents for search
+
+async function performContentSearch(query) {
+  if (!query) {
+    document.getElementById('contentArea').innerHTML = `
+      <div class="empty">
+        <div class="icon">📖</div>
+        <p style="font-size:1.1rem; margin-bottom:0.5rem;">歡迎使用 Wiki 知識庫瀏覽器</p>
+        <p style="font-size:0.9rem;">選擇左側的檔案來閱讀內容，或使用搜尋框查找知識</p>
+        <p style="font-size:0.8rem; margin-top:1rem; color:var(--accent);">📁 支援資料夾展開收合 &nbsp;|&nbsp; 🔍 即時搜尋過濾 &nbsp;|&nbsp; 📝 Markdown 渲染</p>
+      </div>`;
+    return;
+  }
+
+  // Collect all file paths from tree
+  const files = collectFiles(treeData);
+  const results = [];
+
+  // Search through file contents
+  for (const file of files) {
+    // Check title match first
+    const titleMatch = (file.title || '').toLowerCase().includes(query.toLowerCase()) ||
+                       (file.filename || '').toLowerCase().includes(query.toLowerCase());
+
+    // Try to get content for snippet
+    let content = searchCache[file.filename];
+    if (!content) {
+      try {
+        const resp = await fetch(`/api/v1/wiki/pages/${file.filename}`);
+        const data = await resp.json();
+        content = data.content || '';
+        searchCache[file.filename] = content;
+      } catch (e) {
+        content = '';
+      }
+    }
+
+    const contentMatch = content.toLowerCase().includes(query.toLowerCase());
+
+    if (titleMatch || contentMatch) {
+      const snippet = extractSnippet(content, query);
+      results.push({ ...file, snippet, titleMatch, contentMatch });
+    }
+  }
+
+  // Render search results
+  renderSearchResults(results, query);
+}
+
+function collectFiles(items) {
+  let files = [];
+  for (const item of items) {
+    if (item.type === 'file') files.push(item);
+    else if (item.children) files = files.concat(collectFiles(item.children));
+  }
+  return files;
+}
+
+function renderSearchResults(results, query) {
+  const area = document.getElementById('contentArea');
+  if (results.length === 0) {
+    area.innerHTML = `
+      <div class="empty">
+        <div class="icon">🔍</div>
+        <p style="font-size:1.1rem; margin-bottom:0.5rem;">沒有找到匹配「${escapeHtml(query)}」的結果</p>
+        <p style="font-size:0.9rem; color:var(--muted);">試試不同的關鍵字</p>
+      </div>`;
+    return;
+  }
+
+  let html = `<div class="page-title">🔍 搜尋結果</div>`;
+  html += `<div class="page-path">找到 ${results.length} 個匹配「${escapeHtml(query)}」的頁面</div>`;
+  html += `<div class="search-results">`;
+
+  for (const r of results) {
+    const title = highlightKeywords(r.title || r.filename, query);
+    const snippet = r.snippet ? highlightKeywords(r.snippet, query) : '<span style="color:var(--muted);">無摘要</span>';
+    html += `
+      <div class="search-result-item" onclick="loadPage('${r.filename.replace(/'/g, "\\'")}'); document.getElementById('searchInput').value='';">
+        <div class="search-result-title">📄 ${title}</div>
+        <div class="search-result-path">${escapeHtml(r.filename)}</div>
+        <div class="search-result-snippet">${snippet}</div>
+      </div>`;
+  }
+
+  html += `</div>`;
+  area.innerHTML = html;
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const query = e.target.value.trim();
+  searchTimeout = setTimeout(() => {
+    renderTree(treeData, query);
+    performContentSearch(query);
+  }, 300);
+});
+
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    e.target.value = '';
+    renderTree(treeData, '');
+    performContentSearch('');
+  }
+});
+
+// ─── Init ───────────────────────────────────────────
+loadPages();
+</script>
+</body>
+</html>

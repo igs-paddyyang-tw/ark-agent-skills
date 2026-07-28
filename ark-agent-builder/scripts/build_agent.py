@@ -43,9 +43,12 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
     dirs = [
         "src/agent",
         "src/bot",
-        "src/skills/internal",
-        "src/wiki",
-        "src/llm",
+        "src/skills/internal/spec_executor",
+        "src/wiki/search",
+        "src/llm/providers",
+        "src/llm/tools",
+        "src/memory",
+        "src/tools",
         "src/server",
         "config",
         "templates",
@@ -53,6 +56,14 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         "knowledge/wiki",
         "tests",
         "docs",
+        "data",
+        "logs",
+        "state",
+        "output/reports",
+        "output/drafts",
+        "output/exports",
+        "output/skills",
+        "memory/daily",
     ]
     for d in dirs:
         (output_dir / d).mkdir(parents=True, exist_ok=True)
@@ -67,6 +78,7 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         "env.example": ".env.example",
         "gitignore.txt": ".gitignore",
         "tech-daily.html": "templates/tech-daily.html",
+        "agents.yaml": "agents.yaml",
     }
     for src_name, dst_path in asset_map.items():
         src = ASSETS_DIR / src_name
@@ -75,7 +87,16 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
             shutil.copy2(src, dst)
             created.append(dst_path)
 
-    # ── 3. templates → 程式碼產出 ──
+    # ── 2b. Web UI HTML（assets/web/ → templates/）──
+    web_dir = ASSETS_DIR / "web"
+    if web_dir.exists():
+        for html_file in web_dir.glob("*.html"):
+            dst = output_dir / "templates" / html_file.name
+            if not dst.exists():
+                shutil.copy2(html_file, dst)
+                created.append(f"templates/{html_file.name}")
+
+    # ── 3. templates → 程式碼產出（單檔複製）──
     template_map = {
         # Agent 核心
         "agent_cli.py": "src/agent/cli.py",
@@ -85,20 +106,37 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         # Bot（Inline Button 版）
         "bot_main.py": "src/bot/main.py",
         "handlers.py": "src/bot/handlers.py",
-        # Skills
+        # Skills（頂層）
         "base.py": "src/skills/base.py",
         "registry.py": "src/skills/registry.py",
         "echo.py": "src/skills/internal/echo.py",
         "news.py": "src/skills/internal/news.py",
+        "news_scraper.py": "src/skills/internal/news_scraper.py",
         "news_renderer.py": "src/skills/internal/news_renderer.py",
         "summarize.py": "src/skills/internal/summarize.py",
         "translate.py": "src/skills/internal/translate.py",
-        # Wiki
-        "wiki_engine.py": "src/wiki/engine.py",
-        # LLM
-        "gemini_chat.py": "src/llm/gemini_chat.py",
+        "llm_cli.py": "src/skills/internal/llm_cli.py",
+        "execute_code.py": "src/skills/internal/execute_code.py",
+        "chat_history.py": "src/skills/internal/chat_history.py",
+        "wiki_query.py": "src/skills/internal/wiki_query.py",
+        "wiki_distill.py": "src/skills/internal/wiki_distill.py",
+        "todo.py": "src/skills/internal/todo.py",
+        "growth.py": "src/skills/internal/growth.py",
+        "memory_store.py": "src/skills/internal/memory_store.py",
+        "memory_search.py": "src/skills/internal/memory_search.py",
+        "router.py": "src/skills/internal/router.py",
+        "reaction_manager.py": "src/skills/internal/reaction_manager.py",
+        "web_search.py": "src/skills/internal/web_search.py",
+        "utils.py": "src/skills/internal/utils.py",
+        "tracker.py": "src/skills/internal/tracker.py",
+        "openai_chat.py": "src/skills/internal/openai_chat.py",
+        "md_to_image.py": "src/skills/internal/md_to_image.py",
+        "workflow_engine.py": "src/skills/internal/workflow_engine.py",
+        "schedule_engine.py": "src/skills/internal/schedule_engine.py",
         # Server
         "server_main.py": "src/server/main.py",
+        # Test
+        "test_core.py": "tests/test_core.py",
     }
     for src_name, dst_path in template_map.items():
         src = TEMPLATES_DIR / src_name
@@ -107,10 +145,34 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
             shutil.copy2(src, dst)
             created.append(dst_path)
 
+    # ── 3b. templates 目錄型複製（完整子目錄）──
+    dir_template_map = {
+        "llm": "src/llm",
+        "memory": "src/memory",
+        "wiki": "src/wiki",
+        "tools_mcp": "src/tools",
+        "bot": "src/bot",
+        "spec_executor": "src/skills/internal/spec_executor",
+    }
+    for tpl_dir, dst_rel in dir_template_map.items():
+        src_dir = TEMPLATES_DIR / tpl_dir
+        dst_dir = output_dir / dst_rel
+        if src_dir.exists():
+            for src_file in src_dir.rglob("*.py"):
+                rel = src_file.relative_to(src_dir)
+                dst_file = dst_dir / rel
+                dst_file.parent.mkdir(parents=True, exist_ok=True)
+                if not dst_file.exists():
+                    shutil.copy2(src_file, dst_file)
+                    created.append(f"{dst_rel}/{rel}")
+
     # ── 4. __init__.py 補齊 ──
     init_dirs = [
         "src", "src/agent", "src/bot", "src/skills",
-        "src/skills/internal", "src/wiki", "src/llm", "src/server",
+        "src/skills/internal", "src/skills/internal/spec_executor",
+        "src/wiki", "src/wiki/search",
+        "src/llm", "src/llm/providers", "src/llm/tools",
+        "src/memory", "src/tools", "src/server",
         "tests",
     ]
     for d in init_dirs:
@@ -186,19 +248,41 @@ def validate(project_dir: Path) -> list[str]:
     """驗證專案結構完整性。回傳錯誤清單（空=通過）。"""
     errors: list[str] = []
     required = [
+        # Agent 核心
         "src/agent/cli.py",
         "src/agent/session.py",
         "src/agent/memory.py",
         "src/agent/planner.py",
+        # Bot
         "src/bot/main.py",
         "src/bot/handlers.py",
+        "src/bot/progress.py",
+        # Skills
         "src/skills/base.py",
         "src/skills/registry.py",
         "src/skills/internal/echo.py",
+        "src/skills/internal/spec_executor/executor.py",
+        # LLM（新增）
+        "src/llm/agent_loop.py",
+        "src/llm/provider.py",
+        "src/llm/providers/gemini.py",
+        "src/llm/tools/dispatch.py",
+        # Memory（新增）
+        "src/memory/daily_log.py",
+        "src/memory/recall.py",
+        "src/memory/consolidate.py",
+        # Wiki（新增）
         "src/wiki/engine.py",
-        "src/llm/gemini_chat.py",
+        "src/wiki/indexer.py",
+        "src/wiki/search/layer0_exact.py",
+        # Tools（新增）
+        "src/tools/registry.py",
+        "src/tools/handlers.py",
+        # Server
         "src/server/main.py",
+        # Config
         "config/news_sources.yaml",
+        "agents.yaml",
         "agents/admin-agent/.kiro/steering/SOUL.md",
         ".env.example",
         "requirements.txt",

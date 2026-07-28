@@ -1,0 +1,78 @@
+# 角色→技能映射表
+# 每個 Agent 依角色自動獲得對應技能子集
+# 格式：roles.{role}.skills + shared（所有角色共用）
+
+roles:
+  manager:
+    description: "訊息路由、任務調度、團隊管理"
+    skills:
+      - ark-project-planning
+      - ark-internal-comms
+      - ark-superpowers
+
+  admin:
+    description: "系統維運、排程監控、成本控制"
+    skills:
+      - ark-env-doctor
+      - ark-docker-deploy
+      - ark-dashboard-health
+      - ark-security-audit
+
+  leader:
+    description: "需求分析、任務拆解、派工驗收"
+    skills:
+      - ark-superpowers
+      - ark-grill-me
+      - ark-spec-executor
+      - ark-project-planning
+      - ark-planning-with-files
+      - ark-uml-generator
+
+  worker-ai-dev:
+    description: "LLM 整合、Prompt 工程、MCP 開發"
+    skills:
+      - ark-mcp-builder
+      - ark-llm-tools
+      - ark-browser-tool
+
+  worker-coder:
+    description: "全端開發、API 實作、重構優化"
+    skills:
+      - ark-webapp-generator
+      - ark-frontend-design
+      - ark-db-query
+
+  worker-qa:
+    description: "測試策略、自動化測試、Code Review"
+    skills:
+      - ark-test-runner
+      - ark-code-review
+      - ark-security-audit
+
+  worker-data:
+    description: "數據分析、KPI 追蹤、趨勢洞察"
+    skills:
+      - ark-chart-generator
+      - ark-etl-pipeline
+      - ark-db-query
+
+  worker-market:
+    description: "市場研究、競品監控、新聞爬取"
+    skills:
+      - ark-web-scraper
+      - ark-news-daily
+      - ark-landing-page
+
+  worker-report:
+    description: "報告產出、圖表渲染、定期摘要"
+    skills:
+      - ark-chart-generator
+      - ark-news-daily
+      - ark-report-template
+
+# 共用技能（所有角色都有）
+shared:
+  skills:
+    - ark-wiki-engine
+    - ark-code-spec-validator
+    - ark-doc-coauthoring

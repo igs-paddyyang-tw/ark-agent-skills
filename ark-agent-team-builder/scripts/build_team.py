@@ -99,7 +99,19 @@ def build_team(output_dir: Path, team_yaml_path: Path | None = None, level: str 
         except ImportError:
             pass
 
-    # 3g. src/bootstrap.py（統一入口邏輯）
+    # 3g. generators/templates/ → 補齊 generators 未涵蓋的模組（memory/wiki/skills/runtime 新增）
+    if level == "full":
+        gen_templates = Path(__file__).resolve().parent / "generators" / "templates"
+        if gen_templates.exists():
+            for src_file in gen_templates.rglob("*.py"):
+                rel = src_file.relative_to(gen_templates)
+                dst_file = output_dir / "src" / rel
+                dst_file.parent.mkdir(parents=True, exist_ok=True)
+                if not dst_file.exists():
+                    shutil.copy2(src_file, dst_file)
+                    created.append(f"src/{rel}")
+
+    # 3h. src/bootstrap.py（統一入口邏輯）
     if level == "full":
         try:
             from generators.bootstrap import write_bootstrap
