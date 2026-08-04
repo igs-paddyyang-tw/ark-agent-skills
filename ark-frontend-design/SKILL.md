@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-frontend-design
 description: |
   產出獨特、生產級品質的前端介面，具備高設計水準。
@@ -7,6 +6,8 @@ description: |
   （例如網站、Landing Page、Dashboard、React 元件、HTML/CSS 排版，
   或任何需要美化 Web UI 的場景）。
   產出具創意、精緻的程式碼與 UI 設計，避免千篇一律的 AI 美學。
+metadata:
+  author: paddyyang
 ---
 
 本 Skill 指導產出獨特、生產級品質的前端介面，避免千篇一律的「AI 罐頭風格」。

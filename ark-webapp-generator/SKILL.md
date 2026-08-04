@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-webapp-generator
 description: |
   產出完整 Web 專案骨架，包含 FastAPI Server、Web Chat UI、BaseSkill 插件系統
@@ -7,6 +6,8 @@ description: |
   後續可透過獨立 Kiro Skill 擴充業務功能。使用此 Skill 當使用者提及建立專案、
   產出 Web 應用、gen web app、ark webapp、
   或任何需要從零開始建構 FastAPI + Skill 系統的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-webapp-generator

@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-news-daily
 description: |
   產出科技日報 HTML 卡片，將新聞素材結構化後套用模板。
@@ -8,6 +7,7 @@ description: |
   新聞日報 HTML、每日新聞、news daily、日報模板、
   或任何需要將新聞轉化為視覺化 HTML 卡片的場景。
 metadata:
+  author: paddyyang
   version: "1.0"
   updated: 2026-05-26
 ---

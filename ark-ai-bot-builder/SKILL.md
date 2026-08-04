@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-ai-bot-builder
 description: |
   快速產出完整 AI Agent Bot Workspace（1~6 階段漸進式）。
@@ -8,6 +7,8 @@ description: |
   LLMRouter fallback chain + AgentOrchestrator 自進化 + MemorySearch 跨 Session 記憶。
   使用此 Skill 當使用者提及 ai-bot-builder、建立 AI Bot、產出 Bot workspace、
   快速建 Agent Bot、或任何需要從零建構 Telegram AI Agent Bot 的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-ai-bot-builder

@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-ux-spec-validator
 description: |
   驗證 Telegram Bot UX 實作與 UX Spec 文件的一致性。
@@ -8,6 +7,7 @@ description: |
   使用此 Skill 當使用者提及驗證 UX、TG 格式對嗎、Bot 回覆跟 spec 一致嗎、
   訊息格式檢查、InlineKeyboard 驗證、UX drift、或任何需要檢查 Bot UX 品質的場景。
 metadata:
+  author: paddyyang
   version: "1.0"
   updated: 2026-06-07
 ---

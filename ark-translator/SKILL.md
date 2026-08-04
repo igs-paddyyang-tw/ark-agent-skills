@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-translator
 description: |
   產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯，
@@ -7,6 +6,8 @@ description: |
   保留 Markdown 格式與程式碼區塊不翻譯，支援批次翻譯。
   使用此 Skill 當使用者提及翻譯、translate、多語言、i18n、
   中翻英、英翻中、日翻中、或任何需要語言轉換的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-translator

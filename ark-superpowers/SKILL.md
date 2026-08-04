@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-superpowers
 description: |
   產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫），
@@ -11,6 +10,8 @@ description: |
   寫 spec、規格文件、需求文件、設計文件、design doc、ADR、架構決策、
   執行計畫、execution plan、技術提案、系統設計、RFC、里程碑、
   或任何需要產出結構化工程決策文件的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-superpowers

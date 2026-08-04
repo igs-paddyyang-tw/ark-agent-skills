@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-etl-pipeline
 description: |
   產出 etl_pipeline.py 資料轉換 Skill，將任何資料來源（CSV、JSON、API 回傳、
@@ -9,6 +8,8 @@ description: |
   使用此 Skill 當使用者提及 ETL、資料轉換、資料清洗、data transform、
   資料管線、資料前處理、轉換格式、
   或任何需要將原始資料轉換為圖表標準格式的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-etl-pipeline

@@ -1,11 +1,12 @@
-﻿---
-author: paddyyang
+---
 name: ark-code-spec-validator
 description: |
   驗證 code 與 spec/design 文件的一致性，產出 Drift Report。
   偵測 API 端點漂移、Schema 不符、依賴違規、測試覆蓋缺口。
   使用此 Skill 當使用者提及 drift、驗證、spec 一致性、API 比對、
   測試覆蓋檢查、依賴分析、code 與文件不同步、或要求產出驗證報告。
+metadata:
+  author: paddyyang
 ---
 
 # ark-code-spec-validator

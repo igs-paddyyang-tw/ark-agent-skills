@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-browser-tool
 description: |
   瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。
@@ -12,6 +11,7 @@ description: |
   確認 UI、E2E 驗證、localhost 預覽、craft tool、
   或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
 metadata:
+  author: paddyyang
   version: "3.0"
   updated: 2026-05-31
 ---

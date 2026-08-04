@@ -1,10 +1,11 @@
-﻿---
-author: paddyyang
+---
 name: ark-theme-factory
 description: |
   為 artifacts 套用主題樣式的工具包。這些 artifacts 可以是投影片、文件、報表、
   HTML Landing Page 等。有 10 個預設主題（含色彩/字型），可套用到任何已建立的 artifact，
   或即時產生新主題。
+metadata:
+  author: paddyyang
 ---
 
 # 主題工廠

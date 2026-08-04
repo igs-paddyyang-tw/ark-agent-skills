@@ -1,10 +1,11 @@
-﻿---
-author: paddyyang
+---
 name: ark-internal-comms
 description: |
   協助撰寫各類內部溝通文件，使用公司慣用的格式。
   使用此 Skill 當被要求撰寫任何內部溝通文件
   （狀態報告、主管更新、3P 更新、公司通訊、FAQ、事件報告、專案更新等）。
+metadata:
+  author: paddyyang
 ---
 
 ## 何時使用此 Skill

@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-dashboard-health
 description: |
   自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。
@@ -8,6 +7,7 @@ description: |
   健康檢查、端點測試、dashboard health、服務可用性、
   或任何需要驗證 Web Dashboard 是否正常運作的場景。
 metadata:
+  author: paddyyang
   version: "1.0"
   updated: 2026-06-07
 ---

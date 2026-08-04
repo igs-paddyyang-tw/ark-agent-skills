@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-agent-builder
 description: |
   快速產出完整 AI Agent Bot Workspace（1~6 階段漸進式）。
@@ -9,6 +8,7 @@ description: |
   使用此 Skill 當使用者提及 ai-bot-builder、建立 AI Bot、產出 Bot workspace、
   快速建 Agent Bot、或任何需要從零建構 Telegram AI Agent Bot 的場景。
 metadata:
+  author: paddyyang
   version: "2.0"
   updated: 2026-06-22
 ---
