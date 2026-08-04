@@ -1,6 +1,5 @@
 ---
 name: ark-telegram-bot
-author: paddyyang
 description: |
   Telegram Bot 開發完整 SOP（python-telegram-bot）：傳送圖片/檔案/相簿、
   Web App 整合、Menu 命令設定、InlineKeyboard 互動、訊息格式化與分段、
@@ -13,6 +12,7 @@ description: |
   產出 Telegram adapter、整合 Bot 到團隊、telegram_adapter、
   或任何 Telegram Bot 功能開發與推送場景。
 metadata:
+  author: paddyyang
   version: "3.0"
   updated: 2026-05-18
 ---

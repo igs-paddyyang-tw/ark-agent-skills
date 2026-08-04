@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-web-scraper
 description: |
   產出進階網頁爬蟲 Skill，基於 Scrapling 框架。
@@ -8,6 +7,8 @@ description: |
   使用此 Skill 當使用者提及網頁抓取、爬蟲、web scraping、
   抓取網頁、擷取網頁內容、反爬、Cloudflare 繞過、大規模爬取、
   自適應爬蟲、Scrapling、或任何需要從網頁取得資料的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-web-scraper

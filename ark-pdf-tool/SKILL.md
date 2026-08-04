@@ -1,11 +1,12 @@
-﻿---
-author: paddyyang
+---
 name: ark-pdf-tool
 description: |
   處理 PDF 檔案的所有操作。包括讀取或提取 PDF 中的文字/表格、
   合併或拆分 PDF、旋轉頁面、加浮水印、建立新 PDF、填寫 PDF 表單、
   加密/解密 PDF、提取圖片、以及對掃描 PDF 進行 OCR 使其可搜尋。
   當使用者提及 .pdf 檔案或要求產出 PDF 時，使用此 Skill。
+metadata:
+  author: paddyyang
 ---
 
 # PDF 處理指南

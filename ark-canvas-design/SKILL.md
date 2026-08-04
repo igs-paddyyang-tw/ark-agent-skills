@@ -1,10 +1,11 @@
-﻿---
-author: paddyyang
+---
 name: ark-canvas-design
 description: |
   使用設計哲學創作精美的視覺藝術，輸出 .png 和 .pdf 文件。
   使用此 Skill 當使用者要求創作海報、藝術品、設計或其他靜態作品。
   創作原創視覺設計，絕不複製現有藝術家作品以避免版權問題。
+metadata:
+  author: paddyyang
 ---
 
 本 Skill 指導創作設計哲學——美學運動，然後以視覺方式表達。

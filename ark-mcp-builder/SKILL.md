@@ -1,11 +1,12 @@
-﻿---
-author: paddyyang
+---
 name: ark-mcp-builder
 description: |
   建立高品質 MCP（Model Context Protocol）Server 的指南，
   讓 LLM 能透過設計良好的 Tools 與外部服務互動。
   使用此 Skill 當需要建立 MCP Server 整合外部 API 或服務，
   無論是 Python（FastMCP）或 Node/TypeScript（MCP SDK）。
+metadata:
+  author: paddyyang
 ---
 
 # MCP Server 開發指南

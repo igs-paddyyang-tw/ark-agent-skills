@@ -1,11 +1,12 @@
 ---
-author: paddyyang
 name: ark-executive-assistant
 description: |
   部長個人助理。接收工作紀錄並以 5 維度評分追問至完整、
   主動拋出策略性問題、16:00 日誌提醒、結構化歸檔至 worklog。
   使用此 Skill 當使用者提及工作紀錄、日誌、今天做了什麼、
   記錄、追蹤、回顧、週報、工作管理、或長時間未互動時主動觸發。
+metadata:
+  author: paddyyang
 ---
 
 # ark-executive-assistant

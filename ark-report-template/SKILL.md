@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-report-template
 description: |
   產出標準化報表模板引擎 Skill，使用 Jinja2 將資料 + 圖表組裝成完整報表。
@@ -7,6 +6,8 @@ description: |
   內建常用模板（日報/週報/月報），支援自訂模板。
   使用此 Skill 當使用者提及報表模板、報告產生、report template、
   日報、週報、月報、或任何需要將資料組裝成格式化報表的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-report-template

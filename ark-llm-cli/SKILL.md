@@ -1,6 +1,5 @@
 ---
 name: ark-llm-cli
-author: paddyyang
 description: |
   統一封裝多個 LLM CLI Agent 為標準化 Skill，支援 Gemini CLI、Kiro CLI、Claude CLI、Antigravity CLI。
   提供非互動模式對話、程式碼產出、Skill CodeGen、需求評估。
@@ -9,6 +8,7 @@ description: |
   CLI agent、codegen、用 CLI 產出程式碼、產出 Skill、自動寫 Skill、
   或任何需要呼叫 LLM CLI 工具的場景。
 metadata:
+  author: paddyyang
   version: "2.0"
   updated: 2026-05-23
 ---

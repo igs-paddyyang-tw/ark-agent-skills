@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-env-doctor
 description: |
   當使用者遇到開發環境問題時使用此技能。觸發條件包括：環境檢查、套件缺失、
@@ -7,6 +6,8 @@ description: |
   ModuleNotFoundError、ImportError、新手環境設定、一鍵安裝、
   DevContainer 建立、或任何「我的環境跑不起來」相關問題。
   也適用於產出 setup 腳本、修復腳本、或環境診斷報告。
+metadata:
+  author: paddyyang
 ---
 
 # ark-env-doctor

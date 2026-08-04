@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-data-dashboard
 description: |
   產出博奕遊戲標準化面板，包含遊戲資訊抓取、數值規格解析、網頁視覺化 Dashboard。
@@ -8,6 +7,8 @@ description: |
   使用此 Skill 當使用者提及遊戲面板、game dashboard、博奕分析、
   老虎機資訊、遊戲資料視覺化、遊戲卡片、遊戲統計、
   或任何需要建立博奕遊戲資訊收集與視覺化面板的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-data-dashboard

@@ -1,11 +1,12 @@
-﻿---
-author: paddyyang
+---
 name: ark-code-review
 description: |
   產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、
   風格一致性驗證、安全性掃描、PR 審查報告產生。
   使用此 Skill 當使用者提及程式碼審查、code review、PR 審查、
   程式碼品質、lint、或任何需要檢查程式碼品質的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-code-review

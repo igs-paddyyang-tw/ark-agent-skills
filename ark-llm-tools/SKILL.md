@@ -1,11 +1,12 @@
-﻿---
-author: paddyyang
+---
 name: ark-llm-tools
 description: |
   產出 LLM 通用工具 Skills（summarize、analyze、qa、intent_parse），
   搭配 GeminiAdapter 或 LLMAdapter 進行文字摘要、資料分析、問答、意圖解析。
   使用此 Skill 當使用者提及 LLM 摘要、AI 分析、智能問答、意圖解析、
   或任何需要 LLM 文字處理能力的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-llm-tools

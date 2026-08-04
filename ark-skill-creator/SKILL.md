@@ -1,11 +1,12 @@
-﻿---
-author: paddyyang
+---
 name: ark-skill-creator
 description: |
   建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。
   使用此 Skill 當使用者想要從零建立 Skill、編輯或優化既有 Skill、
   執行評估測試 Skill、基準測試 Skill 效能、
   或優化 Skill 的 description 以提升觸發準確度。
+metadata:
+  author: paddyyang
 ---
 
 # Skill 建立器

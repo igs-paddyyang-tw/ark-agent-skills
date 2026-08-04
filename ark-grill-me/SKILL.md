@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-grill-me
 description: |
   在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。
@@ -7,6 +6,8 @@ description: |
   使用此 Skill 當使用者提及拷問、grill me、grill、stress test、
   質疑設計、挑戰方案、設計審查、review plan、拷問我的設計、
   或在實作前想確認設計完整性、釐清需求、避免 AI 自行腦補的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-grill-me

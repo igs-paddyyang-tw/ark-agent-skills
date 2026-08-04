@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-scheduler-generator
 description: |
   在既有專案上加入 WorkflowEngine 工作流引擎、ScheduleEngine 排程引擎，
@@ -7,6 +6,8 @@ description: |
   使用此 Skill 當使用者提及 ark scheduler、加入排程、gen workflow、
   工作流引擎、排程引擎、每日報表自動化、daily slot report、
   或任何需要在既有專案上加入 YAML 工作流與 APScheduler 排程的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-scheduler-generator

@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-wiki-engine
 description: |
   產出 Wiki 知識庫引擎，以 Markdown 為基礎的知識管理系統。
@@ -8,6 +7,8 @@ description: |
   含 Web UI Wiki 分頁（暗黑科技風格）與 Chat 整合（Wiki context 注入）。
   使用此 Skill 當使用者提及 Wiki、知識庫、knowledge base、知識圖譜、
   RAG、文件搜尋、知識管理、wiki Q&A、或任何需要建立 Markdown 知識庫系統的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-wiki-engine

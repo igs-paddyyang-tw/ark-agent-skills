@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-game-design-doc
 description: >
   根據遊戲構想或需求描述，產出完整的遊戲企劃文件（Game Design Document, GDD）。
@@ -7,6 +6,8 @@ description: >
   營運與商業模式等章節。支援完整 GDD 和精簡版 One Pager 兩種輸出模式。
   當使用者提到遊戲企劃、遊戲設計文件、GDD、game design document、遊戲規格書、
   遊戲提案、遊戲概念文件、寫遊戲企劃、設計遊戲時，請務必使用此技能。
+metadata:
+  author: paddyyang
 ---
 
 # 遊戲企劃文件撰寫師（Game Design Document Writer）

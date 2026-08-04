@@ -1,12 +1,12 @@
 ---
 name: ark-project-planning
-author: paddyyang
 description: |
   標準化專案計畫流程。收到新功能需求時使用：釐清需求、撰寫規格文件、拆解任務、
   分派給 Agent、追蹤進度、驗收交付。
   Use when receiving new feature requests, project planning, task delegation to agents.
   觸發條件：新功能、新需求、派工、拆任務、專案規劃、project plan。
 metadata:
+  author: paddyyang
   version: "2.0"
 ---
 

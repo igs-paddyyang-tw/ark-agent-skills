@@ -1,5 +1,4 @@
 ---
-author: paddyyang
 name: ark-spec-executor
 description: |
   讀取 plan.md（含任務表+AC+依賴），自動拆解→角色切換執行→AC 驗收→產出驗收報告。
@@ -7,6 +6,8 @@ description: |
   參考 Augment CIV + LangGraph Plan-and-Execute。
   使用此 Skill 當使用者提及 執行計畫、run plan、自動交付、spec executor、
   跑 plan、驗收、自動執行任務、或任何需要按 plan 逐步完成開發的場景。
+metadata:
+  author: paddyyang
 ---
 
 # ark-spec-executor

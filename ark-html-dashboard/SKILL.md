@@ -1,5 +1,4 @@
-﻿---
-author: paddyyang
+---
 name: ark-html-dashboard
 description: |
   產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、
@@ -10,6 +9,8 @@ description: |
   HTML 報表、數據面板、Chart.js、KPI 卡片、
   或任何需要產出可分享的互動式數據視覺化頁面的場景。
   不適用於靜態 PNG 圖表（請使用 ark-chart-generator）。
+metadata:
+  author: paddyyang
 ---
 
 # ark-html-dashboard
