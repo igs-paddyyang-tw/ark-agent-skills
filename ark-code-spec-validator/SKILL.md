@@ -28,7 +28,7 @@ metadata:
 ### 快速驗證（API 端點 only）
 
 ```bash
-py -m ark_team_agent.skills.code_spec_validator .
+python -m ark_team_agent.code_spec_validator .
 ```
 
 產出：`knowledge/team-agent/wiki/operations/drift-report.md`
@@ -36,7 +36,7 @@ py -m ark_team_agent.skills.code_spec_validator .
 ### 完整驗證（4 維度 + 評分）
 
 ```bash
-py -m ark_team_agent.skills.code_spec_validator --full .
+python -m ark_team_agent.code_spec_validator --full .
 ```
 
 產出同上，但包含 4 個維度的統一報告。
@@ -104,7 +104,7 @@ py -m ark_team_agent.skills.code_spec_validator --full .
 ## 參考
 
 - 詳細維度說明：`references/dimensions.md`
-- Python module：`src/ark_team_agent/skills/code_spec_validator/`
+- Python module：`src/ark_team_agent/code_spec_validator/`
 - One Pager：`docs/one-pagers/ark-code-spec-validator.md`
 
 ---

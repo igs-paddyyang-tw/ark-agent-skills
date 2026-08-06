@@ -327,3 +327,109 @@ print(issues)
 2. 逐檔檢查 frontmatter 必要欄位（title / type / tags / created / updated）
 3. 回報缺少欄位的頁面清單
 4. 檢查孤立頁面（沒被 index.md 列出的）
+
+---
+
+## 本地腳本（不依賴 team MCP）
+
+當 team MCP 斷線、在 ark-agent 直接操作、或需要 CI/CD 整合時，使用以下腳本。
+所有腳本位於 `.kiro/skills/ark-wiki-engine/scripts/`，純 Python 3.12+ 無外部依賴。
+
+```
+scripts/
+├── wiki_ingest.py    # raw/ → wiki/ 骨架產生
+├── wiki_query.py     # BM25 搜尋 + frontmatter filter
+├── wiki_lint.py      # 健康檢查（frontmatter / orphan / broken link）
+├── wiki_graph.py     # 知識圖譜分析（hub / orphan / Mermaid）
+├── wiki_index.py     # 掃描 wiki/ 重建 index.md
+├── build_wiki.py     # 一鍵產出完整 wiki engine 系統
+└── validate_wiki.py  # 驗證 engine 產出完整性
+```
+
+### wiki_ingest.py — 匯入
+
+```bash
+# 單檔（自動偵測 category）
+python scripts/wiki_ingest.py --source knowledge/raw/api-design.md --wiki_dir knowledge/wiki
+
+# 整個目錄 batch
+python scripts/wiki_ingest.py --source knowledge/raw/ --wiki_dir knowledge/wiki --batch
+
+# 指定 category + page_name
+python scripts/wiki_ingest.py --source knowledge/raw/notes.md --wiki_dir knowledge/wiki \
+    --category dev-guide --page_name coding-standards
+
+# 預覽
+python scripts/wiki_ingest.py --source knowledge/raw/ --wiki_dir knowledge/wiki --batch --dry_run
+```
+
+流程：腳本產出 frontmatter 骨架 → ark-agent（LLM）讀 source 填充內容 → 自動更新 index.md + log.md
+
+### wiki_query.py — 搜尋
+
+```bash
+# 基本搜尋
+python scripts/wiki_query.py --wiki_dir knowledge/wiki --query "API 認證"
+
+# 過濾 type / tags / status
+python scripts/wiki_query.py --wiki_dir knowledge/wiki --query "架構" --type concept
+python scripts/wiki_query.py --wiki_dir knowledge/wiki --query "部署" --tags ops,deploy
+python scripts/wiki_query.py --wiki_dir knowledge/wiki --query "測試" --status mature
+
+# 完整內容輸出（給 LLM context 用）
+python scripts/wiki_query.py --wiki_dir knowledge/wiki --query "認證" --full
+```
+
+### wiki_lint.py — 健康檢查
+
+```bash
+# 完整檢查
+python scripts/wiki_lint.py --wiki_dir knowledge/wiki
+
+# 只看錯誤
+python scripts/wiki_lint.py --wiki_dir knowledge/wiki --errors-only
+
+# JSON 輸出（給 CI 用）
+python scripts/wiki_lint.py --wiki_dir knowledge/wiki --json
+```
+
+檢查項目：缺 frontmatter / 必要欄位 / type 合法值 / 孤立頁面 / 斷裂 wikilink / seedling 過期
+
+### wiki_graph.py — 知識圖譜
+
+```bash
+# 報告模式
+python scripts/wiki_graph.py --wiki_dir knowledge/wiki
+
+# Mermaid 圖（貼到 Markdown）
+python scripts/wiki_graph.py --wiki_dir knowledge/wiki --mermaid
+
+# JSON
+python scripts/wiki_graph.py --wiki_dir knowledge/wiki --json
+```
+
+產出：hub 頁面 / 完全孤立 / 無 inbound / 斷裂 link / 平均 degree
+
+### wiki_index.py — 重建索引
+
+```bash
+# 重建（覆寫 index.md）
+python scripts/wiki_index.py --wiki_dir knowledge/wiki
+
+# 指定輸出路徑
+python scripts/wiki_index.py --wiki_dir knowledge/wiki --output knowledge/index.md
+
+# 預覽
+python scripts/wiki_index.py --wiki_dir knowledge/wiki --dry_run
+```
+
+### ark-agent 直接執行 ingest 的完整流程
+
+```
+1. python scripts/wiki_ingest.py --source <raw_file> --wiki_dir <wiki/> --dry_run（預覽）
+2. python scripts/wiki_ingest.py --source <raw_file> --wiki_dir <wiki/>（產出骨架）
+3. 讀取 source 原始檔（read tool）
+4. LLM 萃取關鍵知識，填入骨架頁面（write tool）
+5. python scripts/wiki_index.py --wiki_dir <wiki/>（重建索引）
+6. python scripts/wiki_lint.py --wiki_dir <wiki/>（驗證品質）
+```
