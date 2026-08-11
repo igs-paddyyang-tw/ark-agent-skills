@@ -1,0 +1,5 @@
+# 統一換行：預設 LF（跨平台一致、避免與各專案副本產生假差異）
+* text=auto eol=lf
+# Windows 批次檔必須 CRLF（LF 會導致 goto/label 行為異常）
+*.bat text eol=crlf
+*.cmd text eol=crlf
