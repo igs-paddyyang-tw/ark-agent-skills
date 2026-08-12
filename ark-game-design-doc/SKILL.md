@@ -7,6 +7,12 @@ description: >
   當使用者提到遊戲企劃、遊戲設計文件、GDD、game design document、遊戲規格書、
   遊戲提案、遊戲概念文件、寫遊戲企劃、設計遊戲時，請務必使用此技能。
 metadata:
+  schema_version: 1
+  status: active
+  category: document
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 

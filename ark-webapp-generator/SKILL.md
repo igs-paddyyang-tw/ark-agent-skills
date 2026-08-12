@@ -7,6 +7,12 @@ description: |
   產出 Web 應用、gen web app、ark webapp、
   或任何需要從零開始建構 FastAPI + Skill 系統的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
 ---
 
@@ -102,17 +108,22 @@ metadata:
 
 ### 步驟 4：產出 Web Chat UI
 
-採用暗黑科技風格，搭配 `assets/style.css` 作為基礎樣式模板。
+採用風格自動建議機制，搭配 `assets/style.css` 作為基礎樣式模板。
+
+> **風格自動建議**（`theme: auto` 預設）：
+> - 內部工具 / 開發者工具 / AI Chat → dark（暗黑科技風格）
+> - 客戶面向 / 行銷 / 公開服務 → light（現代亮色風格）
+> - 使用者可明確指定 `theme: "dark"` 或 `theme: "light"` 覆蓋
 
 1. **`src/server/templates/base.html`** — Jinja2 基底模板：
    - HTML5 結構、meta viewport（響應式）
    - 引入 `static/css/style.css?v={版本號}`（cache busting）
 2. **`src/server/templates/index.html`** — Web Chat UI 頁面：
-   - 暗黑科技風格 header（可自訂 SVG icon 機器人頭像 + 綠色狀態燈）
+   - 暗黑科技風格 header（dark 模式；light 模式改為白底深色文字）
    - 對話氣泡顯示區域（使用者藍色靠右、系統半透明深色靠左 + bot avatar）
    - 終端機風格輸入框 + EXECUTE 按鈕
    - 引入 `static/js/app.js?v={版本號}`
-3. **`src/server/static/css/style.css`** — 暗黑科技風格樣式：
+3. **`src/server/static/css/style.css`** — 依 theme 產出對應樣式：
    - CSS 變數 slate 色系 + cyan 強調色
    - 頂部漸層光條、對話氣泡、PROCESSING 打字指示器
    - 響應式佈局
@@ -252,7 +263,7 @@ uvicorn src.server.main:app --reload --port 8000
 
 ### 下一步
 
-完成後告訴 AI：`加入 Telegram Bot`（觸發 ark-chatbot-generator）
+完成後告訴 AI：`加入 Telegram Bot`（觸發 ark-agent-builder）
 
 ### 卡關時
 

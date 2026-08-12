@@ -2,15 +2,24 @@
 name: ark-agent-builder
 description: |
   快速產出完整 AI Agent Bot Workspace（1~6 階段漸進式）。
-  掛載 Agent CLI（Gemini/Kiro/Claude）為大腦，透過 Telegram 自然語言對話讓 Bot 做事。
+  掛載 ark-agent-cli 作為 LLM 後端閘道，透過 Telegram 自然語言對話讓 Bot 做事。
   參考 ninja-bot 架構：BaseSkill 插件系統 + ConversationPlanner 意圖路由 +
   LLMRouter fallback chain + AgentOrchestrator 自進化 + MemorySearch 跨 Session 記憶。
+  涵蓋 Telegram Bot + Web Chatbot 兩種 channel，支援 Gemini FC / Kiro MCP / Ollama 後端。
   使用此 Skill 當使用者提及 ai-bot-builder、建立 AI Bot、產出 Bot workspace、
-  快速建 Agent Bot、或任何需要從零建構 Telegram AI Agent Bot 的場景。
+  快速建 Agent Bot、加入 Telegram Bot、chatbot、加入自然語言互動、
+  或任何需要從零建構 Telegram AI Agent Bot 的場景。
+  （原 ark-chatbot-generator 已合併至此）
 metadata:
+  schema_version: 1
+  status: active
   author: paddyyang
+  category: scaffolder
+  outputs:
+    - { format: code, audience: human }
+  depends_on: []
   version: "2.0"
-  updated: 2026-06-22
+  updated: 2026-08-12
 ---
 
 # ark-agent-builder
@@ -1009,6 +1018,8 @@ python .kiro/skills/ark-agent-builder/scripts/validate_agent.py ./output/my-bot
 
 ---
 metadata:
+  schema_version: 1
+  status: active
   version: "2.0"
   updated: 2026-06-22
 

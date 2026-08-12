@@ -1,0 +1,17 @@
+[
+  {
+    "prompt": "grill me 一下，我想做一個 RSS 新聞聚合器",
+    "expected_behavior": "進入拷問模式，逐一提問設計決策（資料來源、輸出格式、觸發方式等），每次只問一個問題並提供 2-4 選項",
+    "tags": ["trigger"]
+  },
+  {
+    "prompt": "在寫 code 之前先確認設計，我要做一個排程系統",
+    "expected_behavior": "識別為 grill-me 觸發，開始 Phase 1 理解範疇，提出第一個分支問題",
+    "tags": ["trigger"]
+  },
+  {
+    "prompt": "所有問題都回答完了，請產出決策摘要",
+    "expected_behavior": "產出格式化決策摘要表格（已確認決策 + 邊界條件 + 未決事項 + 下一步），並提示可銜接 ark-superpowers",
+    "tags": ["loop-flow"]
+  }
+]

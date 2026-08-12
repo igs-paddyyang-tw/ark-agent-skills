@@ -7,6 +7,13 @@ description: |
   工作流引擎、排程引擎、每日報表自動化、daily slot report、
   或任何需要在既有專案上加入 YAML 工作流與 APScheduler 排程的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: scaffolder
+  depends_on: [ark-telegram-sender]
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
 ---
 
@@ -319,7 +326,7 @@ if v.startswith("${") and v.endswith("}"):
 
 ### 前一步
 
-確認已完成 Step 2（`ark-chatbot-generator`），專案有 `src/bot/`。
+確認已完成 Step 2（`ark-agent-builder`），專案有 `src/bot/`。
 
 ### 觸發提詞
 

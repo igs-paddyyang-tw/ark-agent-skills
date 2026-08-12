@@ -7,6 +7,12 @@ description: |
   健康檢查、端點測試、dashboard health、服務可用性、
   或任何需要驗證 Web Dashboard 是否正常運作的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: ops
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
   version: "1.0"
   updated: 2026-06-07

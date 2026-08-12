@@ -7,6 +7,12 @@ description: |
   使用此 Skill 當使用者提及翻譯、translate、多語言、i18n、
   中翻英、英翻中、日翻中、或任何需要語言轉換的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

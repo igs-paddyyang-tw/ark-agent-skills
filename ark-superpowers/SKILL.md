@@ -11,6 +11,12 @@ description: |
   執行計畫、execution plan、技術提案、系統設計、RFC、里程碑、
   或任何需要產出結構化工程決策文件的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: process
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 
@@ -58,12 +64,15 @@ One Pager 的 frontmatter 有 `upgraded_to` 欄位，升級後指向完整文件
 ```
 1. 辨識意圖 → 確認文件類型（onepager / spec / design / adr / plan）
 2. 確認語言 → 繁體中文（預設）或 English
-3. 收集資訊 → 引導使用者提供關鍵內容
-4. 產出文件 → 依模板填充，存入對應路徑
-5. 品質檢查 → 依 checklist 驗證完整性
-6. （ADR）自動編號 + 更新索引
-7. （升級）One Pager → 完整版時，更新 upgraded_to 欄位
+3. 擬定 slug → 標題含非 ASCII 時，與使用者確認 kebab-case 檔名（如 "用戶管理系統" → user-management）
+4. 收集資訊 → 引導使用者提供關鍵內容
+5. 產出文件 → 依模板填充，存入對應路徑
+6. 品質檢查 → 依 checklist 驗證完整性
+7. （ADR）自動編號 + 更新索引
+8. （升級）One Pager → 完整版時，更新 upgraded_to 欄位
 ```
+
+> ⚠️ **Slug 規則**：若標題純 ASCII，自動 kebab-case 無需確認。若含中文/日文等非 ASCII 字元，必須擬定 slug 供使用者確認後才產出。`build_docs.py --slug <slug>` 可直接指定。
 
 ### 意圖對應表
 
@@ -170,19 +179,83 @@ One Pager 的 frontmatter 有 `upgraded_to` 欄位，升級後指向完整文件
 
 ---
 
+## Executor 相容性
+
+> 本章節定義 plan 任務表的格式契約，確保 `ark-spec-executor` 能自動解析並執行。
+
+### 任務表格式契約
+
+**完整版（plan-full）— 7 欄**：
+
+```
+| # | 任務 | 角色 | 產出檔案 | 估時 | AC-ID | AC |
+```
+
+**精簡版（plan-onepager）— 4 欄**：
+
+```
+| # | 任務 | 產出檔案 | AC |
+```
+
+Executor 以 `|` 分欄後依序號位置（0-indexed）解析，欄位數量必須嚴格符合。
+
+### 角色枚舉
+
+| 值 | 說明 | 執行方式 |
+|----|------|----------|
+| `coder` | 功能開發 | 自動實作 |
+| `ai-dev` | AI/LLM 相關開發 | 自動實作 + prompt 調校 |
+| `qa` | 測試撰寫 / 驗證 | 自動產生測試 |
+| `human` | 需人工介入 | 暫停等待確認 |
+
+角色值大小寫不敏感，executor 以 `.lower().strip()` 正規化。
+
+### 任務編號規則
+
+- 格式：`{milestone}.{seq}`，如 `1.1`、`2.3`
+- Milestone 序號對應 Phase / M 編號
+- 同 milestone 內依序號推斷依賴（1.2 依賴 1.1 完成）
+- 跨 milestone 依賴：在任務名後方標註 `[← X.Y]`，如 `（需 Auth 模組）[← 1.2]`
+
+### AC-ID 規則
+
+- 格式：`AC-XXX`（三位數字零填充）
+- 全域唯一（不可跨文件重複）
+- 測試函式 docstring 必須標記 `AC: AC-XXX`
+- 詳見 `ark-code-spec-validator/references/ac-id-convention.md`
+
+---
+
 ## Git Hook 整合
 
 ### Kiro Hook（自動觸發）
 
-當 `docs/specs/`、`docs/designs/`、`docs/plans/` 下的 `.md` 檔案被編輯時，
+當 `docs/specs/`、`docs/designs/`、`docs/plans/`、`docs/one-pagers/` 下的 `.md` 檔案被編輯時，
 自動檢查 frontmatter 必要欄位和必要章節是否完整。
+
+配置說明：`assets/hooks/kiro-hook.md`
 
 ### pre-commit 腳本
 
-`scripts/check_doc_completeness.py` 提供 CLI 檢查：
+**安裝**：
+```bash
+cp .kiro/skills/ark-superpowers/assets/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+腳本位置：`assets/hooks/pre-commit`
+
+功能：
+- 對 staged `docs/**/*.md` 自動執行 `check_doc_completeness.py`
 - 驗證 frontmatter：`title`、`status`、`created` 必要
 - 驗證章節：依 `type` 欄位對應必要章節清單
+- 空白章節偵測：≥ 20 有效字元，排除 placeholder
+- Design/ADR：至少 2 替代方案
+- Spec：NFR 含量化指標
+- Plan：任務表欄位數與角色枚舉
+- 中英模板 parity check（`--parity` 模式）
 - 輸出：PASS / FAIL + 缺失項目
+- 跳過方式：`git commit --no-verify`
 
 ---
 
@@ -206,6 +279,9 @@ One Pager 的 frontmatter 有 `upgraded_to` 欄位，升級後指向完整文件
 
 ## 🔄 工作流鏈串接
 
+> 閾值與方向分流詳見 `ark-code-spec-validator/references/loop-rules.md`。
+> 摘要：≥ 90 Ship / < 90 依偏移主因方向分流（見 loop-rules.md）
+
 產出 plan.md 後，可直接銜接 `ark-spec-executor` 自動執行：
 
 ```
@@ -217,4 +293,13 @@ ark-grill-me（拷問）→ 【ark-superpowers（產文件）】→ ark-spec-exe
 - 產出 plan 後，主動詢問：「要自動執行這份計畫嗎？」
 - 如果使用者說「跑」、「執行」、「go」→ 觸發 ark-spec-executor
 - plan.md 的 frontmatter `related_spec` / `related_design` 欄位讓 executor 可回溯完整 context
+- validator 判定 `extra_in_code` 為主時，會觸發 superpowers 補文件
+
+### Pipeline 狀態
+
+**不適用於**：流程編排/派工請用 `ark-project-planning`；長任務 session 狀態持久化請用 `ark-planning-with-files`；互動式共筆（人主導逐段精煉）請用 `ark-doc-coauthoring`。
+
+- **開頭**：讀取 `docs/pipeline/{feature}.yaml`，取得 `decision_summary_path` 作為輸入 context
+- **結尾**：更新 `phase: spec`，寫入 `spec_path` / `design_path` / `plan_path`
+- Schema 詳見 `ark-code-spec-validator/references/pipeline-state-schema.md`
 

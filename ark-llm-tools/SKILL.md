@@ -5,7 +5,15 @@ description: |
   搭配 GeminiAdapter 或 LLMAdapter 進行文字摘要、資料分析、問答、意圖解析。
   使用此 Skill 當使用者提及 LLM 摘要、AI 分析、智能問答、意圖解析、
   或任何需要 LLM 文字處理能力的場景。
+  專責 LLM 工具函式與 provider 抽象。CLI 整合請用 ark-llm-cli。
+  不適用於：CLI 整合/閘道開發請用 ark-agent-cli。
 metadata:
+  schema_version: 1
+  status: active
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

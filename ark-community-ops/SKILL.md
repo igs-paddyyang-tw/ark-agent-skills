@@ -5,6 +5,12 @@ description: |
   使用此 Skill 當使用者提及社群管理、community、玩家互動、社群營運、
   Discord 管理、粉絲經營、KOL、輿情監控、或任何社群營運場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: domain
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
   version: "1.0"
   updated: 2026-05-16

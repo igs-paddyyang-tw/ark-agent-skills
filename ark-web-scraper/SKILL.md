@@ -7,7 +7,15 @@ description: |
   使用此 Skill 當使用者提及網頁抓取、爬蟲、web scraping、
   抓取網頁、擷取網頁內容、反爬、Cloudflare 繞過、大規模爬取、
   自適應爬蟲、Scrapling、或任何需要從網頁取得資料的場景。
+  專責大規模網頁抓取、反爬處理。瀏覽器互動自動化/畫面擷取請用 ark-browser-tool。
+  不適用於：瀏覽器自動化操作請用 ark-browser-tool；測試自動化請用 ark-test-runner。
 metadata:
+  schema_version: 1
+  status: active
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

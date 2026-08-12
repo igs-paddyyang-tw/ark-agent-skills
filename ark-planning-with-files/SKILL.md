@@ -7,6 +7,12 @@ description: |
   3-file pattern、防止遺忘、長任務管理、Manus workflow、
   或任何需要跨 session 保持任務狀態的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: process
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
   version: "1.0"
   updated: 2026-05-16
@@ -147,3 +153,5 @@ Filesystem = Disk（持久性、無限）
 - 任務完成後可刪除或歸檔到 knowledge/
 - 不要把 3-file 用在簡單任務（過度工程）
 - findings.md 是 append-only，不刪除舊記錄
+
+**不適用於**：產文件（Spec/Design/Plan）請用 `ark-superpowers`；流程派工請用 `ark-project-planning`。

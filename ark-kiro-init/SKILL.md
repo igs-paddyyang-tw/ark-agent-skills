@@ -9,6 +9,12 @@ description: |
   kiro workspace、建立開發環境、設定 AI 助手角色、
   或任何需要產出 .kiro 目錄結構的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
   version: "1.1"
   updated: 2026-05-15

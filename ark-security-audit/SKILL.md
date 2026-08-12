@@ -8,6 +8,12 @@ description: |
   vulnerability scan、程式碼安全、依賴檢查、
   或任何需要檢查專案安全性的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

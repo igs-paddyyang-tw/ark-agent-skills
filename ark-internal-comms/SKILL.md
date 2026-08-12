@@ -5,6 +5,13 @@ description: |
   使用此 Skill 當被要求撰寫任何內部溝通文件
   （狀態報告、主管更新、3P 更新、公司通訊、FAQ、事件報告、專案更新等）。
 metadata:
+  schema_version: 1
+  status: active
+  category: document
+  depends_on: [ark-telegram-sender]
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 

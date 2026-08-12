@@ -7,9 +7,18 @@ description: |
   支援暗黑科技風格與亮色主題。
   使用此 Skill 當使用者提及 dashboard、儀錶板、互動圖表、
   HTML 報表、數據面板、Chart.js、KPI 卡片、
+  遊戲面板、game dashboard、博奕分析、老虎機資訊、遊戲統計、
   或任何需要產出可分享的互動式數據視覺化頁面的場景。
+  博奕遊戲面板請參考 references/gaming-preset.md。
   不適用於靜態 PNG 圖表（請使用 ark-chart-generator）。
 metadata:
+  schema_version: 1
+  status: active
+  category: view
+  outputs:
+    - format: html
+      audience: human
+  depends_on: [ark-html-report]
   author: paddyyang
 ---
 
@@ -56,7 +65,7 @@ from src.skills.base import SkillParam
 class HtmlDashboardInput(SkillParam):
     """HTML Dashboard 輸入參數。"""
     title: str = Field(default="Dashboard", description="儀錶板標題")
-    theme: str = Field(default="dark", description="主題：dark / light")
+    theme: str = Field(default="auto", description="主題：auto / dark / light（auto 依內容自動判斷）")
     kpis: list[dict] = Field(default_factory=list, description="KPI 卡片資料")
     charts: list[dict] = Field(default_factory=list, description="圖表設定")
     table_data: list[dict] = Field(default_factory=list, description="表格資料")
@@ -172,6 +181,17 @@ KPI 資料格式：
 
 亮色主題切換：`theme: "light"`
 
+Auto 模式（預設）：依內容自動選擇風格：
+
+| 內容類型 | 自動選擇 | 原因 |
+|---------|---------|------|
+| 技術監控 / DevOps / 伺服器 | dark | 減少視覺疲勞、數據對比度高 |
+| 業務報告 / KPI / 營收 | light | 正式場合、列印友好 |
+| 遊戲數據 / 玩家分析 | dark | 符合遊戲開發者習慣 |
+| 行銷 / 公開簡報 | light | 受眾友好、品牌一致 |
+
+判斷邏輯：掃描 title + KPI labels 中的關鍵字，命中 dark 類（monitoring/server/cpu/error/deploy/game/slot）→ dark，否則 → light。
+
 ```css
 :root {
   --bg-primary: #f8f9fa;
@@ -181,6 +201,14 @@ KPI 資料格式：
   --accent: #0891b2;
 }
 ```
+
+---
+
+## 風格 Token
+
+本 skill 的 HTML 輸出使用 ark-html-report 的共享 token 系統。
+詳見：ark-html-report/references/styles.md
+支援 5 種風格：boardroom / terminal / midnight / editorial / paperprint
 
 ---
 

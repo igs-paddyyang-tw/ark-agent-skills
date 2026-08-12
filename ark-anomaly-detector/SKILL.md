@@ -8,6 +8,12 @@ description: |
   anomaly detection、數據告警、指標異常、DAU 突降、
   或任何需要自動偵測數據異常並發送通知的場景。
 metadata:
+  schema_version: 1
+  status: active
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
   version: "1.0"
   updated: 2026-05-18

@@ -6,7 +6,15 @@ description: |
   使用此 Skill 當使用者提及匯出檔案、存成 CSV、輸出 JSON、產生 Markdown 檔、
   資料備份、file export、或任何需要將處理結果寫入磁碟檔案的場景。
   不適用於 PDF/Word/Excel/PPT 等複雜格式（請使用對應的 ark-*-tool）。
+  邊界聲明：本 skill 專責「記憶體資料 → 磁碟檔案」的最後一哩寫入（MD/CSV/JSON）。
+  資料清洗/聚合/轉換請用 ark-etl-pipeline；複雜文件格式請用 ark-docx-tool / ark-pdf-tool / ark-xlsx-tool。
 metadata:
+  schema_version: 1
+  status: active
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

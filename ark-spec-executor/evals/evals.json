@@ -1,0 +1,17 @@
+[
+  {
+    "prompt": "執行 docs/plans/notification-plan.md",
+    "expected_behavior": "解析 plan 任務表，建立 DAG 排序，逐一角色切換執行，產出程式碼 + 驗收報告到 docs/reports/",
+    "tags": ["trigger"]
+  },
+  {
+    "prompt": "把這個 plan 跑完，只跑 M2",
+    "expected_behavior": "識別 milestone 參數，僅執行 M2 區段的任務，跳過 M1/M3，產出 checkpoint + 驗收報告",
+    "tags": ["trigger"]
+  },
+  {
+    "prompt": "驗收通過率 85%，validator 說 missing_in_code 為主",
+    "expected_behavior": "依 loop-rules.md 方向分流，因 missing_in_code 為主回到 spec-executor 補實作失敗項，而非轉到其他 skill",
+    "tags": ["loop-flow"]
+  }
+]

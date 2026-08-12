@@ -1,0 +1,17 @@
+[
+  {
+    "prompt": "跑一次 validator，看看 code 跟 spec 有沒有 drift",
+    "expected_behavior": "執行 4 維度驗證，產出 drift-report.md（含 frontmatter），append log.md 一行，回覆摘要格式（總分 + 維度表 + 建議）",
+    "tags": ["trigger"]
+  },
+  {
+    "prompt": "驗證結果 score 75，API 有 3 個 extra_in_code、1 個 missing_in_code",
+    "expected_behavior": "判定 primary_direction 為 extra_in_code（佔多數），方向分流到 ark-superpowers 補文件，而非 ark-spec-executor",
+    "tags": ["direction-routing"]
+  },
+  {
+    "prompt": "哪些 AC 沒有對應的測試",
+    "expected_behavior": "觸發測試覆蓋維度驗證，列出未覆蓋的 AC-ID + 信度標示（🔗高/⚠️低/❌未覆蓋），不執行 pytest --cov",
+    "tags": ["trigger"]
+  }
+]
