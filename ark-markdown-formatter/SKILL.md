@@ -9,6 +9,10 @@ description: |
   或任何需要將內容轉換為高品質 Markdown 文件的場景。
   不適用於 PDF/Word/PPT 等非 Markdown 格式（請使用對應的 ark-*-tool）。
 metadata:
+  category: document
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
   version: "1.0.0"
   updated: 2026-06-05

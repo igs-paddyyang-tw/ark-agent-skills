@@ -6,6 +6,10 @@ description: |
   使用此 Skill 當使用者提及工作紀錄、日誌、今天做了什麼、
   記錄、追蹤、回顧、週報、工作管理、或長時間未互動時主動觸發。
 metadata:
+  category: domain
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 

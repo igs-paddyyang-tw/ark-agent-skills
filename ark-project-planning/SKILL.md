@@ -6,6 +6,10 @@ description: |
   Use when receiving new feature requests, project planning, task delegation to agents.
   觸發條件：新功能、新需求、派工、拆任務、專案規劃、project plan。
 metadata:
+  category: process
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
   version: "2.0"
 ---
@@ -144,3 +148,5 @@ ASSUMPTIONS：
 | 任務很明顯不用拆 | 寫下來才能追蹤，也能發現遺漏 |
 | Agent 自己會知道 | 明確指令減少來回，省 token 省時間 |
 | 驗收太麻煩 | 不驗收就不知道做對沒 |
+
+**不適用於**：產文件/Spec/Design 請用 `ark-superpowers`。

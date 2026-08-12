@@ -1,0 +1,37 @@
+[
+  {
+    "prompt": "幫我寫一份 spec，主題是用戶通知系統",
+    "expected_behavior": "觸發 ark-superpowers，確認語言（預設繁中），收集需求後產出完整 spec 到 docs/specs/，frontmatter 含 title/status/created/type，必要章節齊全（摘要/動機/目標與非目標/成功指標），NFR 含量化數字，執行 check_doc_completeness 驗證通過",
+    "tags": ["trigger", "spec"]
+  },
+  {
+    "prompt": "寫一份 one pager，主題是自動化部署管線",
+    "expected_behavior": "產出 one-pager 到 docs/one-pagers/，含「問題與目標/方案/執行計畫/風險與驗收」四大章節，方案表至少 2 個選項。若標題含中文則詢問 slug。frontmatter type=one-pager",
+    "tags": ["trigger", "one-pager"]
+  },
+  {
+    "prompt": "新增一條 ADR，我們決定用 SQS 作為訊息佇列",
+    "expected_behavior": "自動掃描 docs/designs/adr/ 取得下一個編號，產出 ADR 含「背景/選項/決策/後果」章節（無狀態章節），選項章節至少 2 個替代方案，更新 _index.md",
+    "tags": ["trigger", "adr"]
+  },
+  {
+    "prompt": "把這份 one pager 升級為正式版",
+    "expected_behavior": "讀取指定 one-pager，呼叫 upgrade 產出 spec + design + plan 三份獨立文件到對應路徑。one-pager frontmatter 回填 upgraded_to，新文件含 upgraded_from。plan 含 related_spec 和 related_design 自動連結",
+    "tags": ["upgrade", "lifecycle"]
+  },
+  {
+    "prompt": "檢查 docs/ 下的文件是否合格",
+    "expected_behavior": "呼叫 --validate 模式，對所有 docs/**/*.md 執行 check_file()。報告通過/失敗數。失敗項顯示具體錯誤（缺章節/空白章節/NFR 無數字/alternatives<2/任務表欄位錯）",
+    "tags": ["validate", "quality"]
+  },
+  {
+    "prompt": "根據以上決策摘要，產出完整 design + plan，這是 API 閘道器專案",
+    "expected_behavior": "識別為從 grill-me 決策摘要銜接。產出 design（含至少 2 替代方案 + 故障隔離）和 plan（7 欄任務表 + AC-ID + 合法角色值）。plan frontmatter 含 related_design。主動詢問是否銜接 ark-spec-executor",
+    "tags": ["loop-flow", "chain"]
+  },
+  {
+    "prompt": "幫我做一個端到端的規格流程：先 one pager 再升級成完整文件",
+    "expected_behavior": "依序：(1) 確認主題與 slug (2) 產出 one-pager (3) 確認後升級為 spec+design+plan (4) 對三份新文件跑 validate 確認全通過 (5) 主動詢問是否銜接 executor。全程 frontmatter 追溯鏈完整",
+    "tags": ["e2e", "lifecycle"]
+  }
+]

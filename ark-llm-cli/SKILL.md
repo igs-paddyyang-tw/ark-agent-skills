@@ -8,6 +8,10 @@ description: |
   CLI agent、codegen、用 CLI 產出程式碼、產出 Skill、自動寫 Skill、
   或任何需要呼叫 LLM CLI 工具的場景。
 metadata:
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
   version: "2.0"
   updated: 2026-05-23

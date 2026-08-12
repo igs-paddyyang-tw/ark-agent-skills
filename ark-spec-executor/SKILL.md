@@ -7,6 +7,10 @@ description: |
   使用此 Skill 當使用者提及 執行計畫、run plan、自動交付、spec executor、
   跑 plan、驗收、自動執行任務、或任何需要按 plan 逐步完成開發的場景。
 metadata:
+  category: process
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 
@@ -177,6 +181,9 @@ result = await registry.invoke("spec_executor", {
 
 ## 🔄 Loop Engineering — 自動迴圈
 
+> 閾值與方向分流詳見 `ark-code-spec-validator/references/loop-rules.md`。
+> 摘要：≥ 90 Ship / < 90 依偏移主因方向分流（見 loop-rules.md）
+
 ark-spec-executor 是四段工作流鏈的執行引擎，支援自動迴圈修復：
 
 ```
@@ -186,9 +193,9 @@ ark-spec-executor 是四段工作流鏈的執行引擎，支援自動迴圈修�
 │        ↑                                    │           │
 │        │              ark-code-spec-validator ←┘         │
 │        │                     │                          │
-│        │         score < 70  │  score ≥ 90             │
+│        │      方向分流        │  score ≥ 90             │
 │        │              ↓      │      ↓                   │
-│        └──── 重新拷問 ←┘    ✅ Ship                      │
+│        └──── 釐清需求 ←┘    ✅ Ship                      │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -199,6 +206,7 @@ ark-spec-executor 是四段工作流鏈的執行引擎，支援自動迴圈修�
 |-----------|------|-------------------------------|
 | ark-superpowers | plan.md | ✅ 詢問使用者是否執行 |
 | ark-grill-me | 決策摘要 | ❌ 先走 superpowers |
+| ark-code-spec-validator | `missing_in_code` 為主 | ✅ 回到 executor 補實作 |
 
 ### 下游迴圈規則
 
@@ -206,7 +214,13 @@ ark-spec-executor 是四段工作流鏈的執行引擎，支援自動迴圈修�
 |----------|------|
 | pass_rate ≥ 90% | ✅ 自動觸發 `ark-code-spec-validator` 做最終 drift check |
 | pass_rate 70-89% | ⚠️ 產出修復任務清單 → 自動重跑失敗項 |
-| pass_rate < 70% | 🛑 停止，建議使用者用 `ark-grill-me` 重新釐清需求 |
+| pass_rate < 70% | 🛑 停止，依方向分流決定下一步（見 loop-rules.md） |
+
+### Pipeline 狀態
+
+- **開頭**：讀取 `docs/pipeline/{feature}.yaml`，取得 `plan_path`；檢查 `loop_count` 是否觸發保險絲（≥ 3 → 人工介入）
+- **結尾**：更新 `phase: execute`，append `acceptance_rates`，寫入 `acceptance_report_path`
+- Schema 詳見 `ark-code-spec-validator/references/pipeline-state-schema.md`
 
 ### 搭配使用提示
 

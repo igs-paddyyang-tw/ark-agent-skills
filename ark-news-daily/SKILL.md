@@ -7,6 +7,11 @@ description: |
   新聞日報 HTML、每日新聞、news daily、日報模板、
   或任何需要將新聞轉化為視覺化 HTML 卡片的場景。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
+  depends_on: [ark-html-report]
   author: paddyyang
   version: "1.0"
   updated: 2026-05-26
@@ -123,6 +128,14 @@ metadata:
 
 若專案中有 `template-tech-daily.html`，直接使用該模板。
 否則依上述規格產出完整 HTML（含內嵌 CSS）。
+
+---
+
+## 風格 Token
+
+本 skill 的 HTML 輸出使用 ark-html-report 的共享 token 系統。
+詳見：ark-html-report/references/styles.md
+支援 5 種風格：boardroom / terminal / midnight / editorial / paperprint
 
 ---
 

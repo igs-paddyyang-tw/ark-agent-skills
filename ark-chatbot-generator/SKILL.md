@@ -10,6 +10,10 @@ description: |
   gen bot chat、加入自然語言互動、Gemini Function Calling、Kiro MCP、
   或任何需要在既有專案上加入 Bot + LLM 整合的場景。
 metadata:
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
 ---
 

@@ -7,6 +7,10 @@ description: |
   使用此 Skill 當使用者提及資料庫查詢、SQL、db query、MongoDB、
   查詢資料表、資料庫連線、或任何需要從資料庫取得資料的場景。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

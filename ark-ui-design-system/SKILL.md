@@ -7,6 +7,10 @@ description: |
   色彩規範、元件庫、ui-ux、前端設計、視覺規範、
   或任何需要建立/套用設計系統的場景。
 metadata:
+  category: view
+  outputs:
+    - format: html
+      audience: human
   author: paddyyang
   version: "1.0"
   updated: 2026-05-16
@@ -150,3 +154,5 @@ Base: 4px → 4, 8, 12, 16, 24, 32, 48, 64
 - 修改設計系統需要全域影響評估
 - 不要在沒有設計系統的情況下寫 UI code
 - 遊戲 UI 可能需要更自由的設計（但仍需色彩規範）
+
+**不適用於**：設計哲學參考與創意方向改用 `ark-frontend-design`；套用既有主題到 artifact 改用 `ark-theme-factory`。

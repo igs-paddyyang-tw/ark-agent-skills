@@ -8,6 +8,10 @@ description: |
   使用此 Skill 當使用者提及 Wiki、知識庫、knowledge base、知識圖譜、
   RAG、文件搜尋、知識管理、wiki Q&A、或任何需要建立 Markdown 知識庫系統的場景。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 
@@ -327,6 +331,15 @@ print(issues)
 2. 逐檔檢查 frontmatter 必要欄位（title / type / tags / created / updated）
 3. 回報缺少欄位的頁面清單
 4. 檢查孤立頁面（沒被 index.md 列出的）
+
+---
+
+## 報告類 Frontmatter 標準
+
+當 Wiki ingest 處理 `type: report` 的頁面時，該頁面必須符合報告類 frontmatter 標準。
+詳見：`docs/report-frontmatter-standard.md`
+
+必要欄位：type / title / date / tags / source_skill / audience / render
 
 ---
 

@@ -12,6 +12,10 @@ description: |
   產出 Telegram adapter、整合 Bot 到團隊、telegram_adapter、
   或任何 Telegram Bot 功能開發與推送場景。
 metadata:
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
   version: "3.0"
   updated: 2026-05-18

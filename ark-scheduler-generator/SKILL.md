@@ -7,6 +7,10 @@ description: |
   工作流引擎、排程引擎、每日報表自動化、daily slot report、
   或任何需要在既有專案上加入 YAML 工作流與 APScheduler 排程的場景。
 metadata:
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
 ---
 

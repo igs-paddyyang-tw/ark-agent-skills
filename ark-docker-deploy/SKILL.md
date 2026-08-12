@@ -7,6 +7,10 @@ description: |
   Dockerfile、部署腳本、containerize、打包部署、
   或任何需要將專案容器化的場景。
 metadata:
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
   version: "1.0"
   updated: 2026-05-18

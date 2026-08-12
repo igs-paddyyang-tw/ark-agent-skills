@@ -6,6 +6,10 @@ description: |
   使用此 Skill 當使用者提及程式碼審查、code review、PR 審查、
   程式碼品質、lint、或任何需要檢查程式碼品質的場景。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

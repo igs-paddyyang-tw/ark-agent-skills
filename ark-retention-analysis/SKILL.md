@@ -5,6 +5,10 @@ description: |
   使用此 Skill 當使用者提及留存分析、retention、LTV、流失率、
   cohort、玩家生命週期、D1/D7/D30、或任何需要分析玩家留存的場景。
 metadata:
+  category: domain
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
   version: "1.0"
   updated: 2026-05-16

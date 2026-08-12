@@ -5,6 +5,10 @@ description: |
   使用此 Skill 當使用者要求創作海報、藝術品、設計或其他靜態作品。
   創作原創視覺設計，絕不複製現有藝術家作品以避免版權問題。
 metadata:
+  category: view
+  outputs:
+    - format: html
+      audience: human
   author: paddyyang
 ---
 

@@ -10,7 +10,12 @@ description: |
   瀏覽器測試、截圖驗證、visual testing、看一下畫面、
   確認 UI、E2E 驗證、localhost 預覽、craft tool、
   或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
+  專責瀏覽器互動自動化、測試、截圖。大規模網頁抓取/反爬請用 ark-web-scraper。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
   version: "3.0"
   updated: 2026-05-31

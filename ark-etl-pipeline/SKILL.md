@@ -9,6 +9,10 @@ description: |
   資料管線、資料前處理、轉換格式、
   或任何需要將原始資料轉換為圖表標準格式的場景。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

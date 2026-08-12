@@ -5,6 +5,10 @@ description: |
   HTML Landing Page 等。有 10 個預設主題（含色彩/字型），可套用到任何已建立的 artifact，
   或即時產生新主題。
 metadata:
+  category: view
+  outputs:
+    - format: html
+      audience: human
   author: paddyyang
 ---
 
@@ -64,3 +68,5 @@ metadata:
 - 使用基本描述選擇適當的色彩/字型
 - 產生後展示供審查確認
 - 確認後按上述流程套用
+
+**不適用於**：從零產生完整設計系統（色彩/字型/元件/間距規範）改用 `ark-ui-design-system`。

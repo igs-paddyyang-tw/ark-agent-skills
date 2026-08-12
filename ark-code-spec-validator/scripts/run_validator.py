@@ -14,7 +14,7 @@ def main() -> None:
     args = sys.argv[1:]
     project_root = "."
 
-    cmd = [sys.executable, "-m", "ark_team_agent.skills.code_spec_validator"]
+    cmd = [sys.executable, "-m", "ark_team_agent.code_spec_validator"]
 
     if "--full" in args:
         cmd.append("--full")

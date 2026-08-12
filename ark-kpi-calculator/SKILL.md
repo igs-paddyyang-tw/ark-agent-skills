@@ -7,6 +7,10 @@ description: |
   LTV、遊戲數據指標、calculate kpi、metrics engine、
   或任何需要產出標準化指標計算邏輯的場景。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
   version: "1.0"
   updated: 2026-05-18

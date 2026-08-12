@@ -8,6 +8,10 @@ description: |
   使用此 Skill 當使用者提及 建立團隊、build team、agent team、多 agent 平台、
   AI 團隊協作、ark-agent-team、或任何需要從零建立多 Agent 協作平台的場景。
 metadata:
+  category: scaffolder
+  outputs:
+    - format: code
+      audience: ai
   author: paddyyang
   version: "2.1"
   updated: 2026-06-25

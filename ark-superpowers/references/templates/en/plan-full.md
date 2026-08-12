@@ -20,9 +20,17 @@ One paragraph describing the delivery goal and timeline.
 
 ### Phase 1: {Phase Name} (Week 1-2)
 
-| Task | Owner | Estimate | Dependencies | Acceptance Criteria |
-|------|-------|----------|--------------|---------------------|
-| ... | ... | ... | ... | ... |
+| # | Task | Role | Output File | Estimate | AC-ID | AC |
+|---|------|------|-------------|----------|-------|-----|
+| 1.1 | ... | coder | `src/...` | 2h | AC-001 | ... |
+| 1.2 | ... | ai-dev | `src/...` | 1h | AC-002 | ... |
+
+> 📌 **Column Contract**:
+> - **#**: `{milestone}.{seq}` (e.g. 1.1, 1.2). Cross-milestone deps noted as `[← 2.3]` after task name
+> - **Role**: `coder` / `ai-dev` / `qa` / `human` (executor dispatches by this enum)
+> - **Output File**: Full relative path; executor verifies file existence
+> - **AC-ID**: Unique `AC-XXX` (three digits). Test docstrings must include `AC: AC-XXX` for traceability
+> - See `ark-code-spec-validator/references/ac-id-convention.md`
 
 **Phase 1 Deliverables**:
 - [ ] Deliverable 1
@@ -30,9 +38,10 @@ One paragraph describing the delivery goal and timeline.
 
 ### Phase 2: {Phase Name} (Week 3-4)
 
-| Task | Owner | Estimate | Dependencies | Acceptance Criteria |
-|------|-------|----------|--------------|---------------------|
-| ... | ... | ... | ... | ... |
+| # | Task | Role | Output File | Estimate | AC-ID | AC |
+|---|------|------|-------------|----------|-------|-----|
+| 2.1 | ... | coder | `src/...` | 3h | AC-003 | ... |
+| 2.2 | (needs 1.2 output) ... [← 1.2] | qa | `tests/...` | 1h | AC-004 | ... |
 
 **Phase 2 Deliverables**:
 - [ ] Deliverable 1

@@ -7,6 +7,10 @@ description: |
   資料備份、file export、或任何需要將處理結果寫入磁碟檔案的場景。
   不適用於 PDF/Word/Excel/PPT 等複雜格式（請使用對應的 ark-*-tool）。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 

@@ -6,6 +6,10 @@ description: |
   此工作流幫助使用者有效傳遞上下文、透過迭代精煉內容、並驗證文件對讀者有效。
   當使用者提及撰寫文件、建立提案、草擬規格或類似文件任務時觸發。
 metadata:
+  category: process
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 
@@ -138,3 +142,5 @@ metadata:
 - **處理偏離**：使用者想跳過階段時，詢問是否要自由撰寫
 - **上下文管理**：發現缺口立即處理，不讓缺口累積
 - **品質優於速度**：每次迭代都應有實質改善
+
+**不適用於**：AI 模板化產出（Spec/Design/Plan）請用 `ark-superpowers`。本 Skill 專責人主導的互動式共筆。

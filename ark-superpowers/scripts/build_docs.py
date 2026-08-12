@@ -4,6 +4,7 @@
   1. 從模板產出文件骨架（自動填入 title/date/number）
   2. ADR 自動編號 + 索引更新
   3. 驗證目錄結構完整性
+  4. One Pager 升級為 spec + design + plan
 
 Usage:
     python build_docs.py onepager "我的提案"
@@ -11,6 +12,7 @@ Usage:
     python build_docs.py design "API Gateway 架構"
     python build_docs.py adr "選擇 PostgreSQL 作為主資料庫"
     python build_docs.py plan "Phase 1 上線計畫"
+    python build_docs.py upgrade docs/one-pagers/my-proposal.md
     python build_docs.py --init                    # 建立 docs/ 目錄結構
     python build_docs.py --index                   # 重建 ADR 索引
     python build_docs.py --validate                # 驗證所有文件
@@ -64,9 +66,31 @@ OUTPUT_DIR_MAP = {
 }
 
 
-def _to_kebab(title: str) -> str:
-    """將標題轉為 kebab-case 檔名。"""
-    # 移除特殊字元，空白轉 dash
+def _has_non_ascii(text: str) -> bool:
+    """檢查文字是否含有非 ASCII 字元。"""
+    return bool(re.search(r"[^\x00-\x7f]", text))
+
+
+def _to_kebab(title: str, slug: str | None = None) -> str:
+    """將標題轉為 kebab-case 檔名。
+
+    若 slug 已提供，直接使用。
+    若標題含非 ASCII 且無 slug，拋出 ValueError 要求提供。
+    """
+    if slug:
+        # 正規化 slug：確保 kebab-case
+        name = re.sub(r"[^\w\s-]", "", slug)
+        name = re.sub(r"[\s_]+", "-", name)
+        return name.lower().strip("-")
+
+    if _has_non_ascii(title):
+        raise ValueError(
+            f"標題含非 ASCII 字元：「{title}」\n"
+            f"  請使用 --slug 參數指定英文檔名，例如：\n"
+            f"  python build_docs.py --slug user-management spec \"{title}\""
+        )
+
+    # 純 ASCII：自動轉換
     name = re.sub(r"[^\w\s-]", "", title)
     name = re.sub(r"[\s_]+", "-", name)
     return name.lower().strip("-")
@@ -154,6 +178,7 @@ def build_doc(
     title: str,
     lang: str = "zh-TW",
     author: str = "paddyyang",
+    slug: str | None = None,
 ) -> Path:
     """從模板產出文件骨架。回傳產出的檔案路徑。"""
     template_file = TEMPLATE_MAP.get(doc_type)
@@ -168,7 +193,7 @@ def build_doc(
     content = template_path.read_text(encoding="utf-8")
 
     # 替換佔位符
-    kebab_name = _to_kebab(title)
+    kebab_name = _to_kebab(title, slug=slug)
 
     if doc_type == "adr":
         adr_dir = project_dir / "docs" / "designs" / "adr"
@@ -236,6 +261,118 @@ def validate_docs(project_dir: Path) -> tuple[int, int, list[str]]:
     return passed, failed, errors
 
 
+def upgrade_onepager(project_dir: Path, onepager_path: Path, lang: str = "zh-TW", author: str = "paddyyang") -> list[Path]:
+    """將 one-pager 升級為 spec + design + plan 三份文件。
+
+    流程：
+    1. 讀取 one-pager 內容與 frontmatter
+    2. 從 title 推斷 slug
+    3. 產出 spec / design / plan 三份骨架
+    4. 回填 one-pager 的 upgraded_to
+    5. 新文件加 upgraded_from
+    6. plan 自動連結 related_spec / related_design
+    """
+    if not onepager_path.exists():
+        raise FileNotFoundError(f"One-pager 不存在：{onepager_path}")
+
+    content = onepager_path.read_text(encoding="utf-8")
+    frontmatter = {}
+    fm_match = re.match(r"^---\s*\n(.*?)\n---", content, re.DOTALL)
+    if fm_match:
+        for line in fm_match.group(1).split("\n"):
+            if ":" in line:
+                key, _, value = line.partition(":")
+                frontmatter[key.strip()] = value.strip().strip('"').strip("'")
+
+    title = frontmatter.get("title", onepager_path.stem)
+    op_lang = frontmatter.get("language", lang)
+
+    # 推斷 slug
+    slug = onepager_path.stem
+    if slug.endswith("-onepager") or slug.endswith("-one-pager"):
+        slug = re.sub(r"-(one-?pager)$", "", slug)
+
+    # 準備三份文件（先全部產到暫存再一次落盤）
+    lang_dir = "en" if op_lang == "en" else "zh-TW"
+    outputs: list[tuple[Path, str]] = []
+
+    for doc_type in ("spec", "design", "plan"):
+        template_file = TEMPLATE_MAP[doc_type]
+        template_path = TEMPLATES_DIR / lang_dir / template_file
+        if not template_path.exists():
+            raise FileNotFoundError(f"模板不存在：{template_path}")
+
+        tmpl_content = template_path.read_text(encoding="utf-8")
+
+        # 替換佔位符
+        if doc_type == "spec":
+            filename = f"{slug}-spec.md"
+            output_dir = project_dir / "docs" / "specs"
+        elif doc_type == "design":
+            filename = f"{slug}-design.md"
+            output_dir = project_dir / "docs" / "designs"
+        else:
+            filename = f"{slug}-plan.md"
+            output_dir = project_dir / "docs" / "plans"
+
+        tmpl_content = tmpl_content.replace("{名稱}", title)
+        tmpl_content = tmpl_content.replace("{專案名稱}", title)
+        tmpl_content = tmpl_content.replace("{Project Name}", title)
+        tmpl_content = tmpl_content.replace("{作者}", author)
+        tmpl_content = tmpl_content.replace("{Author}", author)
+        tmpl_content = tmpl_content.replace("YYYY-MM-DD", TODAY)
+
+        # 加入 upgraded_from 欄位到 frontmatter
+        onepager_rel = str(onepager_path.relative_to(project_dir)) if project_dir in onepager_path.parents else str(onepager_path)
+        tmpl_content = _inject_frontmatter_field(tmpl_content, "upgraded_from", onepager_rel)
+
+        # plan 加入 related_spec / related_design
+        if doc_type == "plan":
+            spec_path = f"docs/specs/{slug}-spec.md"
+            design_path = f"docs/designs/{slug}-design.md"
+            tmpl_content = _inject_frontmatter_field(tmpl_content, "related_spec", spec_path)
+            tmpl_content = _inject_frontmatter_field(tmpl_content, "related_design", design_path)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / filename
+        outputs.append((output_path, tmpl_content))
+
+    # 一次落盤
+    created: list[Path] = []
+    for path, file_content in outputs:
+        if path.exists():
+            raise FileExistsError(f"檔案已存在：{path}")
+        path.write_text(file_content, encoding="utf-8")
+        created.append(path)
+
+    # 回填 one-pager 的 upgraded_to
+    upgraded_to_paths = [str(p.relative_to(project_dir)) for p in created]
+    upgraded_to_value = ", ".join(upgraded_to_paths)
+
+    # 修改 one-pager frontmatter
+    new_op_content = re.sub(
+        r"(upgraded_to:\s*).*",
+        f"\\1\"{upgraded_to_value}\"",
+        content,
+    )
+    if "upgraded_to" not in content:
+        # 在 frontmatter 結束前插入
+        new_op_content = content.replace("\n---\n", f"\nupgraded_to: \"{upgraded_to_value}\"\n---\n", 1)
+
+    onepager_path.write_text(new_op_content, encoding="utf-8")
+
+    return created
+
+
+def _inject_frontmatter_field(content: str, key: str, value: str) -> str:
+    """在 frontmatter 中注入或更新一個欄位。"""
+    pattern = re.compile(rf"^({key}:\s*).*$", re.MULTILINE)
+    if pattern.search(content):
+        return pattern.sub(f"{key}: \"{value}\"", content)
+    # 在 --- 結束前插入
+    return content.replace("\n---\n", f"\n{key}: \"{value}\"\n---\n", 1)
+
+
 def main() -> None:
     """CLI 入口。"""
     if len(sys.argv) < 2:
@@ -278,12 +415,35 @@ def main() -> None:
             sys.exit(1)
         sys.exit(0)
 
+    # Upgrade 模式
+    if arg1 == "upgrade":
+        if len(sys.argv) < 3:
+            print("Usage: python build_docs.py upgrade <onepager-path>")
+            sys.exit(1)
+        onepager_path = Path(sys.argv[2]).resolve()
+        project_dir = Path.cwd()
+        try:
+            created = upgrade_onepager(project_dir, onepager_path)
+            print(f"✅ 升級完成，產出 {len(created)} 份文件：")
+            for p in created:
+                print(f"  + {p.relative_to(project_dir)}")
+            print(f"  ↑ one-pager upgraded_to 已回填")
+        except (FileExistsError, FileNotFoundError, ValueError) as e:
+            print(f"❌ {e}")
+            sys.exit(1)
+        sys.exit(0)
+
     # 語言選項
     lang = "zh-TW"
+    slug: str | None = None
     args = list(sys.argv[1:])
     if "--lang" in args:
         idx = args.index("--lang")
         lang = args[idx + 1]
+        args = args[:idx] + args[idx + 2:]
+    if "--slug" in args:
+        idx = args.index("--slug")
+        slug = args[idx + 1]
         args = args[:idx] + args[idx + 2:]
 
     # 正常模式：build_docs <type> <title>
@@ -297,7 +457,7 @@ def main() -> None:
     project_dir = Path.cwd()
 
     try:
-        output = build_doc(project_dir, doc_type, title, lang=lang)
+        output = build_doc(project_dir, doc_type, title, lang=lang, slug=slug)
         print(f"✅ 已產出：{output.relative_to(project_dir)}")
         if doc_type == "adr":
             print(f"   ADR 索引已更新")

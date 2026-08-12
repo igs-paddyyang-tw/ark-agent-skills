@@ -8,6 +8,11 @@ description: |
   老虎機資訊、遊戲資料視覺化、遊戲卡片、遊戲統計、
   或任何需要建立博奕遊戲資訊收集與視覺化面板的場景。
 metadata:
+  category: view
+  depends_on: [ark-html-dashboard]
+  outputs:
+    - format: html
+      audience: human
   author: paddyyang
 ---
 
@@ -137,7 +142,12 @@ async def game_stats(source: str = "vegasslots"):
 
 #### 5a. `src/server/templates/dashboard.html`
 
-暗黑科技風格面板頁面：
+暗黑科技風格面板頁面（預設，可依內容自動切換）：
+
+> **風格自動建議**：`theme: "auto"`（預設）
+> - 遊戲數據/Slot 分析 → dark（開發者習慣）
+> - 業務報告/營收 KPI → light（正式場合）
+> - 使用者可明確指定 `theme: "dark"` 或 `theme: "light"` 覆蓋
 - 頂部：來源選擇 + 篩選條件
 - 主區域：遊戲卡片 grid
 - 側邊/底部：統計圖表區
@@ -152,7 +162,7 @@ async def game_stats(source: str = "vegasslots"):
 
 #### 5c. `src/server/static/css/dashboard.css`
 
-面板專用樣式（繼承暗黑科技風格）：
+面板專用樣式（依 theme 參數選擇暗黑或亮色）：
 - `.game-grid` — 遊戲卡片網格
 - `.game-card` — 卡片（icon + info + 解析按鈕）
 - `.game-card__stars` — 星星評分
@@ -269,7 +279,7 @@ Workflow YAML 範例：
 - HTTP 4xx 時回傳 fallback_url 而非報錯
 - 必須帶瀏覽器 User-Agent headers
 - 正則提取可能因網站格式變更而需調整
-- Dashboard 頁面繼承暗黑科技風格
+- Dashboard 頁面風格依 theme 參數（auto/dark/light）決定
 
 ## 踩坑紀錄
 

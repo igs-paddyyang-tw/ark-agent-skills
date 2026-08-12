@@ -12,10 +12,6 @@ supersedes: ""
 
 # ADR-{NNN}: {Decision Title}
 
-## Status
-
-proposed
-
 ## Context
 
 Describe the context, problem, or requirement that prompted this decision.

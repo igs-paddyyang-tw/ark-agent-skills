@@ -7,6 +7,10 @@ description: |
   質疑設計、挑戰方案、設計審查、review plan、拷問我的設計、
   或在實作前想確認設計完整性、釐清需求、避免 AI 自行腦補的場景。
 metadata:
+  category: process
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 
@@ -150,14 +154,23 @@ ark-spec-executor（自動執行）
     ↓ 程式碼 + 驗收報告
 ark-code-spec-validator（驗證一致性）
     ↓ Drift Report
-    ↓ score < 70 → 回到 ark-grill-me 重新釐清
+    ↓ mismatch/依賴違規為主 → 回到 ark-grill-me 重新釐清
 ```
 
 ### 🔄 Loop Engineering
 
+> 閾值與方向分流詳見 `ark-code-spec-validator/references/loop-rules.md`。
+> 摘要：≥ 90 Ship / < 90 依偏移主因方向分流（見 loop-rules.md）
+
 - 拷問完成後，主動提示：「要根據決策摘要產出 spec 嗎？（觸發 ark-superpowers）」
-- 如果 validator drift score < 70，下游會建議使用者回到 grill-me 重新釐清
+- 如果 validator 判定偏移主因為 mismatch/依賴違規，下游會建議使用者回到 grill-me 重新釐清
 - 形成正向迴圈：**拷問 → 文件 → 執行 → 驗證 → (如需) 回到拷問**
+
+### Pipeline 狀態
+
+- **開頭**：檢查 `docs/pipeline/{feature}.yaml` 是否存在。若存在且 `phase != grill`，提示使用者確認是否回到拷問階段
+- **結尾**：建立或更新狀態檔，設定 `phase: grill`，寫入 `decision_summary_path`
+- Schema 詳見 `ark-code-spec-validator/references/pipeline-state-schema.md`
 
 ---
 

@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# pre-commit hook — 驗證 staged docs/*.md 文件完整性
+# 安裝方式：cp assets/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+set -euo pipefail
+
+# 找到 checker 路徑（相對於 repo root）
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+CHECKER=""
+
+# 搜尋 checker 位置（支援多種放置方式）
+for candidate in \
+    "$REPO_ROOT/.kiro/skills/ark-superpowers/scripts/check_doc_completeness.py" \
+    "$REPO_ROOT/scripts/check_doc_completeness.py"; do
+    if [[ -f "$candidate" ]]; then
+        CHECKER="$candidate"
+        break
+    fi
+done
+
+if [[ -z "$CHECKER" ]]; then
+    echo "⚠️  check_doc_completeness.py 未找到，跳過文件檢查"
+    exit 0
+fi
+
+# 取得 staged 的 docs/*.md 檔案
+STAGED_DOCS=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^docs/.*\.md$" || true)
+
+if [[ -z "$STAGED_DOCS" ]]; then
+    # 沒有 staged docs，直接通過
+    exit 0
+fi
+
+echo "▸ ark-superpowers: 檢查 staged docs..."
+FAILED=0
+
+while IFS= read -r file; do
+    # 跳過索引檔
+    if [[ "$(basename "$file")" == _* ]]; then
+        continue
+    fi
+    output=$(python3 "$CHECKER" "$REPO_ROOT/$file" 2>&1) || true
+    if echo "$output" | grep -q "❌ FAIL"; then
+        echo "$output"
+        FAILED=1
+    fi
+done <<< "$STAGED_DOCS"
+
+if [[ $FAILED -eq 1 ]]; then
+    echo ""
+    echo "❌ 文件完整性檢查未通過，commit 已中止。"
+    echo "   修正上述問題後重新 git add + git commit。"
+    echo "   如需跳過：git commit --no-verify"
+    exit 1
+fi
+
+echo "  ✅ 所有 staged docs 通過完整性檢查"
+exit 0

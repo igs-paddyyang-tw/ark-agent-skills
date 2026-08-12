@@ -6,6 +6,10 @@ description: |
   加密/解密 PDF、提取圖片、以及對掃描 PDF 進行 OCR 使其可搜尋。
   當使用者提及 .pdf 檔案或要求產出 PDF 時，使用此 Skill。
 metadata:
+  category: document
+  outputs:
+    - format: md
+      audience: both
   author: paddyyang
 ---
 

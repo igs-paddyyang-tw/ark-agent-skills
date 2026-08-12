@@ -6,6 +6,10 @@ description: |
   使用此 Skill 當使用者提及 LLM 摘要、AI 分析、智能問答、意圖解析、
   或任何需要 LLM 文字處理能力的場景。
 metadata:
+  category: pipeline
+  outputs:
+    - format: md
+      audience: ai
   author: paddyyang
 ---
 
