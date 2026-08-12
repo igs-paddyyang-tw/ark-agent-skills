@@ -9,8 +9,12 @@ description: |
   快速建 Agent Bot、或任何需要從零建構 Telegram AI Agent Bot 的場景。
 metadata:
   author: paddyyang
+  category: scaffolder
+  outputs:
+    - { format: project, audience: human }
+  depends_on: []
   version: "2.0"
-  updated: 2026-06-22
+  updated: 2026-08-12
 ---
 
 # ark-agent-builder
