@@ -28,12 +28,16 @@
 
 ## Deprecated skill
 
-目錄下只有 `README.md`、沒有 `SKILL.md` 的資料夾視為 deprecated stub，
-**不列入目錄也不計入總數**，但會在頁尾另立一節說明去向 —— 直接消失會讓
-還在用舊 skill 的人找不到遷移路徑。
+**兩種形態都算 deprecated**，都不列入目錄也不計入總數，但會在頁尾另立一節
+說明去向 —— 直接消失會讓還在用舊 skill 的人找不到遷移路徑。詳見 `scan()`。
+
+判定結果與 `ark-skills-align/scripts/audit_skills.py` 對帳：兩者的
+active / deprecated 數字必須一致，不一致代表其中一方的判定漏了形態。
 """
 # ── Change Log ────────────────────────────────────────────
 # 2026-08-12 | admin-agent | init: 修 README 與目錄脫節（三個數字對不上）
+# 2026-08-12 | admin-agent | fix: deprecated 判定補上 frontmatter status
+#              （原本只認「沒有 SKILL.md」，5 個標記型被誤列為 active）
 # ──────────────────────────────────────────────────────────
 from __future__ import annotations
 
@@ -62,8 +66,12 @@ SECTIONS = [
 
 _FM = re.compile(r"^---\s*\n(.*?)\n---", re.S)
 _CATEGORY = re.compile(r"^\s{2,}category:\s*([A-Za-z0-9_-]+)", re.M)
+_STATUS = re.compile(r"^\s{2,}status:\s*([A-Za-z0-9_-]+)", re.M)
 _DESC = re.compile(r"^description:\s*(\|[-+]?)?\s*(.*?)(?=^\w|\Z)", re.M | re.S)
 _MIGRATED = re.compile(r"\*\*Migrated to\*\*:\s*(.+)")
+#: SKILL.md 內的 deprecation 說明。格式如
+#: `description: "⚠️ DEPRECATED — 已合併至 ark-agent-builder。"`
+_DEPRECATED_NOTE = re.compile(r"DEPRECATED\s*[—\-–]\s*(.+?)(?:\n|$)")
 
 MARK_START = "<!-- BEGIN GENERATED CATALOGUE -->"
 MARK_END = "<!-- END GENERATED CATALOGUE -->"
@@ -82,16 +90,30 @@ def _first_line(desc: str, limit: int = 100) -> str:
 def scan() -> tuple[dict[str, list[tuple[str, str]]], list[tuple[str, str]]]:
     """掃描所有 skill 目錄。
 
+    ## deprecated 有兩種形態，兩種都要認
+
+    初版只認第一種，於是 5 個第二種的 skill 被當成 active 列進分類表 ——
+    正是這支腳本原本要修的那類錯誤（2026-08-12 發現）：
+
+    | 形態 | 判定 | 例 |
+    |------|------|---|
+    | 目錄只剩 `README.md` | 沒有 `SKILL.md` | `ark-report-template` |
+    | **保留 `SKILL.md`，frontmatter 標記** | `status: deprecated` 或 `category: deprecated` | `ark-llm-cli` |
+
+    第二種保留 SKILL.md 是為了讓觸發詞仍能導向遷移說明 —— 使用者說出舊 skill
+    的關鍵字時，agent 會讀到「已合併至 X」而不是完全沒反應。
+
     Returns:
-        (依分類分組的 active skill, deprecated stub 清單)
+        (依分類分組的 active skill, deprecated 清單 `[(名稱, 去向)]`)
     """
     active: dict[str, list[tuple[str, str]]] = {}
     deprecated: list[tuple[str, str]] = []
 
     for d in sorted(p for p in ROOT.iterdir() if p.is_dir() and p.name.startswith("ark-")):
         skill_md = d / "SKILL.md"
+
+        # 形態一：目錄只剩 README stub
         if not skill_md.exists():
-            # 只有 README 的資料夾＝deprecated stub
             readme = d / "README.md"
             去向 = ""
             if readme.exists():
@@ -105,6 +127,16 @@ def scan() -> tuple[dict[str, list[tuple[str, str]]], list[tuple[str, str]]]:
         block = fm.group(1) if fm else ""
         cat_m = _CATEGORY.search(block)
         cat = cat_m.group(1) if cat_m else "__uncategorised__"
+        status_m = _STATUS.search(block)
+        status = (status_m.group(1) if status_m else "active").lower()
+
+        # 形態二：SKILL.md 還在，但 frontmatter 標記已廢
+        if status == "deprecated" or cat == "deprecated":
+            note = _DEPRECATED_NOTE.search(text)
+            去向 = note.group(1).strip().rstrip('"。') if note else ""
+            deprecated.append((d.name, 去向))
+            continue
+
         desc_m = _DESC.search(block)
         desc = _first_line(desc_m.group(2)) if desc_m else "（無描述）"
         active.setdefault(cat, []).append((d.name, desc))
@@ -141,8 +173,9 @@ def render(active: dict, deprecated: list) -> str:
         L += [""]
 
     if deprecated:
-        L += ["## 🗑️ 已移除（保留 stub 供遷移）", "",
-              "> 目錄下只剩 `README.md` 的資料夾。**不計入上方總數。**", "",
+        L += ["## 🗑️ 已移除（保留供遷移）", "",
+              "> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 "
+              "`status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**", "",
               "| Skill | 遷移到 |", "|-------|--------|"]
         L += [f"| `{n}` | {去向 or '—'} |" for n, 去向 in sorted(deprecated)]
         L += [""]
