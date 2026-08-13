@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{LABEL}} · {{DATE}}</title>
+<!--
+  ============================================================================
+  日報版式：報頭 + 欄目 + 卡片牆
+  ============================================================================
+
+  為什麼是卡片而不是長列表：日報常態是 8~24 則。長列表要一路捲到底才知道
+  今天有什麼，而讀者（主管與企劃）多半先掃一遍再挑著讀。卡片讓每則有明確
+  邊界，格線讓一個螢幕能容納多則。
+
+  ⚠️ 零外部請求是硬性條件，不是樣式偏好 —— 這份 HTML 走 TG 檔案附件，
+     讀者常在手機上離線開啟。不得加入 CDN、@import 網路字體、遠端圖片或
+     任何 <script src>。規範見 ../ark-html-report/references/offline-mode.md
+
+  佔位符（渲染時全部替換）：
+    {{LABEL}}      刊名，如「競品日報」
+    {{DATE}}       2026-08-13
+    {{WEEKDAY}}    週四
+    {{ISSUE_ID}}   market/2026-08-13
+    {{HEADLINE}}   今日頭條（一句話，有資訊量，不是「今日日報」）
+    {{SPINE}}      書脊色 hex，依刊別區分（科技 #0E7C7B／競品 #C0392B／專案 #1F3A5F）
+    {{N_COLLECTED}} {{N_SELECTED}} {{N_PUBLISHED}} {{N_SECTIONS}}
+    {{SECTIONS}}   欄目與卡片（結構見檔案末端的註解範例）
+    {{ACTIONS}}    今日行動彙總 <section>，無行動時整段留空
+
+  所有由 LLM 或外部來源產生的文字，插入前必須逸出 & < >。
+  一個沒逸出的 `<` 會吃掉後面整段內容。
+  ============================================================================
+-->
+<style>
+:root {
+  --paper: #FAF8F5; --card: #FFFFFF; --ink: #1C2430; --ink-soft: #5A6472;
+  --rule: #E3DED6; --spine: {{SPINE}};
+  --tint: color-mix(in srgb, var(--spine) 7%, var(--card));
+  --shadow: 0 1px 2px rgba(28,36,48,.06), 0 6px 16px rgba(28,36,48,.05);
+  /* 系統字體 stack —— 字體名稱本身不需要網路 */
+  --font-head: "Noto Serif TC", "Songti TC", "PMingLiU", Georgia, serif;
+  --font-body: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+  --font-data: "JetBrains Mono", "Consolas", monospace;
+  --radius: 12px; --maxw: 1120px;
+}
+/* 深色配色只定義一次，由兩個入口共用：系統偏好、根元素蓋章。
+   前者用 :not([data-theme="light"]) 收斂，讓明確選淺色的人不被系統深色蓋過。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12161C; --card: #1A1F27; --ink: #E8E6E1; --ink-soft: #99A2AE;
+    --rule: #2A313B;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.28);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12161C; --card: #1A1F27; --ink: #E8E6E1; --ink-soft: #99A2AE;
+  --rule: #2A313B;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.28);
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--paper); color:var(--ink);
+       font-family:var(--font-body); line-height:1.7;
+       -webkit-text-size-adjust:100%; }
+.wrap { max-width:var(--maxw); margin:0 auto; padding:28px 20px 72px; }
+
+/* ── 報頭 ── */
+.masthead { border-bottom:3px double var(--rule); padding-bottom:18px; }
+.masthead .kicker { display:flex; flex-wrap:wrap; gap:10px; align-items:baseline;
+  font-size:12px; letter-spacing:.18em; color:var(--ink-soft); }
+.masthead .kicker .dot { color:var(--spine); }
+.masthead .brand { font-family:var(--font-head); font-size:34px; font-weight:700;
+  color:var(--spine); letter-spacing:.06em; margin:6px 0 2px; }
+.masthead .headline { font-family:var(--font-head); font-size:22px; font-weight:700;
+  line-height:1.45; margin:10px 0 12px; text-wrap:balance; }
+.masthead .stats { display:flex; flex-wrap:wrap; gap:14px;
+  font-family:var(--font-data); font-size:12px; color:var(--ink-soft);
+  border-top:1px solid var(--rule); padding-top:10px; }
+.masthead .stats b { color:var(--ink); font-weight:600; }
+
+/* ── 欄目 ── */
+.section { margin-top:34px; }
+.section-title { display:flex; align-items:center; gap:12px;
+  font-family:var(--font-head); font-size:15px; font-weight:700; letter-spacing:.12em;
+  margin-bottom:14px; }
+.section-title::before { content:""; width:14px; height:14px; flex:none;
+  background:var(--spine); border-radius:3px; }
+.section-title::after { content:""; flex:1; height:1px; background:var(--rule); }
+.section-title .count { font-family:var(--font-data); font-size:12px;
+  font-weight:400; color:var(--ink-soft); letter-spacing:0; }
+
+/* ── 卡片 ── */
+.cards { display:grid; gap:16px;
+  grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); }
+.card { background:var(--card); border:1px solid var(--rule);
+  border-top:3px solid var(--spine); border-radius:var(--radius);
+  padding:16px 18px 18px; box-shadow:var(--shadow);
+  display:flex; flex-direction:column; }
+.card.urgent { border-top-color:#D64545; }
+.card .meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+  margin-bottom:8px; }
+.chip { font-family:var(--font-data); font-size:11px; line-height:1.9;
+  padding:0 8px; border-radius:999px; border:1px solid var(--rule);
+  color:var(--ink-soft); white-space:nowrap; }
+.chip.kind { background:var(--tint); border-color:transparent; color:var(--spine); }
+.chip.now { background:#D64545; border-color:transparent; color:#fff; }
+.chip.week { background:color-mix(in srgb, #E0A21A 22%, var(--card));
+  border-color:transparent; }
+.chip.degraded { border-style:dashed; }
+.card h3 { font-family:var(--font-head); margin:0 0 8px; font-size:17px;
+  line-height:1.45; }
+.card h3 a { color:var(--ink); text-decoration:none;
+  border-bottom:2px solid color-mix(in srgb, var(--spine) 35%, transparent); }
+.card h3 a:hover { border-bottom-color:var(--spine); }
+.card .summary { margin:0 0 10px; font-size:14.5px; }
+.card .insight { margin:0 0 10px; padding:10px 12px; font-size:14px;
+  background:var(--tint); border-radius:8px; }
+.card .insight::before { content:"💡 "; }
+.card .metric { display:flex; align-items:baseline; gap:10px;
+  font-family:var(--font-data); margin:0 0 10px; }
+.card .metric .value { font-size:24px; font-weight:700;
+  font-variant-numeric: tabular-nums; }
+.card .metric .wow.up { color:#1F8A4C; }
+.card .metric .wow.down { color:#D64545; }
+.card .metric .anomaly { font-size:12px; color:#D64545; }
+.card .procon { display:grid; gap:8px; margin:0 0 10px; font-size:13.5px; }
+.card .procon > div { padding:8px 10px; border-radius:8px;
+  background:color-mix(in srgb, var(--ink) 4%, var(--card)); }
+.card .foot { margin-top:auto; padding-top:10px; border-top:1px dashed var(--rule); }
+.card .action { font-weight:700; font-size:14px; margin-bottom:8px; }
+.card .action::before { content:"▶ "; color:var(--spine); }
+.card .tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+  font-size:12px; color:var(--ink-soft); }
+.card .relevance { font-size:12.5px; color:var(--ink-soft); }
+
+/* ── 行動彙總 ── */
+.actions { margin-top:40px; border-top:3px double var(--rule); padding-top:18px; }
+.actions h2 { font-family:var(--font-head); font-size:17px; margin:0 0 10px; }
+.actions ol { margin:0; padding-left:22px; }
+.actions li { margin-bottom:6px; }
+.footer { margin-top:44px; font-family:var(--font-data); font-size:11.5px;
+  color:var(--ink-soft); border-top:1px solid var(--rule); padding-top:12px; }
+
+:focus-visible { outline:2px solid var(--spine); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+@media print {
+  body { background:#fff; }
+  .card { box-shadow:none; break-inside:avoid; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="kicker">
+      <span>ARK DIGEST</span><span class="dot">◆</span>
+      <span>{{DATE}}（{{WEEKDAY}}）</span><span class="dot">◆</span>
+      <span>{{ISSUE_ID}}</span>
+    </div>
+    <div class="brand">{{LABEL}}</div>
+    <div class="headline">{{HEADLINE}}</div>
+    <div class="stats">
+      <span>收集 <b>{{N_COLLECTED}}</b> 則</span>
+      <span>入選 <b>{{N_SELECTED}}</b> 則</span>
+      <span>刊出 <b>{{N_PUBLISHED}}</b> 則</span>
+      <span>欄目 <b>{{N_SECTIONS}}</b> 個</span>
+    </div>
+  </header>
+
+  {{SECTIONS}}
+
+  {{ACTIONS}}
+
+  <footer class="footer">產出：Ark Digest · {{ISSUE_ID}} · 本檔自包含，無外部請求</footer>
+</div>
+
+<!--
+============================================================================
+ 結構範例 —— {{SECTIONS}} 與 {{ACTIONS}} 應產出的形狀
+============================================================================
+
+一個欄目：
+
+<section class="section">
+  <h2 class="section-title">競品動態<span class="count">3 則</span></h2>
+  <div class="cards">
+    …卡片…
+  </div>
+</section>
+
+⚠️ 一則卡片都沒有的欄目**整段不要輸出**。留一個空標題會讓讀者以為內容漏了。
+
+── 事實類卡片（最常見）──────────────────────────────────────────────────
+
+<article class="card">
+  <div class="meta">
+    <span class="chip kind">事實</span>
+    <span class="chip week">本週</span>
+  </div>
+  <h3><a href="https://example.com/news">指尖捕魚v8.5加入功夫IP角色與幻靈系統</a></h3>
+  <p class="summary">CN 榜 #6 指尖捕魚於 2026-08-07 推出 v8.5，新增功夫電影衍生角色作為特殊魚種與幻靈。</p>
+  <p class="insight">競品以外部 IP 包裝特殊魚種，是把美術資產轉成留存節點的做法；我方若僅以倍率調整應對，題材新鮮感會逐漸落後。</p>
+  <div class="foot">
+    <div class="action">建議產品組兩週內產出幻靈系統的拆解一頁報告</div>
+    <div class="relevance">→ 支柱2：魚機產品線</div>
+    <div class="tags"><span class="chip">競品-T1</span><span class="chip">玩法-留存</span></div>
+  </div>
+</article>
+
+── 指標類卡片（metric）──────────────────────────────────────────────────
+
+放在 <h3> 之後、<p class="summary"> 之前：
+
+  <div class="metric">
+    <span class="value">1,234.50</span>
+    <span class="wow up">▲ 3.2%</span>        ← 下降用 <span class="wow down">▼ 2.0%</span>
+    <span class="anomaly">⚠ 異常</span>        ← 僅異常時輸出
+  </div>
+
+沒有週變化就整個 <span class="wow"> 不要輸出 —— 榜單名次與首日單日指標
+本質上沒有 WoW，硬填 0% 會被讀成「持平」。
+
+── 決策類卡片（decision）────────────────────────────────────────────────
+
+在 insight 之後加正反兩面（只有 decision 類才有）：
+
+  <div class="procon">
+    <div>✅ 投入 IP 聯名：題材新鮮感是捕魚品類留存的主要驅動，對手已驗證有效。</div>
+    <div>⚠️ 維持自有題材：授權成本與檔期綁定會壓縮排程彈性，效益週期短。</div>
+  </div>
+
+反方要能被反駁。「跟進有風險」這種罐頭句等於沒說。
+
+── 其他變體 ────────────────────────────────────────────────────────────
+
+立即處理：<article class="card urgent"> + <span class="chip now">立即</span>
+降級項目：<span class="chip degraded">降級</span>
+          （insight 是模板補的、不是模型判斷的，讀者要分得出來）
+無連結時：<h3>純標題</h3>，不要做成 href="#" 或 href="bq://…" 的假連結
+
+chip 規則：
+  kind 用中文（決策／事實／指標），不要用 schema 詞彙
+  urgency 只標「立即」「本週」；「參考」不標 —— 每張卡都掛一個灰標籤等於沒有標籤
+
+── 行動彙總 {{ACTIONS}} ────────────────────────────────────────────────
+
+<section class="actions">
+  <h2>今日行動彙總</h2>
+  <ol><li>第一項行動</li><li>第二項行動</li></ol>
+</section>
+
+沒有任何行動時整段留空，不要輸出只有標題的空區塊。
+============================================================================
+-->
+</body>
+</html>

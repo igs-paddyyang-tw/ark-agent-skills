@@ -1,203 +1,189 @@
 ---
 name: ark-news-daily
 description: |
-  產出科技日報 HTML 卡片，將新聞素材結構化後套用模板。
-  支援手動輸入或串接爬蟲結果，產出可直接瀏覽器開啟的精美日報頁面。
-  使用此 Skill 當使用者提及科技日報、tech daily、產出日報、
-  新聞日報 HTML、每日新聞、news daily、日報模板、
-  或任何需要將新聞轉化為視覺化 HTML 卡片的場景。
+  產出科技日報：MD-first 雙軌流程。先產出結構化 Markdown（Content 軌，給 AI/知識庫），
+  再渲染 HTML 卡片（View 軌，給人看/發 TG）。
+  支援手動輸入或串接資料來源結果，含 news_md_writer 步驟自動寫入 knowledge/raw/。
+  使用此 Skill 當使用者提及科技日報、tech daily、產出日報、新聞日報、
+  或任何需要將新聞轉化為 MD + HTML 雙軌產出的場景。
 metadata:
-  category: pipeline
-  outputs:
-    - format: md
-      audience: ai
-  depends_on: [ark-html-report]
   author: paddyyang
-  version: "1.0"
-  updated: 2026-05-26
+  schema_version: 1
+  category: document
+  version: "2.0"
+  updated: 2026-08-12
+  outputs:
+    - { format: md, audience: ai }
+    - { format: html, audience: human }
+  render: html
+  status: active
+  depends_on: [ark-md-report, ark-html-report]
 ---
 
 # ark-news-daily
 
-將新聞素材結構化 → 套用 HTML 模板 → 產出科技日報卡片頁面。
+科技日報 — MD-first 雙軌產出。
+
+## 核心流程
+
+```
+爬蟲 → 解析 → 結構化 → 【save_md】→ 【render_html】→ 發 TG
+                            ↓                ↓
+                  knowledge/raw/         output/*.html
+                  (AI 看/wiki ingest)    (人看/瀏覽器)
+```
+
+**原則：MD 是 source of truth，HTML 只是渲染視圖。**
 
 ## 觸發條件
 
-- 「科技日報」、「tech daily」、「產出日報」
-- 「新聞日報 HTML」、「每日新聞」、「news daily」
-- 「日報模板」、「產出日報 HTML」
+- 「科技日報」「tech daily」「產出日報」
+- 「新聞日報」「每日新聞」「news daily」
+- 「日報模板」「產出日報 HTML」
+- 「今日科技新聞」
 
 ---
 
-## 輸入參數
+## 步驟一：結構化新聞
 
-| 參數 | 型別 | 必要 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| `news_items` | `list[dict]` | ✅ | — | 結構化新聞清單 |
-| `date` | `str` | ❌ | 今日日期 | 日報日期（格式：2026.05.26） |
-| `output_path` | `str` | ❌ | `output/tech-daily-{date}.html` | 輸出路徑 |
-
-### news_items 格式
+將原始新聞轉為結構化 JSON：
 
 ```json
-[
-  {
-    "topic": "AI 焦點",
-    "title": "Gemini Omni 登場",
-    "img_src": "imgs/cover.jpg",
-    "source": "Google 官方部落格",
-    "news_date": "2026-05-20",
-    "what": "事件摘要，<span class=\"hl\">關鍵詞</span>標紅",
-    "why": "影響分析",
-    "summary": "一句話總結",
-    "tags": [
-      {"icon": "🎬", "text": "影片製作門檻大降"},
-      {"icon": "💬", "text": "自然語言取代剪輯"},
-      {"icon": "✨", "text": "電影級效果普及化"}
-    ]
-  }
-]
-```
-
----
-
-## 產出指引
-
-### 步驟 1：結構化新聞
-
-若使用者提供原始新聞文字，用以下 prompt 結構化：
-
-```
-你是科技日報編輯。請將以下新聞轉化為 JSON 格式：
-
-{原始新聞}
-
-產出格式：
-{
-  "topic": "焦點分類（如 AI 焦點、開發工具）",
+[{
+  "topic": "AI 焦點",
   "title": "10 字內標題",
   "source": "來源",
   "news_date": "YYYY-MM-DD",
   "what": "100 字內摘要，關鍵詞用 <span class=\"hl\">包裹</span>",
-  "why": "80 字內影響分析，關鍵詞標紅",
+  "why": "80 字內影響分析",
   "summary": "15 字內一句話總結",
-  "tags": [{"icon": "emoji", "text": "8 字內"}] (3 個)
-}
+  "urgency": "一般|關注|立即",
+  "action": "具體行動建議（null 則不顯示）",
+  "tags": [{"icon": "emoji", "text": "8 字內"}]
+}]
 ```
 
-### 步驟 2：套用 HTML 模板
+## 步驟二：save_md（Content 軌）
 
-使用以下卡片結構，每則新聞一張卡片：
+將結構化結果寫入 `knowledge/raw/news-daily-{date}.md`。
 
-```html
-<div class="card">
-  <div class="header">
-    <div class="header-title">{date} 科技日報</div>
-  </div>
-  <div class="subtitle-bar">{topic} ｜ <span>{title}</span></div>
-  <div class="main">
-    <div class="left-panel">
-      <img class="cover-img" src="{img_src}" alt="{title}">
-      <div class="source-info">...</div>
-    </div>
-    <div class="right-panel">
-      <div class="info-box">📋 發生了什麼：{what}</div>
-      <div class="info-box">⭐ 為什麼重要：{why}</div>
-      <div class="quote-bar">一句話總結：{summary}</div>
-    </div>
-  </div>
-  <div class="inspiration-bar">💡 對團隊的啟發：{tags}</div>
-  <div class="footer">{page} / {total} | IGS</div>
-</div>
+### MD 格式規範
+
+```markdown
+---
+title: 科技日報 2026-08-12
+type: news-daily
+date: 2026-08-12
+count: 5
+status: raw
+---
+
+# 📡 科技日報 — 2026-08-12
+
+> 5 則新聞
+
+## 1. 標題
+
+**分類**：AI 焦點
+**來源**：Google Blog
+**緊急度**：立即
+
+### 📋 發生了什麼
+事件摘要...
+
+### ⭐ 為什麼重要
+影響分析...
+
+### 💡 一句話總結
+...
+
+### 🎯 行動建議
+...
+
+**標籤**：`🤖 AI 模型` `💡 突破`
+
+---
 ```
 
-### 步驟 3：產出完整 HTML
+此 MD 可被：
+- wiki-engine ingest 為知識頁面 source
+- 其他 agent 直接讀取分析
+- ark-md-report 的日報 CollectorRunner 消費
 
-組合 CSS 樣式 + 多張卡片 → 存為 `tech-daily-{date}.html`。
+## 步驟三：render_html（View 軌）
 
-設計規格：
-- 卡片寬度：860px
-- 配色：淺藍白色系（#dde8ff / #f0f4ff / #fff）
-- 字型：Noto Sans TC 900（標題）/ 700（內文）
-- 標紅色：#e03030
-- 每份日報 3-5 則新聞
+**用 `assets/news-daily.html` 樣板**，替換佔位符即可，不要每次重寫 CSS。
+樣板本身帶完整結構範例（事實／指標／決策三種卡片變體、chip 規則、空欄目處理）。
+
+版式是「報頭 + 欄目 + 卡片牆」：日報常態 8~24 則，長列表要一路捲到底才知道
+今天有什麼，而讀者多半先掃一遍再挑著讀。
+
+| 項目 | 規格 |
+|------|------|
+| 佈局 | `grid auto-fill minmax(320px, 1fr)` —— 桌面多欄、手機自動單欄 |
+| 主題 | 三態（系統偏好 + `data-theme` 蓋章），深色 token 只定義一份 |
+| 字體 | 系統 stack，**不載入網路字體** |
+| 外部資源 | **零** |
+
+> ⚠️ **零外部請求是硬性條件**：這份 HTML 走 TG 檔案附件，讀者常在手機上離線開啟。
+> 不得加入 CDN、`@import` 網路字體、遠端圖片或任何 `<script src>`。
+> 完整規範與交付前檢查指令見 `../ark-html-report/references/offline-mode.md`。
+
+所有由 LLM 或外部來源產生的文字，插入前必須逸出 `&` `<` `>` —— 一個沒逸出的 `<`
+會吃掉後面整段內容。
+
+## 步驟四：發送 Telegram
+
+1. **先發文字摘要**（立即處理 + 精選 N 則）
+2. **再發 HTML 附件**（完整日報）
+
+文字摘要格式：
+```
+📡 科技日報 {date}
+
+⚡ 立即處理
+• {urgent_title} → {action}
+
+今日精選 N 則，完整分析見附件 👇
+```
 
 ---
 
-## 模板位置
-
-若專案中有 `template-tech-daily.html`，直接使用該模板。
-否則依上述規格產出完整 HTML（含內嵌 CSS）。
-
----
-
-## 風格 Token
-
-本 skill 的 HTML 輸出使用 ark-html-report 的共享 token 系統。
-詳見：ark-html-report/references/styles.md
-支援 5 種風格：boardroom / terminal / midnight / editorial / paperprint
-
----
-
-## Workflow 串接
+## Workflow 定義
 
 ```yaml
-- id: scrape
-  type: skill
-  skill: web_scraper
-  params:
-    url: "https://technews.tw"
-    selector: "article h2 a"
-  output: raw_news
-
-- id: structure
-  type: skill
-  skill: llm_cli
-  params:
-    prompt: "將以下新聞結構化為科技日報 JSON：{{ outputs.raw_news }}"
-    mode: "chat"
-    backend: "gemini"
-  output: structured
-
-- id: daily
-  type: skill
-  skill: news_daily
-  params:
-    news_items: "{{ outputs.structured }}"
-  output: html_report
+steps:
+  - id: scrape
+    skill: news_scraper
+  - id: parse
+    skill: news_parser
+  - id: structure
+    skill: news_structurer
+  - id: save_md          # ← MD-first
+    skill: news_md_writer
+    params:
+      articles: "{{ outputs.structured.articles }}"
+      output_dir: "knowledge/raw"
+  - id: render           # ← View 軌
+    skill: news_renderer
+    params:
+      articles: "{{ outputs.structured.articles }}"
+  - id: send_message
+    skill: news_telegram_sender
+  - id: send_file
+    skill: telegram_send_file
+    params:
+      file_path: "{{ outputs.render.path }}"
 ```
 
 ---
 
-## Workshop 引導（ai-bot-workshop）
+## 與其他 Skill 的關係
 
-本 Skill 對應 Workshop Step 6：產出科技日報 HTML。
-
-### 前一步
-
-確認已完成 Step 4（`ark-llm-cli`），Gemini CLI 可用。
-
-### 快速測試（不需 LLM）
-
-使用 `structured-example.json` 的 mock 資料直接產出 HTML：
-
-```
-用 structured-example.json 的資料產出科技日報 HTML
-```
-
-### 完整流程
-
-```
-幫我產出今天的科技日報，新聞素材如下：
-（貼上新聞內容）
-```
-
-### 預期產出
-
-- `output/tech-daily-2026-05-26.html` — 瀏覽器開啟即可看到精美卡片
-
-### 卡關時
-
-- 沒有圖片 → `img_src` 留空或用 placeholder
-- HTML 排版跑掉 → 確認 `<span class="hl">` 標籤有正確關閉
-- 想改樣式 → 修改 `<style>` 區塊的 CSS 變數
+| Skill | 角色 |
+|-------|------|
+| ark-web-scraper | 提供爬蟲能力（上游） |
+| ark-md-report | 定義 MD frontmatter 契約 |
+| ark-html-report | 定義 HTML 渲染風格（midnight） |
+| ark-wiki-engine | 消費 MD 產出，ingest 為知識 |
+| ark-telegram-sender | 發送 TG 文字摘要 |

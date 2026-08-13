@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><!-- 報告標題 --></title>
+<style>
+/* ============================================================
+   OFFLINE 骨架 — 零外部請求（無 @import、無 CDN、無遠端圖片）
+   用途：TG／Slack／Email 附件、內網交付、長期歸檔
+   規範見 references/offline-mode.md
+   ============================================================ */
+
+/* ---- 1. 風格 token ----------------------------------------
+   從 references/styles.md 貼入所選風格的 :root，但**不要貼 @import**，
+   並把三個字體變數換成下面的系統 stack。
+   ----------------------------------------------------------- */
+:root {
+  /* 以下為 terminal 風格的示例值，換風格時整段替換 */
+  --bg:#fafbfc; --surface:#ffffff; --surface-2:#f1f4f7; --border:#e2e7ed;
+  --text:#16202b; --text-2:#4d5d6e; --text-3:#93a1b0;
+  --accent:#0b66c3; --accent-soft:rgba(11,102,195,.09);
+  --ok:#1a8754; --warn:#b45309; --danger:#d1242f; --info:#0b66c3;
+  --c1:#0b66c3; --c2:#1a8754; --c3:#7c3aed; --c4:#d97706; --c5:#0d9488; --c6:#64748b;
+  --radius:8px; --radius-sm:5px;
+  --shadow:0 1px 2px rgba(22,32,43,.05);
+  --maxw:920px;
+
+  /* 系統字體 stack —— 字體名稱本身不需要網路 */
+  --font-display:"Noto Serif TC","Songti TC","PMingLiU",Georgia,serif;
+  --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Hiragino Sans",sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Consolas,"Noto Sans TC",monospace;
+}
+
+/* ---- 2. 主題三態 -------------------------------------------
+   ① 系統深色且未明確選淺色 ② 根元素蓋 data-theme="dark"
+   兩者共用同一組 token。元件只讀 token，不在這裡寫元件樣式。
+   ----------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#12161c; --surface:#1a1f27; --surface-2:#212836; --border:#2a313b;
+    --text:#e8e6e1; --text-2:#a8b1bd; --text-3:#7c8593;
+    --accent-soft:rgba(11,102,195,.18);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.28);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#12161c; --surface:#1a1f27; --surface-2:#212836; --border:#2a313b;
+  --text:#e8e6e1; --text-2:#a8b1bd; --text-3:#7c8593;
+  --accent-soft:rgba(11,102,195,.18);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.28);
+}
+
+/* ---- 3. 基礎樣式 ------------------------------------------- */
+* { box-sizing: border-box; }
+body {
+  margin:0;
+  /* 必須明確設定：沒設會透出檢視器自己的底色 */
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.7;
+  -webkit-text-size-adjust: 100%;
+}
+.page { max-width: var(--maxw); margin: 0 auto; padding: 28px 20px 72px; }
+a { color: var(--accent); }
+/* 寬內容自己捲，頁面本體永不橫向捲動 */
+.scroll-x { overflow-x: auto; }
+table { width:100%; border-collapse: collapse; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+@media print {
+  body { background:#fff; }
+  .card, .chart { break-inside: avoid; box-shadow: none; }
+}
+
+/* ---- 4. 元件樣式 -------------------------------------------
+   從 references/components.md 只貼入用到的元件。
+   元件一律讀 token，不要寫死顏色。
+   ----------------------------------------------------------- */
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 封面標頭 -->
+
+  <!-- 摘要（寫給只看 30 秒的人：結論先行，3-5 個 bullet） -->
+
+  <!-- KPI 卡片列（如有數據） -->
+
+  <!-- 各章節 -->
+
+  <!-- 圖表：純 SVG，見 references/charts.md 的 SVG 模式。
+       ⚠️ 這份骨架不得出現 <script src="…">，圖表不用 Chart.js -->
+
+  <!-- 頁尾 -->
+
+</div>
+</body>
+</html>

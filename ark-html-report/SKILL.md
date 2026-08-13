@@ -2,6 +2,8 @@
 name: ark-html-report
 description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。只要使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時，就使用此 skill。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout 等），元件與風格可任意組合。
 metadata:
+  schema_version: 1
+  status: active
   category: view
   outputs:
     - format: html
@@ -58,15 +60,32 @@ metadata:
 - N-M-P-Q 報告使用 `nmpq` 元件（四段式：Needs → Methods → Plan → Quantitative）
 - 內容為主，裝飾為輔。每個元件都要承載真實內容，不要為了好看塞空卡片
 
+### 3.5 決定交付模式：標準或 offline
+
+**先確認報告要怎麼送到讀者手上**，這決定能不能用外部資源：
+
+| 交付通道 | 模式 | 骨架 |
+|----------|------|------|
+| 瀏覽器開啟、需要互動圖表 | 標準（允許 Chart.js + Google Fonts） | `assets/template.html` |
+| **TG／Slack／Email 附件** | **offline** | `assets/template-offline.html` |
+| 內網／封閉網路、長期歸檔、通道不明 | **offline** | 同上 |
+
+附件類一律 offline —— 讀者常在手機上點開，可能沒有網路。CDN 一掉，字體與圖表同時失效。
+規範與檢查清單見 `references/offline-mode.md`。
+
 ### 4. 圖表（如有數據）
 
-讀 `references/charts.md`。用 Chart.js CDN，顏色一律取自 token（`--c1`~`--c6`），這樣換風格圖表配色會跟著換。需要列印的報告優先考慮純 SVG 圖表（reference 內有模式）。
+讀 `references/charts.md`。標準模式用 Chart.js CDN，顏色一律取自 token（`--c1`~`--c6`），
+這樣換風格圖表配色會跟著換。**offline 模式與需要列印的報告一律走純 SVG**（reference 內有模式）。
 
 ### 5. 產出與 QA
 
-- 單一 `.html` 檔，所有 CSS 內嵌於 `<style>`，只允許 Chart.js 與 Google Fonts 兩個外部資源
-- 從 `assets/template.html` 骨架開始，貼入所選風格的 `:root` 區塊與基礎樣式
+- 單一 `.html` 檔，所有 CSS 內嵌於 `<style>`
+- 標準模式最多兩個外部資源（Chart.js、Google Fonts）；**offline 模式零外部資源**
+- 從對應骨架開始（`assets/template.html` 或 `assets/template-offline.html`），貼入所選風格的 `:root` 區塊與基礎樣式
+- offline 模式交付前跑一次 `references/offline-mode.md` 的檢查指令，並**實際斷網開啟確認**
 - 檢查：中文字體正常（Noto Sans TC 載入前的 fallback 是 Microsoft JhengHei / PingFang TC）、手機寬度不破版、`@media print` 生效、深色風格的文字對比足夠
+- 主題：`body` 一定要明確設 `background: var(--bg)`。沒設會透出檢視器自己的底色 —— 在深色檢視器裡看到淺色文字配深色底，整份糊掉。元件只讀 token，不要把顏色的唯一定義寫在 `@media` 或 `[data-theme]` 區塊裡
 - 產出到 `/mnt/user-data/outputs/` 並用 present_files 呈現
 
 ## 內容撰寫原則
