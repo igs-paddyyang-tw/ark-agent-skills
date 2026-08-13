@@ -65,22 +65,43 @@ metadata:
 
 ## 步驟二：save_md（Content 軌）
 
-將結構化結果寫入 `knowledge/raw/news-daily-{date}.md`。
+```bash
+python scripts/news_md_writer.py --json items.json --issue tech
+```
+
+落點 **`knowledge/raw/digest/<issue>/<date>.md`** —— 與排程管線
+（ninja `digest/raw_writer.py`）同一個目錄樹與 frontmatter 契約。
+舊版寫成 `raw/news-daily-{date}.md`，會讓同一種東西有兩個名字，
+wiki ingest 端遲早漏掉其中一種。
+
+腳本做三件手寫容易漏的事：
+
+| 事情 | 為什麼 |
+|------|--------|
+| **拒絕覆蓋既有檔**（要 `--force`） | 同一天排程管線可能已寫過。靜默覆蓋會讓當天的收集素材無聲消失，而 raw 是唯一保留「被 `max_items` 砍掉的條目」的地方 |
+| **寫入前跑 `wiki_guard scan`** | 素材來自外部網頁，正是提示注入／隱形字元要防的來源。檢查暫存檔而非目標檔 —— 寫進去才檢查等於已經污染目標目錄 |
+| **guard 不可用時標記 `guard: unavailable`** | 「沒檢查」與「檢查過了」在下游是兩件事，不能靜默當成通過 |
+
+必要欄位缺漏會擋下（`title` / `what` / `why`）。**缺 `why` 的新聞就只是轉述** ——
+日報的價值在影響分析，不在轉貼標題。
 
 ### MD 格式規範
 
 ```markdown
 ---
-title: 科技日報 2026-08-12
-type: news-daily
-date: 2026-08-12
-count: 5
-status: raw
+title: tech 日報原始素材 · 2026-08-13
+type: digest-raw
+issue_type: tech
+date: 2026-08-13
+collected: 5
+sources: [Anthropic Blog, GitHub]
+generated_at: 2026-08-13T11:22:52+08:00
+generated_by: ark-news-daily
+guard: pass
+tags: [digest, raw, tech]
 ---
 
-# 📡 科技日報 — 2026-08-12
-
-> 5 則新聞
+# tech 日報原始素材 · 2026-08-13
 
 ## 1. 標題
 
@@ -106,14 +127,22 @@ status: raw
 ```
 
 此 MD 可被：
-- wiki-engine ingest 為知識頁面 source
+- `ark-wiki-engine` ingest 為知識頁面 source（ingest 順序：guard → 萃取 → taxonomy → 落盤 → 索引重建）
 - 其他 agent 直接讀取分析
-- ark-md-report 的日報 CollectorRunner 消費
+- 排程管線的下游一併消費（形狀相同，靠 `generated_by` 區分來路）
 
 ## 步驟三：render_html（View 軌）
 
-**用 `assets/news-daily.html` 樣板**，替換佔位符即可，不要每次重寫 CSS。
-樣板本身帶完整結構範例（事實／指標／決策三種卡片變體、chip 規則、空欄目處理）。
+```bash
+python scripts/render_news_html.py --md knowledge/raw/digest/tech/2026-08-13.md
+```
+
+**MD 是 source of truth，HTML 從 MD 渲染**：MD 改了重新渲染就會反映。
+若兩軌各自從 JSON 生成，最後沒人知道哪個是對的。
+
+腳本套 `assets/news-daily.html` 樣板，不自己寫 CSS —— 兩份 CSS 必然漂移。
+它會剝掉樣板裡給維護者看的說明註解（約 3 KB），並在輸出前**檢查零外部請求**，
+違規直接報錯：破圖的附件比沒有附件更糟，讀者會以為是自己網路的問題。
 
 版式是「報頭 + 欄目 + 卡片牆」：日報常態 8~24 則，長列表要一路捲到底才知道
 今天有什麼，而讀者多半先掃一遍再挑著讀。
@@ -134,8 +163,17 @@ status: raw
 
 ## 步驟四：發送 Telegram
 
-1. **先發文字摘要**（立即處理 + 精選 N 則）
-2. **再發 HTML 附件**（完整日報）
+**兩段式**：先文字摘要，再 HTML 附件。
+
+```bash
+python ../ark-telegram-sender/scripts/tg_send.py text --topic daily_report \
+    --file-text summary.txt --escape never
+python ../ark-telegram-sender/scripts/tg_send.py file --topic daily_report \
+    --path data/output/2026-08-13/tech-2026-08-13.html --caption "📅 科技日報 2026-08-13"
+```
+
+不要把長內容硬切成多則文字訊息 —— 會洗版，讀者也拼不回來。
+摘要截斷 + 附件補完，並標明「其餘 N 則見附件」。
 
 文字摘要格式：
 ```
@@ -147,43 +185,52 @@ status: raw
 今日精選 N 則，完整分析見附件 👇
 ```
 
+失敗語意、逸出策略、常見 400 對照見 `../ark-telegram-sender/references/delivery-sop.md`。
+**摘要送不出去才算出刊失敗；附件失敗不算**（讀者已收到通知）。
+
 ---
 
-## Workflow 定義
+## 完整鏈路
 
-```yaml
-steps:
-  - id: scrape
-    skill: news_scraper
-  - id: parse
-    skill: news_parser
-  - id: structure
-    skill: news_structurer
-  - id: save_md          # ← MD-first
-    skill: news_md_writer
-    params:
-      articles: "{{ outputs.structured.articles }}"
-      output_dir: "knowledge/raw"
-  - id: render           # ← View 軌
-    skill: news_renderer
-    params:
-      articles: "{{ outputs.structured.articles }}"
-  - id: send_message
-    skill: news_telegram_sender
-  - id: send_file
-    skill: telegram_send_file
-    params:
-      file_path: "{{ outputs.render.path }}"
+```bash
+# ① 取材（新來源探勘用；常態來源請落成 collector，不要每天現爬）
+#    ark-web-scraper
+
+# ② 結構化 → raw MD（含 guard 前置）
+python scripts/news_md_writer.py --json items.json --issue tech
+
+# ③ 入庫
+#    ark-wiki-engine：ingest raw/digest/tech/<date>.md
+
+# ④ 渲染
+python scripts/render_news_html.py --md knowledge/raw/digest/tech/<date>.md
+
+# ⑤ 發送（兩段式）
+python ../ark-telegram-sender/scripts/tg_send.py text --topic daily_report --file-text summary.txt
+python ../ark-telegram-sender/scripts/tg_send.py file --topic daily_report --path <html>
 ```
+
+> **這條鏈是「臨機路徑」**：適合一次性、新主題、還在探索來源的日報。
+> 已經穩定每天出刊的刊別應該走程式管線（collector + 排程），
+> skill 在那裡的角色是提供樣板與契約，不是每天執行。
+> 兩條路徑的分工見 ninja `docs/plans/news-daily-skill-chain-plan.md`。
 
 ---
 
 ## 與其他 Skill 的關係
 
-| Skill | 角色 |
-|-------|------|
-| ark-web-scraper | 提供爬蟲能力（上游） |
-| ark-md-report | 定義 MD frontmatter 契約 |
-| ark-html-report | 定義 HTML 渲染風格（midnight） |
-| ark-wiki-engine | 消費 MD 產出，ingest 為知識 |
-| ark-telegram-sender | 發送 TG 文字摘要 |
+| Skill | 角色 | 何時用 |
+|-------|------|--------|
+| ark-web-scraper | 取材 | **只用於新來源探勘與一次性抓取**。常態來源請落成 collector —— 每天現爬會變成第二套來源定義，與程式管線漂移 |
+| ark-wiki-engine | 消費 MD 產出，ingest 為知識 | 每次 save_md 之後 |
+| ark-html-report | 定義 offline 交付規範（本 skill 的樣板即其實例） | 需要改樣板或做非日報型報告時 |
+| ark-telegram-sender | 兩段式送達（摘要 + 附件） | 步驟四 |
+| ark-md-report | 深度分析報告的文體與 frontmatter 契約 | **不在日報主鏈上** —— 它的五種 type（review／competitive／incident／decision／data）沒有 news 類，硬套會產生兩份互相矛盾的 frontmatter |
+
+## 腳本
+
+| 檔案 | 用途 |
+|------|------|
+| `scripts/news_md_writer.py` | 結構化 JSON → raw MD（guard 前置、拒絕覆蓋、必要欄位檢查） |
+| `scripts/render_news_html.py` | raw MD → HTML 卡片牆（套樣板、剝說明註解、零外部請求檢查） |
+| `assets/news-daily.html` | 版式樣板（報頭 + 欄目 + 卡片牆，含三種卡片變體的結構範例） |
