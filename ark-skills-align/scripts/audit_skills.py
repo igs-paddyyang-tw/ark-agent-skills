@@ -9,6 +9,7 @@
   5. 觸發詞衝突掃描（獨占詞出現在非 owner description → P1）
   6. deprecated stub 格式檢查（P2）
   7. README 分類表與 frontmatter category 一致性（P2）
+  8. empty-skill-dir：目錄存在但無有效內容或 SKILL.md < 5 行（P2）
 
 用法：
   python audit_skills.py --repo /path/to/ark-agent-skills [--config audit_config.yml] [--json out.json]
@@ -101,6 +102,23 @@ def audit(repo: Path, triggers: dict):
         })
 
     skills, stubs = load_skills(repo)
+
+    # 0. empty-skill-dir：目錄存在但無有效內容
+    for name, info in list(skills.items()):
+        sk = Path(info["path"])
+        if info["fm"] is None and sk.is_dir():
+            # 目錄存在但無 SKILL.md 也無 README.md
+            add("P2", "empty-skill-dir", name,
+                "目錄存在但無 SKILL.md 也無 README.md（空殼）")
+            del skills[name]
+        elif info["fm"] is not None:
+            # SKILL.md 存在但內容不足 5 行
+            sk_file = Path(info["path"])
+            if sk_file.is_file():
+                lines = sk_file.read_text(encoding="utf-8", errors="replace").splitlines()
+                if len(lines) < 5:
+                    add("P2", "empty-skill-dir", name,
+                        f"SKILL.md 僅 {len(lines)} 行（< 5），疑似空殼或未完成")
 
     # deprecated：SKILL.md 標 status: deprecated 者視同 stub，跳過 schema 檢查
     active = {}
