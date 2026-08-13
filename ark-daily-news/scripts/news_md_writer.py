@@ -126,14 +126,14 @@ def render_md(items: list[dict[str, Any]], *, issue: str, date: str, guard: str)
         f"collected: {len(items)}",
         f"sources: [{', '.join(來源)}]",
         f"generated_at: {now}",
-        "generated_by: ark-news-daily",   # 與排程管線的產出區分，兩者形狀相同但來路不同
+        "generated_by: ark-daily-news",   # 與排程管線的產出區分，兩者形狀相同但來路不同
         f"guard: {guard}",
         f"tags: [digest, raw, {issue}]",
         "---",
         "",
         f"# {issue} 日報原始素材 · {date}",
         "",
-        "> 由 `ark-news-daily`（kiro-cli 臨機路徑）產出。"
+        "> 由 `ark-daily-news`（kiro-cli 臨機路徑）產出。"
         f"蒸餾後的精華見 `knowledge/wiki/digest/{issue}/{date}.md`。",
         "",
         f"共 {len(items)} 則。",

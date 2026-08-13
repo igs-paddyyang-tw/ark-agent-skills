@@ -86,4 +86,4 @@ grep -c 'fonts.googleapis' report.html
 | 檔案 | 用途 |
 |------|------|
 | `assets/template-offline.html` | offline 骨架（已內含三態主題與系統字體 stack） |
-| `../ark-news-daily/assets/news-daily.html` | 日報卡片牆版式，本身就是 offline 的完整實例 |
+| `../ark-daily-news/assets/news-daily.html` | 日報卡片牆版式，本身就是 offline 的完整實例 |

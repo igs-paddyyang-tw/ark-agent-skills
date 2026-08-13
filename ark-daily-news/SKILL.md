@@ -1,5 +1,5 @@
 ---
-name: ark-news-daily
+name: ark-daily-news
 description: |
   產出科技日報：MD-first 雙軌流程。先產出結構化 Markdown（Content 軌，給 AI/知識庫），
   再渲染 HTML 卡片（View 軌，給人看/發 TG）。
@@ -20,7 +20,7 @@ metadata:
   depends_on: [ark-md-report, ark-html-report]
 ---
 
-# ark-news-daily
+# ark-daily-news
 
 科技日報 — MD-first 雙軌產出。
 
@@ -96,7 +96,7 @@ date: 2026-08-13
 collected: 5
 sources: [Anthropic Blog, GitHub]
 generated_at: 2026-08-13T11:22:52+08:00
-generated_by: ark-news-daily
+generated_by: ark-daily-news
 guard: pass
 tags: [digest, raw, tech]
 ---

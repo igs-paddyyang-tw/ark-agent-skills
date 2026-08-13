@@ -140,6 +140,6 @@ if r["status"] != "success":      # ← 失敗以回傳值表示，這行不能�
 
 | Skill | 關係 |
 |-------|------|
-| ark-news-daily | 日報的兩段式送達使用本 skill |
+| ark-daily-news | 日報的兩段式送達使用本 skill |
 | ark-html-report | 產出的 HTML 走本 skill 的檔案附件（附件常離線開啟，該端需零外部請求） |
 | ark-md-report | 報告 MD 轉 HTML 後同上 |
