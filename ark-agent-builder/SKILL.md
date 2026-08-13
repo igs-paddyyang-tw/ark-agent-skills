@@ -99,31 +99,44 @@ ConversationPlanner（六層意圖路由，零 LLM 消耗）
 {project_name}/
 ├── start.py                        # 入口（~20 行）
 ├── src/
-│   ├── bootstrap.py                # 啟動邏輯（四層順序）
-│   ├── gateway/                    # 入口層
-│   │   ├── telegram/handlers/      #   messages.py（六層路由 + 即時回饋）
-│   │   ├── api/                    #   FastAPI（agents/issues/costs/schedules）
-│   │   └── gemini_chat.py          #   Gemini API 快速路徑
-│   ├── coordinator/                # 協調層
-│   │   ├── db/                     #   SQLite + migrations
-│   │   ├── events/                 #   EventBus pub/sub
-│   │   ├── services/              #   cost_tracker + audit_logger
-│   │   └── a2a/                   #   Agent 協作（router/graph/memory）
-│   ├── runtime/                    # 執行層
-│   │   ├── process.py              #   AgentProcess（kiro/gemini/claude）
-│   │   ├── config.py              #   team.yaml 解析（含 backend）
-│   │   └── scheduler.py           #   APScheduler
-│   └── business/                   # 業務 Skills
-│       ├── news_scraper.py
-│       └── news_renderer.py
+│   ├── bootstrap.py                # 啟動邏輯
+│   ├── bot/                        # TG 入口層
+│   │   ├── handlers.py             #   訊息處理
+│   │   ├── multi_runner.py         #   多 Bot 並行
+│   │   ├── permissions.py          #   權限（白名單 + 角色）
+│   │   ├── health_monitor.py       #   健康監控 + 自動重啟
+│   │   └── formatter.py            #   HTML/MD 格式化 + 分段
+│   ├── conversation/               # 對話層
+│   │   ├── router.py               #   多層意圖路由（零 LLM）
+│   │   ├── session_manager.py      #   多用戶 session
+│   │   ├── user_profiler.py        #   用戶畫像
+│   │   └── telemetry.py            #   遙測（延遲/錯誤率）
+│   ├── agent/                      # 派工層
+│   │   ├── orchestrator.py         #   派工引擎（選 agent → 分配 → 追蹤）
+│   │   ├── pool.py                 #   Agent 池（啟動/停止/負載均衡）
+│   │   ├── lead_client.py          #   Lead→Worker 通訊
+│   │   ├── verifier.py             #   完成驗收
+│   │   ├── nudge.py                #   超時催促
+│   │   ├── task_store.py           #   任務持久化（SQLite）
+│   │   └── event_log.py            #   事件紀錄（JSONL）
+│   ├── gateway/                    # API 層
+│   │   └── api/                    #   FastAPI（health/chat/status）
+│   ├── skills/                     # 業務 Skills
+│   │   └── internal/               #   news / echo / cost_tracker ...
+│   ├── ingest/                     # 知識入庫管線
+│   │   ├── pipeline.py             #   fetch → parse → guard → store
+│   │   └── github_fetcher.py       #   GitHub 來源取得
+│   ├── distill/                    # 知識蒸餾
+│   │   └── distiller.py            #   raw → wiki synthesis
+│   └── workflow/                   # 排程引擎
+│       └── engine.py               #   YAML workflow 執行
 ├── agents/                         # Agent 工作空間（各有 .kiro/）
-├── skills/                         # 共用 Skills（git clone）
-├── team.yaml                       # 團隊配置（含 backend 欄位）
-├── scheduler.yaml                  # 排程定義
-├── data/                           # SQLite DBs
+├── knowledge/                      # 知識庫（raw/ + wiki/）
+├── config/                         # 配置（agents.yaml / telegram.json）
+├── workflows/                      # YAML 排程定義
+├── data/                           # SQLite + JSONL logs
 ├── .env.example
 └── requirements.txt
-```
 ```
 
 ---
@@ -132,12 +145,12 @@ ConversationPlanner（六層意圖路由，零 LLM 消耗）
 
 | Stage | 產出 | 一句話 |
 |-------|------|--------|
-| 1 | 四層目錄結構 | gateway + coordinator + runtime + business |
-| 2 | Runtime 層 | process.py 多後端（kiro/gemini/claude fallback） |
-| 3 | Gateway 六層路由 | Planner 零 LLM + Gemini API 快速路徑 |
-| 4 | Telegram Bot + 即時回饋 | 👀/typing/👍 + 12 slash commands |
-| 5 | Coordinator | EventBus + DB + A2A Router + Scheduler |
-| 6 | 業務 Skills | news_scraper + news_renderer + team.yaml |
+| 1 | 專案骨架 | bot/ + agent/ + conversation/ + gateway/ |
+| 2 | Agent 派工層 | orchestrator + pool + verifier + nudge + task_store |
+| 3 | Conversation 路由 | 多層 router（零 LLM）+ session_manager + telemetry |
+| 4 | TG Bot 運維 | multi_runner + permissions + health_monitor + formatter |
+| 5 | 知識管線（optional） | ingest/ + distill/ + wiki engine |
+| 6 | LLM 整合（optional） | llm/ providers + tool_registry（給非 kiro-cli 用戶） |
 
 ### Output 清洗（必做）
 

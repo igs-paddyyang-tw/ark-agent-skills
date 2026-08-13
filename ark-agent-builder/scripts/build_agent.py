@@ -43,6 +43,9 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
     dirs = [
         "src/agent",
         "src/bot",
+        "src/conversation",
+        "src/ingest",
+        "src/distill",
         "src/skills/internal/spec_executor",
         "src/wiki/search",
         "src/llm/providers",
@@ -50,10 +53,13 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         "src/memory",
         "src/tools",
         "src/server",
+        "src/gateway/api",
+        "src/workflow",
         "config",
         "templates",
         "knowledge/raw",
         "knowledge/wiki",
+        "workflows",
         "tests",
         "docs",
         "data",
@@ -147,11 +153,15 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
 
     # ── 3b. templates 目錄型複製（完整子目錄）──
     dir_template_map = {
+        "agent": "src/agent",
+        "conversation": "src/conversation",
+        "bot": "src/bot",
+        "ingest": "src/ingest",
+        "distill": "src/distill",
         "llm": "src/llm",
         "memory": "src/memory",
         "wiki": "src/wiki",
         "tools_mcp": "src/tools",
-        "bot": "src/bot",
         "spec_executor": "src/skills/internal/spec_executor",
     }
     for tpl_dir, dst_rel in dir_template_map.items():
@@ -168,11 +178,14 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
 
     # ── 4. __init__.py 補齊 ──
     init_dirs = [
-        "src", "src/agent", "src/bot", "src/skills",
-        "src/skills/internal", "src/skills/internal/spec_executor",
+        "src", "src/agent", "src/bot", "src/conversation",
+        "src/ingest", "src/distill", "src/workflow",
+        "src/skills", "src/skills/internal",
+        "src/skills/internal/spec_executor",
         "src/wiki", "src/wiki/search",
         "src/llm", "src/llm/providers", "src/llm/tools",
         "src/memory", "src/tools", "src/server",
+        "src/gateway", "src/gateway/api",
         "tests",
     ]
     for d in init_dirs:
