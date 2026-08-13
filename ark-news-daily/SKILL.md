@@ -10,8 +10,8 @@ metadata:
   author: paddyyang
   schema_version: 1
   category: document
-  version: "2.0"
-  updated: 2026-08-12
+  version: "2.1"
+  updated: 2026-08-13
   outputs:
     - { format: md, audience: ai }
     - { format: html, audience: human }
