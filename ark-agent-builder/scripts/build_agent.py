@@ -141,6 +141,8 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         "schedule_engine.py": "src/skills/internal/schedule_engine.py",
         # Server
         "server_main.py": "src/server/main.py",
+        # Logging
+        "logging_config.py": "src/logging_config.py",
         # Test
         "test_core.py": "tests/test_core.py",
     }
@@ -161,6 +163,7 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         "llm": "src/llm",
         "memory": "src/memory",
         "wiki": "src/wiki",
+        "workflow": "src/workflow",
         "tools_mcp": "src/tools",
         "spec_executor": "src/skills/internal/spec_executor",
     }
@@ -259,6 +262,8 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
 
 def validate(project_dir: Path) -> list[str]:
     """驗證專案結構完整性。回傳錯誤清單（空=通過）。"""
+    import py_compile
+
     errors: list[str] = []
     required = [
         # Agent 派工層（Stage 2）
@@ -296,6 +301,18 @@ def validate(project_dir: Path) -> list[str]:
     for f in required:
         if not (project_dir / f).exists():
             errors.append(f"❌ 缺少: {f}")
+
+    # ── 語法檢查：所有 .py 檔案 ──
+    for py_file in project_dir.rglob("*.py"):
+        # 排除 .venv / node_modules 等
+        rel = py_file.relative_to(project_dir)
+        if any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in rel.parts):
+            continue
+        try:
+            py_compile.compile(str(py_file), doraise=True)
+        except py_compile.PyCompileError as e:
+            errors.append(f"❌ 語法錯誤: {rel} — {e.msg}")
+
     return errors
 
 

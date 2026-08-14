@@ -1,4 +1,4 @@
-﻿"""LLM Provider 抽象層：統一介面，支援 Gemini / OpenAI / Anthropic。"""
+"""LLM Provider 抽象層：統一介面，支援 Gemini / OpenAI / Anthropic。"""
 from __future__ import annotations
 
 import os
