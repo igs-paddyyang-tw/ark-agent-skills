@@ -17,7 +17,7 @@ metadata:
   category: scaffolder
   outputs:
     - { format: code, audience: human }
-  depends_on: []
+  depends_on: [ark-kiro-init]
   version: "2.0"
   updated: 2026-08-12
 ---

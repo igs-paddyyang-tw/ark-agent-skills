@@ -261,41 +261,33 @@ def validate(project_dir: Path) -> list[str]:
     """驗證專案結構完整性。回傳錯誤清單（空=通過）。"""
     errors: list[str] = []
     required = [
-        # Agent 核心
-        "src/agent/cli.py",
-        "src/agent/session.py",
-        "src/agent/memory.py",
-        "src/agent/planner.py",
-        # Bot
-        "src/bot/main.py",
-        "src/bot/handlers.py",
-        "src/bot/progress.py",
+        # Agent 派工層（Stage 2）
+        "src/agent/__init__.py",
+        "src/agent/orchestrator.py",
+        "src/agent/pool.py",
+        "src/agent/verifier.py",
+        "src/agent/task_store.py",
+        "src/agent/lead_client.py",
+        "src/agent/event_log.py",
+        # Conversation 路由（Stage 3）
+        "src/conversation/__init__.py",
+        "src/conversation/router.py",
+        "src/conversation/session_manager.py",
+        # Bot 運維（Stage 4）
+        "src/bot/__init__.py",
+        "src/bot/multi_runner.py",
+        "src/bot/permissions.py",
+        "src/bot/health_monitor.py",
+        "src/bot/formatter.py",
         # Skills
         "src/skills/base.py",
         "src/skills/registry.py",
         "src/skills/internal/echo.py",
-        "src/skills/internal/spec_executor/executor.py",
-        # LLM（新增）
-        "src/llm/agent_loop.py",
-        "src/llm/provider.py",
-        "src/llm/providers/gemini.py",
-        "src/llm/tools/dispatch.py",
-        # Memory（新增）
-        "src/memory/daily_log.py",
-        "src/memory/recall.py",
-        "src/memory/consolidate.py",
-        # Wiki（新增）
-        "src/wiki/engine.py",
-        "src/wiki/indexer.py",
-        "src/wiki/search/layer0_exact.py",
-        # Tools（新增）
-        "src/tools/registry.py",
-        "src/tools/handlers.py",
-        # Server
-        "src/server/main.py",
+        # Knowledge（Stage 5, optional 但骨架必備）
+        "src/ingest/__init__.py",
+        "src/ingest/pipeline.py",
+        "src/distill/__init__.py",
         # Config
-        "config/news_sources.yaml",
-        "agents.yaml",
         "agents/admin-agent/.kiro/steering/SOUL.md",
         ".env.example",
         "requirements.txt",
@@ -326,6 +318,9 @@ if __name__ == "__main__":
         files = build_agent(out, name)
 
         print(f"\n✅ 產出完成（{len(files)} 項）→ {out}/")
+        kiro_init = Path(out.parent / ".kiro/skills/ark-kiro-init/scripts/build_kiro.py")
+        if not kiro_init.exists():
+            kiro_init = Path.home() / "kiro-cli/.kiro/skills/ark-kiro-init/scripts/build_kiro.py"
         print(f"\n📋 下一步：")
         print(f"  1. python .kiro/skills/ark-kiro-init/scripts/build_kiro.py --standalone {out}")
         print(f"     → 產出 .kiro/ 配置（SOUL + KIRO + MEMORY + mcp.json）")
