@@ -68,7 +68,7 @@
 | `ark-kpi-calculator` | 產出標準化 KPI 計算引擎模組 + MCP Tool，支援遊戲類指標（DAU/MAU/ARPU/RTP/留存率/LTV） 與通用指標（轉換率/流失率/NPS）。 |
 | `ark-llm-tools` | 產出 LLM 通用工具 Skills（summarize、analyze、qa、intent_parse）， 搭配 GeminiAdapter 或 LLMAdapter 進行文字摘要、資料分析、問答、… |
 | `ark-security-audit` | 產出 security_audit.py 安全性掃描 Skill，對專案進行程式碼安全性檢查與弱點偵測。 |
-| `ark-telegram-sender` | 通用 Telegram 訊息發送 Skill：文字訊息（HTML 格式）、檔案附件、圖片。 |
+| `ark-telegram-sender` | 通用 Telegram 發送 Skill：文字訊息（HTML 格式）、檔案附件、圖片。 |
 | `ark-test-runner` | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
 | `ark-translator` | 產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯， 支援繁體中文、簡體中文、英文、日文互譯。 |
 | `ark-web-scraper` | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
@@ -99,11 +99,11 @@
 
 | Skill | 定位 |
 |-------|------|
+| `ark-daily-news` | 產出科技日報：MD-first 雙軌流程。 |
 | `ark-docx-tool` | 當使用者想要建立、讀取、編輯或操作 Word 文件（.docx 檔案）時使用此技能。 |
 | `ark-game-design-doc` | > 根據遊戲構想或需求描述，產出完整的遊戲企劃文件（Game Design Document, GDD）。 |
 | `ark-internal-comms` | 協助撰寫各類內部溝通文件，使用公司慣用的格式。 |
 | `ark-md-report` | 產出「給 AI 看」的結構化分析報告 Markdown（Content 軌），與 ark-html-report（View 軌）成對。 |
-| `ark-daily-news` | 產出科技日報：MD-first 雙軌流程。 |
 | `ark-pdf-tool` | 處理 PDF 檔案的所有操作。 |
 | `ark-pptx-tool` | 任何涉及 .pptx 檔案的情境皆使用此技能——無論作為輸入、輸出或兩者皆是。 |
 | `ark-release-notes` | 當使用者需要從 git log 產出結構化 changelog 或版本說明時使用此技能。 |

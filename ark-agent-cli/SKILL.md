@@ -9,11 +9,12 @@ description: |
 metadata:
   author: paddyyang
   schema_version: 1
+  status: active
   category: pipeline
   outputs:
+    - { format: md, audience: ai }
     - { format: data, audience: ai }
   render: none
-  status: active
   replaces: [ark-llm-cli]
 ---
 

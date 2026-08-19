@@ -7,6 +7,8 @@ description: |
   使用此 Skill 當使用者提及驗證 UX、TG 格式對嗎、Bot 回覆跟 spec 一致嗎、
   訊息格式檢查、InlineKeyboard 驗證、UX drift、或任何需要檢查 Bot UX 品質的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md
