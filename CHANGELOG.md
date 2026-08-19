@@ -4,7 +4,36 @@
 
 ---
 
-## 2026-08-12
+## 2026-08-12 (ark-skills-align W2~W5)
+
+### 治理（W2 — schema 回填 + 觸發詞）
+- 全庫 60 個 active SKILL.md 回填 `schema_version: 1` + `status: active`
+- 4 個 deprecated stubs 正確跳過
+- `ark-news-daily` 加 negative trigger（不適用於網頁抓取）
+- `ark-grill-me` 加 negative trigger（不適用於產 spec/design/plan）
+- `ark-llm-cli` / `ark-llm-tools` 加互斥邊界聲明
+
+### 治理（W3 — 呈現引擎收編 + README 重建）
+- `ark-html-report` 確認 schema_version: 1 + status: active ✅
+- `ark-md-report` 確認 schema_version: 1 + status: active ✅
+- `ark-news-daily` 加 `depends_on: [ark-html-report]` ✅
+- `ark-html-dashboard` 對齊共享 token 系統 ✅
+- `docs/report-frontmatter-standard.md` 已建立 ✅
+- README.md 完整重建（60 active + 7 deprecated 分類表）
+
+### 治理（W4 — 條件執行 D-6~D-8）
+- D-6: `ark-report-template` 確認為 deprecated stub ✅
+- D-7: `ark-file-export` **保留**（有獨立價值：pipeline 最後一哩寫入）+ 加邊界聲明
+- D-8: `ark-cost-tracker` **保留**（有獨立資料管線：data/costs/{date}.json）
+
+### 統計（W5）
+- Active：**60**（process 9 / scaffolder 9 / pipeline 20 / view 6 / content 1 / document 8 / domain 4 / ops 3）
+- Deprecated：**7**（4 有 SKILL.md + 3 stub）
+- 目錄總數：**67**（+ scripts/ = 68 個子目錄）
+
+---
+
+## 2026-08-12 (原始變更)
 
 ### 新增
 - `ark-md-report` — Content 軌報告引擎（5 類型 × frontmatter 契約 × AI 寫作規則）
@@ -27,6 +56,7 @@
 - `ark-policy-translate` → 廢棄
 
 ### 修正
+- `ark-wiki-engine` — 全面優化（受控詞彙表 + ingest guard + trust 欄位 + 雙模式路由 + 三件套銜接）
 - `ark-code-spec-validator` — 四段工作流鏈優化（17 任務）
   - 評分公式定義 + 比例制 + drift 加權
   - AC-ID 約定 + loop-rules.md + 方向分流
@@ -57,6 +87,7 @@
 - `ark-spec-executor` — 執行 plan.md 任務清單（加入預設 skills）
 
 ### 修正
+- `ark-wiki-engine` — 全面優化（受控詞彙表 + ingest guard + trust 欄位 + 雙模式路由 + 三件套銜接）
 - `ark-wiki-engine` — 本地化 7 scripts（ingest/query/lint/graph/index/build/validate）
 
 ---

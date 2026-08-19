@@ -103,7 +103,7 @@
 | `ark-game-design-doc` | > 根據遊戲構想或需求描述，產出完整的遊戲企劃文件（Game Design Document, GDD）。 |
 | `ark-internal-comms` | 協助撰寫各類內部溝通文件，使用公司慣用的格式。 |
 | `ark-md-report` | 產出「給 AI 看」的結構化分析報告 Markdown（Content 軌），與 ark-html-report（View 軌）成對。 |
-| `ark-news-daily` | 產出科技日報：MD-first 雙軌流程。 |
+| `ark-daily-news` | 產出科技日報：MD-first 雙軌流程。 |
 | `ark-pdf-tool` | 處理 PDF 檔案的所有操作。 |
 | `ark-pptx-tool` | 任何涉及 .pptx 檔案的情境皆使用此技能——無論作為輸入、輸出或兩者皆是。 |
 | `ark-release-notes` | 當使用者需要從 git log 產出結構化 changelog 或版本說明時使用此技能。 |
