@@ -1,0 +1,11 @@
+# 按需安裝（只裝該 agent 會用到的資料庫驅動）
+# BigQuery（取代 BQ MCP 的核心路徑）
+google-cloud-bigquery>=3.20
+# PostgreSQL
+# psycopg[binary]>=3.1
+# MySQL
+# pymysql>=1.1
+# MSSQL
+# pymssql>=2.3
+# MongoDB
+# pymongo>=4.7
