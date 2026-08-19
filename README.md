@@ -12,12 +12,12 @@
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **61 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
 
-> 輸出：MD 給 AI｜`category: process`｜9 個
+> 輸出：MD 給 AI｜`category: process`｜8 個
 
 | Skill | 定位 |
 |-------|------|
@@ -29,7 +29,6 @@
 | `ark-skill-creator` | 建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。 |
 | `ark-spec-executor` | 讀取 plan.md（含任務表+AC+依賴），自動拆解→角色切換執行→AC 驗收→產出驗收報告。 |
 | `ark-superpowers` | 產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫）， 基於 power-engineer-skills 框架，協助資深工程師與技術領導者 將技術決… |
-| `ark-ux-spec-validator` | 驗證 Telegram Bot UX 實作與 UX Spec 文件的一致性。 |
 
 ## ② 平台生成器 Scaffolders
 
@@ -130,16 +129,6 @@
 | `ark-dashboard-health` | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
 | `ark-env-doctor` | 當使用者遇到開發環境問題時使用此技能。 |
 | `ark-skills-align` | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
-
-## 🗑️ 已移除（保留供遷移）
-
-> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
-
-| Skill | 遷移到 |
-|-------|--------|
-| `ark-ai-bot-builder` | `ark-agent-builder` |
-| `ark-postmortem` | `ark-md-report`（type: incident） |
-| `ark-report-template` | `ark-md-report`（Content 軌）+ `ark-html-report`（View 軌） |
 
 <!-- END GENERATED CATALOGUE -->
 
