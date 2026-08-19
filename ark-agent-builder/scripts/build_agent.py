@@ -43,6 +43,9 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
     dirs = [
         "src/agent",
         "src/bot",
+        "src/conversation",
+        "src/ingest",
+        "src/distill",
         "src/skills/internal/spec_executor",
         "src/wiki/search",
         "src/llm/providers",
@@ -50,10 +53,13 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         "src/memory",
         "src/tools",
         "src/server",
+        "src/gateway/api",
+        "src/workflow",
         "config",
         "templates",
         "knowledge/raw",
         "knowledge/wiki",
+        "workflows",
         "tests",
         "docs",
         "data",
@@ -135,6 +141,8 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
         "schedule_engine.py": "src/skills/internal/schedule_engine.py",
         # Server
         "server_main.py": "src/server/main.py",
+        # Logging
+        "logging_config.py": "src/logging_config.py",
         # Test
         "test_core.py": "tests/test_core.py",
     }
@@ -147,11 +155,16 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
 
     # ── 3b. templates 目錄型複製（完整子目錄）──
     dir_template_map = {
+        "agent": "src/agent",
+        "conversation": "src/conversation",
+        "bot": "src/bot",
+        "ingest": "src/ingest",
+        "distill": "src/distill",
         "llm": "src/llm",
         "memory": "src/memory",
         "wiki": "src/wiki",
+        "workflow": "src/workflow",
         "tools_mcp": "src/tools",
-        "bot": "src/bot",
         "spec_executor": "src/skills/internal/spec_executor",
     }
     for tpl_dir, dst_rel in dir_template_map.items():
@@ -168,11 +181,14 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
 
     # ── 4. __init__.py 補齊 ──
     init_dirs = [
-        "src", "src/agent", "src/bot", "src/skills",
-        "src/skills/internal", "src/skills/internal/spec_executor",
+        "src", "src/agent", "src/bot", "src/conversation",
+        "src/ingest", "src/distill", "src/workflow",
+        "src/skills", "src/skills/internal",
+        "src/skills/internal/spec_executor",
         "src/wiki", "src/wiki/search",
         "src/llm", "src/llm/providers", "src/llm/tools",
         "src/memory", "src/tools", "src/server",
+        "src/gateway", "src/gateway/api",
         "tests",
     ]
     for d in init_dirs:
@@ -246,43 +262,37 @@ def build_agent(output_dir: Path, project_name: str = "my-agent") -> list[str]:
 
 def validate(project_dir: Path) -> list[str]:
     """驗證專案結構完整性。回傳錯誤清單（空=通過）。"""
+    import py_compile
+
     errors: list[str] = []
     required = [
-        # Agent 核心
-        "src/agent/cli.py",
-        "src/agent/session.py",
-        "src/agent/memory.py",
-        "src/agent/planner.py",
-        # Bot
-        "src/bot/main.py",
-        "src/bot/handlers.py",
-        "src/bot/progress.py",
+        # Agent 派工層（Stage 2）
+        "src/agent/__init__.py",
+        "src/agent/orchestrator.py",
+        "src/agent/pool.py",
+        "src/agent/verifier.py",
+        "src/agent/task_store.py",
+        "src/agent/lead_client.py",
+        "src/agent/event_log.py",
+        # Conversation 路由（Stage 3）
+        "src/conversation/__init__.py",
+        "src/conversation/router.py",
+        "src/conversation/session_manager.py",
+        # Bot 運維（Stage 4）
+        "src/bot/__init__.py",
+        "src/bot/multi_runner.py",
+        "src/bot/permissions.py",
+        "src/bot/health_monitor.py",
+        "src/bot/formatter.py",
         # Skills
         "src/skills/base.py",
         "src/skills/registry.py",
         "src/skills/internal/echo.py",
-        "src/skills/internal/spec_executor/executor.py",
-        # LLM（新增）
-        "src/llm/agent_loop.py",
-        "src/llm/provider.py",
-        "src/llm/providers/gemini.py",
-        "src/llm/tools/dispatch.py",
-        # Memory（新增）
-        "src/memory/daily_log.py",
-        "src/memory/recall.py",
-        "src/memory/consolidate.py",
-        # Wiki（新增）
-        "src/wiki/engine.py",
-        "src/wiki/indexer.py",
-        "src/wiki/search/layer0_exact.py",
-        # Tools（新增）
-        "src/tools/registry.py",
-        "src/tools/handlers.py",
-        # Server
-        "src/server/main.py",
+        # Knowledge（Stage 5, optional 但骨架必備）
+        "src/ingest/__init__.py",
+        "src/ingest/pipeline.py",
+        "src/distill/__init__.py",
         # Config
-        "config/news_sources.yaml",
-        "agents.yaml",
         "agents/admin-agent/.kiro/steering/SOUL.md",
         ".env.example",
         "requirements.txt",
@@ -291,6 +301,18 @@ def validate(project_dir: Path) -> list[str]:
     for f in required:
         if not (project_dir / f).exists():
             errors.append(f"❌ 缺少: {f}")
+
+    # ── 語法檢查：所有 .py 檔案 ──
+    for py_file in project_dir.rglob("*.py"):
+        # 排除 .venv / node_modules 等
+        rel = py_file.relative_to(project_dir)
+        if any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in rel.parts):
+            continue
+        try:
+            py_compile.compile(str(py_file), doraise=True)
+        except py_compile.PyCompileError as e:
+            errors.append(f"❌ 語法錯誤: {rel} — {e.msg}")
+
     return errors
 
 
@@ -313,6 +335,9 @@ if __name__ == "__main__":
         files = build_agent(out, name)
 
         print(f"\n✅ 產出完成（{len(files)} 項）→ {out}/")
+        kiro_init = Path(out.parent / ".kiro/skills/ark-kiro-init/scripts/build_kiro.py")
+        if not kiro_init.exists():
+            kiro_init = Path.home() / "kiro-cli/.kiro/skills/ark-kiro-init/scripts/build_kiro.py"
         print(f"\n📋 下一步：")
         print(f"  1. python .kiro/skills/ark-kiro-init/scripts/build_kiro.py --standalone {out}")
         print(f"     → 產出 .kiro/ 配置（SOUL + KIRO + MEMORY + mcp.json）")
