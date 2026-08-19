@@ -7,6 +7,8 @@ description: |
   3-file pattern、防止遺忘、長任務管理、Manus workflow、
   或任何需要跨 session 保持任務狀態的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

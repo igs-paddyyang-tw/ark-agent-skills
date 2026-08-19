@@ -11,6 +11,8 @@ description: |
   執行計畫、execution plan、技術提案、系統設計、RFC、里程碑、
   或任何需要產出結構化工程決策文件的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

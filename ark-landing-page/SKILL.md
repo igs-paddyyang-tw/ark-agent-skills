@@ -6,6 +6,8 @@ description: |
   使用此 Skill 當使用者提及 landing page、著陸頁、預註冊頁、
   活動頁、產品頁、一頁式網站、或任何需要快速產出行銷頁面的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: view
   outputs:
     - format: html

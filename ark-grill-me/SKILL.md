@@ -2,11 +2,14 @@
 name: ark-grill-me
 description: |
   在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。
-  走完所有決策後產出格式化「決策摘要」，可直接作為 ark-superpowers 產 Spec 的輸入。
+  走完所有決策後產出格式化「決策摘要」，可直接作為 ark-superpowers 輸出 Spec 的輸入。
   使用此 Skill 當使用者提及拷問、grill me、grill、stress test、
   質疑設計、挑戰方案、設計審查、review plan、拷問我的設計、
   或在實作前想確認設計完整性、釐清需求、避免 AI 自行腦補的場景。
+  不適用於：產出規格/design/plan 請用 ark-superpowers。本 skill 只負責拷問設計。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

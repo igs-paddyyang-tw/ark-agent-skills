@@ -7,6 +7,8 @@ description: |
   使用此 Skill 當使用者提及 執行計畫、run plan、自動交付、spec executor、
   跑 plan、驗收、自動執行任務、或任何需要按 plan 逐步完成開發的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

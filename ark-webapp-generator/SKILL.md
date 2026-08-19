@@ -7,6 +7,8 @@ description: |
   產出 Web 應用、gen web app、ark webapp、
   或任何需要從零開始建構 FastAPI + Skill 系統的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: scaffolder
   outputs:
     - format: code
@@ -261,7 +263,7 @@ uvicorn src.server.main:app --reload --port 8000
 
 ### 下一步
 
-完成後告訴 AI：`加入 Telegram Bot`（觸發 ark-chatbot-generator）
+完成後告訴 AI：`加入 Telegram Bot`（觸發 ark-agent-builder）
 
 ### 卡關時
 

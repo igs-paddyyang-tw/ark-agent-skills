@@ -2,6 +2,8 @@
 name: ark-eval-runner
 description: "當使用者需要對 LLM 輸出進行回歸評測時使用此技能。觸發條件包括：提及「LLM 評測」「回歸測試」「prompt 評分」「模型品質」，或要求用 prompt 集 + 斷言 + 多次取樣計算通過率。適用於 prompt 變更後的品質驗證、模型切換前後的效果對比。不適用於 pytest 單元測試——該場景請用 ark-test-runner。"
 metadata:
+  schema_version: 1
+  status: active
   author: paddyyang
   category: pipeline
   outputs:

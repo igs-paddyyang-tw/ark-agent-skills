@@ -6,6 +6,8 @@ description: |
   使用此 Skill 當使用者提及程式碼審查、code review、PR 審查、
   程式碼品質、lint、或任何需要檢查程式碼品質的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: pipeline
   outputs:
     - format: md
@@ -83,4 +85,4 @@ class CodeReviewSkill(BaseSkill):
 - `language: auto` 根據副檔名自動偵測
 - 安全性檢查包含常見的 OWASP Top 10 模式
 - `score` 為 0-100 分，100 為完美
-- 可搭配 `ark-chatbot-generator` 在 TG Bot 中觸發審查
+- 可搭配 `ark-agent-builder` 在 TG Bot 中觸發審查

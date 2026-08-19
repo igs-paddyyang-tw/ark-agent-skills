@@ -8,6 +8,8 @@ description: |
   散點圖、直方圖、matplotlib、報表圖表、數據圖表、
   或任何需要將數據轉換為圖片的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: pipeline
   outputs:
     - format: md

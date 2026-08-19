@@ -10,8 +10,11 @@ description: |
   瀏覽器測試、截圖驗證、visual testing、看一下畫面、
   確認 UI、E2E 驗證、localhost 預覽、craft tool、
   或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
-  專責瀏覽器互動自動化、測試、截圖。大規模網頁抓取/反爬請用 ark-web-scraper。
+  專責瀏覽器互動自動化、測試、截圖。大規模網頁抓取/反擷取請用 ark-web-scraper。
+  不適用於：網頁內容抓取/網頁擷取請用 ark-web-scraper；網頁自動化測試請用 ark-test-runner。
 metadata:
+  schema_version: 1
+  status: active
   category: pipeline
   outputs:
     - format: md

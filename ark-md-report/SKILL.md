@@ -8,12 +8,15 @@ description: |
   使用此 skill 當使用者要求「產出分析報告」「review 報告」「給 AI 看的報告」「決策摘要文件」
   「報告要能入 wiki」「雙軌報告」，或任何分析結論需要被下游 agent/wiki/日報消費的場景。
 metadata:
+  schema_version: 1
+  status: active
   author: paddyyang
-  category: presentation-content
+  category: document
   outputs:
     - { format: md, audience: ai }
     - { format: html, audience: human, via: ark-html-report }
   depends_on: [ark-html-report]
+  render: html
 ---
 
 # ark-md-report

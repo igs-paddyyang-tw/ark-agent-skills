@@ -6,6 +6,8 @@ description: |
   此工作流幫助使用者有效傳遞上下文、透過迭代精煉內容、並驗證文件對讀者有效。
   當使用者提及撰寫文件、建立提案、草擬規格或類似文件任務時觸發。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

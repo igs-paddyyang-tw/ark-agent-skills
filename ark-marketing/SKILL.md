@@ -6,6 +6,8 @@ description: |
   使用此 Skill 當使用者提及行銷策略、ASO、CRO、文案、廣告素材、
   用戶獲取、留存策略、LiveOps、活動企劃、或任何遊戲行銷場景。
 metadata:
+  schema_version: 1
+  status: active
   category: domain
   outputs:
     - format: md

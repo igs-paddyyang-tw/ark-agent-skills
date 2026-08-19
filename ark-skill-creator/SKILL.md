@@ -6,6 +6,8 @@ description: |
   執行評估測試 Skill、基準測試 Skill 效能、
   或優化 Skill 的 description 以提升觸發準確度。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

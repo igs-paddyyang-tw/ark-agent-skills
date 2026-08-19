@@ -2,6 +2,8 @@
 name: ark-api-doc-sync
 description: "當使用者需要將 FastAPI route 定義同步到 docs/ 目錄下的 API 文件表格時使用此技能。觸發條件包括：提及「API 文件同步」「route 變更同步」「端點文件化」，或在新增/修改 route 後要求更新對應文件。目標是消滅 extra_in_code drift（程式碼有但文件沒有的端點）。不適用於驗證 drift 或規格偏差——該場景請用 ark-code-spec-validator。"
 metadata:
+  schema_version: 1
+  status: active
   author: paddyyang
   category: pipeline
   outputs:

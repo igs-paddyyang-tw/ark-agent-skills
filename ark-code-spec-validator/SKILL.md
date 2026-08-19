@@ -6,8 +6,11 @@ description: |
   使用此 Skill 當使用者提及 drift、驗證、spec 一致性、API 比對、
   驗收條件覆蓋、依賴分析、code 與文件不同步、或要求產出驗證報告。
   注意：本 skill 驗證的是 AC（驗收條件）是否有對應測試，
-  非 pytest --cov 的 line coverage。如需 line coverage 分析，請用 pytest --cov。
+  非程式碼 coverage。如需 coverage 分析，請用 ark-test-runner。
+  不適用於：單純的 code review 請用 ark-code-review；網頁抓取請用 ark-web-scraper。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

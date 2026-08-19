@@ -7,9 +7,13 @@ description: |
   支援暗黑科技風格與亮色主題。
   使用此 Skill 當使用者提及 dashboard、儀錶板、互動圖表、
   HTML 報表、數據面板、Chart.js、KPI 卡片、
+  遊戲面板、game dashboard、博奕分析、老虎機資訊、遊戲統計、
   或任何需要產出可分享的互動式數據視覺化頁面的場景。
+  博奕遊戲面板請參考 references/gaming-preset.md。
   不適用於靜態 PNG 圖表（請使用 ark-chart-generator）。
 metadata:
+  schema_version: 1
+  status: active
   category: view
   outputs:
     - format: html

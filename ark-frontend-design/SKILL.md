@@ -7,6 +7,8 @@ description: |
   或任何需要美化 Web UI 的場景）。
   產出具創意、精緻的程式碼與 UI 設計，避免千篇一律的 AI 美學。
 metadata:
+  schema_version: 1
+  status: active
   category: view
   outputs:
     - format: html
@@ -50,4 +52,4 @@ metadata:
 
 **重要**：實作複雜度要匹配美學願景。極繁主義設計需要精心的程式碼、大量動畫與效果。極簡或精緻設計需要克制、精準，以及對間距、字型和微妙細節的仔細關注。優雅來自於對願景的良好執行。
 
-**不適用於**：產生設計系統（色彩/字型/元件規範）改用 `ark-ui-design-system`；套用既有主題改用 `ark-theme-factory`。
+**不適用於**：產生設計系統（色彩/字型/元件規範）改用 `ark-ui-design-system`；套用既有主題到 artifact 改用 `ark-html-dashboard` 或 `ark-html-report`（內建 token 系統）。

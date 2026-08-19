@@ -7,6 +7,8 @@ description: |
   DevContainer 建立、或任何「我的環境跑不起來」相關問題。
   也適用於產出 setup 腳本、修復腳本、或環境診斷報告。
 metadata:
+  schema_version: 1
+  status: active
   category: ops
   outputs:
     - format: md

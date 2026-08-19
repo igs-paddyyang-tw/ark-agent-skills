@@ -7,6 +7,8 @@ description: |
   LTV、遊戲數據指標、calculate kpi、metrics engine、
   或任何需要產出標準化指標計算邏輯的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: pipeline
   outputs:
     - format: md

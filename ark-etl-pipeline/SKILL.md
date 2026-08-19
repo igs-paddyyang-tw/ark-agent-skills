@@ -9,6 +9,8 @@ description: |
   資料管線、資料前處理、轉換格式、
   或任何需要將原始資料轉換為圖表標準格式的場景。
 metadata:
+  schema_version: 1
+  status: active
   category: pipeline
   outputs:
     - format: md

@@ -6,6 +6,8 @@ description: |
   Use when receiving new feature requests, project planning, task delegation to agents.
   觸發條件：新功能、新需求、派工、拆任務、專案規劃、project plan。
 metadata:
+  schema_version: 1
+  status: active
   category: process
   outputs:
     - format: md

@@ -2,6 +2,8 @@
 name: ark-ingest-guard
 description: "當知識庫入庫前需要進行 prompt injection 消毒時使用此技能。觸發條件包括：提及「ingest 安全檢查」「消毒」「injection 偵測」，或在 wiki-engine ingest 前需要前置安全關卡。作為 wiki-engine 的前置防護層，確保入庫內容不含惡意指令注入。不適用於 ingest 本身——該場景請用 ark-wiki-engine。"
 metadata:
+  schema_version: 1
+  status: active
   author: paddyyang
   category: pipeline
   outputs:

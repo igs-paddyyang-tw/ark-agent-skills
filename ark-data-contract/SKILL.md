@@ -2,6 +2,8 @@
 name: ark-data-contract
 description: "當使用者需要驗證管線元件間的 schema 契約時使用此技能。觸發條件包括：提及「資料契約」「schema 驗證」「管線契約」，或需要確保上下游元件的輸入/輸出格式一致。適用於 ETL 管線、agent 間訊息傳遞、API 回應格式的契約定義與驗證。不適用於資料庫查詢——該場景請用 ark-db-query。"
 metadata:
+  schema_version: 1
+  status: active
   author: paddyyang
   category: pipeline
   outputs:

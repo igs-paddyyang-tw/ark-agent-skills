@@ -1,17 +1,18 @@
 ---
 name: ark-telegram-bot
 description: |
-  Telegram Bot 開發完整 SOP（python-telegram-bot）：傳送圖片/檔案/相簿、
-  Web App 整合、Menu 命令設定、InlineKeyboard 互動、訊息格式化與分段、
-  Rate Limiting 處理、推送通知（排程/告警）、Workflow 串接。
+  Telegram Bot 開發骨架 SOP（python-telegram-bot）：Bot 專案建置、
+  Web App 整合、Menu 命令設定、InlineKeyboard 互動、Rate Limiting 處理、Workflow 串接。
   為 ark-agent-team-builder 打造的 Telegram UI/UX 互動標準。
   也可產出完整可運行的 Telegram Adapter 模組（整合 CoreDaemon）。
-  使用此 Skill 當使用者提及 Telegram Bot 開發、TG 推送、傳送圖片、傳送檔案、
+  使用此 Skill 當使用者提及 Telegram Bot 開發、Bot 專案建置、
   Web App、Mini App、Menu 命令、InlineKeyboard、Bot API、
-  訊息格式、分段發送、TG 通知、推播訊息、告警通知、
   產出 Telegram adapter、整合 Bot 到團隊、telegram_adapter、
-  或任何 Telegram Bot 功能開發與推送場景。
+  或任何 Telegram Bot 骨架搭建場景。
+  不適用於：TG 訊息發送/推播/告警通知請用 ark-telegram-sender。
 metadata:
+  schema_version: 1
+  status: active
   category: scaffolder
   outputs:
     - format: code
