@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ark-agent-skills.invalid/ark-wiki-engine/query-contract-3.0.json",
+  "title": "ark-wiki-engine v3 stdout 契約",
+  "description": "wiki_query.py / wiki_context.py --format json 的輸出。下游 agent 與測試共用此 schema。",
+  "oneOf": [{ "$ref": "#/definitions/success" }, { "$ref": "#/definitions/failure" }],
+  "definitions": {
+    "failure": {
+      "type": "object",
+      "required": ["ok", "error"],
+      "properties": {
+        "ok": { "const": false },
+        "error": {
+          "type": "object",
+          "required": ["code", "msg"],
+          "properties": {
+            "code": {
+              "enum": ["WIKI_DIR_NOT_FOUND", "INDEX_MISSING", "INDEX_STALE",
+                       "TOKENIZER_MISMATCH", "GUARD_BLOCKED", "TAG_NOT_IN_WHITELIST",
+                       "SCHEMA_NOT_FOUND", "BUILD_LOCKED", "BAD_ARGUMENTS"]
+            },
+            "msg": { "type": "string" }
+          }
+        }
+      }
+    },
+    "success": {
+      "type": "object",
+      "required": ["ok", "query", "results", "meta"],
+      "properties": {
+        "ok": { "const": true },
+        "query": { "type": "string" },
+        "results": { "type": "array", "items": { "$ref": "#/definitions/result" } },
+        "meta": { "$ref": "#/definitions/meta" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["page", "slug", "title", "score", "layers", "type", "status",
+                   "trust", "approved", "tags", "summary"],
+      "properties": {
+        "page": { "type": "string" },
+        "slug": { "type": "string" },
+        "title": { "type": "string" },
+        "score": { "type": "number" },
+        "layers": {
+          "type": "array",
+          "items": { "enum": ["L0", "L1", "L2", "L3", "fallback"] }
+        },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "trust": { "type": "string" },
+        "approved": { "type": ["boolean", "null"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "summary": { "type": "string" },
+        "content": { "type": "string" }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["total", "top_k", "truncated", "out_file", "domains", "index_used",
+                   "index_fresh", "layers_used", "layers_skipped", "tokenizer",
+                   "bm25_backend", "warnings", "elapsed_ms"],
+      "properties": {
+        "total": { "type": "integer" },
+        "top_k": { "type": "integer" },
+        "truncated": { "type": "boolean" },
+        "out_file": { "type": ["string", "null"] },
+        "domains": { "type": "array", "items": { "type": "string" } },
+        "index_used": { "type": "boolean" },
+        "index_version": { "type": ["string", "null"] },
+        "index_fresh": { "type": "boolean" },
+        "layers_used": { "type": "array", "items": { "type": "string" } },
+        "layers_skipped": { "type": "object" },
+        "tokenizer": { "enum": ["jieba", "bigram"] },
+        "bm25_backend": { "enum": ["purepy", "bm25s"] },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "elapsed_ms": { "type": "integer" }
+      }
+    }
+  }
+}

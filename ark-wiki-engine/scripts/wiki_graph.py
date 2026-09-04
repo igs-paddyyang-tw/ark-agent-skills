@@ -16,20 +16,27 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from _wikilib import (  # noqa: E402
+    ErrorCode,
+    emit_error,
+    extract_wikilinks,
+    index_dir,
+    iter_pages,
+    page_id,
+)
 
-def extract_wikilinks(content: str) -> list[str]:
-    """提取所有 [[wikilink]]。"""
-    return re.findall(r"\[\[([^\]]+)\]\]", content)
+# extract_wikilinks 由 _wikilib 提供（v2 自帶一份，不支援 [[target|顯示文字]]
+# → 別名連結會被當成不存在的頁面而誤報 broken_link）
 
 
 def build_graph(wiki_dir: Path) -> dict:
     """建構 wikilink 圖譜。"""
-    md_files = list(wiki_dir.rglob("*.md"))
+    md_files = [f for f in iter_pages(wiki_dir) if index_dir(wiki_dir) not in f.parents]
 
     nodes: dict[str, dict] = {}  # page_name → {path, outbound, inbound}
     edges: list[tuple[str, str]] = []
@@ -110,22 +117,61 @@ def to_mermaid(graph: dict) -> str:
     return "\n".join(lines)
 
 
+
+def to_adjacency(wiki_dir: Path) -> dict:
+    """輸出 L3 用的鄰接表。
+
+    key 一律用 page_id（`kpi/retention-definition`），與 `.index/metadata.json`
+    同一套識別；`[[link]]` 內容可以是 slug 或 page_id，兩者都解析。
+    """
+    pages = {}
+    for f in iter_pages(wiki_dir):
+        if index_dir(wiki_dir) in f.parents:
+            continue
+        pages[page_id(wiki_dir, f)] = f
+    slug_to_pid = {f.stem: pid for pid, f in pages.items()}
+    out: dict[str, list[str]] = {}
+    inn: dict[str, list[str]] = {pid: [] for pid in pages}
+    for pid, f in pages.items():
+        links = extract_wikilinks(f.read_text(encoding="utf-8", errors="replace"))
+        resolved = []
+        for l in links:
+            target = l if l in pages else slug_to_pid.get(l)
+            if target and target != pid:
+                resolved.append(target)
+                inn[target].append(pid)
+        out[pid] = sorted(set(resolved))
+    return {"out": out, "in": {k: sorted(set(v)) for k, v in inn.items()}}
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Wiki Graph — 知識圖譜分析")
     p.add_argument("--wiki_dir", required=True, help="wiki/ 目錄路徑")
     p.add_argument("--mermaid", action="store_true", help="輸出 Mermaid 圖")
     p.add_argument("--json", action="store_true", help="JSON 格式輸出")
+    p.add_argument("--export", default="", help="輸出 L3 鄰接表 JSON 到指定路徑")
     args = p.parse_args()
 
     wiki_dir = Path(args.wiki_dir)
     if not wiki_dir.exists():
-        print(f"[ERROR] 目錄不存在：{wiki_dir}", file=sys.stderr)
-        sys.exit(1)
+        emit_error(ErrorCode.WIKI_DIR_NOT_FOUND, f"目錄不存在：{wiki_dir}")
+
+    if args.export:
+        adjacency = to_adjacency(wiki_dir)
+        out = Path(args.export)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(adjacency, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(json.dumps({"ok": True, "action": "export", "path": str(out),
+                          "nodes": len(adjacency["out"]),
+                          "edges": sum(len(v) for v in adjacency["out"].values())},
+                         ensure_ascii=False, indent=2))
+        return
 
     graph = build_graph(wiki_dir)
     analysis = analyze(graph)
 
     if args.json:
+        analysis["adjacency"] = to_adjacency(wiki_dir)
         print(json.dumps(analysis, ensure_ascii=False, indent=2))
         return
 

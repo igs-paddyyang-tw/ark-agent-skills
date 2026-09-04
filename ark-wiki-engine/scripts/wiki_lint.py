@@ -24,33 +24,21 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from _wikilib import (  # noqa: E402
+    ErrorCode,
+    emit_error,
+    extract_wikilinks,
+    index_dir,
+    iter_pages,
+    parse_frontmatter,
+)
+
 
 REQUIRED_FIELDS = ["title", "type", "created", "updated"]
 RECOMMENDED_FIELDS = ["tags", "status"]
 VALID_TYPES = ["concept", "entity", "source", "synthesis", "comparison", "overview", "system"]
 VALID_STATUS = ["seedling", "developing", "mature"]
-
-
-def parse_frontmatter(content: str) -> dict:
-    """解析 YAML frontmatter。"""
-    match = re.match(r"^---\n(.+?)\n---", content, re.DOTALL)
-    if not match:
-        return {}
-    result = {}
-    for line in match.group(1).splitlines():
-        if ":" in line:
-            k, _, v = line.partition(":")
-            k = k.strip()
-            v = v.strip().strip('"').strip("'")
-            if v.startswith("[") and v.endswith("]"):
-                v = [x.strip().strip('"').strip("'") for x in v[1:-1].split(",") if x.strip()]
-            result[k] = v
-    return result
-
-
-def extract_wikilinks(content: str) -> list[str]:
-    """提取所有 [[wikilink]]。"""
-    return re.findall(r"\[\[([^\]]+)\]\]", content)
 
 
 def lint_wiki(wiki_dir: Path, errors_only: bool = False) -> dict:
