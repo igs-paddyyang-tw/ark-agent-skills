@@ -38,6 +38,11 @@ active / deprecated 數字必須一致，不一致代表其中一方的判定漏
 # 2026-08-12 | admin-agent | init: 修 README 與目錄脫節（三個數字對不上）
 # 2026-08-12 | admin-agent | fix: deprecated 判定補上 frontmatter status
 #              （原本只認「沒有 SKILL.md」，5 個標記型被誤列為 active）
+# 2026-09-04 | admin-agent | feat: 登記 executor 分類（ark-db-query v2 executor 化後
+#              未補登記，重產 README 會落到「⚠️ 未分類」）
+# 2026-09-04 | admin-agent | fix: 移除 ⑤ presentation-content 節並重編號 ——
+#              audit_skills.py 已把該值列為 legacy 別名（P3 → document），
+#              這裡卻還當現行分類展示且恆印「（目前無）」，兩道守門說法不一致
 # ──────────────────────────────────────────────────────────
 from __future__ import annotations
 
@@ -58,10 +63,10 @@ SECTIONS = [
     ("scaffolder",           "② 平台生成器 Scaffolders",   "專案骨架"),
     ("pipeline",             "③ 管線元件 Pipeline",        "結構化資料"),
     ("view",                 "④ 呈現層 View",              "HTML / 視覺（給人看）"),
-    ("presentation-content", "⑤ 呈現層 Content",           "結構化 MD（給 AI 讀）"),
-    ("document",             "⑥ 文件輸出 Document",        "MD / Office"),
-    ("domain",               "⑦ 領域 SOP Domain",          "策略分析 MD"),
-    ("ops",                  "⑧ 維運 Ops",                 "診斷 / 驗證"),
+    ("document",             "⑤ 文件輸出 Document",        "MD / Office"),
+    ("domain",               "⑥ 領域 SOP Domain",          "策略分析 MD"),
+    ("ops",                  "⑦ 維運 Ops",                 "診斷 / 驗證"),
+    ("executor",             "⑧ 執行器 Executor",          "捆綁 scripts，agent 直接跑"),
 ]
 
 _FM = re.compile(r"^---\s*\n(.*?)\n---", re.S)

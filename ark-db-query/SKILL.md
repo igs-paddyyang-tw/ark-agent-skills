@@ -15,8 +15,10 @@ metadata:
   status: active
   category: executor        # v1 誤標 pipeline、實為 scaffolder；v2 起為可直接執行工具箱
   outputs:
-    - { format: json, audience: ai }        # stdout 統一 JSON 契約
-    - { format: jsonl/csv, audience: ai }   # --out 落盤，供 etl-pipeline / chart-generator 消費
+    # stdout 統一 JSON 契約 rows/count/truncated/out_file + meta；
+    # bq_export.py --out 落盤為 jsonl / csv —— 兩者皆歸受控詞彙 data
+    # （json、jsonl/csv 不是合法 format 值，見 docs/skill-metadata-schema.md）
+    - { format: data, audience: ai }
   render: none
   depends_on: []
   replaces: [bq-mcp-server]

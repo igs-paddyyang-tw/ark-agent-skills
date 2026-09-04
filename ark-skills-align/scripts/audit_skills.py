@@ -26,7 +26,11 @@ from pathlib import Path
 import yaml
 
 # schema v1.1：受控詞彙 canonical 為全名；舊縮寫過渡期容忍（P3 警告）
-CATEGORY_CODES = {"process", "scaffolder", "pipeline", "view", "document", "domain", "ops"}
+# 'executor'（2026-09-04 補登記）：捆綁可執行 scripts/、agent 直接以 bash 呼叫的 skill
+# （非「產碼食譜」）。新增 category 必須同時登記到 scripts/gen_readme.py 的 SECTIONS，
+# 否則該 skill 會落到 README 的「⚠️ 未分類」一節。
+CATEGORY_CODES = {"process", "scaffolder", "pipeline", "view", "document", "domain", "ops",
+                  "executor"}
 LEGACY_CATEGORY_ALIASES = {  # 舊值 → canonical（觸發 P3 legacy-category）
     "proc": "process", "scaffold": "scaffolder", "present": "view",
     "doc": "document", "sop": "domain",
@@ -34,6 +38,8 @@ LEGACY_CATEGORY_ALIASES = {  # 舊值 → canonical（觸發 P3 legacy-category�
 }
 # 注意：'deprecated' 不是合法 category —— 它是 status，出現時報 P1 要求轉 stub 格式
 OUTPUT_FORMATS = {"md", "html", "png", "pdf", "code", "data", "office"}
+#: 合法 schema_version（字串比對 —— frontmatter 寫 1 是 int、1.1 會被 YAML 讀成 str）
+SCHEMA_VERSIONS = {"1", "1.1"}
 AUDIENCES = {"ai", "human", "both"}
 
 # 預設觸發詞衝突矩陣：獨占詞 → owner skill（可被 --config 覆寫/擴充）
@@ -169,8 +175,10 @@ def audit(repo: Path, triggers: dict):
                    o.get("audience") not in AUDIENCES:
                     add("P2", "invalid-output-entry", name,
                         f"outputs 項目不合法：{o}")
-        if meta.get("schema_version") != 1:
-            add("P2", "missing-schema-version", name, "metadata.schema_version 應為 1")
+        if str(meta.get("schema_version")) not in SCHEMA_VERSIONS:
+            add("P2", "missing-schema-version", name,
+                f"metadata.schema_version 應為 {sorted(SCHEMA_VERSIONS)} 之一，"
+                f"實際為 {meta.get('schema_version')!r}")
 
     # 4. description 重複偵測
     descs = {n: normalize(str((i["fm"] or {}).get("description", "")))

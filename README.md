@@ -6,7 +6,10 @@
 **目錄章節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生。**
 新增／移除 skill 後執行一次，不要手改表格 —— 手動維護的索引必定過期。
 
-**統計：60 active + 3 stubs (README only) = 63 skill 目錄｜稽核：P0=0 P1=0 P2=0**
+**統計：60 active + 0 stubs = 60 skill 目錄｜稽核：P0=0 P1=0 P2=0 P3=0（2026-09-04）**
+
+> 這行是手寫的 —— 兩道守門是 `python scripts/gen_readme.py --check` 與
+> `python ark-skills-align/scripts/audit_skills.py --repo .`，數字以它們為準。
 
 ---
 
@@ -47,7 +50,7 @@
 
 ## ③ 管線元件 Pipeline
 
-> 輸出：結構化資料｜`category: pipeline`｜21 個
+> 輸出：結構化資料｜`category: pipeline`｜20 個
 
 | Skill | 定位 |
 |-------|------|
@@ -59,7 +62,6 @@
 | `ark-code-review` | 產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、 風格一致性驗證、安全性掃描、PR 審查報告產生。 |
 | `ark-cost-tracker` | 產出 API 呼叫成本追蹤 Skill，記錄 LLM API 的 token 使用量和費用。 |
 | `ark-data-contract` | 當使用者需要驗證管線元件間的 schema 契約時使用此技能。 |
-| `ark-db-query` | 產出 db_query.py Skill，支援多種資料庫查詢並回傳標準格式（list[dict]）， 可直接串接 etl-pipeline 和 chart-generator。 |
 | `ark-etl-pipeline` | 產出 etl_pipeline.py 資料轉換 Skill，將任何資料來源（CSV、JSON、API 回傳、 Skill 輸出、資料庫查詢）轉換為 chart_generator 可直接使用的標準格式… |
 | `ark-eval-runner` | 當使用者需要對 LLM 輸出進行回歸評測時使用此技能。 |
 | `ark-file-export` | 產出檔案匯出 Skill，將記憶體中的資料（dict/list/str）輸出為 Markdown、CSV、JSON 檔案。 |
@@ -86,13 +88,7 @@
 | `ark-landing-page` | 快速產出高轉換率 Landing Page：遊戲預註冊頁、活動頁、產品介紹頁。 |
 | `ark-ui-design-system` | 設計系統自動生成：分析專案需求後產出完整設計系統（色彩、字型、元件、間距）， 確保 UI 產出不是 AI 預設風格（紫色漸層）而是專業、一致的設計。 |
 
-## ⑤ 呈現層 Content
-
-> 輸出：結構化 MD（給 AI 讀）｜`category: presentation-content`｜0 個
-
-（目前無）
-
-## ⑥ 文件輸出 Document
+## ⑤ 文件輸出 Document
 
 > 輸出：MD / Office｜`category: document`｜10 個
 
@@ -109,7 +105,7 @@
 | `ark-uml-generator` | 產出 Mermaid 格式的 UML 圖表，用於系統設計文件。 |
 | `ark-xlsx-tool` | 當試算表檔案為主要輸入或輸出時，請使用此技能。 |
 
-## ⑦ 領域 SOP Domain
+## ⑥ 領域 SOP Domain
 
 > 輸出：策略分析 MD｜`category: domain`｜4 個
 
@@ -120,7 +116,7 @@
 | `ark-marketing` | 遊戲行銷與成長策略：ASO（應用商店優化）、CRO（轉換率優化）、 文案撰寫、社群行銷、UA（用戶獲取）、LiveOps 活動規劃。 |
 | `ark-retention-analysis` | 玩家留存與 LTV 分析：Cohort 分析、留存曲線、LTV 預測、流失預警。 |
 
-## ⑧ 維運 Ops
+## ⑦ 維運 Ops
 
 > 輸出：診斷 / 驗證｜`category: ops`｜3 個
 
@@ -129,6 +125,14 @@
 | `ark-dashboard-health` | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
 | `ark-env-doctor` | 當使用者遇到開發環境問題時使用此技能。 |
 | `ark-skills-align` | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
+
+## ⑧ 執行器 Executor
+
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜1 個
+
+| Skill | 定位 |
+|-------|------|
+| `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
 
 <!-- END GENERATED CATALOGUE -->
 
@@ -151,14 +155,17 @@ metadata:
 
 | category | 章節 | 產物性質 |
 |----------|------|---------|
-| `processess` | ① 流程鏈 | 工作流程本身，產出 MD 給 AI 接手 |
+| `process` | ① 流程鏈 | 工作流程本身，產出 MD 給 AI 接手 |
 | `scaffolder` | ② 平台生成器 | 專案骨架 |
 | `pipeline` | ③ 管線元件 | 可被程式呼叫的元件，產出結構化資料 |
 | `view` | ④ 呈現層 View | HTML／視覺，**給人看** |
-| `viewation-content` | ⑤ 呈現層 Content | 結構化 MD，**給 AI 讀**（與 view 成對） |
-| `document` | ⑥ 文件輸出 | MD／Office 檔案 |
-| `domain` | ⑦ 領域 SOP | 特定業務領域的做法 |
-| `ops` | ⑧ 維運 | 診斷、驗證 |
+| `document` | ⑤ 文件輸出 | MD／Office 檔案 |
+| `domain` | ⑥ 領域 SOP | 特定業務領域的做法 |
+| `ops` | ⑦ 維運 | 診斷、驗證 |
+| `executor` | ⑧ 執行器 | 捆綁 `scripts/`，agent 直接以 bash 執行 |
+
+> `presentation-content` 是 `ark-md-report` 的舊值，**已併入 `document`** ——
+> 寫這個值 `audit_skills.py` 會報 P3、`gen_readme.py` 會丟進「⚠️ 未分類」。
 
 **新增 category 必須同時登記到 `scripts/gen_readme.py` 的 `SECTIONS`**，
 否則該 skill 會落到「⚠️ 未分類」一節。

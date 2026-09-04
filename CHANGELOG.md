@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-09-04 (executor 分類補登記 + 兩道守門對齊)
+
+起點是一次全庫盤點：`audit_skills.py --repo .` 回 **P1=1 / P2=3，四條全在
+`ark-db-query`** —— 08-19 的 v2 executor 化改造引入了新 category 與
+`schema_version: "1.1"`，但守門與規格文件都沒跟著改。
+
+### 守門
+- `audit_skills.py`：`CATEGORY_CODES` 加 `executor`；`schema_version` 檢查抽成
+  `SCHEMA_VERSIONS = {"1", "1.1"}` 並改**字串比對** ——
+  原本 `!= 1` 對 YAML 讀成 str 的 `"1.1"` 恆為真
+- `gen_readme.py`：`SECTIONS` 登記 `executor`（不登記 db-query 會落到「⚠️ 未分類」）；
+  **移除 ⑤ `presentation-content` 並重編號** —— 該值在 `audit_skills.py` 已是
+  legacy 別名（P3 → `document`），這裡卻當現行分類展示且恆印「（目前無）」
+
+### 資料
+- `ark-db-query`：`outputs` 的 `json` / `jsonl/csv` → 單一 `{format: data, audience: ai}`
+  （沿用既有詞彙，不放寬守門。全庫實際只用 md 44 / code 9 / html 8 / data 3）
+
+### 文件（三處分岔，不修就會留下新的）
+- `docs/skill-metadata-schema.md`：`outputs.format` 原列 `xlsx|pptx|docx` 且**缺 `data`**，
+  與守門的 `OUTPUT_FORMATS` 不同 —— 照文件設會被 P2 擋下
+- `README.md` 分類規格表：`processess`、`viewation-content` 兩處全域替換誤傷
+- `README.md` 統計行：手寫的「60 active + 3 stubs = 63」已過期（實際 stubs=0）
+
+### 驗收
+`gen_readme.py --check` ✅（原本是紅的，stale 到 08-19 之前，db-query 定位還是 v1 描述）·
+`audit_skills.py` **P0/P1/P2/P3 全 0**（rc=0）·
+反證：把 `executor` 移出詞彙、`SCHEMA_VERSIONS` 縮回 `{"1"}` → 立刻回 P1×1 + P2×1
+
+---
+
 ## 2026-08-12 (ark-skills-align W2~W5)
 
 ### 治理（W2 — schema 回填 + 觸發詞）
