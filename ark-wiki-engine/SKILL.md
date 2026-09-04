@@ -25,7 +25,9 @@ metadata:
   render: none
   depends_on: []
   consumed_by: [ark-md-report, ark-news-daily, ark-html-report]
-  replaces: [mcp-wiki-server, team-mcp.wiki_query, team-mcp.wiki_ingest]
+  # 只取代 query —— 內建的 wiki_ingest 有可信的 role gate（見「ingest 的授權邊界」），
+  # bash 腳本無法複製那個管控，故不宣稱取代它
+  replaces: [mcp-wiki-server, team-mcp.wiki_query]
 ---
 
 # ark-wiki-engine v3
@@ -153,6 +155,21 @@ Schema：`references/query-contract.schema.json`。
   **仍用舊索引回答**。
 - **為何查詢端不自動重建**：15 個 instance 併發會撞 lock 並拖慢查詢。
   維護者要重建用 `--rebuild-if-stale` 或直接 `wiki_index.py build`。
+
+## 🔴 ingest 的授權邊界（executor 化弱化的地方）
+
+內建 `wiki_ingest` 有**可信的 role gate**（`tools_for_role` 讓 worker 看不到該工具，
+handler 另有 `_role not in ("admin","leader")` 擋一次；`_role` 來自 daemon 的
+`--role` 啟動參數，agent 改不了）。而 `scripts/wiki_ingest.py` 是 bash 腳本 ——
+**任何能跑 bash 的 agent 都能執行**。
+
+因此：**排他句只涵蓋查詢，不涵蓋寫入。** worker 維持「寫到 `raw/`、由排程 ingest」；
+只有 admin／leader／排程才用 `wiki_ingest.py`。
+**不要在腳本裡加 `--role` 檢查** —— 呼叫者自報的 role 不是邊界。
+完整政策表見 `references/agent-prompt-snippets.md`。
+
+> `authority.L2: wiki_ingest` 這條**不是由 DecisionManager 執行的**（matrix 未被
+> team_mcp 讀取）—— 實際管控就是上面那個 role gate。讀 matrix 的人會誤以為有拍板流程。
 
 ## Multi-agent 部署（取代 MCP 掛載）
 
