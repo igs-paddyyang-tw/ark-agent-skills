@@ -25,10 +25,14 @@ Exit code：check 有未知 tag 回 1。
 """
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from datetime import date
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from _wikilib import ErrorCode, emit_error, emit_json  # noqa: E402
 
 WHITELIST_HEADER = "## tags 白名單"
 QUEUE_HEADER = "## tags 提案佇列"
@@ -147,33 +151,70 @@ def cmd_migrate(schema: Path, wiki_dir: Path) -> int:
     return 0
 
 
-def main() -> int:
-    args = sys.argv[1:]
-    if len(args) < 3 or "--schema" not in args:
-        print(__doc__)
-        return 1
-    cmd = args[0]
-    idx = args.index("--schema")
-    schema = Path(args[idx + 1])
-    rest = args[1:idx] + args[idx + 2:]
+def check_payload(schema: Path, pages: list[Path]) -> dict:
+    """check 的機器可讀版：列出每頁的未知 tag。"""
+    whitelist = load_whitelist(schema)
+    rows, unknown_total = [], 0
+    for pg in pages:
+        tags = page_tags(pg)
+        unknown = sorted(t for t in tags if t not in whitelist)
+        unknown_total += len(unknown)
+        rows.append({"page": str(pg), "tags": tags, "unknown": unknown})
+    return {"ok": True, "action": "check", "whitelist_size": len(whitelist),
+            "pages": len(rows), "unknown_total": unknown_total, "results": rows}
 
-    if cmd == "list":
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="Wiki Taxonomy — tags 受控詞彙表")
+    sub = p.add_subparsers(dest="cmd")
+
+    for name, helptext in (("list", "列出白名單"), ("check", "檢查頁面 tags"),
+                           ("propose", "提案新 tag"), ("approve", "核准提案（人工）"),
+                           ("migrate", "由存量頁面產候選白名單")):
+        sp = sub.add_parser(name, help=helptext)
+        sp.add_argument("--schema", required=True)
+        sp.add_argument("--json", action="store_true")
+        if name == "check":
+            sp.add_argument("pages", nargs="+")
+        if name in ("propose", "approve"):
+            sp.add_argument("tag")
+        if name == "propose":
+            sp.add_argument("--reason", default="")
+            sp.add_argument("--by", default="unknown")
+        if name == "migrate":
+            sp.add_argument("--wiki_dir", required=True)
+
+    args = p.parse_args()
+    if not args.cmd:
+        p.print_help()
+        return 2
+
+    schema = Path(args.schema)
+    if not schema.exists():
+        emit_error(ErrorCode.SCHEMA_NOT_FOUND, f"schema 不存在：{schema}")
+
+    if args.cmd == "list":
+        if args.json:
+            emit_json({"ok": True, "action": "list",
+                       "tags": sorted(load_whitelist(schema))})
         return cmd_list(schema)
-    if cmd == "check":
-        pages = [Path(p) for p in rest if not p.startswith("--")]
+    if args.cmd == "check":
+        pages = [Path(x) for x in args.pages]
+        if args.json:
+            payload = check_payload(schema, pages)
+            emit_json(payload, 1 if payload["unknown_total"] else 0)
         return cmd_check(schema, pages)
-    if cmd == "propose":
-        tag = rest[0]
-        reason = rest[rest.index("--reason") + 1] if "--reason" in rest else "（未填）"
-        by = rest[rest.index("--by") + 1] if "--by" in rest else "unknown"
-        return cmd_propose(schema, tag, reason, by)
-    if cmd == "approve":
-        return cmd_approve(schema, rest[0])
-    if cmd == "migrate":
-        wiki_dir = Path(rest[rest.index("--wiki_dir") + 1])
-        return cmd_migrate(schema, wiki_dir)
-    print(f"未知指令：{cmd}")
-    return 1
+    if args.cmd == "propose":
+        rc = cmd_propose(schema, args.tag, args.reason, args.by)
+        if args.json:
+            emit_json({"ok": rc == 0, "action": "propose", "tag": args.tag}, rc)
+        return rc
+    if args.cmd == "approve":
+        rc = cmd_approve(schema, args.tag)
+        if args.json:
+            emit_json({"ok": rc == 0, "action": "approve", "tag": args.tag}, rc)
+        return rc
+    return cmd_migrate(schema, Path(args.wiki_dir))
 
 
 if __name__ == "__main__":

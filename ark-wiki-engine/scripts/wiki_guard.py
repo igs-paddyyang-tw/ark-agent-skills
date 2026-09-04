@@ -18,11 +18,15 @@ Exit code：scan/sweep 發現違規回 1。
 """
 from __future__ import annotations
 
+import argparse
 import re
 import shutil
 import sys
 from datetime import date
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from _wikilib import ErrorCode, emit_error, emit_json  # noqa: E402
 
 # ── 規則定義 ─────────────────────────────────────────────────────────────
 
@@ -156,32 +160,83 @@ SELF_TEST_CASES = [
 ]
 
 
-def self_test() -> int:
+def self_test(stream=None) -> int:
+    """`stream` 預設 stdout；`--json` 時傳 stderr —— stdout 要留給 JSON 契約。"""
+    out = stream or sys.stdout
     fails = 0
     for name, text, should_flag in SELF_TEST_CASES:
         flagged = bool(scan_text(text))
         ok = flagged == should_flag
-        print(f"{'✅' if ok else '❌'} {name}: flagged={flagged} expected={should_flag}")
+        print(f"{'✅' if ok else '❌'} {name}: flagged={flagged} expected={should_flag}",
+              file=out)
         if not ok:
             fails += 1
-    print(f"\n{'🎉 self-test 全數通過' if fails == 0 else f'⚠ {fails} 項未通過'}")
+    print(f"\n{'🎉 self-test 全數通過' if fails == 0 else f'⚠ {fails} 項未通過'}", file=out)
     return 0 if fails == 0 else 1
 
 
+def _findings_payload(files: list[Path]) -> dict:
+    rows = []
+    for f in files:
+        if not f.exists():
+            rows.append({"file": str(f), "error": "not_found", "findings": []})
+            continue
+        rows.append({"file": str(f),
+                     "findings": scan_text(f.read_text(encoding="utf-8", errors="replace"))})
+    bad = [r for r in rows if r["findings"]]
+    return {"ok": True, "action": "scan", "files": len(rows), "violating": len(bad),
+            "results": rows}
+
+
 def main() -> int:
-    args = sys.argv[1:]
-    if not args:
-        print(__doc__)
-        return 1
-    if args[0] == "--self-test":
-        return self_test()
-    if args[0] == "scan":
-        return cmd_scan([Path(p) for p in args[1:]])
-    if args[0] == "sweep":
-        raw_dir = Path(args[args.index("--raw_dir") + 1])
-        return cmd_sweep(raw_dir)
-    print(f"未知指令：{args[0]}")
-    return 1
+    p = argparse.ArgumentParser(description="Wiki Guard — ingest 前置消毒關卡")
+    sub = p.add_subparsers(dest="cmd")
+
+    sc = sub.add_parser("scan", help="只檢查不動作")
+    sc.add_argument("files", nargs="+")
+    sc.add_argument("--json", action="store_true")
+
+    sw = sub.add_parser("sweep", help="掃描並隔離違規檔")
+    sw.add_argument("--raw_dir", required=True)
+    sw.add_argument("--json", action="store_true")
+
+    st = sub.add_parser("self-test", help="內建樣本自測")
+    st.add_argument("--json", action="store_true")
+
+    args = p.parse_args()
+    if not args.cmd:
+        p.print_help()
+        return 2
+
+    if args.cmd == "self-test":
+        rc = self_test(sys.stderr if args.json else None)
+        if args.json:
+            emit_json({"ok": rc == 0, "action": "self-test",
+                       "cases": len(SELF_TEST_CASES), "failed": rc}, rc)
+        return rc
+
+    if args.cmd == "scan":
+        files = [Path(x) for x in args.files]
+        if args.json:
+            payload = _findings_payload(files)
+            emit_json(payload, 1 if payload["violating"] else 0)
+        return cmd_scan(files)
+
+    raw_dir = Path(args.raw_dir)
+    if not raw_dir.exists():
+        emit_error(ErrorCode.WIKI_DIR_NOT_FOUND, f"raw 目錄不存在：{raw_dir}")
+    if args.json:
+        rows = []
+        for f in sorted(raw_dir.glob("*.md")) + sorted(raw_dir.glob("*.txt")):
+            findings = scan_text(f.read_text(encoding="utf-8", errors="replace"))
+            entry = {"file": str(f), "findings": findings}
+            if findings:
+                entry["quarantined_to"] = str(quarantine(f, findings, raw_dir))
+            rows.append(entry)
+        bad = [r for r in rows if r["findings"]]
+        emit_json({"ok": True, "action": "sweep", "files": len(rows),
+                   "quarantined": len(bad), "results": rows}, 1 if bad else 0)
+    return cmd_sweep(raw_dir)
 
 
 if __name__ == "__main__":

@@ -222,16 +222,29 @@ def rrf(layer_results: dict[str, list[tuple[str, float]]]) -> dict[str, dict]:
     return fused
 
 
+def _is_heading_only(para: str) -> bool:
+    """整段都是 markdown 標題／引言符號 → 不能當摘要。"""
+    lines = [l.strip() for l in para.splitlines() if l.strip()]
+    return bool(lines) and all(l.startswith(("#", ">", "<!--")) for l in lines)
+
+
 def best_paragraph(body: str, query: str, tokenizer: str, limit: int = 200) -> str:
-    """取含最多查詢詞的段落（段落 = 連續非空行）。"""
+    """取含最多查詢詞的段落（段落 = 連續非空行）。
+
+    **跳過純標題段落** —— H1 通常就是 title，命中查詢詞的機率最高，
+    但拿它當 summary 等於把已經顯示的東西再說一次（實測 wiki_context
+    三筆摘要全是 `# 標題`，對注入端毫無資訊）。
+    同分時取較長的段落（資訊量較高）。
+    """
     qt = set(tokenize(query, tokenizer)) or {query.lower()}
     paras = [p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()]
-    if not paras:
+    candidates = [p for p in paras if not _is_heading_only(p)] or paras
+    if not candidates:
         return ""
     def hit(p: str) -> int:
         low = p.lower()
         return sum(1 for t in qt if t in low)
-    best = max(paras, key=lambda p: (hit(p), -paras.index(p)))
+    best = max(candidates, key=lambda p: (hit(p), len(p)))
     one = " ".join(best.split())
     return one[:limit]
 

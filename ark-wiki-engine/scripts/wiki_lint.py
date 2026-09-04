@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from _wikilib import (  # noqa: E402
     ErrorCode,
     emit_error,
+    emit_json,
     extract_wikilinks,
     index_dir,
     iter_pages,
@@ -35,17 +36,24 @@ from _wikilib import (  # noqa: E402
 )
 
 
-REQUIRED_FIELDS = ["title", "type", "created", "updated"]
+REQUIRED_FIELDS = ["title", "type", "created", "updated", "trust"]
 RECOMMENDED_FIELDS = ["tags", "status"]
+VALID_TRUST = ["deterministic", "llm-distilled"]
 VALID_TYPES = ["concept", "entity", "source", "synthesis", "comparison", "overview", "system"]
 VALID_STATUS = ["seedling", "developing", "mature"]
 
 
-def lint_wiki(wiki_dir: Path, errors_only: bool = False) -> dict:
+def lint_wiki(wiki_dir: Path, errors_only: bool = False,
+              schema: Path | None = None) -> dict:
     """執行 lint，回傳結果字典。"""
-    md_files = list(wiki_dir.rglob("*.md"))
+    md_files = [f for f in iter_pages(wiki_dir) if index_dir(wiki_dir) not in f.parents]
     if not md_files:
         return {"files": 0, "errors": [], "warnings": []}
+
+    whitelist: set[str] | None = None
+    if schema is not None:
+        import wiki_taxonomy
+        whitelist = wiki_taxonomy.load_whitelist(schema)
 
     errors = []
     warnings = []
@@ -84,6 +92,33 @@ def lint_wiki(wiki_dir: Path, errors_only: bool = False) -> dict:
         # status 合法值
         if "status" in fm and fm["status"] not in VALID_STATUS:
             warnings.append({"file": str(rel), "level": "warning", "msg": f"status 不在合法值中：{fm['status']}"})
+
+        # ── 兩層信任模型（v3 新增；SKILL.md 早已宣告，實作是零檢查 = F-7）
+        #
+        # trust=llm-distilled 的頁面是模型蒸餾產出，**必須**有 approved 欄位表態；
+        # 未審核（approved:false）的內容只能停在 seedling ——
+        # 一旦標成 developing/mature，下游引用時就不會再懷疑它。
+        if "trust" in fm and fm["trust"] not in VALID_TRUST:
+            errors.append({"file": str(rel), "level": "error",
+                           "msg": f"trust 不在合法值中：{fm['trust']}（{'|'.join(VALID_TRUST)}）"})
+        if fm.get("trust") == "llm-distilled" and "approved" not in fm:
+            errors.append({"file": str(rel), "level": "error",
+                           "msg": "trust: llm-distilled 必須帶 approved 欄位（true/false 皆可，但要表態）"})
+        if fm.get("approved") is False and fm.get("status") not in (None, "seedling"):
+            errors.append({"file": str(rel), "level": "error",
+                           "msg": f"approved: false 的頁面 status 只能是 seedling"
+                                  f"（現為 {fm.get('status')}）"})
+
+        # ── tags 受控詞彙（--schema 給了才驗）
+        if whitelist is not None:
+            page_tags_val = fm.get("tags", [])
+            if isinstance(page_tags_val, str):
+                page_tags_val = [page_tags_val]
+            for t in page_tags_val:
+                if t not in whitelist:
+                    errors.append({"file": str(rel), "level": "error",
+                                   "msg": f"tag 不在白名單：{t}"
+                                          f"（用 wiki_taxonomy.py propose 提案）"})
 
         # status 過期（seedling 超過 30 天）
         if not errors_only and fm.get("status") == "seedling" and "created" in fm:
@@ -133,41 +168,36 @@ def main() -> None:
     p = argparse.ArgumentParser(description="Wiki Lint — 健康檢查")
     p.add_argument("--wiki_dir", required=True, help="wiki/ 目錄路徑")
     p.add_argument("--errors-only", action="store_true", help="只顯示錯誤")
+    p.add_argument("--schema", default="", help="schema.md 路徑（給了才驗 tags 白名單）")
     p.add_argument("--json", action="store_true", help="JSON 格式輸出")
     args = p.parse_args()
 
     wiki_dir = Path(args.wiki_dir)
     if not wiki_dir.exists():
-        print(f"[ERROR] 目錄不存在：{wiki_dir}", file=sys.stderr)
-        sys.exit(1)
+        emit_error(ErrorCode.WIKI_DIR_NOT_FOUND, f"目錄不存在：{wiki_dir}")
+    schema = Path(args.schema) if args.schema else None
+    if schema is not None and not schema.exists():
+        emit_error(ErrorCode.SCHEMA_NOT_FOUND, f"schema 不存在：{schema}")
 
-    result = lint_wiki(wiki_dir, errors_only=args.errors_only)
+    result = lint_wiki(wiki_dir, args.errors_only, schema)
+    errors, warnings = result["errors"], result["warnings"]
 
     if args.json:
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return
+        # exit code 以 errors 數為準 —— CI 靠它擋，不靠人讀輸出
+        emit_json({"ok": not errors, "action": "lint", "files": result["files"],
+                   "error_count": len(errors), "warning_count": len(warnings),
+                   "errors": errors, "warnings": warnings}, 1 if errors else 0)
 
-    # Human-readable output
-    print(f"📋 Wiki Lint: {result['files']} 頁面掃描完成\n")
-
-    if result["errors"]:
-        print(f"❌ 錯誤 ({len(result['errors'])}):")
-        for e in result["errors"]:
-            print(f"  {e['file']}: {e['msg']}")
-        print()
-
-    if result["warnings"]:
-        print(f"⚠️  警告 ({len(result['warnings'])}):")
-        for w in result["warnings"]:
-            print(f"  {w['file']}: {w['msg']}")
-        print()
-
-    if not result["errors"] and not result["warnings"]:
-        print("✅ 全部通過，無問題。")
-    elif not result["errors"]:
-        print("✅ 無錯誤（有警告建議處理）。")
-    else:
-        sys.exit(1)
+    print(f"🔍 Wiki Lint：{result['files']} 頁面")
+    print(f"   ❌ errors: {len(errors)}｜⚠️  warnings: {len(warnings)}\n")
+    for e in errors:
+        print(f"  ❌ {e['file']}：{e['msg']}")
+    if not args.errors_only:
+        for w in warnings:
+            print(f"  ⚠️  {w['file']}：{w['msg']}")
+    if not errors and not warnings:
+        print("✅ 全數通過")
+    sys.exit(1 if errors else 0)
 
 
 if __name__ == "__main__":
