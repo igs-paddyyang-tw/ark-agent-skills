@@ -40,7 +40,10 @@ REQUIRED_FIELDS = ["title", "type", "created", "updated", "trust"]
 RECOMMENDED_FIELDS = ["tags", "status"]
 VALID_TRUST = ["deterministic", "llm-distilled"]
 VALID_TYPES = ["concept", "entity", "source", "synthesis", "comparison", "overview", "system"]
-VALID_STATUS = ["seedling", "developing", "mature"]
+# `evergreen`（2026-09-04 加入）：長青頁面 —— 內容穩定、不該被 seedling 逾期規則催。
+# W1 baseline 實測有 2 頁在用它，語意合理 → **是枚舉表少了一個值，不是資料錯**。
+# （為了讓 lint 變綠而改資料語意是本末倒置。）
+VALID_STATUS = ["seedling", "developing", "mature", "evergreen"]
 
 
 def lint_wiki(wiki_dir: Path, errors_only: bool = False,

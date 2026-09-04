@@ -94,6 +94,9 @@ def test_json_paths_emit_pure_json(script, args):
 @pytest.mark.parametrize("script", [
     "wiki_guard.py", "wiki_taxonomy.py", "wiki_ingest.py", "wiki_lint.py",
     "wiki_query.py", "wiki_index.py", "wiki_graph.py", "wiki_context.py",
+    # W2 補上 —— 這兩支原本不在清單裡，validate_wiki.py 的 --help rc=1
+    # 是「完成定義逐條驗」時才發現的（測試涵蓋 8 支，實際有 10 支）
+    "build_wiki.py", "validate_wiki.py",
 ])
 def test_help_works_zero_dependency(script):
     """AC: AC-016 — 每支腳本 --help 可跑（零第三方依賴環境的基本要求）"""

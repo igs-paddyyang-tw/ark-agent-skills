@@ -1,0 +1,21 @@
+# ark-wiki-engine v3 依賴
+#
+# **硬需求：Python 3.12+ 標準庫。零第三方依賴時全功能可用**
+# （bm25 走 purepy postings、分詞走 ASCII 詞 + CJK bigram），
+# 只有召回品質差異，不會有功能缺失。
+#
+# 以下皆為 optional —— 裝了會自動啟用（`--tokenizer auto`），
+# 沒裝就降級並在 `meta.tokenizer` / `meta.bm25_backend` 明確回報。
+#
+#   jieba   中文分詞（+ .index/userdict.txt 讓 title/aliases 不被切散）
+#   bm25s   BM25 加速與持久化 —— **v3 尚未接上**（排在 W4／T4.1），
+#           `--backend bm25s` 目前會明確回 BAD_ARGUMENTS 而非靜默降級
+#
+# ⚠️ PyStemmer 已移除：英文詞幹還原對中文知識庫無用，
+#    而它需要編譯（Python 3.14 上曾因此安裝失敗）。
+#
+# ⚠️ 索引的 tokenizer 記在 .index/manifest.json。**建索引與查詢若用不同
+#    解譯器（一邊有 jieba、一邊沒有），查詢端會回 TOKENIZER_MISMATCH
+#    並改記憶體重算** —— 不是故障，但會失去持久索引的速度優勢。
+
+jieba>=0.42 ; extra == "cjk"
