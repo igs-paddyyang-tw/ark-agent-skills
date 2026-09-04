@@ -15,7 +15,7 @@
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **61 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -50,7 +50,7 @@
 
 ## ③ 管線元件 Pipeline
 
-> 輸出：結構化資料｜`category: pipeline`｜20 個
+> 輸出：結構化資料｜`category: pipeline`｜19 個
 
 | Skill | 定位 |
 |-------|------|
@@ -73,8 +73,6 @@
 | `ark-test-runner` | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
 | `ark-translator` | 產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯， 支援繁體中文、簡體中文、英文、日文互譯。 |
 | `ark-web-scraper` | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
-| `ark-weknora-cli` | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫；查詢（agent-chat / knowledge-chat）+ 寫入（ingest）+ 口徑路由三合一，配 ark-db-query 執行。 |
-| `ark-wiki-engine` | Wiki 知識庫引擎（庫），三件套架構中與 ark-md-report（Content 軌）、ark-html-report（View 軌）分工。 |
 
 ## ④ 呈現層 View
 
@@ -119,21 +117,23 @@
 
 ## ⑦ 維運 Ops
 
-> 輸出：診斷 / 驗證｜`category: ops`｜3 個
+> 輸出：診斷 / 驗證｜`category: ops`｜4 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-dashboard-health` | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
 | `ark-env-doctor` | 當使用者遇到開發環境問題時使用此技能。 |
 | `ark-skills-align` | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
+| `ark-weknora-cli` | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
 
 ## ⑧ 執行器 Executor
 
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜1 個
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜2 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
+| `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
 <!-- END GENERATED CATALOGUE -->
 
