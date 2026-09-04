@@ -73,6 +73,7 @@
 | `ark-test-runner` | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
 | `ark-translator` | 產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯， 支援繁體中文、簡體中文、英文、日文互譯。 |
 | `ark-web-scraper` | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
+| `ark-weknora-cli` | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫；查詢（agent-chat / knowledge-chat）+ 寫入（ingest）+ 口徑路由三合一，配 ark-db-query 執行。 |
 | `ark-wiki-engine` | Wiki 知識庫引擎（庫），三件套架構中與 ark-md-report（Content 軌）、ark-html-report（View 軌）分工。 |
 
 ## ④ 呈現層 View

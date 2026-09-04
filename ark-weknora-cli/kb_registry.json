@@ -1,0 +1,4 @@
+{
+  "_note": "KB 別名 → UUID 對照表（knowledge-chat 專用）。weknora_kb_chat.py --kb-id 接受別名或直接 UUID。唯讀 key 看不到 kb-list，故手動維護、納入版控、人審更新。",
+  "player-profile": "a32f7777-fecc-43c7-ad06-580bc4e6e372"
+}
