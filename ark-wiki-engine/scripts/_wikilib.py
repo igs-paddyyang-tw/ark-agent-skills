@@ -198,8 +198,31 @@ def tokenize(text: str, mode: str = "auto", userdict: Path | None = None) -> lis
 # ── 頁面掃描與雜湊 ───────────────────────────────────────────
 
 def iter_pages(wiki_dir: Path) -> Iterator[Path]:
-    """依相對路徑排序列出 wiki 頁面（排序讓 content_hash 穩定）。"""
-    yield from sorted(wiki_dir.rglob("*.md"), key=lambda p: str(p.relative_to(wiki_dir)))
+    """依相對路徑排序列出 wiki 頁面（排序讓 content_hash 穩定）。
+
+    **明確跳過 symlink 目錄與 symlink 檔案。** 理由：知識庫常用目錄 symlink
+    掛載上游鏡像（實例：hoyeah 的 `knowledge/github/wiki/statistics-activities`
+    → `../raw/statistics/wiki/activities`，1392 頁的上游鏡像）。
+    跟進去會把鏡像當自己的頁面掃 —— 而鏡像每日被覆寫，改它撐不過隔天。
+
+    `Path.rglob` 對目錄 symlink 的行為隨 Python 版本而異
+    （3.13 才有 `recurse_symlinks` 參數）→ 不能依賴預設行為，要自己擋。
+    """
+    def walk(d: Path) -> Iterator[Path]:
+        try:
+            entries = sorted(d.iterdir(), key=lambda p: p.name)
+        except OSError:
+            return
+        for e in entries:
+            if e.is_symlink():          # 目錄或檔案 symlink 一律不跟進
+                continue
+            if e.is_dir():
+                if e.name.startswith("."):
+                    continue            # .index/ 等
+                yield from walk(e)
+            elif e.suffix == ".md":
+                yield e
+    yield from sorted(walk(wiki_dir), key=lambda p: str(p.relative_to(wiki_dir)))
 
 
 def content_hash(wiki_dir: Path) -> str:

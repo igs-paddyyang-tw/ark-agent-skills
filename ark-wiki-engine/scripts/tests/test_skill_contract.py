@@ -170,3 +170,44 @@ def test_repo_audit_and_readme_gates():
                              capture_output=True, text=True)
         assert chk.returncode == 0, (
             "README 目錄過期 —— 改 category 後要重跑 gen_readme.py\n" + chk.stderr[-300:])
+
+
+# ── 鏡像／唯讀素材的保護（2026-09-07 由 hoyeah 的實例驅動）─────────────
+
+def test_iter_pages_skips_symlinked_dirs(tmp_path):
+    """AC: AC-001 — iter_pages 不跟進目錄 symlink（鏡像掛載點）"""
+    sys.path.insert(0, str(SCRIPTS))
+    from _wikilib import iter_pages
+    real = tmp_path / "wiki"
+    (real / "sub").mkdir(parents=True)
+    (real / "a.md").write_text("---\ntitle: a\n---\n", encoding="utf-8")
+    (real / "sub" / "b.md").write_text("---\ntitle: b\n---\n", encoding="utf-8")
+    mirror = tmp_path / "mirror"
+    mirror.mkdir()
+    (mirror / "upstream.md").write_text("---\ntitle: up\n---\n", encoding="utf-8")
+    (real / "mounted").symlink_to(mirror, target_is_directory=True)
+
+    names = sorted(p.name for p in iter_pages(real))
+    assert names == ["a.md", "b.md"], names
+    assert "upstream.md" not in names, (
+        "跟進了 symlink 目錄 —— 鏡像頁面會被當成自己的頁面掃，"
+        "而鏡像每日被覆寫，改它撐不過隔天")
+
+
+def test_lint_refuses_raw_paths_by_default(tmp_path):
+    """AC: AC-019 — 預設拒絕 lint raw/（唯讀素材／上游鏡像），--allow-raw 才放行"""
+    raw_wiki = tmp_path / "knowledge" / "github" / "raw" / "statistics" / "wiki"
+    raw_wiki.mkdir(parents=True)
+    (raw_wiki / "p.md").write_text("---\ntitle: p\n---\n", encoding="utf-8")
+
+    proc = subprocess.run([sys.executable, str(SCRIPTS / "wiki_lint.py"),
+                           "--wiki_dir", str(raw_wiki), "--json"],
+                          capture_output=True, text=True)
+    assert proc.returncode == 2, proc.stdout[:200]
+    import json as _json
+    assert _json.loads(proc.stdout)["error"]["code"] == "BAD_ARGUMENTS"
+
+    ok = subprocess.run([sys.executable, str(SCRIPTS / "wiki_lint.py"),
+                         "--wiki_dir", str(raw_wiki), "--json", "--allow-raw"],
+                        capture_output=True, text=True)
+    assert ok.returncode in (0, 1), ok.stdout[:200]     # 顯式放行後正常運作

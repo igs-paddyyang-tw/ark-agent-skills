@@ -189,6 +189,8 @@ def main() -> None:
     p.add_argument("--wiki_dir", required=True, help="wiki/ 目錄路徑")
     p.add_argument("--errors-only", action="store_true", help="只顯示錯誤")
     p.add_argument("--schema", default="", help="schema.md 路徑（給了才驗 tags 白名單）")
+    p.add_argument("--allow-raw", dest="allow_raw", action="store_true",
+                   help="允許掃 raw/（預設拒絕 —— 唯讀素材與上游鏡像不該 lint）")
     p.add_argument("--json", action="store_true", help="JSON 格式輸出")
     args = p.parse_args()
 
@@ -198,6 +200,14 @@ def main() -> None:
     schema = Path(args.schema) if args.schema else None
     if schema is not None and not schema.exists():
         emit_error(ErrorCode.SCHEMA_NOT_FOUND, f"schema 不存在：{schema}")
+
+    # raw/ 是唯讀的原始素材／上游鏡像 —— 對它 lint 沒有意義且會淹沒真正的問題。
+    # 實例：hoyeah 的 knowledge/github/raw/statistics/wiki 有 1392 頁上游鏡像，
+    # 直接 lint 會回 4071 個 error，而那些頁面每日被 sync 覆寫、改了也撐不過隔天。
+    if not args.allow_raw and any(part == "raw" for part in wiki_dir.resolve().parts):
+        emit_error(ErrorCode.BAD_ARGUMENTS,
+                   f"路徑含 raw/ —— 那是唯讀素材或上游鏡像，lint 它沒有意義："
+                   f"{wiki_dir}。確定要掃請加 --allow-raw。")
 
     result = lint_wiki(wiki_dir, args.errors_only, schema)
     errors, warnings = result["errors"], result["warnings"]
