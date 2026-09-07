@@ -130,10 +130,27 @@ def test_requirements_marks_optional_and_drops_pystemmer():
     assert any("jieba" in d.lower() for d in deps)
 
 
+#: 只有真正的 ark-agent-skills repo 才有這個產生區標記
+_CATALOGUE_MARKER = "<!-- BEGIN GENERATED CATALOGUE -->"
+
+
 def _repo_root() -> Path | None:
-    """往上找 ark-agent-skills repo 根（有 ark-skills-align/ 與 scripts/gen_readme.py）。"""
+    """往上找 ark-agent-skills repo 根。
+
+    ⚠️ **不能只看 `ark-skills-align/` 存不存在** —— 消費端的 `.kiro/skills/` 裡
+    常有一份複製的 `ark-skills-align`（skill 子集），那不是 repo 根。
+    實測踩過：在 nana-team-agent 底下跑時，它把消費端的 24 個 skill 子集
+    當成全庫去稽核 → 回一堆本來就存在的 P1，**測試變成假紅燈**。
+
+    判準改成三者同時成立：稽核腳本 + README 產生器 + README 的產生區標記。
+    那個標記只有單一真相來源的 repo 有。
+    """
     for parent in [SKILL_ROOT, *SKILL_ROOT.parents]:
-        if (parent / "ark-skills-align" / "scripts" / "audit_skills.py").is_file():
+        readme = parent / "README.md"
+        if ((parent / "ark-skills-align" / "scripts" / "audit_skills.py").is_file()
+                and (parent / "scripts" / "gen_readme.py").is_file()
+                and readme.is_file()
+                and _CATALOGUE_MARKER in readme.read_text(encoding="utf-8", errors="replace")):
             return parent
     return None
 
