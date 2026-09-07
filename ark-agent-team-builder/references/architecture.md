@@ -95,7 +95,7 @@ Stage 0: Skill 產出（精簡版，7 模組）
 ```
 基礎系統（ark-agent-team-builder 產出）
   │
-  ├── 加 .kiro/ 配置 → /ark-kiro-init
+  ├── 加 .kiro/ 配置 → /ark-agent-init
   ├── 加啟動程式 → /ark-team-runtime（已內建於 build_team.py）
   ├── 加工作流排程 → /ark-scheduler-generator
   ├── 加知識庫引擎 → /ark-wiki-engine

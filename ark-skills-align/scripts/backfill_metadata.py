@@ -30,7 +30,7 @@ FALLBACK_CATEGORY_MAP = {
              "ark-project-planning", "ark-planning-with-files",
              "ark-doc-coauthoring", "ark-skill-creator"],
     "scaffolder": ["ark-agent-team-builder", "ark-agent-builder",
-                 "ark-webapp-generator", "ark-chatbot-generator", "ark-kiro-init",
+                 "ark-webapp-generator", "ark-chatbot-generator", "ark-agent-init",
                  "ark-llm-cli", "ark-mcp-builder", "ark-scheduler-generator",
                  "ark-telegram-bot", "ark-docker-deploy", "ark-ai-bot-builder"],
     "pipeline": ["ark-db-query", "ark-etl-pipeline", "ark-chart-generator",

@@ -40,7 +40,7 @@ metadata:
 4. 確認排程需求 → 預設開啟（hourly + daily-summary + daily-qa）
 5. 產出全部檔案（含 prompts/ 每 agent ≥ 2 個模板）
 6. 執行 validate_team.py 驗證結構完整性
-7. 提示下一步：「用 /ark-kiro-init 為每個 agent 配置 .kiro/」
+7. 提示下一步：「用 /ark-agent-init 為每個 agent 配置 .kiro/」
 ```
 
 ### 快速模式
@@ -120,8 +120,8 @@ knowledge/shared/
 ```
 
 > 以下由其他 Skill 在後續 Phase 產出（本 Skill 不負責）：
-> - `.kiro/`（根目錄 admin workspace）→ `ark-kiro-init`（Phase A2）
-> - `skills/`（共用 Skills 倉庫）→ `ark-kiro-init`（Phase A2）
+> - `.kiro/`（根目錄 admin workspace）→ `ark-agent-init`（Phase A2）
+> - `skills/`（共用 Skills 倉庫）→ `ark-agent-init`（Phase A2）
 > - `docs/spec.md` → `ark-superpowers`（Phase A3）
 > - `src/{pkg}/` + `mcp_setup.py` → `ark-mcp-builder`（Phase B1）
 > - `start.py` → `ark-team-runtime`（Phase B3）
@@ -450,7 +450,7 @@ if agents/{name}/ 已存在:
 
 📋 下一步：
 1. 填寫 .env（Telegram token 等）
-2. 執行 /ark-kiro-init 為每個 agent 配置 .kiro/
+2. 執行 /ark-agent-init 為每個 agent 配置 .kiro/
 3. 執行 ark-team-agent team start 啟動團隊
 ```
 
@@ -459,13 +459,13 @@ if agents/{name}/ 已存在:
 ## 注意事項
 
 - 此 Skill 只產出團隊骨架，不產出 .kiro/ 配置
-- .kiro/ 由 /ark-kiro-init 產出（含 steering + agent.json + skills）
+- .kiro/ 由 /ark-agent-init 產出（含 steering + agent.json + skills）
 - 知識庫由 /ark-wiki-engine 產出
 - team.yaml schema 遵循 ark-team-agent v0.11+
 
 ### Skills 部署規則
 
-ark-kiro-init 產出 .kiro/ 時，必須部署核心 4 個 Skills 到 `.kiro/skills/`：
+ark-agent-init 產出 .kiro/ 時，必須部署核心 4 個 Skills 到 `.kiro/skills/`：
 
 | Skill | 用途 | 部署對象 |
 |-------|------|---------|
@@ -474,7 +474,7 @@ ark-kiro-init 產出 .kiro/ 時，必須部署核心 4 個 Skills 到 `.kiro/ski
 | `ark-skill-creator` | 建立/修改 Skill | 全員 |
 | `ark-code-spec-validator` | 驗證 code 與 spec 一致性 | 全員 |
 
-**來源：** 從專案根層 `skills/` 目錄複製（如有），或從 ark-kiro-init 的 references 載入。
+**來源：** 從專案根層 `skills/` 目錄複製（如有），或從 ark-agent-init 的 references 載入。
 
 **admin 額外 Skills：** admin 可擁有全套 Skills（視需求），worker 只需核心 4 個。
 

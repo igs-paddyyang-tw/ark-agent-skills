@@ -1,13 +1,16 @@
 ---
-name: ark-kiro-init
+name: ark-agent-init
 description: |
-  產出完整的 .kiro/ workspace 配置（agents、steering、prompts、skills、settings），
-  根據使用者指定的角色自動生成。預設為全端工程師 + 系統分析與設計師（SA/SD）。
-  支援自訂角色：上網搜尋該角色的最佳實踐並整理成配置。
-  使用此 Skill 當使用者提及 建立 .kiro、產生 workspace、初始化 kiro 配置、
-  kiro init、kiro-init、設定角色的 .kiro、幫我建 agent 配置、新增角色、
-  kiro workspace、建立開發環境、設定 AI 助手角色、
-  或任何需要產出 .kiro 目錄結構的場景。
+  產出完整的 agent workspace 配置（steering、agents、prompts、skills、settings、
+  knowledge、memory），根據使用者指定的角色自動生成。預設為全端工程師 +
+  系統分析與設計師（SA/SD）。支援自訂角色：上網搜尋該角色的最佳實踐並整理成配置。
+  同時產出多 AI CLI 的入口檔（.kiro/steering、CLAUDE.md、AGENTS.md），
+  以單一真相來源（SSOT）連結，讓 Kiro CLI / Claude Code / Codex 等共用同一份人格與規範。
+  使用此 Skill 當使用者提及 建立 agent 配置、初始化 agent、agent init、agent-init、
+  建立 .kiro、產生 workspace、初始化 kiro 配置、kiro init、kiro-init、
+  設定角色的 .kiro、幫我建 agent 配置、新增角色、workspace generator、
+  建立開發環境、設定 AI 助手角色、多 CLI 入口、CLAUDE.md 連結、
+  或任何需要產出 agent workspace 目錄結構的場景。
 metadata:
   schema_version: 1
   status: active
@@ -16,21 +19,28 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "1.1"
-  updated: 2026-05-15
+  version: "2.0"
+  updated: 2026-09-07
 ---
 
-# ark-kiro-init
+# ark-agent-init
 
-根據角色產出完整 `.kiro/` workspace 配置。
+根據角色產出完整 agent workspace 配置（`.kiro/` + 多 CLI 入口檔）。
+
+> **更名紀錄**：本 skill 原名 `ark-kiro-init`（v1.x），於 v2.0（2026-09-07）
+> 更名為 `ark-agent-init` —— 因為它產出的不只是 Kiro 的 `.kiro/`，
+> 而是「一份 agent workspace 給多個 AI CLI 共用」。舊觸發詞（kiro init / kiro-init）
+> 保留向後相容。
 
 ## 觸發條件
 
-- 「建立 .kiro」、「產生 workspace」、「初始化 kiro 配置」
+- 「建立 agent 配置」、「初始化 agent」、「agent init」、「agent-init」
+- 「建立 .kiro」、「產生 workspace」、「初始化 kiro 配置」（舊詞，相容保留）
 - 「設定 {角色} 的 .kiro」、「幫我建 agent 配置」
 - 「新增角色」、「kiro workspace」、「workspace generator」
 - 「建立開發環境」、「設定 AI 助手」
 - 「為 {name}-agent 配置 .kiro/」、「配置 agent 角色」
+- 「多 CLI 入口」、「CLAUDE.md 連結」、「讓 Claude Code / Codex 共用 steering」
 
 ---
 
@@ -117,6 +127,73 @@ metadata:
 > 這些是專案特定檔案，由使用者依需求手動建立（或後續用 ark-superpowers 產出）。
 > 預設只產出 5 個核心 steering 檔案，確保最小可用。
 
+---
+
+## 🔗 多 AI CLI 入口（v2.0 新增）
+
+不同的 AI CLI 各自預設讀**不同檔名**的入口檔。若你的專案會被多個 CLI 使用
+（例如同時用 Kiro CLI 開發、用 Claude Code / Codex 協作），要讓它們**共用同一份
+人格與規範**，避免三份檔案各自漂移。做法是**單一真相來源（SSOT）+ 連結**。
+
+### 各 CLI 預設讀哪個檔案
+
+| AI CLI | 預設入口檔（repo root，除非另註） | 載入時機 |
+|--------|-----------------------------------|----------|
+| **Kiro CLI** | `.kiro/steering/*.md`（`AGENTS.md`/`SOUL.md`/`MEMORY.md`…，依 `inclusion` 決定） | 每次對話自動載入 always 檔 |
+| **Claude Code** | `CLAUDE.md`（原生讀取，session 起始的 ground truth） | 每次 session 開頭 |
+| **Codex CLI**（OpenAI） | `AGENTS.md` | 每次 session 開頭 |
+| **Cursor** | `.cursor/rules/`（或舊版 `.cursorrules`） | 依規則檔 |
+| **GitHub Copilot** | `.github/copilot-instructions.md` | 依設定 |
+| **Gemini CLI** | `GEMINI.md` | 每次 session 開頭 |
+
+> 💡 **`AGENTS.md` 已是事實上的跨工具通用標準** —— Codex / Cursor / Gemini / 多數
+> coding agent 都會讀 repo root 的 `AGENTS.md`。Claude Code 是主要例外（讀 `CLAUDE.md`）。
+
+### SSOT 連結策略（建議預設）
+
+以 **`AGENTS.md`（repo root）為單一真相來源**，其他 CLI 的入口檔連結過去：
+
+```bash
+# 1) SSOT：repo root 的 AGENTS.md（Codex / Cursor / Gemini 直接讀）
+#    內容 = 通用規範（Kiro 的 .kiro/steering/AGENTS.md 可指向或複製同一份）
+
+# 2) Claude Code：symlink CLAUDE.md → AGENTS.md（一份內容，兩個入口）
+ln -s AGENTS.md CLAUDE.md
+
+# 3) Kiro CLI：.kiro/steering/AGENTS.md 亦可 symlink 回 root
+#    （或以 root AGENTS.md 為主、steering 只放 Kiro 專屬的 inclusion 設定）
+ln -sf ../../AGENTS.md .kiro/steering/AGENTS.md   # 視專案結構決定方向
+```
+
+**連結 vs 複製的取捨：**
+
+| 方式 | 優點 | 風險 |
+|------|------|------|
+| **symlink**（建議） | 改一處全部生效，永不漂移 | 跨 OS（Windows）symlink 支援差；有些 CI checkout 不還原 symlink |
+| **複製 + 守門** | 純檔案、跨平台穩 | 會漂移 → 需一支腳本／CI 檢查各入口檔內容一致 |
+| 各自維護 | — | 🔴 **禁止** —— 三份必然漂移，這正是本 skill 要解決的問題 |
+
+> 🔴 **判準（來自實例踩坑）**：一份事實寫多處時，其中一處會被忘記更新。
+> 用 symlink 讓「多入口」在檔案系統層就是「一份內容」；若環境不支援 symlink，
+> 就必須有守門腳本比對各入口檔的一致性 —— **不能靠人記得同步**。
+
+### Kiro 的分層對應（本 skill 的特殊性）
+
+Kiro 的 steering 是**多檔 + `inclusion` 分層**，比單一 `AGENTS.md` 表達力強：
+
+| Kiro steering 檔 | `inclusion` | 對應到單一入口檔時 |
+|------------------|-------------|---------------------|
+| `AGENTS.md` | always | → 併入 root `AGENTS.md` / `CLAUDE.md` 的「通用規範」段 |
+| `SOUL.md` | always | → 併入「角色人格」段 |
+| `TEAM.md` | **manual** | → **不併入** always 入口檔（團隊派工規範，只在團隊場景載入） |
+| `MEMORY.md` | always | → 專案敘事記憶（可獨立，不一定塞進 CLAUDE.md） |
+
+> 💡 產出多 CLI 入口時，**只把 always 層併進 `CLAUDE.md`/`AGENTS.md`**；
+> `inclusion: manual` 的 `TEAM.md` 不要併 —— 否則非團隊的 CLI session 會吃到
+> 用不到的派工規範 context。
+
+---
+
 ### 知識庫五件套（每個 agent 必有）
 
 | 檔案 | 用途 | 規則 |
@@ -126,6 +203,33 @@ metadata:
 | `log.md` | 操作日誌 | **append-only**，禁止刪除舊記錄 |
 | `raw/` | 唯讀原始資料 | LLM 只讀不改，ingest 工具處理 |
 | `wiki/overview.md` | 知識庫概覽 | 含 frontmatter（title/type/tags/created/updated/status） |
+
+> 🔴 **團隊級 knowledge 要建 `knowledge/shared/` 層**（`shared/wiki/` + `shared/raw/`
+> + `schema/index/log`）—— Wiki 引擎（ark-wiki-engine）與 bot 啟動實際讀的是 `shared/`，
+> 不是扁平的 `knowledge/wiki/`。少一層 `shared/` 會讓索引讀不到且**不報錯**。
+> 另建 `knowledge/raw/memory-archive/`（MEMORY 歸檔落點，路徑寫死不可搬）。
+> 詳見 `references/architecture-drift-feedback.md`。
+
+### memory/ 目錄（每個 agent 必有，v2.0 補）
+
+記憶落點**不只是 `steering/MEMORY.md`**。套件層（ark_bot_agent / ark_team_agent）
+用 `memory/` 目錄存執行期記憶：
+
+```
+memory/
+├── daily/YYYY-MM-DD.md   # 每日 log（自動累積）
+├── recent.md
+└── memory.md
+```
+
+- `dir="."` 的 manager → 記憶落**根層 `memory/`**；子 agent → 各自 `agents/<name>/memory/`
+- `steering/MEMORY.md` 仍保留（人類可讀的專案敘事記憶 + 自動歸檔）
+- 分工寫進 `AGENTS.md`：`memory/` = 套件寫入的執行期記憶；`MEMORY.md` = 專案敘事
+
+### artifacts/ 產出目錄（取代舊 output/，v2.0 更新）
+
+agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不再用 `output/`**
+—— 與套件 1.2.19 起的骨架一致。`.gitkeep` 骨架：`memory/` + `artifacts/` + `scripts/`。
 
 ### schema.md 產出規則
 
@@ -607,7 +711,10 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 | 檔案 | 說明 |
 |------|------|
 | `role-templates.md` | 已知角色索引（10 種內建角色） |
+| `role-skills-map.md` | 角色 → Skills 對應表 |
+| `knowledge-schema-template.md` | 知識庫 schema 模板 |
 | `defaults/README.md` | 預設角色說明 |
+| `architecture-drift-feedback.md` | 🔴 **模板 vs 演化實例的三項缺口回饋**（knowledge/shared 層、memory/ 目錄、artifacts/）—— 維護本 skill 前必讀 |
 
 
 ---

@@ -40,9 +40,9 @@
 | Skill | 定位 |
 |-------|------|
 | `ark-agent-builder` | 快速產出完整 AI Agent Bot Workspace（1~6 階段漸進式）。 |
+| `ark-agent-init` | 產出完整的 agent workspace 配置（steering、agents、prompts、skills、settings、 knowledge、memory），根據使用者指定的角色自動生成。 |
 | `ark-agent-team-builder` | 一鍵產出完整 AI Agent 團隊平台（五層架構：Entry + OS + Collaboration + Execution + Knowledge）。 |
 | `ark-docker-deploy` | 產出容器化部署配置（Dockerfile + docker-compose.yaml + .dockerignore + 部署腳本）， 支援 Python / Node / Go 專案自動偵測，mul… |
-| `ark-kiro-init` | 產出完整的 .kiro/ workspace 配置（agents、steering、prompts、skills、settings）， 根據使用者指定的角色自動生成。 |
 | `ark-mcp-builder` | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
 | `ark-scheduler-generator` | 在既有專案上加入 WorkflowEngine 工作流引擎、ScheduleEngine 排程引擎， 並產出範例 Workflow YAML、排程定義與 agent-browser MCP Serve… |
 | `ark-telegram-bot` | Telegram Bot 開發骨架 SOP（python-telegram-bot）：Bot 專案建置、 Web App 整合、Menu 命令設定、InlineKeyboard 互動、Rate Lim… |

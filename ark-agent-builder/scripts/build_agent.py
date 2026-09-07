@@ -335,11 +335,11 @@ if __name__ == "__main__":
         files = build_agent(out, name)
 
         print(f"\n✅ 產出完成（{len(files)} 項）→ {out}/")
-        kiro_init = Path(out.parent / ".kiro/skills/ark-kiro-init/scripts/build_kiro.py")
+        kiro_init = Path(out.parent / ".kiro/skills/ark-agent-init/scripts/build_kiro.py")
         if not kiro_init.exists():
-            kiro_init = Path.home() / "kiro-cli/.kiro/skills/ark-kiro-init/scripts/build_kiro.py"
+            kiro_init = Path.home() / "kiro-cli/.kiro/skills/ark-agent-init/scripts/build_kiro.py"
         print(f"\n📋 下一步：")
-        print(f"  1. python .kiro/skills/ark-kiro-init/scripts/build_kiro.py --standalone {out}")
+        print(f"  1. python .kiro/skills/ark-agent-init/scripts/build_kiro.py --standalone {out}")
         print(f"     → 產出 .kiro/ 配置（SOUL + KIRO + MEMORY + mcp.json）")
         print(f"  2. 編輯 {out}/.kiro/steering/SOUL.md 設計 Bot 人格")
         print(f"  3. cp {out}/.env.example {out}/.env  # 填入 Token")

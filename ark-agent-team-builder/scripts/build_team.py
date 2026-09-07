@@ -1,6 +1,6 @@
 """build_team.py — 一鍵產出完整可獨立運作的 Agent Team 專案。
 
-整合 ark-agent-team-builder + ark-team-core + ark-kiro-init，
+整合 ark-agent-team-builder + ark-team-core + ark-agent-init，
 確保產出的專案可以直接 `python start.py` 啟動。
 
 Usage:
@@ -764,7 +764,7 @@ def _ensure_knowledge(knowledge_dir: Path, agent_name: str) -> None:
 # ── .kiro/ admin workspace ────────────────────────────────────
 
 def _scaffold_kiro(output_dir: Path, cfg: dict) -> list[str]:
-    """產出 .kiro/ admin workspace（精簡版 ark-kiro-init）。"""
+    """產出 .kiro/ admin workspace（精簡版 ark-agent-init）。"""
     created: list[str] = []
     kiro_dir = output_dir / ".kiro"
 
@@ -824,7 +824,7 @@ def _scaffold_kiro(output_dir: Path, cfg: dict) -> list[str]:
         "# 服務檢查\n\n用 query_team_status() 查詢團隊狀態，回報結果。\n")
     created.append(".kiro/prompts/")
 
-    # skills/ (空目錄，由 ark-kiro-init 填充)
+    # skills/ (空目錄，由 ark-agent-init 填充)
     skills_dir = kiro_dir / "skills"
     skills_dir.mkdir(parents=True, exist_ok=True)
 
