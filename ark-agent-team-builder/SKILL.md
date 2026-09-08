@@ -1,749 +1,154 @@
 ---
 name: ark-agent-team-builder
 description: |
-  一鍵產出完整 AI Agent 團隊平台（五層架構：Entry + OS + Collaboration + Execution + Knowledge）。
-  預設 5 人團隊（admin + leader + ai-dev + coder + qa），支援 --level team（基礎）或 full（117 項完整平台）。
-  含 7 狀態任務生命週期、多 Runtime（kiro-cli/claude/codex/multica auto-detect + fallback）、
-  Kanban Web UI、Autopilot 排程、REST API（21+ 端點）、Telegram Bot（14 指令）、Docker 部署。
+  產出 ark_team_agent 套件消費端的多 agent 團隊 daemon 骨架 —— 裝 wheel + 產設定檔，
+  不手搭架構（team daemon / 多 runtime / Kanban Web UI / REST API / autopilot 排程 /
+  TG polling / 決策路由 / 記憶系統全由套件內建）。
+  產出：start.py（asyncio run_team）+ team.yaml（instances/channel/access/cost_guard/
+  hang_detector）+ scheduler.yaml + .env 骨架 + knowledge/shared 骨架。
+  預設多層專家團隊（manager + admin + leader + worker，用 group 歸屬）。
   使用此 Skill 當使用者提及 建立團隊、build team、agent team、多 agent 平台、
-  AI 團隊協作、ark-agent-team、或任何需要從零建立多 Agent 協作平台的場景。
+  AI 團隊協作、ark_team_agent 消費端、team daemon、team.yaml 骨架、
+  或任何需要建立 ark_team_agent 多 agent 團隊的場景。
+  不適用於：① 單 bot → ark-agent-bot-builder（ark_bot_agent）；
+  ② 非套件獨立 web 應用 → ark-webapp-generator；③ steering 人格 → ark-agent-init。
 metadata:
   schema_version: 1
   status: active
   category: scaffolder
+  depends_on: [ark-agent-init]
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.1"
-  updated: 2026-06-25
+  version: "3.0"
+  updated: 2026-09-08
 ---
 
-# ark-agent-team-init
+# ark-agent-team-builder
 
-產出多 Agent 團隊骨架，一句話啟動團隊協作。
+產出 `ark_team_agent` 套件消費端的團隊 daemon 骨架：**裝 wheel + 產設定檔**。
+
+> **v3.0 重寫（2026-09-08）**：本 skill 原為「手搭五層架構團隊平台」（117 項：
+> Kanban UI / REST API 21 端點 / 多 runtime / autopilot / TG 14 指令 / 整套
+> backend/coordinator/wiki/memory/runtime generators）。那些**已全部套件化為
+> `ark_team_agent`**。現在建團隊只需：**裝 wheel + start.py + team.yaml**。
+> 手搭 generators 已移除，保留設定慣例 references + team.yaml 範本。
+
+## 定位（與鄰近 skill 的分工）
+
+| 需求 | 用哪個 |
+|------|--------|
+| **多 agent 團隊 daemon**（ark_team_agent 消費端） | **本 skill** |
+| 單 bot（ark_bot_agent） | `ark-agent-bot-builder` |
+| 非套件的獨立 FastAPI web 應用 | `ark-webapp-generator` |
+| agent 的 steering 人格 + 多 CLI 入口 | `ark-agent-init`（本 skill 產骨架後呼叫它補人格） |
 
 ## 觸發條件
 
-- 「建立團隊」、「team init」、「agent teams」
-- 「多 agent 配置」、「團隊骨架」
-- 「ark-team-agent init」、「建立 N 人團隊」
+- 「建立團隊」、「build team」、「agent team」、「多 agent 平台」、「AI 團隊協作」
+- 「ark_team_agent 消費端」、「team daemon」、「team.yaml 骨架」
+
+## 輸入參數
+
+| 參數 | 型別 | 必要 | 預設 | 說明 |
+|------|------|------|------|------|
+| `project_name` | str | ✅ | — | 團隊專案名稱 |
+| `output_dir` | str | ❌ | `.` | 輸出目錄 |
+| `bot_token_env` | str | ❌ | `TELEGRAM_BOT_TOKEN` | TG token 的環境變數名 |
+| `group_id` | str | ❌ | — | TG 群組 id |
 
 ---
 
-## 互動流程
+## 產出流程
 
-```
-1. 確認團隊規模 → 預設 5 人（admin + leader + ai-dev + coder + qa）
-2. 確認角色組合 → 從 presets 選或自訂
-3. 確認互動模式 → 純私聊 @mention（預設）或 Group Topics
-4. 確認排程需求 → 預設開啟（hourly + daily-summary + daily-qa）
-5. 產出全部檔案（含 prompts/ 每 agent ≥ 2 個模板）
-6. 執行 validate_team.py 驗證結構完整性
-7. 提示下一步：「用 /ark-agent-init 為每個 agent 配置 .kiro/」
+### 步驟 1：裝套件
+
+```bash
+uv venv --python 3.13
+# wheel 從 Release 取得：github.com/igs-paddyyang-tw/ark_team_agent/releases
+uv pip install --python .venv/bin/python <ark_team_agent-*.whl>
 ```
 
-### 快速模式
+> 🔴 換裝後**驗 import 版號，不看 pip 輸出**：
+> `.venv/bin/python -c "import ark_team_agent; print(ark_team_agent.__version__)"`
+> team 端有些消費端 pin 版號（`pyproject.toml`），升級要同步改 pin（doctor 會比對）。
 
-使用者直接說「建立 4 人團隊」→ 跳過所有確認，直接用預設值產出。
-
-### 互動模式選擇
-
-| 模式 | 設定 | 適用 |
-|------|------|------|
-| **純私聊 @mention**（預設） | `channel.bot_token_env` 有值、無 `group_id` | 小團隊、個人助理 |
-| **Group Topics** | `channel.bot_token_env` + `group_id` | 大團隊、多人協作 |
-
-純私聊模式下：
-- 使用者用 `@{agent-short-name}` 指定對話對象
-- 無 @mention 時 Bot 回覆可用 agent 清單
-- `/start` 顯示歡迎訊息 + 用法範例
-- reply 經 admin 的 `private_chat` 送回使用者
-
----
-
-## 產出結構
+### 步驟 2：產目錄結構
 
 ```
 {project}/
-├── team.yaml                          # 團隊配置（5 instances）
-├── scheduler.yaml                     # 排程定義（≥ 2 jobs）
-├── .env.example                       # 環境變數範本
-├── .gitignore                         # Git 忽略
-├── README.md                          # 專案說明（團隊組成 + 啟動方式）
-├── pyproject.toml                     # 套件定義（name + dependencies）
-├── requirements.txt                   # 依賴清單（ark-team-agent + 業務依賴）
-├── tasks/                             # 任務板
-│   ├── board.json                     # 空 board（[]）
-│   └── items/                         # 任務項目目錄
-└── agents/                            # 各 agent 工作目錄（不含 admin）
-    ├── AGENTS.md                      # 團隊共用行為準則（所有 agent 複製此檔）
-    ├── {leader}-agent/
-    │   ├── docs/.gitkeep
-    │   ├── output/.gitkeep
-    │   └── knowledge/
-    │       ├── schema.md
-    │       ├── index.md
-    │       ├── log.md
-    │       ├── raw/.gitkeep
-    │       └── wiki/
-    │           └── overview.md
-    ├── {worker1}-agent/
-    │   ├── docs/.gitkeep
-    │   ├── output/.gitkeep
-    │   └── knowledge/（同上五件套）
-    └── {worker2}-agent/
-        ├── docs/.gitkeep
-        ├── output/.gitkeep
-        └── knowledge/（同上五件套）
+├── start.py                 # asyncio.run(run_team(Path("team.yaml")))
+├── team.yaml                # 團隊設定（唯一集中點）← 範本 references/templates/team.yaml.tpl
+├── scheduler.yaml           # 排程（選用）← references/templates/scheduler.yaml.tpl
+├── .env                     # 機密（bot_token_env 指定的變數 / API key）
+├── requirements.txt         # 只列 wheel
+├── .kiro/steering/          # 全域規範（由 ark-agent-init 產；TEAM.md 由套件動態產生）
+├── knowledge/
+│   ├── shared/{wiki,raw}/    # 🔴 團隊共用知識庫（Wiki 引擎讀這層）
+│   │   └── {schema,index,log}.md
+│   └── raw/memory-archive/
+├── agents/<name>-agent/      # 各 instance 的 working_directory（含 .kiro + knowledge + memory）
+└── secrets/                 # 機密檔（BQ key 等，.gitignore 排除）
 ```
 
-> **注意：** admin 預設 `working_directory: agents/admin-agent`（獨立 workspace）。
-> 根目錄 `.kiro/` 作為 Kiro CLI 開發用，不與 daemon 的 admin-agent 衝突。
+> knowledge/shared 骨架範本在 `references/templates/knowledge/shared/`。
 
-### 團隊共享知識庫（根目錄 knowledge/shared/）
+### 步驟 3：填 team.yaml（設定集中點）
 
-產出時自動寫入 5 篇預設 wiki 頁面，供所有 agent 透過 `wiki_query` 搜尋：
+team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml）。核心區塊：
 
-```
-knowledge/shared/
-├── schema.md                       # Wiki Schema v3.0 規則
-├── index.md                        # 知識庫索引
-├── log.md                          # 操作日誌（append-only）
-├── raw/.gitkeep                    # 唯讀原始資料
-└── wiki/
-    ├── team-architecture.md        # 系統架構總覽
-    ├── mcp-tools-reference.md      # MCP 工具使用指南
-    ├── communication-patterns.md   # 跨 Agent 通訊模式
-    ├── upgrade-roadmap.md          # 系統升級路徑
-    └── troubleshooting.md          # 常見問題排除
-```
-
-> 以下由其他 Skill 在後續 Phase 產出（本 Skill 不負責）：
-> - `.kiro/`（根目錄 admin workspace）→ `ark-agent-init`（Phase A2）
-> - `skills/`（共用 Skills 倉庫）→ `ark-agent-init`（Phase A2）
-> - `docs/spec.md` → `ark-superpowers`（Phase A3）
-> - `src/{pkg}/` + `mcp_setup.py` → `ark-mcp-builder`（Phase B1）
-> - `start.py` → `ark-team-runtime`（Phase B3）
-> - `tests/` → `ark-test-runner`（Phase D1）
-### Agent 目錄三件套（必要）
-
-| 目錄 | 用途 |
+| 區塊 | 內容 |
 |------|------|
-| `docs/` | Agent 工作文件（spec、設計、筆記） |
-| `output/` | 任務產出（交付物） |
-| `knowledge/` | 私有知識庫（Schema v3.0，五件套） |
+| `defaults` | `backend: kiro-cli` / `model: auto` |
+| `kiro_files` | `skills.policy`（建議 skip，交 sync_skills 管）/ `steering.team_md: always` |
+| `channel` | `bot_token_env` / `group_id` / `announce_topics`（只收不回的公告頻道） |
+| `access` | `mode: group` / `allowed_users` |
+| `cost_guard` | `daily_limit_usd` / `warn_at_percentage` / `timezone` |
+| `hang_detector` | `enabled` / `timeout_minutes` / `escalation_minutes` |
+| `instances` | 各 agent：`working_directory` / `description` / `role` / `private_chat` / `skip_resume` / `group` |
 
-### 知識庫五件套（每個 agent 必有）
+範本：`references/templates/team.yaml.tpl`（基礎）、`team-full.yaml`（多層專家）、
+`team-ops.yaml` / `team-dev.yaml`（情境）。角色慣例見 `references/role-presets.md`。
 
-| 檔案 | 用途 | 規則 |
-|------|------|------|
-| `schema.md` | 規則定義 | 定義 frontmatter 欄位、操作規則 |
-| `index.md` | 索引目錄 | 每次修改 wiki 必須同步更新 |
-| `log.md` | 操作日誌 | **append-only**，禁止刪除舊記錄 |
-| `raw/` | 唯讀原始資料 | LLM 只讀不改，ingest 工具處理 |
-| `wiki/overview.md` | 知識庫概覽 | 含 frontmatter（title/type/tags/created） |
+> 🔴 `kiro_files.steering.team_md: always` —— 成員表以 team.yaml 為唯一真相，
+> 每次啟動同步。設 `once` 會凍結舊內容（含已移除的幽靈成員），升級套件也修不好。
 
----
+### 步驟 4：補 steering 人格
 
-## 產出規則
+呼叫 `ark-agent-init` 為各 instance 產 `.kiro/steering`（SOUL 人格 + 多 CLI 入口）。
+`TEAM.md` **不用手產** —— 套件 `backend.py` 依 team.yaml 動態產生（policy=always）。
 
-### 1. team.yaml
+### 步驟 5：啟動驗證
 
-```yaml
-defaults:
-  backend: kiro-cli
-  model: auto
-
-cost_guard:
-  daily_limit_usd: 30.0
-  warn_at_percentage: 80
-  timezone: Asia/Taipei
-
-hang_detector:
-  enabled: true
-  timeout_minutes: 60
-  escalation_minutes: 180
-
-channel:
-  bot_token_env: TELEGRAM_BOT_TOKEN
-  # group_id: -100xxxxxxxxxx        # 有值 = Group Topics 模式；無值 = 純私聊 @mention 模式
-  # general_topic_id: 1
-
-access:
-  mode: locked
-  allowed_users:
-    - 123456789                      # 使用者 Telegram ID
-
-instances:
-  # Admin — 服務管理（獨立目錄，不接業務）
-  {admin-name}-agent:
-    working_directory: agents/{admin-name}-agent
-    description: "👑 {描述}"
-    private_chat: 123456789          # 使用者 ID（reply 出口）
-    role: admin
-
-  # Leader — 業務入口
-  {leader-name}-agent:
-    working_directory: {leader-name}-agent
-    description: "{emoji} {描述}"
-    role: leader
-
-  # Workers
-  {worker-name}-agent:
-    working_directory: {worker-name}-agent
-    description: "{emoji} {描述}"
-    role: worker
-
-health_port: 13030                   # 第二個團隊用 23030 避免衝突
+```bash
+.venv/bin/python start.py
+curl -s localhost:<health_port>/api/health     # ark_team_agent → /api/health
 ```
 
-**填充規則：**
-- `description` 從 `references/role-presets.md` 查對應 emoji + 描述
-- admin 的 `working_directory` 預設 `agents/admin-agent`
-- 根目錄 `.kiro/` 作為 Kiro CLI 開發 workspace（不影響 daemon）
-- admin 的 `private_chat` = 使用者 Telegram ID（reply 回覆出口）
-- 非 admin 的 `working_directory` 格式為 `agents/{name}-agent`
-- 純私聊模式：不設 `group_id`，使用者用 @mention 指定 agent
-- Group Topics 模式：設 `group_id`，每個 agent 綁定一個 Topic
-- Telegram 區塊預設純私聊模式（group_id 註解）
-
-### 2. scheduler.yaml
-
-```yaml
-timezone: Asia/Taipei
-
-jobs:
-  - name: hourly-progress
-    target: {leader}-agent
-    prompt: "⏰ 確認團隊狀態，query_team_status 後依計劃派工或追蹤。更新 memory.md。"
-    cron: "10 9-21 * * *"
-
-  - name: daily-summary
-    target: {leader}-agent
-    prompt: "📋 今日摘要：整理成果 + 明日計劃，reply 回報。"
-    cron: "daily:21:00"
-```
-
-**條件式 job：**
-
-| 條件 | 加入 job |
-|------|---------|
-| 有 qa agent | `daily-qa-review`（cron: daily:12:30） |
-| 有 admin agent | `daily-changelog`（cron: daily:21:30，target: admin） |
-| 團隊 ≥ 5 人 | `wiki-maintenance`（cron: 0 12,18 * * *） |
-| 有 analyst | `weekly-data-report`（cron: 0 10 * * 1） |
-
-### 3. .env.example
-
-```
-TELEGRAM_BOT_TOKEN=your-token-here
-# GEMINI_API_KEY=your-key-here
-# DATABASE_URL=postgresql://user:pass@localhost/db
-```
-
-### 4. .gitignore
-
-```
-.env
-state/
-*.pid
-__pycache__/
-*.pyc
-```
-
----
-
-## 角色預設組合
-
-從 `references/role-presets.md` 載入。快速參考：
-
-| 預設 | 角色（含 admin） |
-|------|-----------------|
-| 最小（3人） | admin + leader + dev |
-| 標準（4人） | admin + leader + dev + qa |
-| AI 團隊（5人） | admin + leader(pm) + ai-dev + coder + qa |
-| 全端（5人） | admin + leader + frontend + backend + devops |
-| 遊戲（6人） | admin + leader + gamedev + frontend + backend + qa |
-| 完整（7人） | admin + leader + dev + qa + devops + design + analyst |
-
-> admin 永遠存在（服務管理 + reply 出口），不計入「業務角色」。
-
-### Leader 派工標準化
-
-Leader 必須部署 `ark-project-planning` Skill，收到需求時走 6 步流程：
-1. 需求釐清（假設 + 釐清問題）
-2. 撰寫規格（ark-superpowers 產出）
-3. 任務拆解（垂直切片 + 大小標記）
-4. 分派任務（統一 📋 格式）
-5. 追蹤進度（query_team_status）
-6. 驗收交付（對照 DoD）
-
-### 標準派工格式
-
-所有 `delegate_task` 必須使用：
-```
-📋 任務：{名稱}
-📄 規格：specs/{檔名}.md（第 N 節）
-🎯 你負責：{具體描述}
-📁 範圍：{檔案/目錄}
-⏰ 優先級：高/中/低
-📎 依賴：{無 / 等待 XXX}
-✅ 驗收：{完成條件}
-📏 大小：XS / S / M
-```
-
-自訂角色命名規則：
-- kebab-case（如 `data-engineer`）
-- 自動加 `-agent` 後綴
-- 禁止特殊字元
-
----
-
-## MCP Tools 骨架產出
-
-當團隊有業務 MCP Tools 需求時（使用者指定或偵測到 `src/` 目錄），額外產出：
-
-### 產出結構
-
-```
-{project}/
-├── src/{team_name}/
-│   ├── __init__.py
-│   ├── tools/
-│   │   ├── __init__.py          # TOOL_DEFINITIONS + __all__
-│   │   └── base.py              # get_db() + init_tools() 共用基礎
-│   └── mcp_setup.py             # register_tools() — 接入 MCP 協議
-└── start.py                     # 含 tool_setup=register_tools
-```
-
-### src/{team_name}/tools/__init__.py 模板
-
-```python
-"""{team_name} MCP Tools."""
-
-TOOL_DEFINITIONS: list[dict] = [
-    # 由使用者或後續 Skill 填充
-    # {
-    #     "name": "tool_name",
-    #     "description": "工具描述",
-    #     "inputSchema": {"type": "object", "properties": {...}, "required": [...]},
-    # },
-]
-
-__all__ = ["TOOL_DEFINITIONS"]
-```
-
-### src/{team_name}/tools/base.py 模板
-
-```python
-"""MCP Tools 共用基礎設施。"""
-from __future__ import annotations
-
-_db = None
-
-
-def get_db():
-    """取得資料庫連線（延遲初始化）。"""
-    global _db
-    if _db is None:
-        # 依專案需求初始化（SQLite / BigQuery / PostgreSQL）
-        pass
-    return _db
-
-
-def init_tools(config: dict | None = None) -> None:
-    """初始化工具依賴（由 daemon 啟動時呼叫）。"""
-    pass
-```
-
-### src/{team_name}/mcp_setup.py 模板
-
-```python
-"""MCP Tools 註冊 — 將業務工具接入 MCP 協議。"""
-from __future__ import annotations
-
-from ark_team_core import McpRegistry, ToolDefinition
-from .tools import TOOL_DEFINITIONS
-
-HANDLERS: dict[str, callable] = {}
-
-
-def register_tools(registry: McpRegistry) -> None:
-    """將業務工具註冊到 MCP Server。"""
-    for defn in TOOL_DEFINITIONS:
-        name = defn["name"]
-        if name in HANDLERS:
-            registry.register(ToolDefinition(
-                name=name,
-                description=defn["description"],
-                input_schema=defn["inputSchema"],
-                handler=HANDLERS[name],
-            ))
-```
-
-### 觸發條件
-
-| 條件 | 動作 |
-|------|------|
-| 使用者說「含 MCP 工具」或「有業務工具」 | 產出 MCP Tools 骨架 |
-| 使用者指定 `project_type: "data-pipeline"` | 自動產出 |
-| 預設（無特別指定） | 不產出（純團隊骨架） |
-
-### 品質檢查追加
-
-- [ ] `src/{team_name}/tools/__init__.py` 存在且有 `TOOL_DEFINITIONS`
-- [ ] `src/{team_name}/mcp_setup.py` 存在且有 `register_tools()`
-- [ ] `start.py` 含 `tool_setup=register_tools`
-
----
-
-## 冪等性
-
-```
-if team.yaml 已存在:
-  提示「team.yaml 已存在」
-  - 使用者選覆寫 → 重新產出
-  - 使用者選跳過 → 只補缺少的目錄
-
-if agents/{name}/ 已存在:
-  跳過（不刪除已有內容）
-```
-
----
-
-## 品質檢查
-
-產出後自動驗證（執行 `scripts/validate_team.py`）：
-
-- [ ] `team.yaml` 有 defaults + cost_guard + hang_detector + instances + health_port
-- [ ] 每個 instance 有 working_directory + description + role
-- [ ] 恰好 1 個 role: admin
-- [ ] 恰好 1 個 role: leader
-- [ ] instance 命名符合 `^[a-z][a-z0-9-]*-agent$`
-- [ ] `scheduler.yaml` 有 timezone + 至少 2 個 jobs
-- [ ] 每個非 admin agent 目錄存在三件套：`docs/` + `output/` + `knowledge/`
-- [ ] 每個 agent 的 `knowledge/` 有五件套：schema.md + index.md + log.md + raw/ + wiki/overview.md
-- [ ] `agents/AGENTS.md` 存在（團隊共用行為準則）
-- [ ] `tasks/board.json` 存在
-- [ ] `README.md` 存在
-- [ ] `pyproject.toml` 存在
-- [ ] `requirements.txt` 存在
-- [ ] `.env.example` 存在
-- [ ] `.gitignore` 存在
-
----
-
-## 完成回報格式
-
-```
-✅ 團隊骨架已建立
-
-📁 產出清單：
-- team.yaml（{N} 個 instances）
-- scheduler.yaml（{M} 個 jobs）
-- .env.example
-- .gitignore
-- agents/{name1}-agent/（三件套 + 知識庫五件套）
-- agents/{name2}-agent/（三件套 + 知識庫五件套）
-- ...
-
-📋 下一步：
-1. 填寫 .env（Telegram token 等）
-2. 執行 /ark-agent-init 為每個 agent 配置 .kiro/
-3. 執行 ark-team-agent team start 啟動團隊
-```
-
----
-
-## 注意事項
-
-- 此 Skill 只產出團隊骨架，不產出 .kiro/ 配置
-- .kiro/ 由 /ark-agent-init 產出（含 steering + agent.json + skills）
-- 知識庫由 /ark-wiki-engine 產出
-- team.yaml schema 遵循 ark-team-agent v0.11+
-
-### Skills 部署規則
-
-ark-agent-init 產出 .kiro/ 時，必須部署核心 4 個 Skills 到 `.kiro/skills/`：
-
-| Skill | 用途 | 部署對象 |
-|-------|------|---------|
-| `ark-superpowers` | 文件產出（spec / design / plan） | 全員 |
-| `ark-wiki-engine` | 知識庫管理（ingest / query） | 全員 |
-| `ark-skill-creator` | 建立/修改 Skill | 全員 |
-| `ark-code-spec-validator` | 驗證 code 與 spec 一致性 | 全員 |
-
-**來源：** 從專案根層 `skills/` 目錄複製（如有），或從 ark-agent-init 的 references 載入。
-
-**admin 額外 Skills：** admin 可擁有全套 Skills（視需求），worker 只需核心 4 個。
-
----
+- 三層架構慣例（General manager → leader → worker group）見 `references/`
+- 職人 worker 不設 topic_id，輸出自動發到所屬 leader 的 topic
 
 ## 附帶資源
 
-### scripts/（產出後自動驗證）
-
-| 腳本 | 用途 | 觸發時機 |
-|------|------|---------|
-| `validate_team.py` | 驗證 team.yaml 結構完整性 | 產出後執行 |
-| `scaffold_dirs.py` | 讀 team.yaml → 建立目錄骨架 | 產出時呼叫 |
-| `gen_env.py` | 依 team.yaml 動態產出 .env.example | 產出時呼叫 |
-
-### references/（按需載入）
-
-| 文件 | 用途 | 載入時機 |
-|------|------|---------|
-| `role-presets.md` | 角色預設組合表 | 確認角色時 |
-| `naming-rules.md` | 命名規範 | 驗證 instance 名稱時 |
-| `communication-presets.md` | P2P 通訊策略預設 | 使用者選「進階通訊」時 |
-| `kiro-files-presets.md` | kiro_files policy 預設 | 使用者問 .kiro 配置時 |
-| `troubleshooting.md` | 環境問題排查指南 | 啟動失敗時 |
-| `templates/team.yaml.tpl` | team.yaml 模板 | 產出時 |
-| `templates/scheduler.yaml.tpl` | scheduler.yaml 模板 | 產出時 |
-| `templates/docker-compose.yaml.tpl` | Docker 部署模板 | 使用者選「Docker」時 |
-
-### assets/（直接輸出）
-
-| 檔案 | 用途 | 產出條件 |
-|------|------|---------|
-| `start-team.bat` | Windows watchdog 腳本 | 永遠產出 |
-| `start-team.sh` | Linux/Mac watchdog 腳本 | 永遠產出 |
-| `gitignore.txt` | .gitignore 範本 | 永遠產出（copy 為 .gitignore） |
-
-
----
-
-## 關鍵環境偵測規則
-
-### kiro-cli 絕對路徑
-
-產出 `start.py` 或 `src/ark_team_core/process.py` 時，**必須偵測 kiro-cli 的絕對路徑**並寫入配置。
-
-**Windows 絕對路徑：** `%LOCALAPPDATA%\Kiro-Cli\kiro-cli.exe`
-
-**偵測順序：**
-1. 環境變數 `KIRO_CLI_PATH`（如有設定，直接使用）
-2. Windows 預設路徑：`C:\Users\{username}\AppData\Local\Kiro-Cli\kiro-cli.exe`
-3. `where kiro-cli`（Windows）或 `which kiro-cli`（Mac/Linux）
-4. npm global：`npm root -g` + `kiro-cli/bin/kiro-cli`
-
-**產出方式（擇一）：**
-- 在 `.env.example` 加入 `KIRO_CLI_PATH=` 提示使用者填寫
-- 在 `start.py` 加入自動偵測邏輯：
-
-```python
-import shutil, os, pathlib
-
-def find_kiro_cli() -> str:
-    """偵測 kiro-cli 絕對路徑。"""
-    # 1. 環境變數
-    env_path = os.getenv("KIRO_CLI_PATH")
-    if env_path and pathlib.Path(env_path).exists():
-        return env_path
-    # 2. Windows 預設路徑
-    if os.name == "nt":
-        default = pathlib.Path.home() / "AppData/Local/Kiro-Cli/kiro-cli.exe"
-        if default.exists():
-            return str(default)
-    # 3. PATH 搜尋
-    found = shutil.which("kiro-cli")
-    if found:
-        return found
-    raise FileNotFoundError("找不到 kiro-cli，請設定 KIRO_CLI_PATH 環境變數")
-```
-
-### kiro-cli 完整啟動參數
-
-每個 agent 的 subprocess 必須使用以下完整參數：
-
-```bash
-kiro-cli chat --trust-all-tools --legacy-ui --resume --model auto
-```
-
-| 參數 | 用途 | 備註 |
-|------|------|------|
-| `chat` | 進入對話模式 | 必要 |
-| `--trust-all-tools` | 工具免確認 | 自動化必備，否則會卡在確認 |
-| `--legacy-ui` | 純文字模式 | 省資源、適合 subprocess pipe |
-| `--resume` | 接續上次對話 | 預設開啟（見下方關閉時機） |
-| `--model auto` | 模型選擇 | 可改 `claude-sonnet-4.6` / `claude-opus-4.6` |
-
-**`--resume` 關閉時機（改為不帶 --resume）：**
-- MCP 設定變更後（新 session 才會載入 tools/list）
-- Crash 後重啟（避免恢復壞掉的 session）
-- 版本更新後首次啟動
-
-**AgentProcess 建構參數範例：**
-
-```python
-cmd = find_kiro_cli()
-args = [cmd, "chat", "--trust-all-tools", "--legacy-ui", "--resume", "--model", model or "auto"]
-
-# crash 後重啟時移除 --resume
-if is_restart_after_crash:
-    args = [a for a in args if a != "--resume"]
-```
-
-### requirements.txt 必須包含
-
-產出 `requirements.txt` 時，**必須包含以下依賴**（Telegram polling 需要）：
-
-```
-python-telegram-bot>=21.0
-python-dotenv>=1.0.0
-apscheduler>=3.10.0
-uvicorn>=0.30.0
-fastapi>=0.111.0
-httpx>=0.27.0
-```
-
-> ⚠️ `python-telegram-bot` 是 Telegram Bot polling 的核心依賴，缺少會導致 `start.py` 啟動失敗。
-
-### 教學提醒
-
-產出完成後，提示使用者執行：
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Workshop 引導（agent-team-workshop）
-
-本 Skill 對應 Workshop Step 1：建立團隊骨架。
-
-### 觸發提詞
-
-```
-建立 5 人 AI 團隊，角色：admin + leader + ai-dev + coder + qa
-```
-
-### 預期產出
-
-- `team.yaml`（5 個 instances）
-- `scheduler.yaml`（≥ 2 個 jobs）
-- `agents/` 目錄（每個 agent 三件套 + 知識庫五件套）
-- `.env.example`、`.gitignore`、`README.md`
-
-### 驗證方式
-
-```bash
-python scripts/validate_team.py
-```
-
-全部 ✅ 即通過。
-
-### 下一步
-
-完成後告訴 AI：`產出團隊啟動程式，包含 CoreDaemon + Telegram + 排程`（觸發 ark-team-runtime）
-
-### 卡關時
-
-- 直接複製 `team.example.yaml` 改名為 `team.yaml`
-- 手動建目錄：`mkdir agents\pm-agent\docs agents\pm-agent\output agents\pm-agent\knowledge`
-
----
-
-## Bot 整合升級（ark-agent-builder → Team）
-
-團隊骨架產出後，可整合完整 Telegram Bot 能力。
-
-### 整合步驟
-
-```bash
-# 1. 複製 ark-agent-builder 的 src/ 到團隊專案
-cp -r <bot-project>/src/ ./src/
-mkdir -p config && cp <bot-project>/config/llm_prompts.yaml config/
-
-# 2. 修改 3 個整合點
-#    - src/bot/main.py: create_app(daemon=daemon) + /team 指令
-#    - src/bot/handlers.py: init_components(daemon=) + cmd_team + handle_message 轉發
-#    - start.py: asyncio Bot + Daemon 共存
-
-# 3. 清理舊檔
-rm runtime/telegram_bot.py  # 舊 urllib bot（已被 src/bot 取代）
-
-# 4. 更新依賴
-#    requirements.txt 合併：python-telegram-bot, google-genai, openai, fastapi, uvicorn...
-```
-
-### 整合後架構
-
-```
-使用者 → Telegram Bot (python-telegram-bot)
-  ├── /chat → LLM Router (Gemini/OpenAI, 1-3s)
-  ├── /team status → 查詢 6 agent 狀態
-  ├── /team send @agent msg → 派工
-  ├── /ask → 知識庫搜尋
-  ├── /skills → 列出 Skills
-  └── 直接打字 → daemon → mc-agent（深度處理）
-```
-
-### Event Bus + Dashboard
-
-整合後自動獲得：
-
-- **Event Bus**（`runtime/event_bus.py`）：全域事件匯流排，連接 Bot、Daemon、Dashboard
-- **Web Dashboard**（`runtime/dashboard/index.html`）：暗黑科技風即時面板
-- **SSE API**（`runtime/api.py`）：FastAPI + `/api/events` 即時推送
-- **Agent 回覆閉環**：stdout → reply_fn → notify_fn → Telegram
-
-Dashboard 端點：`http://localhost:{health_port}/dashboard`
-
-### start.py 範本（整合版）
-
-```python
-async def main():
-    daemon = TeamDaemon("team.yaml")
-    daemon_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(2)  # 等 agent 子程序就緒
-
-    app = create_app(daemon=daemon)
-    await asyncio.wait_for(app.initialize(), timeout=15)
-    await app.start()
-    await app.updater.start_polling(drop_pending_updates=True)
-
-    # 注入通知 callback
-    chat_id = int(os.environ.get("TELEGRAM_CHAT_ID", "0"))
-    async def _notify(text):
-        await app.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
-    daemon.set_notify_fn(_notify)
-
-    await daemon_task
-```
-
-### 踩坑紀錄
-
-| 問題 | 解法 |
+| 路徑 | 說明 |
 |------|------|
-| Bot initialize timeout | `asyncio.wait_for(timeout=15)` + 重試 |
-| httpx 日誌噪音 | `logging.getLogger("httpx").setLevel(WARNING)` |
-| 舊 telegram_bot.py 衝突 | 刪除，由 src/bot 接管 |
-| Agent 回覆使用者看不到 | process.py 加 stdout reader + reply_fn |
-| `_write_minimal_core` 只產 `__init__.py` | 補上 config/process/daemon/mcp_registry/scheduler 5 模組（282 行） |
-| TelegramAdapter `channel.bot_token_env` AttributeError | `config.channel` 是 dict，改用 `.get()` |
-| kiro-cli 不支援 `--prompt` | 用 positional arg：`kiro-cli chat ... "message"` |
-| kiro-cli `--no-interactive` 不讀 stdin | 改為每次 send() spawn 新進程，完成後回傳 |
-| team.yaml 預設 4 人 | 改為 5 人（admin + pm + ai-dev + coder + qa） |
-| `skip_resume: true` 導致失憶 | 預設改為 `false`，保留 session |
-| 多個 bot instance 衝突 | `Conflict: terminated by other getUpdates request`，確保只有一個進程 |
-| `start-team.sh` 呼叫 `ark_team_agent` | 應為 `python start.py` |
+| `references/templates/team*.yaml` | team.yaml 範本（基礎 / full / ops / dev） |
+| `references/templates/scheduler*.yaml` | scheduler 範本 |
+| `references/templates/knowledge/shared/` | 知識庫骨架 |
+| `references/role-presets.md` | 角色定義慣例 |
+| `references/persona-presets.md` | 人格語氣預設 |
+| `references/naming-rules.md` | 命名規範 |
+| `references/kiro-files-presets.md` | kiro_files policy 慣例 |
+| `references/mcp-tools-spec.md` | 團隊 MCP 工具（reply/send_to_instance…） |
+| `references/telegram-ux-patterns.md` | TG UX 慣例 |
+| `references/communication-presets.md` | 通訊規則預設 |
+| `scripts/scaffold_dirs.py` | 依 team.yaml 產目錄骨架 |
+| `scripts/validate_team.py` | team.yaml 驗證 |
 
-### 上下文壓縮建議
+## 注意事項
 
-`skip_resume: false` 時 agent 保留 session，長期運作必然觸發 context compaction。建議壓縮觸發百分比：
-
-| Agent 角色 | 觸發點 | 理由 |
-|------------|--------|------|
-| leader (pm-agent) | **70%** | 派工決策鏈最珍貴，早壓縮保留摘要空間 |
-| worker (dev/coder/qa) | **75%** | 保留當前任務上下文，完成的任務可壓縮 |
-| admin | **85%** | 多為短指令，歷史價值低 |
-
-壓縮策略（建議寫入各 agent 的 `.kiro/steering/KIRO.md`）：
-- 保留：當前未完成任務、最近 5 輪對話、關鍵決策
-- 丟棄：已完成任務詳細對話、重複系統訊息、舊 tool output
-- 持久化：壓縮後摘要寫入 MEMORY.md
-
-> 詳細修正記錄見 `references/changelog-2026-06-17.md`
+- Python 3.13、`pathlib.Path`、async I/O、繁中 docstring
+- **不要手搭** daemon / UI / API / runtime / 記憶 —— 套件都有；手搭 = 兩套並存必漂移
+- 換裝驗 import 版號；team.yaml 的 `team_md` 用 `always`
+- 各 instance 的 `working_directory` 就是它的家（讀自己的 .kiro/knowledge/memory）

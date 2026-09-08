@@ -85,4 +85,4 @@ class CodeReviewSkill(BaseSkill):
 - `language: auto` 根據副檔名自動偵測
 - 安全性檢查包含常見的 OWASP Top 10 模式
 - `score` 為 0-100 分，100 為完美
-- 可搭配 `ark-agent-builder` 在 TG Bot 中觸發審查
+- 可搭配 `ark-agent-bot-builder` 在 TG Bot 中觸發審查

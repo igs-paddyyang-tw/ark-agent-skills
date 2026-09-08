@@ -571,7 +571,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 | AI Dev | ark-skill-creator, ark-mcp-builder, ark-llm-tools | Skill 開發+MCP+LLM |
 | Coder / 全端 | ark-skill-creator, ark-code-review, ark-webapp-generator, ark-db-query | 開發+審查+全端 |
 | QA / 測試 | ark-test-runner, ark-security-audit, ark-code-review | 品質保證 |
-| DevOps | ark-docker-deploy, ark-env-doctor, ark-scheduler-generator | 部署運維 |
+| DevOps | ark-docker-deploy, ark-env-doctor, ark-webapp-generator | 部署運維（排程已併入 webapp-generator） |
 | 數據分析 | ark-db-query, ark-etl-pipeline, ark-chart-generator, ark-kpi-calculator, ark-anomaly-detector, ark-retention-analysis | 數據工程 |
 | 市場研究 | ark-web-scraper, ark-translator, ark-llm-tools | 資訊收集 |
 | 報告產出 | ark-report-template, ark-html-dashboard, ark-chart-generator, ark-file-export | 視覺化 + 報表 |
@@ -754,7 +754,10 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 ### 下一步
 
-全部 agent 配置完成後，告訴 AI：`設定 Telegram Bot`（觸發 ark-telegram-bot）
+全部 agent 配置完成後：
+- 單 bot（ark_bot_agent 消費端）→ `ark-agent-bot-builder`
+- 團隊 daemon（ark_team_agent）→ `ark-agent-team-builder`
+- 獨立 web/TG/排程應用（非套件）→ `ark-webapp-generator`
 
 ### 卡關時
 

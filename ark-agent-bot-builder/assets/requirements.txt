@@ -1,0 +1,8 @@
+# 套件消費端只需裝 ark_bot_agent wheel（其餘依賴由套件帶入）。
+# 安裝：uv pip install --python .venv/bin/python <ark_bot_agent-*.whl>
+#
+# wheel 從 GitHub Release 取得：
+#   https://github.com/igs-paddyyang-tw/ark_bot_agent/releases
+#
+# 業務 skill 若有額外依賴，另建 skills/<name>/requirements.txt。
+ark_bot_agent   # 由 wheel 安裝，不從 PyPI

@@ -1,0 +1,62 @@
+# ═══════════════════════════════════════════════════════
+# agents.yaml — Agent 定義（唯一來源，專案根哨兵）
+# TG Bot / Web API / dispatch_to_agent 都讀這份。
+#
+# 欄位：dir / name / codename / emoji / desc / dispatchable
+#       persistent（常駐）/ skip_resume（不接續 session）/ role / timeout
+#       group_members（僅 leader，⚔️ team 可派工範圍）
+# ═══════════════════════════════════════════════════════
+
+# ── 💬 chat 引擎（Gemini ReAct，不可派工）──
+default:
+  dir: "."
+  name: "{BOT_NAME}"
+  codename: "{CODENAME}"
+  emoji: "🚀"
+  desc: "通用 AI 助手，什麼都能聊"
+  dispatchable: false
+
+# ── 🚀 manager：👤 agent 模式常駐對象（dir="." 讀根目錄 .kiro/steering）──
+manager:
+  dir: "."
+  name: "{BOT_NAME}"
+  codename: "{CODENAME}"
+  emoji: "🚀"
+  desc: "通用 AI 助手，什麼都能做"
+  dispatchable: false
+  persistent: true
+  skip_resume: true       # 根目錄 session 多入口共享，fresh start 不帶舊人設
+  role: manager
+  timeout: 300            # dir="." context 大，給足逾時（全域預設 120s 會撞）
+
+# ── 👑 admin：維運（team/dispatch 用）──
+admin:
+  dir: "agents/admin-agent"
+  name: "Admin Agent"
+  codename: "管家"
+  emoji: "👑"
+  desc: "系統管理、監控、費控"
+  dispatchable: true
+  role: admin
+
+# ── 🎯 leader：⚔️ team 統籌 ──
+leader:
+  dir: "agents/leader-agent"
+  name: "Leader Agent"
+  codename: "隊長"
+  emoji: "🎯"
+  desc: "任務規劃、拆解需求、協調派工"
+  dispatchable: true
+  persistent: true
+  role: leader
+  group_members: [worker-a, worker-b]   # 加 worker 只改這裡，勿寫進 prompt
+
+# ── worker（依需求增減）──
+worker-a:
+  dir: "agents/worker-a-agent"
+  name: "Worker A"
+  codename: "職人A"
+  emoji: "🔧"
+  desc: "（角色描述）"
+  dispatchable: true
+  role: worker

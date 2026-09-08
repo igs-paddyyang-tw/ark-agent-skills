@@ -1,0 +1,61 @@
+# ═══════════════════════════════════════════════════════════════
+# bot.yaml —— Bot 層設定（只放「怎麼跑」，agent 定義在 agents.yaml）
+#
+# 設定檔分工（各自單一職責，不合併）：
+#   agents.yaml     有誰（agent 定義）← 專案根哨兵
+#   bot.yaml        怎麼跑（本檔）
+#   scheduler.yaml  何時（排程，選用）
+#   .env            只放機密（TG token / API key）
+#
+# 整份檔案可不存在 —— 全走預設。留著是為了顯式可見、可版控。
+# 檢查解析結果：python -m ark_bot_agent paths
+# ═══════════════════════════════════════════════════════════════
+name: "{PROJECT_NAME}"
+codename: "{CODENAME}"
+
+server:
+  port: 8888              # port 唯一來源（啟動訊息與實際綁定都從這展開）
+  host: "0.0.0.0"
+
+modes:
+  default: agent          # chat | agent | team
+  default_agent: manager  # agent 模式預設對象
+  team_leader: leader     # team 模式統籌者
+
+  chat:                   # 💬 Gemini ReAct 快答（有 API 費用）
+    max_iterations: 5
+    source_agent: ""      # "" = 讀根目錄（與 agent 模式同源）
+    tools: [search_wiki, recall_memory, web_search]  # 唯讀白名單
+
+  team:                   # ⚔️ 三階段工作流
+    stage_deadline: 100
+    member_timeout: 150
+    max_concurrency: 3
+    max_assignments: 3
+    member_reply_cap: 2500
+
+llm:                      # 只有 chat 模式用（agent/team 走 kiro-cli 零費用）
+  provider: gemini
+  model: gemini-3.5-flash
+  temperature: 0.7
+
+backend:
+  cli: auto               # auto | kiro | claude | agy
+  model: auto
+
+report:                   # 分析產出 MD→HTML→TG
+  enabled: true
+  md_dir: output/reports
+  render_html: true
+  send_to_tg: true
+  min_chars: 150
+
+features:
+  wiki: true
+  memory: true
+  scheduler: true
+  web_ui: true
+  a2a: false
+
+access:
+  admin_chat_ids: [{ADMIN_CHAT_ID}]

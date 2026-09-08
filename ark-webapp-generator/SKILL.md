@@ -1,32 +1,59 @@
 ---
 name: ark-webapp-generator
 description: |
-  產出完整 Web 專案骨架，包含 FastAPI Server、Web Chat UI、BaseSkill 插件系統
-  與 1 個最小範例 Skill（echo）。可獨立運作，支援 /skill_id 指令呼叫與 Skill 管理。
-  後續可透過獨立 Kiro Skill 擴充業務功能。使用此 Skill 當使用者提及建立專案、
-  產出 Web 應用、gen web app、ark webapp、
-  或任何需要從零開始建構 FastAPI + Skill 系統的場景。
+  產出完整的「webbot」應用骨架 —— 一個 lifespan 一次啟動四層：
+  FastAPI Server + Web Chat UI、BaseSkill 插件系統、WorkflowEngine + ScheduleEngine
+  排程、Telegram Bot channel。三種可選規模：純 web / +排程 / +TG（三合一）。
+  可獨立運作，支援 /skill_id 指令、workflow YAML、APScheduler 排程、TG 私聊路由。
+  使用此 Skill 當使用者提及建立專案、產出 Web 應用、gen web app、ark webapp、
+  webbot、web + bot、web 加 telegram、加入排程、排程引擎、工作流引擎、
+  每日報表自動化、Telegram Bot 開發、加入 TG bot、
+  或任何需要從零建構 FastAPI + Skill + 排程 + TG 的獨立應用場景。
+  不適用於：① ark_bot_agent / ark_team_agent 的**消費端**（那用 ark-agent-bot-builder /
+  ark-agent-team-builder，套件已內建 web/TG/排程）；② 純 TG 推播請用 ark-telegram-sender。
 metadata:
   schema_version: 1
   status: active
   category: scaffolder
+  depends_on: [ark-telegram-sender]
   outputs:
     - format: code
       audience: ai
   author: paddyyang
+  version: "2.0"
+  updated: 2026-09-08
 ---
 
 # ark-webapp-generator
 
-產出完整 Web 專案骨架，包含 Skill 插件系統與 Web Chat UI，可獨立運作。
+產出完整「webbot」應用骨架：**Web + Skill 插件 + 排程 + Telegram**，一個 lifespan 全啟動。
+
+> **三合一紀錄**（v2.0，2026-09-08）：本 skill 併入原 `ark-telegram-bot`（TG 層）
+> 與 `ark-scheduler-generator`（Workflow/Schedule 層）。三者本就設計成一個 webbot
+> （webapp 的 lifespan 依序啟動 SkillRegistry → WorkflowEngine → ScheduleEngine →
+> Telegram Bot），合併是正名。TG 慣例見 `references/telegram-integration.md`，
+> 排程 schema 見 `references/{workflow,schedule}-yaml-schema.md`。
+>
+> 🔴 **定位**：本 skill 產出**獨立 FastAPI 應用**（自帶 web/排程/TG）。
+> 若你要的是 `ark_bot_agent` / `ark_team_agent` 的消費端（那些套件已內建這些能力），
+> 請用 `ark-agent-bot-builder` / `ark-agent-team-builder`。
+
+## 規模選擇
+
+| 規模 | 產出 | 觸發 |
+|------|------|------|
+| **純 web** | FastAPI + Web Chat UI + Skill 系統（步驟 1-7） | 「建立 web 專案」「gen web app」 |
+| **+排程** | 加 WorkflowEngine + ScheduleEngine + workflow YAML | 「加入排程」「工作流引擎」 |
+| **+TG（完整 webbot）** | 再加 Telegram adapter channel | 「webbot」「web 加 telegram」 |
 
 ## 觸發條件
 
 使用者提及以下關鍵字時觸發：
-- 「建立專案」、「建立 Web 專案」、「建立 ai-bot Web 專案」
-- 「gen web app」、「ark webapp」、「Workshop 專案」
-- 「產出 Web 應用」、「Web Chat」
+- 「建立專案」、「建立 Web 專案」、「gen web app」、「ark webapp」、「Workshop 專案」
+- 「webbot」、「web + bot」、「web 加 telegram」、「產出 Web 應用」、「Web Chat」
 - 「FastAPI + Skill 系統」
+- 「加入排程」、「排程引擎」、「工作流引擎」、「Workflow Engine」、「每日報表自動化」、「APScheduler」
+- 「Telegram Bot 開發」、「加入 TG bot」、「Bot channel」（獨立應用場景）
 
 ## 輸入參數
 
@@ -34,6 +61,7 @@ metadata:
 |------|------|------|--------|------|
 | `project_name` | `str` | ✅ | — | 專案名稱（用於建立根目錄） |
 | `output_dir` | `str` | ❌ | `"./output"` | 輸出目錄路徑 |
+| `scale` | `str` | ❌ | `"web"` | `web` / `web+schedule` / `webbot`（含 TG） |
 
 ## 產出指引
 
@@ -186,6 +214,37 @@ class EchoSkill(BaseSkill):
 
 ---
 
+## 步驟 8：排程層（scale = web+schedule 或 webbot）
+
+> 完整 schema 見 `references/workflow-yaml-schema.md` 與 `references/schedule-yaml-schema.md`。
+> 腳本：`scripts/scaffold_scheduler.py`。
+
+新增目錄與檔案：
+
+```
+src/workflow/{context.py, engine.py}      # RunContext + WorkflowEngine（skill/condition/loop/parallel）
+src/scheduler/engine.py                   # ScheduleEngine（APScheduler，AsyncIOScheduler 與 FastAPI 共用 loop）
+workflows/{hello,echo_loop,echo_condition}.yaml
+workflows/schedules/morning_report.yaml   # cron 排程範例
+src/server/api/{workflows,schedules}.py   # 觸發/列出/toggle API
+```
+
+- `template_render` skill（Workflow 步驟間的 Jinja2 膠水）放 `src/skills/internal/`
+- `requirements.txt` 加 `apscheduler>=3.10.0`、`matplotlib>=3.8.0`
+- 🔴 Workflow 模板解析：簡單引用（`{{ outputs.x }}`）直接取 Python 物件、
+  複雜表達式走 Jinja2 後 `json.loads`、`${ENV_VAR}` 執行時替換（見 references）
+
+## 步驟 9：Telegram 層（scale = webbot）
+
+> 完整 TG API/UX 慣例見 `references/telegram-integration.md`。
+
+- 產 `src/{package_name}/telegram_adapter.py`（polling + 私聊路由 + reply 出口 + rate limit）
+- `.env` 加 `TELEGRAM_BOT_TOKEN`；`requirements.txt` 加 `python-telegram-bot[ext]>=21.0`
+- lifespan 有 token 才啟動 Bot，無 token 自動跳過（web + 排程仍正常）
+- 🔴 **TG 一律 polling，不需開 port**；最終回覆用新訊息而非就地編輯（編輯不發通知）
+
+---
+
 ## 擴充 Skills
 
 產出的專案骨架支援透過獨立 Kiro Skills 擴充功能。
@@ -263,7 +322,8 @@ uvicorn src.server.main:app --reload --port 8000
 
 ### 下一步
 
-完成後告訴 AI：`加入 Telegram Bot`（觸發 ark-agent-builder）
+完成後告訴 AI：`加入排程` 或 `加入 TG bot`（同一 skill 的更大 scale，見上方「規模選擇」）。
+若要的是套件消費端（web/TG/排程已內建），改用 `ark-agent-bot-builder`。
 
 ### 卡關時
 

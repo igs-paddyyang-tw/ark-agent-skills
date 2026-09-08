@@ -15,7 +15,7 @@
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **61 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **59 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -35,18 +35,16 @@
 
 ## ② 平台生成器 Scaffolders
 
-> 輸出：專案骨架｜`category: scaffolder`｜8 個
+> 輸出：專案骨架｜`category: scaffolder`｜6 個
 
 | Skill | 定位 |
 |-------|------|
-| `ark-agent-builder` | 快速產出完整 AI Agent Bot Workspace（1~6 階段漸進式）。 |
+| `ark-agent-bot-builder` | 產出 ark_bot_agent 套件消費端的 Bot workspace 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（runtime / Web UI / 記憶 / TG polling… |
 | `ark-agent-init` | 產出完整的 agent workspace 配置（steering、agents、prompts、skills、settings、 knowledge、memory），根據使用者指定的角色自動生成。 |
-| `ark-agent-team-builder` | 一鍵產出完整 AI Agent 團隊平台（五層架構：Entry + OS + Collaboration + Execution + Knowledge）。 |
+| `ark-agent-team-builder` | 產出 ark_team_agent 套件消費端的多 agent 團隊 daemon 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（team daemon / 多 runtime / Kanb… |
 | `ark-docker-deploy` | 產出容器化部署配置（Dockerfile + docker-compose.yaml + .dockerignore + 部署腳本）， 支援 Python / Node / Go 專案自動偵測，mul… |
 | `ark-mcp-builder` | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
-| `ark-scheduler-generator` | 在既有專案上加入 WorkflowEngine 工作流引擎、ScheduleEngine 排程引擎， 並產出範例 Workflow YAML、排程定義與 agent-browser MCP Serve… |
-| `ark-telegram-bot` | Telegram Bot 開發骨架 SOP（python-telegram-bot）：Bot 專案建置、 Web App 整合、Menu 命令設定、InlineKeyboard 互動、Rate Lim… |
-| `ark-webapp-generator` | 產出完整 Web 專案骨架，包含 FastAPI Server、Web Chat UI、BaseSkill 插件系統 與 1 個最小範例 Skill（echo）。 |
+| `ark-webapp-generator` | 產出完整的「webbot」應用骨架 —— 一個 lifespan 一次啟動四層： FastAPI Server + Web Chat UI、BaseSkill 插件系統、WorkflowEngine … |
 
 ## ③ 管線元件 Pipeline
 
