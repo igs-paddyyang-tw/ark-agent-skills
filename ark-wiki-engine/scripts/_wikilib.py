@@ -72,7 +72,11 @@ def emit_error(code: str, msg: str, exit_code: int = 2, **extra: Any) -> None:
 
 # ── frontmatter ──────────────────────────────────────────────
 
-_FM_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
+#: frontmatter 開頭允許 UTF-8 BOM —— 有 BOM 的頁面若不容忍，`\A---` 比對失敗，
+#: 整份 frontmatter 會被當成不存在（lint 報「缺少 frontmatter」，而它明明有）。
+#: 實例：slotverse 的 knowledge-base-map.md（本 repo 另有 skill-frontmatter-bom-fix.patch
+#: 記載同一個坑咬過 skill 檔）。**症狀誤導**：訊息說沒有，實際是有但讀不到。
+_FM_RE = re.compile(r"\A\ufeff?---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 
 
 def _coerce(value: str) -> Any:

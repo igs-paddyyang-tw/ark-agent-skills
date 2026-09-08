@@ -211,3 +211,30 @@ def test_lint_refuses_raw_paths_by_default(tmp_path):
                          "--wiki_dir", str(raw_wiki), "--json", "--allow-raw"],
                         capture_output=True, text=True)
     assert ok.returncode in (0, 1), ok.stdout[:200]     # 顯式放行後正常運作
+
+
+def test_frontmatter_tolerates_bom(tmp_path):
+    """AC: AC-001 — 有 UTF-8 BOM 的頁面仍能解析出 frontmatter（否則會誤報「缺少 frontmatter」）"""
+    sys.path.insert(0, str(SCRIPTS))
+    from _wikilib import parse_frontmatter, strip_frontmatter
+    text = '﻿---\ntitle: "有 BOM 的頁"\ntype: source\ntrust: deterministic\n---\n\n本文。\n'
+    fm = parse_frontmatter(text)
+    assert fm.get("title") == "有 BOM 的頁", f"BOM 讓 frontmatter 讀不到：{fm}"
+    assert fm.get("trust") == "deterministic"
+    assert "本文" in strip_frontmatter(text)
+
+
+def test_no_module_has_its_own_frontmatter_regex():
+    """AC: AC-003 — 除 _wikilib 外不得自帶 frontmatter regex（BOM／block list 行為會分岔）"""
+    import re as _re
+    offenders = []
+    for f in SCRIPTS.glob("*.py"):
+        if f.name == "_wikilib.py":
+            continue
+        src = f.read_text(encoding="utf-8")
+        # 找 re.match/compile 裡出現 --- 的 pattern（排除註解與 docstring 中的說明）
+        for m in _re.finditer(r"re\.(?:match|compile)\(\s*r?b?\"[^\"]*---", src):
+            offenders.append(f"{f.name}: {m.group(0)[:44]}")
+    assert not offenders, (
+        "自帶 frontmatter regex 會與 _wikilib 分岔（實例：不容忍 BOM → tags 讀成空 → "
+        "白名單靜默放行）：\n" + "\n".join(offenders))

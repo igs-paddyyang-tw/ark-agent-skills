@@ -32,7 +32,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _wikilib import ErrorCode, emit_error, emit_json  # noqa: E402
+from _wikilib import ErrorCode, emit_error, emit_json, parse_frontmatter  # noqa: E402
 
 WHITELIST_HEADER = "## tags 白名單"
 QUEUE_HEADER = "## tags 提案佇列"
@@ -55,18 +55,16 @@ def load_whitelist(schema: Path) -> set[str]:
 
 
 def page_tags(page: Path) -> list[str]:
-    text = page.read_text(encoding="utf-8", errors="replace")
-    m = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
-    if not m:
-        return []
-    tm = re.search(r"^tags:\s*\[([^\]]*)\]", m.group(1), re.MULTILINE)
-    if tm:
-        return [t.strip().strip('"').strip("'") for t in tm.group(1).split(",") if t.strip()]
-    # 多行 list 格式
-    tm = re.search(r"^tags:\s*\n((?:\s+-\s+.+\n?)+)", m.group(1), re.MULTILINE)
-    if tm:
-        return [t.strip() for t in re.findall(r"-\s+(\S+)", tm.group(1))]
-    return []
+    """讀頁面 tags。
+
+    改用 `_wikilib.parse_frontmatter`（支援 inline 與 block list、容忍 BOM）——
+    自帶的 `^---` regex 對有 BOM 的頁面讀不到 frontmatter → tags 回空 →
+    **白名單檢查靜默放行**（fail-open）。那比報錯更糟。
+    """
+    tags = parse_frontmatter(page.read_text(encoding="utf-8", errors="replace")).get("tags", [])
+    if isinstance(tags, str):
+        tags = [tags]
+    return [str(t).strip() for t in tags if str(t).strip()]
 
 
 def cmd_list(schema: Path) -> int:

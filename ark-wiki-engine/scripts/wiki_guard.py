@@ -26,7 +26,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _wikilib import ErrorCode, emit_error, emit_json  # noqa: E402
+from _wikilib import ErrorCode, emit_error, emit_json, parse_frontmatter  # noqa: E402
 
 # ── 規則定義 ─────────────────────────────────────────────────────────────
 
@@ -60,8 +60,12 @@ BLOB_RE = re.compile(r"[A-Za-z0-9+/=]{256,}|[0-9a-fA-F]{256,}")
 
 
 def has_guard_reviewed(text: str) -> bool:
-    m = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
-    return bool(m and re.search(r"^guard:\s*reviewed", m.group(1), re.MULTILINE))
+    """frontmatter 是否標了 `guard: reviewed`（豁免 injection 規則）。
+
+    用 `_wikilib.parse_frontmatter` 而非自帶 regex —— 自帶的 `^---` 不容忍
+    UTF-8 BOM，有 BOM 的教學文件會讀不到豁免標記而被誤隔離。
+    """
+    return str(parse_frontmatter(text).get("guard", "")).strip() == "reviewed"
 
 
 def scan_text(text: str) -> list[dict]:
