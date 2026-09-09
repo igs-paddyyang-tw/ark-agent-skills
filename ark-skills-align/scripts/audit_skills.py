@@ -140,6 +140,10 @@ def audit(repo: Path, triggers: dict):
         else:
             active[name] = info
 
+    # 目錄層級的所有 skill 名稱（active + deprecated stub 都算「存在」——
+    # stub 存在的目的就是讓舊名仍可被指向）
+    all_names = set(active) | set(stubs)
+
     # 1–3. schema 檢查
     for name, info in active.items():
         fm = info["fm"]
@@ -175,6 +179,23 @@ def audit(repo: Path, triggers: dict):
                    o.get("audience") not in AUDIENCES:
                     add("P2", "invalid-output-entry", name,
                         f"outputs 項目不合法：{o}")
+        # 引用其他 skill 的欄位必須指向存在的 skill。
+        #
+        # [2026-09-09 新增] 這類欄位原本**完全沒有守門** —— 掃全庫交叉比對才發現
+        # `ark-wiki-engine: consumed_by → ark-news-daily`（正確名是 ark-daily-news）
+        # 寫錯很久沒人發現，而 paddy-bot 的 sync 清單也踩同一個名字，
+        # 導致那個 skill **從來沒有被同步過**（每次只印一行「來源缺 xxx，跳過」）。
+        #
+        # `replaces` 刻意不驗：它的語意就是「取代了已移除的東西」，
+        # 指向不存在的名字是正確的（例：ark-agent-cli replaces ark-llm-cli）。
+        for field, sev in (("depends_on", "P1"), ("consumed_by", "P2")):
+            for ref in (meta.get(field) or []):
+                base = str(ref).split(".")[0].strip()
+                if base.startswith("ark-") and base not in all_names:
+                    add(sev, "dangling-skill-ref", name,
+                        f"{field} 指向不存在的 skill：{ref}"
+                        f"（{'依賴斷鏈' if field == 'depends_on' else '下游宣告失效'}）")
+
         if str(meta.get("schema_version")) not in SCHEMA_VERSIONS:
             add("P2", "missing-schema-version", name,
                 f"metadata.schema_version 應為 {sorted(SCHEMA_VERSIONS)} 之一，"

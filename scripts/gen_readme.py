@@ -138,7 +138,11 @@ def scan() -> tuple[dict[str, list[tuple[str, str]]], list[tuple[str, str]]]:
         # 形態二：SKILL.md 還在，但 frontmatter 標記已廢
         if status == "deprecated" or cat == "deprecated":
             note = _DEPRECATED_NOTE.search(text)
-            去向 = note.group(1).strip().rstrip('"。') if note else ""
+            # rstrip 要含 `]` —— 兩道守門的格式本來不相容：
+            # audit_skills.py 要求 description 以 `[DEPRECATED` **開頭**，
+            # 而這裡的 regex 抓到行尾 → 去向會帶著收尾的 `]`。
+            # （實測：`[DEPRECATED — 已由 X 取代]` → 去向 = `已由 X 取代]`）
+            去向 = note.group(1).strip().rstrip('"。]') if note else ""
             deprecated.append((d.name, 去向))
             continue
 
