@@ -135,19 +135,32 @@ metadata:
 （例如同時用 Kiro CLI 開發、用 Claude Code / Codex 協作），要讓它們**共用同一份
 人格與規範**，避免三份檔案各自漂移。做法是**單一真相來源（SSOT）+ 連結**。
 
+> 🧭 **兩個維度，別混**（與 `ark-agent-cli` 的分工）：
+> - **入口維度（本 skill）**：agent 專案該產哪些 CLI 的**設定入口檔**（給 CLI *讀*人格）。
+> - **呼叫維度（`ark-agent-cli`）**：執行期該把哪個 CLI 當 **backend 呼叫**（*用* CLI 做事）。
+>
+> 同一工具可能同時是兩者（kiro / claude / gemini / codex 四個交集），
+> 也可能只是入口維度（Cursor / Copilot 只讀設定，**不是**可程式呼叫的 backend）。
+
 ### 各 CLI 預設讀哪個檔案
 
-| AI CLI | 預設入口檔（repo root，除非另註） | 載入時機 |
-|--------|-----------------------------------|----------|
-| **Kiro CLI** | `.kiro/steering/*.md`（`AGENTS.md`/`SOUL.md`/`MEMORY.md`…，依 `inclusion` 決定） | 每次對話自動載入 always 檔 |
-| **Claude Code** | `CLAUDE.md`（原生讀取，session 起始的 ground truth） | 每次 session 開頭 |
-| **Codex CLI**（OpenAI） | `AGENTS.md` | 每次 session 開頭 |
-| **Cursor** | `.cursor/rules/`（或舊版 `.cursorrules`） | 依規則檔 |
-| **GitHub Copilot** | `.github/copilot-instructions.md` | 依設定 |
-| **Gemini CLI** | `GEMINI.md` | 每次 session 開頭 |
+| AI CLI | 預設入口檔（repo root，除非另註） | 載入時機 | 可當 agent-cli backend？ |
+|--------|-----------------------------------|----------|:---:|
+| **Kiro CLI** | `.kiro/steering/*.md`（`AGENTS.md`/`SOUL.md`/`MEMORY.md`…，依 `inclusion` 決定） | 每次對話自動載入 always 檔 | ✅ `kiro` |
+| **Claude Code** | `CLAUDE.md`（原生讀取，session 起始的 ground truth） | 每次 session 開頭 | ✅ `claude` |
+| **Codex CLI**（OpenAI） | `AGENTS.md` | 每次 session 開頭 | ✅ `codex` |
+| **Gemini CLI** | `GEMINI.md` | 每次 session 開頭 | ✅ `gemini` |
+| **Cursor** | `.cursor/rules/`（或舊版 `.cursorrules`） | 依規則檔 | ❌ IDE 外掛 |
+| **GitHub Copilot** | `.github/copilot-instructions.md` | 依設定 | ❌ IDE 外掛 |
 
 > 💡 **`AGENTS.md` 已是事實上的跨工具通用標準** —— Codex / Cursor / Gemini / 多數
 > coding agent 都會讀 repo root 的 `AGENTS.md`。Claude Code 是主要例外（讀 `CLAUDE.md`）。
+
+> 🔗 **接力關係**：本 skill 產的入口檔是 CLI **讀**人格的來源；若要在**執行期程式化
+> 呼叫**這些 CLI（kiro/claude/gemini/codex，如 bot/team 的 LLM backend），用
+> `ark-agent-cli`（統一 `ArkAgentCli.call(backend, prompt)` → `CliResult`）。
+> 兩者是「配置 → 執行」的接力：init 產設定檔、agent-cli 呼叫讀了那些設定檔的 CLI。
+
 
 ### SSOT 連結策略（建議預設）
 

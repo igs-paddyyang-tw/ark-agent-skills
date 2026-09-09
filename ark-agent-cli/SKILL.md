@@ -22,6 +22,15 @@ metadata:
 
 統一 Agent CLI 閘道 — 四種 CLI 後端、三種使用方式、一個核心。
 
+> 🧭 **兩個維度，別混**（與 `ark-agent-init` 的分工）：
+> - **呼叫維度（本 skill）**：執行期把哪個 CLI 當 **backend 呼叫**（*用* CLI 做事，回 `CliResult`）。
+> - **入口維度（`ark-agent-init`）**：agent 專案該產哪些 CLI 的**設定入口檔**（給 CLI *讀*人格）。
+>
+> 本 skill 呼叫的四個 backend（kiro/claude/gemini/codex）各自會**讀自己的入口檔**
+> （`.kiro/steering` / `CLAUDE.md` / `GEMINI.md` / `AGENTS.md`）—— 那些入口檔由
+> `ark-agent-init` 產出並以 SSOT 連結。兩者是「配置 → 執行」的接力：
+> init 產設定檔、agent-cli 呼叫讀了那些設定檔的 CLI。
+
 ## 觸發條件
 
 - 「呼叫 agent」「問一下 claude/kiro/gemini」「用 CLI 問」
