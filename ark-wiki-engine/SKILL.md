@@ -24,7 +24,7 @@ metadata:
     - { format: md, audience: both }
   render: none
   depends_on: []
-  consumed_by: [ark-md-report, ark-news-daily, ark-html-report]
+  consumed_by: [ark-md-report, ark-daily-news, ark-html-report]
   # 只取代 query —— 內建的 wiki_ingest 有可信的 role gate（見「ingest 的授權邊界」），
   # bash 腳本無法複製那個管控，故不宣稱取代它
   replaces: [mcp-wiki-server, team-mcp.wiki_query]
