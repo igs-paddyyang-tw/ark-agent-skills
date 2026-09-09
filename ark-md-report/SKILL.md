@@ -36,6 +36,19 @@ metadata:
 | frontmatter | verdict / findings / severity | type / status / related |
 | 關係 | 報告 = wiki 的 ingest 素材（source） | wiki 蒸餾多份報告成 synthesis 頁 |
 
+## 領域參考資料（產 data / competitive 型報告時先讀）
+
+產出「數據分析結論（data）」或「競品/市場分析（competitive）」型報告時，先參考以下領域範本，快速套用既有規格與踩坑：
+
+| 參考檔 | 用途 | 適用報告型 |
+|--------|------|-----------|
+| `references/daily-report-design-playbook.md` | 三份日報（產品/市場/活動）設計原則、T9 三段式規格、BQ 口徑踩坑（表名不符/營收口徑/LEFT JOIN）、命名慣例 | data、competitive |
+| `references/tg-ux-prompt-templates.md` | Telegram 輸出模板 T1–T9、雙軌格式（template=MD / style=report=HTML）、T9 全版面日報 + 10 條必檢清單 | data（含 TG 推送時） |
+
+- 涉及 KPI/營收/RTP/DAU 數據報告 → 先讀 daily-report-design-playbook 的 BQ 口徑段，避免重踩表名與掃描量的坑
+- 報告需推送 Telegram → 依 tg-ux-prompt-templates 選對模板與格式軌
+- 這兩份是「領域範本」，不取代 ai-writing-rules 的通用契約；契約優先，領域範本補充。
+
 ## 工作流程
 
 ### 1. 判斷報告類型
