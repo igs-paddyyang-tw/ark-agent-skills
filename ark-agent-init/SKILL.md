@@ -559,9 +559,8 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 根目錄的 `.kiro/` **就是 admin-agent 的 workspace**（team.yaml 中 `working_directory: .` 的那個 agent）：
 - admin-agent 的 Kiro CLI 啟動時 cwd = 根目錄，自動載入根目錄 `.kiro/`
 - `steering/AGENTS.md` 是所有 agent 共用規範的**來源**（其他 agent 複製此檔）
-  - 🔴 **SSOT：共用 steering（AGENTS.md / CODE.md / USER.md）要改就改根目錄那份，
-    再重新分配到各 agent。** 子 agent 的是**複本**，直接改子 agent 的會被下次分配覆蓋、
-    且造成多份漂移。角色專屬的 SOUL.md 才各自維護。
+  - 🔴 **SSOT：`AGENTS.md` 要改就改根目錄那份，再重新分配到各 agent。**
+    子 agent 的是**複本**，直接改子 agent 的會被下次分配覆蓋、且造成多份漂移。
 - `skills/` 放全套 Skills（admin 擁有全部能力）
 - `settings/mcp.json` 的 role 必須是 `admin`
 - 非 admin agent 的 .kiro/ 在 `agents/{name}-agent/.kiro/`（不在根目錄）
