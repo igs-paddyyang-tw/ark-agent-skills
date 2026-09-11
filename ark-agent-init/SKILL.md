@@ -581,7 +581,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 | 角色類型 | 建議 Skills | 說明 |
 |---------|------------|------|
 | Admin / CEO（根目錄 .kiro） | 全部 | 管理者擁有全套能力 |
-| 全員必備（Loop 五件套） | ark-grill-me, ark-superpowers, ark-spec-executor, ark-code-spec-validator, ark-wiki-engine | 需求→文件→執行→驗證→知識（迴圈工程核心） |
+| 全員必備（base_skills）| ark-grill-me, ark-superpowers, ark-spec-executor, ark-code-spec-validator, ark-wiki-engine, ark-prompt-spec-validator, ark-md-report, ark-html-report | 需求→文件→執行→驗證(code+prompt)→知識→報告（迴圈工程核心 + 產出）。權威清單見 `references/role-skills-map.md` 的 `base_skills:` |
 | Leader / PM | ark-project-planning, ark-doc-coauthoring, ark-uml-generator | 規劃+共筆+圖表 |
 | AI Dev | ark-skill-creator, ark-mcp-builder, ark-llm-tools | Skill 開發+MCP+LLM |
 | Coder / 全端 | ark-skill-creator, ark-code-review, ark-webapp-generator, ark-db-query | 開發+審查+全端 |
@@ -594,7 +594,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 **匹配邏輯：**
 
 1. 根目錄 .kiro/skills/ → 全套（admin 全能力覆蓋）
-2. 每個 agent 先分配「全員必備 Loop 五件套」
+2. 每個 agent 先分配「全員必備 base_skills」（見 references/role-skills-map.md）
 3. 根據角色類型分配對應 Skills
 4. 如角色跨多類型（如「全端 + DevOps」），合併兩組
 5. 自訂角色 → 根據 SOUL.md 的 Core Mission 關鍵字匹配 Skill description
