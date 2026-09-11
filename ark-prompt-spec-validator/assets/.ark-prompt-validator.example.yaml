@@ -1,0 +1,14 @@
+# 放到專案根目錄，改名 .ark-prompt-validator.yaml
+type_overrides:                       # 路徑 glob → skill | prompt | content
+  "steering/**/*.md": prompt
+  ".kiro/steering/*.md": prompt
+  "knowledge/**/wiki/**/*.md": content
+required_sections:                    # 覆寫 PL-014（prompt 型必要章節；每組任一關鍵字命中即可）
+  prompt:
+    - ["角色", "職責", "你是"]
+    - ["邊界", "不做", "限制"]
+    - ["輸出格式", "回覆格式"]
+exclusive_triggers:                   # 擴充 PL-015 矩陣（與 audit_skills.py --config 同格式）
+  "提詞驗證": ark-prompt-spec-validator
+ignore_rules: []                      # 例：["PL-031"]；報告中標 ⏭️ ignored，可稽核
+ignore_paths: []                      # 預設已忽略 node_modules / fixtures / templates / examples

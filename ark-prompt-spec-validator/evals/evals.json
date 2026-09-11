@@ -1,0 +1,8 @@
+{
+  "skill_name": "ark-prompt-spec-validator",
+  "evals": [
+    {"id": 1, "prompt": "幫我驗證 hoyeah-team-agent 的 leader steering 提詞符不符合規格，agent 跑得動嗎", "expected_output": "走 L1 prompt_lint → 建議/執行 L2 prompt_eval → 產 review 報告；不改提詞", "files": []},
+    {"id": 2, "prompt": "ark-db-query 的 SKILL.md 檢查一下觸發詞有沒有跟別的 skill 打架", "expected_output": "prompt_lint --type skill --repo，回報 PL-015/016 結果", "files": []},
+    {"id": 3, "prompt": "code 跟 spec 有 drift 嗎，跑一次 validator", "expected_output": "不觸發；導向 ark-code-spec-validator", "files": []}
+  ]
+}

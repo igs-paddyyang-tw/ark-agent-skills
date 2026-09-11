@@ -33,12 +33,12 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **59 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
 
-> 輸出：MD 給 AI｜`category: process`｜8 個
+> 輸出：MD 給 AI｜`category: process`｜9 個
 
 | Skill | 定位 |
 |-------|------|
@@ -47,6 +47,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-grill-me` | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
 | `ark-planning-with-files` | 持久化任務追蹤：複雜任務（3+ 步驟）自動建立 3-File Pattern（task_plan.md / findings.md / progress.md）， 防止 context 丟失、goal… |
 | `ark-project-planning` | 標準化專案計畫流程。 |
+| `ark-prompt-spec-validator` | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
 | `ark-skill-creator` | 建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。 |
 | `ark-spec-executor` | 讀取 plan.md（含任務表+AC+依賴），自動拆解→角色切換執行→AC 驗收→產出驗收報告。 |
 | `ark-superpowers` | 產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫）， 基於 power-engineer-skills 框架，協助資深工程師與技術領導者 將技術決… |

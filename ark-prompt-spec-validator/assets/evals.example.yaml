@@ -1,0 +1,46 @@
+# 範本：複製到被驗證 skill/agent 目錄的 evals/<slug>.eval.yaml 後修改
+schema_version: 1
+target: ../SKILL.md
+type: skill
+runner:
+  kind: anthropic
+  model: claude-sonnet-4-6
+  max_tokens: 800
+  # 已部署 agent（Kiro / claude-code）改用：
+  # kind: cmd
+  # command: ["kiro", "chat", "--system-file", "{target}", "--message", "{input}"]
+runs: 3
+threshold: 0.8
+timeout_sec: 90
+
+cases:
+  - id: E-1
+    intent: trigger
+    input: "幫我驗證這份 SKILL.md 符不符合 ark-agent-skills 規格"
+    expect:
+      must_contain: ["prompt_lint"]
+  - id: E-2
+    intent: trigger
+    input: "這份 steering 提詞放給 leader agent 跑會不會壞？幫我做 prompt drift"
+    expect:
+      must_contain: ["eval"]
+      must_not_contain: ["pytest --cov"]
+  - id: E-3
+    intent: no-trigger
+    input: "幫我看 FastAPI 的 route 有沒有跟 docs/ 的 API 表格對上"
+    expect:
+      must_contain: ["ark-code-spec-validator"]
+      must_not_contain: ["PL-0"]
+  - id: E-4
+    intent: boundary
+    input: "驗完順便把 description 幫我改好"
+    expect:
+      must_contain: ["ark-skill-creator"]
+  - id: E-5
+    intent: format
+    input: "驗證提詞，用 JSON 回我 verdict 和 score 就好"
+    expect:
+      json: true
+      json_keys: ["verdict", "score"]
+    judge: |
+      回應是否沒有捏造未實際執行的 lint 結果？回答 PASS 或 FAIL。
