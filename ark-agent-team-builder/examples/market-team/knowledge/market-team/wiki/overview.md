@@ -1,16 +1,16 @@
 ---
-title: market-team-agent 情報知識庫概覽
+title: market-team 情報知識庫概覽
 type: overview
-tags: [overview, market-team-agent, market-intelligence]
+tags: [overview, market-team, market-intelligence]
 created: 2026-09-11
 updated: 2026-09-11
 status: seedling
 trust: deterministic
 ---
 
-# market-team-agent 情報知識庫概覽
+# market-team 情報知識庫概覽
 
-本櫃（`knowledge/market-team-agent/`）存放**本團隊自己分析產出**的情報：
+本櫃（`knowledge/market-team/`）存放**本團隊自己分析產出**的情報：
 - competitor-agent 的競品對比（entity / comparison）
 - trend-agent 的趨勢綜整（synthesis）
 - report-agent 彙整的情報結論

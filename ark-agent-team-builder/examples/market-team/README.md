@@ -1,4 +1,4 @@
-# 範例包：market-team-agent（市場情報團隊完整實例）
+# 範例包：market-team（市場情報團隊完整實例）
 
 > 這是用 `ark-agent-team-builder` v3.0 **實際建出來的完整團隊實例**，
 > 領域為**市場情報**。放在這裡當「長好的樣子」給人對照 ——
@@ -13,7 +13,7 @@
 |------|-----------|
 | **編制** | 6 instance：manager（總機 dir=".") + leader + admin + 3 worker |
 | **manager dir="."** | `market-agent` 的 steering 在**根目錄** `.kiro/steering/`，不在 `agents/` |
-| **雙知識櫃** | `knowledge/market-team-agent/`（自產）+ `shared/`（共用），對應 team.yaml 的 `knowledge_search_order` |
+| **雙知識櫃** | `knowledge/market-team/`（自產）+ `shared/`（共用），對應 team.yaml 的 `knowledge_search_order` |
 | **記憶歸記憶** | `memory/archive/`（不放 knowledge） |
 | **完整 team.yaml** | defaults / kiro_files / channel / access / cost_guard / hang_detector / instances / health_port 全區塊 |
 | **scheduler** | 2 個啟用 job + 3 個 `enabled: false` 骨架（等資料源就緒再開） |
@@ -43,4 +43,4 @@
 - `.env`（機密；只留 `.env.example` 骨架）
 - `.venv/`（各自裝 wheel）
 
-> 建立紀錄見專案 MEMORY「2026-09-11 建 market-team-agent」段。
+> 建立紀錄見專案 MEMORY「2026-09-11 建 market-team」段。

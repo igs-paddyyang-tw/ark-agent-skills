@@ -1,4 +1,4 @@
-# market-team-agent 知識庫 Schema（v3.0）
+# market-team 知識庫 Schema（v3.0）
 
 > **本櫃定位**：本團隊各 agent **自己分析產出**的市場情報。
 > 對照 `knowledge/shared/`（排程蒸餾 / 使用者放入 / 跨 agent 共用）。
@@ -12,7 +12,7 @@ concept / entity / source / synthesis / comparison / overview / system
 
 ## 目錄結構
 ```
-knowledge/market-team-agent/
+knowledge/market-team/
 ├── raw/     → 原始素材（給人查證，只增不改）
 ├── wiki/    → 結構化知識（給 AI 檢索，ingest 蒸餾產出）
 ├── .index/  → 搜尋索引（自動生成）

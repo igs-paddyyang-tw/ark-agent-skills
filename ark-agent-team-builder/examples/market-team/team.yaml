@@ -1,5 +1,5 @@
-# market-team-agent 配置（市場情報團隊）— ark_team_agent 套件
-# 啟動：.venv/bin/python start.py（或 systemctl --user start market-team-agent）
+# market-team 配置（市場情報團隊）— ark_team_agent 套件
+# 啟動：.venv/bin/python start.py（或 systemctl --user start market-team）
 #
 # 結構：market-agent（總機/私訊）→ leader（統籌）→ 3 worker（競品/趨勢/報告）+ admin（維運）
 # 設定集中本檔；機密在 .env；排程在 scheduler.yaml。
@@ -8,8 +8,8 @@ defaults:
   backend: kiro-cli
   model: auto
 
-# 知識庫查詢櫃順序（market-team-agent 自有 + 共用）
-knowledge_search_order: [market-team-agent, shared]
+# 知識庫查詢櫃順序（market-team 自有 + 共用）
+knowledge_search_order: [market-team, shared]
 
 # [skill 自動鋪設關閉，交 sync 管；成員表以 team.yaml 為唯一真相每次同步]
 kiro_files:

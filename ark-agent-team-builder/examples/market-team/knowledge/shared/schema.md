@@ -1,7 +1,7 @@
 # shared 知識庫 Schema（v3.0）
 
 > **本櫃定位**：排程蒸餾 + 使用者放入 + 跨 agent 共用的市場情報知識。
-> 對照 `knowledge/market-team-agent/`（本團隊自己分析產出的情報）。
+> 對照 `knowledge/market-team/`（本團隊自己分析產出的情報）。
 > 🔴 記憶歸記憶、知識歸知識：本櫃只放知識；記憶歸檔在 `memory/archive/`。
 
 ## Frontmatter 欄位

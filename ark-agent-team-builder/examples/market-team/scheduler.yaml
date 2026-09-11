@@ -1,4 +1,4 @@
-# market-team-agent 排程
+# market-team 排程
 # 由 ark_team_agent 的 ScheduleEngine 讀取。target 為 instance 名。
 
 timezone: Asia/Taipei

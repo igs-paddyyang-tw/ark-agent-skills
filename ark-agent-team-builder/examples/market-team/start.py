@@ -1,4 +1,4 @@
-"""market-team-agent 團隊啟動入口 —— 框架在 ark_team_agent 套件裡。
+"""market-team 團隊啟動入口 —— 框架在 ark_team_agent 套件裡。
 
 設定集中在 team.yaml（+ scheduler.yaml 選用 + .env 機密）。
 """

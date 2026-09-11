@@ -1,7 +1,7 @@
 ---
 inclusion: always
 ---
-# market-team-agent 共用規範
+# market-team 共用規範
 
 > 所有回覆使用**繁體中文**。每完成一個段落更新 `memory/`。
 > All tools are trusted.
@@ -14,7 +14,7 @@ inclusion: always
 
 ## 情報工作流（SDD 精神）
 
-① 查知識庫（market-team-agent / shared）→ ② web 查最新 → ③ 蒸餾入 wiki → ④ 產報告 → ⑤ 更新記憶
+① 查知識庫（market-team / shared）→ ② web 查最新 → ③ 蒸餾入 wiki → ④ 產報告 → ⑤ 更新記憶
 
 ## 知識庫規則（記憶歸記憶、知識歸知識）
 
@@ -24,7 +24,7 @@ inclusion: always
 
 | 這份知識是… | → 櫃 |
 |---|---|
-| market-team-agent 自己分析產出的情報 | `knowledge/market-team-agent/`（或各 agent 私有）|
+| market-team 自己分析產出的情報 | `knowledge/market-team/`（或各 agent 私有）|
 | 排程蒸餾 / 使用者放入 / 跨 agent 共用 | `knowledge/shared/` |
 
 | 路徑 | 用途 | 權限 |
