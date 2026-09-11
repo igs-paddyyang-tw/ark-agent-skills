@@ -22,8 +22,11 @@ knowledge/
 │   ├── raw/
 │   ├── tasks/ decisions/ agent_profiles/ artifacts/
 │   ├── schema.md / index.md / log.md
-└── raw/memory-archive/  ← MEMORY.md 日期分節自動歸檔（路徑寫死不可搬）
+└── （MEMORY 歸檔已移出 knowledge → 見下方 memory/archive/；1.8.1 起）
 ```
+
+> 🔴 **記憶歸記憶、知識歸知識**：MEMORY.md 日期分節歸檔在 `memory/archive/`，
+> **不在 knowledge**（1.8.1 起；舊 `knowledge/raw/memory-archive/` 已作廢並遷出）。
 
 **為什麼一定要補**：本機 MEMORY 記過**四次**「少一層 shared」的靜默失效
 （`layer1_bm25` / `indexer` / `wiki_distill` / `server/main.py` 都曾少一層 `shared`
@@ -32,7 +35,7 @@ knowledge/
 
 **建議模板動作**：
 - 團隊級 knowledge 一律建 `knowledge/shared/{wiki,raw}/` + `schema/index/log`
-- `knowledge/raw/memory-archive/` 保留給 MEMORY 歸檔（`memory_archive` 模組寫死此路徑）
+- `memory/archive/` 給 MEMORY 歸檔（1.8.1 起 —— 記憶歸記憶，不在 knowledge）
 - 在 `AGENTS.md`／`schema.md` 明寫「Wiki 引擎讀 `shared/`，禁止手寫 `wiki/`，只由 ingest 產出」
 
 ---
@@ -60,7 +63,7 @@ agents/<name>/memory/    ← 子 agent 各自的 memory/（同結構）
 
 **建議模板動作**：
 - 每個 agent workspace（含根）都建 `memory/{daily/,recent.md,memory.md}`
-- `steering/MEMORY.md` 仍保留（人類可讀的長期記憶 + 自動歸檔到 memory-archive）
+- `steering/MEMORY.md` 仍保留（人類可讀的長期記憶 + 自動歸檔到 `memory/archive/`）
 - 兩者分工寫進 `AGENTS.md`：`memory/` = 套件寫入的執行期記憶；`steering/MEMORY.md` = 專案敘事記憶
 
 ---

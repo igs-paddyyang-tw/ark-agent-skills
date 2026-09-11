@@ -8,28 +8,35 @@
 
 ```
 專案根目錄/
-├── knowledge/                    ← 共用知識庫（排程彙整 + IDE 手動維護）
-│   ├── raw/                      ← 排程 LLM 分析 Agent 知識後放入
-│   ├── wiki/                     ← 共用精煉知識
-│   ├── schema.md
-│   ├── index.md
-│   └── log.md
+├── knowledge/
+│   └── shared/                   ← 🔴 共用知識庫（Wiki 引擎與 start.py 實際讀這層）
+│       ├── raw/                  ← 排程 LLM 分析 Agent 知識後放入 / 人類放入
+│       ├── wiki/                 ← 共用精煉知識（BM25 索引 .index/ 建在此）
+│       ├── schema.md
+│       ├── index.md
+│       └── log.md
 │
 └── agents/{name}-agent/
     └── knowledge/                ← Agent 私有知識庫（Agent 自己維護）
         ├── raw/
-        ├── wiki/
+        ├── wiki/                 ← 私有精煉知識（各自的 .index/）
         ├── schema.md             ← 本模板
         ├── index.md
         └── log.md
 ```
+
+> 🔴 **一定要有 `shared/` 這一層**（不是扁平的 `knowledge/wiki/`）。
+> Wiki 引擎與 `start.py` 讀的是 `knowledge/shared/wiki/`。本機 MEMORY 記過**四次**
+> 「少一層 shared」的靜默失效（索引讀不到、蒸餾搜不到，不拋例外不寫 log）。
+> team.yaml 的 `knowledge_search_order` 列的櫃名（如 `[<self>, shared]`）
+> 各對應 `knowledge/<櫃名>/`。
 
 ## 讀取優先順序
 
 | 優先 | 來源 | 何時搜尋 |
 |------|------|---------|
 | 1️⃣ | 自己的 `knowledge/wiki/` | **預設**（所有查詢先搜自己） |
-| 2️⃣ | 根目錄 `knowledge/wiki/` | 自己的找不到 or 明確指定「共用知識」 |
+| 2️⃣ | `knowledge/shared/wiki/` | 自己的找不到 or 明確指定「共用知識」 |
 
 
 ## 寫入規則
@@ -38,8 +45,8 @@
 |------|---------|------|
 | Agent 完成任務學到東西 | **自己的** `knowledge/wiki/` | 私有，不影響他人 |
 | Agent 解決了通用問題 | **自己的** `knowledge/wiki/` | 先存私有 |
-| 排程整理（daily） | 根目錄 `knowledge/raw/` | LLM 分析私有知識 → 提取通用部分 → 放入 shared/raw |
-| IDE 手動寫入 | 根目錄 `knowledge/raw/` | 人類放入 raw → LLM ingest → wiki |
+| 排程整理（daily） | `knowledge/shared/raw/` | LLM 分析私有知識 → 提取通用部分 → 放入 shared/raw |
+| IDE 手動寫入 | `knowledge/shared/raw/` | 人類放入 raw → LLM ingest → wiki |
 
 ## 共用知識同步機制
 
@@ -69,15 +76,20 @@ Agent 在以下時機必須更新**自己的**知識庫：
 ```yaml
 ---
 title: "頁面標題"
-type: concept | entity | source | synthesis | troubleshooting | overview
-tags: [tag1, tag2]
-sources: [raw/來源檔案]
-related: [相關頁面檔名]
+type: concept | entity | source | synthesis | comparison | overview | system
+tags: [tag1, tag2]              # 必須在 schema.md 的白名單內
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-status: seedling | developing | mature
+status: seedling | developing | mature | evergreen
+trust: deterministic | llm-distilled   # 必填
+approved: true | false          # trust: llm-distilled 時必填
+aliases: [別名1, 別名2]          # 選填但強烈建議
 ---
 ```
+
+> 對齊 `ark-wiki-engine` v3.1（`references/page-schema.md` 為權威）。
+> `wiki_lint.py` 對必填欄位（`title`/`type`/`created`/`updated`/`trust`）缺一即 error。
+> 兩層信任：腳本搬運 = `deterministic`；LLM 改寫/摘要 = `llm-distilled`（需 `approved`）。
 
 ## 操作規則
 
