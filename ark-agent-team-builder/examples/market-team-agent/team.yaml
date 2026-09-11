@@ -52,7 +52,6 @@ instances:
     working_directory: agents/leader-agent
     description: "🎯 情報統籌 — 拆解情報需求、派工、驗收彙整"
     role: leader
-    group_members: [competitor-agent, trend-agent, report-agent]
 
   # ═══ 維運（General）═══
   admin-agent:
@@ -60,20 +59,23 @@ instances:
     description: "👑 維運 — 監控、費控、服務健康"
     role: admin
 
-  # ═══ 職人（worker，輸出自動發到 leader topic）═══
+  # ═══ 職人（worker，用 group 指向所屬 leader，輸出自動發到 leader topic）═══
   competitor-agent:
     working_directory: agents/competitor-agent
     description: "🔍 競品分析 — 產品/定價/功能對比、競爭態勢"
     role: worker
+    group: leader-agent
 
   trend-agent:
     working_directory: agents/trend-agent
     description: "📈 趨勢研究 — 市場動態、新品、法規、玩家偏好"
     role: worker
+    group: leader-agent
 
   report-agent:
     working_directory: agents/report-agent
     description: "📝 情報報告 — 彙整分析為 MD→HTML→TG 報告"
     role: worker
+    group: leader-agent
 
 health_port: 23040

@@ -106,7 +106,12 @@ team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml�
 | `access` | `mode: group` / `allowed_users` |
 | `cost_guard` | `daily_limit_usd` / `warn_at_percentage` / `timezone` |
 | `hang_detector` | `enabled` / `timeout_minutes` / `escalation_minutes` |
-| `instances` | 各 agent：`working_directory` / `description` / `role` / `private_chat` / `skip_resume` / `group` |
+| `instances` | 各 agent：`working_directory` / `description` / `role` / `private_chat` / `skip_resume` / **`group`** |
+
+> 🔴 **worker 歸屬用 `group: <leader-name>`（worker 指向所屬 leader），不是 leader 用 `group_members` 列成員。**
+> `group_members` 是 **bot 端 `agents.yaml`** 的欄位 —— team 端寫它會被套件**靜默忽略**
+> （log 印 `欄位 'group_members' 不存在 → 已忽略。你是不是想寫 'group'？`），leader 派工歸屬不生效。
+> （2026-09-11 建 market-team-agent 第一次實跑踩到，1.4.11/1.8.4 皆然。）
 
 範本：`references/templates/team.yaml.tpl`（基礎）、`team-full.yaml`（多層專家）、
 `team-ops.yaml` / `team-dev.yaml`（情境）。角色慣例見 `references/role-presets.md`。
@@ -123,6 +128,29 @@ team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml�
 > manager（總機）通常設 `working_directory: .` 讀根目錄 —— 它的 `SOUL.md`/`AGENTS.md`
 > 就是**根目錄**那份，不要另外在 `agents/<manager>/` 建（會被忽略）。
 > 驗證骨架時別把「`agents/<manager>/` 沒有 SOUL」當成缺失。
+
+#### 🔑 套件啟動時會自動產/更新 steering（實測 1.8.4）
+
+`backend.py` 每次啟動會處理各 instance 的 steering，**依 `kiro_files` policy**：
+
+| 檔 | 預設 policy | 行為 |
+|----|-----------|------|
+| `SOUL.md` | `once` | **已存在就不覆蓋** → 你手寫的人格保住；不存在才用 `templates/agents/<role>/SOUL.md` 產 |
+| `AGENTS.md` | once | 同上 |
+| `MEMORY.md` / `BRAIN.md` / `CODE.md` / `USER.md` | once | 不存在才產（骨架）|
+| `TEAM.md` | `always` | 每次依 team.yaml 動態產（成員表唯一真相）|
+
+> 🔴 **log 印 `Using SOUL.md template for X` 不代表它覆蓋了你的手寫 SOUL。**
+> 那行只是「載入了 template 內容備用」；接著 `policy=once` 判斷 `SOUL.md 已存在 → 跳過寫入`。
+> 手寫人格在 `once` 下安全。（2026-09-11 實跑一度被這行 log 誤導以為被覆蓋，查 backend.py:626-651 確認沒有。）
+> 要讓套件每次強制用 template 覆蓋 → 設 `soul_md: always`；要完全不管 → `skip`。
+
+#### ⚙️ 啟動後的兩個非致命現象（實測 1.8.4，可忽略或按需處理）
+
+- **website dashboard 自動起在 `health_port + 5000`**（如 health 23040 → dashboard 28040）。
+  規劃 port 時預留 28xxx 頻段（1.6.2 起 offset=5000）。
+- **`authority-matrix.yml not found`（non-fatal）** —— 決策鎖用，沒有也能跑。
+  要啟用防互鎖決策才在 `config/authority-matrix.yml` 建（選配）。
 
 ### 步驟 5：啟動驗證
 
