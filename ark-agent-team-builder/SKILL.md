@@ -119,6 +119,11 @@ team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml�
 呼叫 `ark-agent-init` 為各 instance 產 `.kiro/steering`（SOUL 人格 + 多 CLI 入口）。
 `TEAM.md` **不用手產** —— 套件 `backend.py` 依 team.yaml 動態產生（policy=always）。
 
+> 🔴 **`working_directory: .` 的 manager，steering 在專案根 `.kiro/steering/`，不在 `agents/<name>/`。**
+> manager（總機）通常設 `working_directory: .` 讀根目錄 —— 它的 `SOUL.md`/`AGENTS.md`
+> 就是**根目錄**那份，不要另外在 `agents/<manager>/` 建（會被忽略）。
+> 驗證骨架時別把「`agents/<manager>/` 沒有 SOUL」當成缺失。
+
 ### 步驟 5：啟動驗證
 
 ```bash
@@ -145,6 +150,7 @@ curl -s localhost:<health_port>/api/health     # ark_team_agent → /api/health
 | `references/communication-presets.md` | 通訊規則預設 |
 | `scripts/scaffold_dirs.py` | 依 team.yaml 產目錄骨架 |
 | `scripts/validate_team.py` | team.yaml 驗證 |
+| `examples/market-team-agent/` | 🎯 **完整實例**（市場情報團隊）—— 「長好的樣子」，對照 6 instance + 雙知識櫃 + dir="." manager + 完整 team.yaml 怎麼組（範本教填空、本例教全貌）|
 
 ## 注意事項
 

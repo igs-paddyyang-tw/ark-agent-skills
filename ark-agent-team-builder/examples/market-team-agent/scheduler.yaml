@@ -1,0 +1,35 @@
+# market-team-agent 排程
+# 由 ark_team_agent 的 ScheduleEngine 讀取。target 為 instance 名。
+
+timezone: Asia/Taipei
+
+jobs:
+  - name: hourly-progress
+    target: leader-agent
+    prompt: "⏰ 確認團隊狀態，query_team_status 後依計劃派工或追蹤。更新 memory.md。"
+    cron: "10 9-21 * * *"
+
+  - name: daily-summary
+    target: leader-agent
+    prompt: "📋 今日情報摘要：整理競品/趨勢成果 + 明日追蹤重點，reply 回報。"
+    cron: "daily:21:00"
+
+  # ── 市場情報專屬（骨架，啟用前確認 worker steering 就緒）──
+
+  - name: daily-market-scan
+    target: trend-agent
+    prompt: "📈 每日市場掃描：抓取關注品類的新品/動態/法規變化，蒸餾入 knowledge/shared/wiki。"
+    cron: "daily:09:00"
+    enabled: false        # worker 人格與資料源就緒後改 true
+
+  - name: weekly-competitor-report
+    target: competitor-agent
+    prompt: "🔍 週競品報告：整理本週競品動向，交 report-agent 產 HTML 報告。"
+    cron: "0 10 * * 1"
+    enabled: false
+
+  - name: wiki-maintenance
+    target: leader-agent
+    prompt: "📚 Wiki 巡檢：掃 knowledge/shared，超標或過期派整理。"
+    cron: "0 12,18 * * *"
+    enabled: false

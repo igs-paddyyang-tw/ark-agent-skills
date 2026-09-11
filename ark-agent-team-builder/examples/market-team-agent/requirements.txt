@@ -1,0 +1,9 @@
+# 套件消費端只需裝 ark_team_agent wheel（其餘依賴由套件帶入）。
+# 安裝：uv pip install --python .venv/bin/python <ark_team_agent-*.whl>
+#
+# wheel 從 GitHub Release 取得：
+#   https://github.com/igs-paddyyang-tw/ark_team_agent/releases
+#
+# 🔴 若 pyproject.toml pin 了版號，升級要同步改 pin（doctor.sh 會比對）。
+ark_team_agent   # 由 wheel 安裝，不從 PyPI
+python-dotenv>=1.0.0
