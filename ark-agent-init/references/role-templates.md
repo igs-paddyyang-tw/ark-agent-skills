@@ -30,3 +30,15 @@
 2. steering 全部保留（不衝突）
 3. prompts 合併
 4. mcp.json 合併 servers
+
+## 產業擴充包
+
+上表是通用角色。特定產業有專屬角色包（能力定義 + SOUL 生成段 + prompts 配方），
+與 `role-skills-map.md` 的 `base_skills`（8 個全員底座）疊加：
+
+| 產業 | 擴充包 | 涵蓋角色 |
+|------|--------|---------|
+| 🎮 遊戲 | `role-templates-gamedev.md` | game-planner · **math-designer**（PAR sheet/RTP/Monte Carlo）· client-eng · server-eng · tech-artist · game-qa · liveops · game-analyst · producer · narrative |
+
+> 遊戲產業（尤其機率型遊戲 slot/fish）建議直接採 gamedev 包 —— 它已對齊
+> AC-ID / ark-code-spec-validator 慣例、artifacts 落點、送審數學文件需求。
