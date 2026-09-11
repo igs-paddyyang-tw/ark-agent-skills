@@ -116,4 +116,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    # 🔴 在讀位置參數之前攔截 —— 否則 `--help` 會被當成路徑，
+    #    輕則 exit≠0，重則在 cwd 產出整包骨架（scripts/tests/test_cli_contract.py 在驗）。
+    if {"-h", "--help"} & set(sys.argv[1:]):
+        print(__doc__ or "")
+        raise SystemExit(0)
     sys.exit(main())

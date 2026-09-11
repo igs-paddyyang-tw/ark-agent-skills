@@ -1,3 +1,8 @@
+"""check_bounding_boxes.py — 檢查 PDF 表單欄位的 bounding box 是否重疊／超出頁面。
+
+用法：
+    python check_bounding_boxes.py <fields.json>
+"""
 from dataclasses import dataclass
 import json
 import sys
@@ -56,6 +61,11 @@ def get_bounding_box_messages(fields_json_stream) -> list[str]:
     return messages
 
 if __name__ == "__main__":
+    # 🔴 在讀位置參數之前攔截 —— 否則 `--help` 會被當成路徑，
+    #    輕則 exit≠0，重則在 cwd 產出整包骨架（scripts/tests/test_cli_contract.py 在驗）。
+    if {"-h", "--help"} & set(sys.argv[1:]):
+        print(__doc__ or "")
+        raise SystemExit(0)
     if len(sys.argv) != 2:
         print("Usage: check_bounding_boxes.py [fields.json]")
         sys.exit(1)
