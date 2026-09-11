@@ -7,6 +7,22 @@
 > 🔴 這是**特定領域**（市場情報）的實例，不是通用範本。建別種團隊時，
 > 結構可照抄，但 6 個角色的 SOUL 人格要換成你的領域（或用 `ark-agent-init` 重產）。
 
+## 打造完整團隊 = 三個 skill 分工
+
+這個實例是三個 skill 協作的產物，各管一層：
+
+| 階段 | skill | 管什麼 | 對應本實例 |
+|------|-------|--------|-----------|
+| ① 架構 | `ark-agent-team-builder` | 裝 wheel + 產 team.yaml/scheduler/start.py + 驗證架構 | `team.yaml`（6 instance）· `start.py` · `validate_team.py` |
+| ② 基礎 | `ark-agent-init` | 每個 agent 的人格 + 基礎知識 + 多 CLI 入口 | 6 個 `SOUL.md` · `AGENTS.md` · `knowledge/` 骨架 |
+| ③ 專業 | `ark-agent-skills`（`sync_skills.py`）| 依角色矩陣裝各 agent 的專業技能 | `scripts/sync_skills.py`（6-agent 矩陣 → 38 skill）|
+
+```
+① 定架構（誰在團隊）→ ② 給靈魂（人格/知識）→ ③ 給工具（專業 skill）
+   team.yaml            SOUL/AGENTS/knowledge      sync_skills.py 依矩陣
+```
+
+
 ## 這個實例示範了什麼
 
 | 面向 | 實例怎麼做 |

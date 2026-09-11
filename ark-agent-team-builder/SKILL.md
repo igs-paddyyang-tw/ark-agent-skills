@@ -62,6 +62,23 @@ metadata:
 
 ## 產出流程
 
+> 🧩 **打造一個完整團隊 = 三個 skill 分工協作**（各管一層，不重疊）：
+>
+> | 階段 | skill | 管什麼 | 產出 |
+> |------|-------|--------|------|
+> | ① **架構** | **`ark-agent-team-builder`**（本 skill） | 裝 wheel + 產 team.yaml/scheduler/start.py 骨架 + **驗證架構**（`validate_team.py`）| 團隊 daemon 骨架、目錄結構、編制 |
+> | ② **基礎** | **`ark-agent-init`** | 為每個 agent 產 **基本人格 + 知識 + 能力**（SOUL/AGENTS + 多 CLI 入口 + knowledge/memory 骨架）| 每個 agent 的 `.kiro/steering` 人格 |
+> | ③ **專業** | **`ark-agent-skills`**（透過 `sync_skills.py`）| 依角色矩陣**裝各 agent 需要的專業技能**（複本，靠 sync 重建）| 各 agent 的 `.kiro/skills/` |
+>
+> **順序**：① 先定架構（誰在團隊、什麼角色）→ ② 給每個 agent 靈魂（人格/知識）
+> → ③ 給每個 agent 工具（專業 skill）。三者對應下面步驟 1-2-3（架構）、4（基礎）、4.5（專業）。
+>
+> ```
+> ark-agent-team-builder          ark-agent-init            ark-agent-skills
+>   （骨架 + 驗證架構）      →      （人格 + 基礎知識）   →    （sync_skills 裝專業技能）
+>   team.yaml/start.py             SOUL/AGENTS/knowledge     .kiro/skills/ 依角色矩陣
+> ```
+
 ### 步驟 1：裝套件
 
 ```bash
@@ -154,6 +171,42 @@ team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml�
   規劃 port 時預留 28xxx 頻段（1.6.2 起 offset=5000）。
 - **`authority-matrix.yml not found`（non-fatal）** —— 決策鎖用，沒有也能跑。
   要啟用防互鎖決策才在 `config/authority-matrix.yml` 建（選配）。
+
+### 步驟 4.5：裝專業技能（`ark-agent-skills` → `sync_skills.py`）
+
+步驟 4 給了 agent「人格與基礎能力」，這一步給它「**專業工具**」——
+從共用庫 `ark-agent-skills` 依**角色矩陣**把該裝的 skill 複製到各 agent。
+
+**為什麼是複本不是 symlink**：symlink 指向 repo 外絕對路徑，clone 到新機器必斷鏈。
+複本讓專案自我完備，代價是上游更新要靠 `sync_skills.py` 主動拉。
+
+```bash
+# 上游：~/kiro-cli/.kiro/skills（git clone igs-paddyyang-tw/ark-agent-skills）
+python3 scripts/sync_skills.py            # 依角色矩陣拉齊
+python3 scripts/sync_skills.py --dry-run  # 只印要做什麼
+python3 scripts/sync_skills.py --check    # 驗一致（doctor/CI 用）
+```
+
+**角色矩陣**（`sync_skills.py` 的 `MATRIX`）= 「哪個 agent 裝哪些 skill」。原則：
+
+| 角色 | 該裝的專業技能方向 | 例（ark-agent-skills 內） |
+|------|-------------------|--------------------------|
+| manager（總機） | 通用執行力：RAG 查詢 + 規格/計畫 + 報告 | `ark-weknora-cli` `ark-superpowers` `ark-project-planning` `ark-md-report` |
+| leader（統籌） | 拆解/派工/驗收 | `ark-project-planning` `ark-grill-me` |
+| admin（維運） | 環境/健康/成本 | `ark-env-doctor` `ark-dashboard-health` `ark-cost-tracker` |
+| worker（職人） | **依領域**：資料/研究/報告… | 競品→`ark-web-scraper` `ark-marketing`；報告→`ark-chart-generator` `ark-html-report` |
+| 全員 COMMON | 知識查詢 | `ark-wiki-engine` |
+
+> 🔴 **只裝該裝的，別全員裝同一批** —— skill 會進 agent 的 context window，
+> 裝無關的只是稀釋注意力。矩陣就是「角色邊界」的具體化。
+> 完整範例見 `examples/market-team/scripts/sync_skills.py`（6-agent 矩陣）。
+
+> 🔴 前提：team.yaml 的 `kiro_files.skills.policy: skip`。否則套件 `_deploy_skills`
+> 每次啟動會用 bundled skill **推翻**你的角色矩陣（步驟 3 的 policy 表已說明）。
+
+> 💡 skill 是複本 → **gitignore 排除** `.kiro/skills/`、`agents/*/.kiro/skills/`
+> （靠 `sync_skills.py` 重建，不進版控）。這也是為什麼範例包不含 skill 複本。
+
 ### 步驟 5：啟動驗證（**兩階段就緒，別在第一階段就測私訊**）
 
 ```bash
