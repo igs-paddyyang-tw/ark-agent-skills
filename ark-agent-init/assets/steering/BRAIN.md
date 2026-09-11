@@ -1,4 +1,4 @@
-﻿---
+---
 inclusion: always
 ---
 # BRAIN — 記憶與資源使用準則

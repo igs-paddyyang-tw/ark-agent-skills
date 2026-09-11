@@ -45,7 +45,7 @@ backend:
 
 report:                   # 分析產出 MD→HTML→TG
   enabled: true
-  md_dir: output/reports
+  md_dir: artifacts/reports   # 必須與 build_agent.py 的 DIRS 一致（validate_agent 會驗）
   render_html: true
   send_to_tg: true
   min_chars: 150

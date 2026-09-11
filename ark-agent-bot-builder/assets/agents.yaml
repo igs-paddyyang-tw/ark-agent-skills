@@ -49,7 +49,10 @@ leader:
   dispatchable: true
   persistent: true
   role: leader
-  group_members: [worker-a, worker-b]   # 加 worker 只改這裡，勿寫進 prompt
+  # 🔴 只列**已在本檔定義、且 agents/<dir> 真的存在**的成員 ——
+  #    指向不存在的成員，派工當下才會發現（validate_agent 會先幫你擋）。
+  #    加 worker：先在下面定義 + 建目錄，再加進這行。勿寫進 prompt。
+  group_members: [worker-a]
 
 # ── worker（依需求增減）──
 worker-a:

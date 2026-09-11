@@ -67,9 +67,14 @@ metadata:
 ```bash
 uv venv --python 3.13
 # wheel 從 Release 取得：github.com/igs-paddyyang-tw/ark_bot_agent/releases
-uv pip install --python .venv/bin/python <ark_bot_agent-*.whl>
+uv pip install --python .venv/bin/python '<ark_bot_agent-*.whl>[search,skills]'
 ```
 
+> 🔴 **extras 不可省** —— 只裝 base wheel 會少兩組能力且**不報錯**：
+> `[search]`（bm25s/jieba/PyStemmer）缺了四層搜尋靜默降級成 purepy + CJK bigram；
+> `[skills]`（apscheduler/jinja2/markdown/feedparser/bs4/openai）缺了 `schedule_engine`
+> 只印一行 WARNING 就跳過。
+>
 > 🔴 換裝後**驗 import 版號，不看 pip 輸出**（MEMORY 記過「回報成功但沒裝進去」）：
 > `.venv/bin/python -c "import ark_bot_agent; print(ark_bot_agent.__version__)"`
 

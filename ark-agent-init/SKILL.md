@@ -105,7 +105,7 @@ metadata:
 │       │       ├── USER.md            #   共用
 │       │       └── TEAM.md            #   系統自動產生
 │       ├── docs/.gitkeep
-│       ├── output/.gitkeep
+│       ├── artifacts/.gitkeep
 │       └── knowledge/                 #   私有知識庫
 │           ├── schema.md
 │           ├── index.md
@@ -659,7 +659,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 - [ ] `knowledge/` 有五件套：schema.md + index.md + log.md + raw/ + wiki/overview.md
 - [ ] `knowledge/schema.md` 有角色客製化「適合存放的知識」段落
 - [ ] `docs/` 目錄存在
-- [ ] `output/` 目錄存在
+- [ ] `artifacts/` 目錄存在（**不是** `output/`，套件 1.2.19 起已改）
 
 ---
 
@@ -682,7 +682,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 - .kiro/settings/mcp.json
 - knowledge/（五件套：schema + index + log + raw/ + wiki/）
 - docs/
-- output/
+- artifacts/
 
 📊 Context 佔比估算：~{total_kb} KB ≈ {tokens} tokens ≈ {percent}%
 
@@ -710,14 +710,24 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 ### assets/steering/（預設模板，直接 copy）
 
+> 🔴 **本表必須與目錄實況一致** —— `scripts/tests/test_scaffold.py::
+> test_skill_md_asset_table_matches_reality` 會驗。曾經列了四個不存在的檔名
+> （AGENTS/USER/SOUL/MEMORY.md），照著走的人會發現「說要 copy 的檔案不在」。
+
 | 檔案 | 說明 |
 |------|------|
-| `AGENTS.md` | 全域行為準則（含 AI 開發流程 + 知識庫規則） |
+| `BRAIN.md` | 記憶與資源使用準則（三層資源分工，inclusion: always） |
 | `KIRO.md` | Kiro CLI 行為指南（程式碼規範，fileMatch: *.py） |
-| `MEMORY.md` | 專案記憶骨架（快照 + 待辦 + 進度） |
-| `USER.md` | 使用者百科骨架（空白待填） |
-| `SOUL.md` | 預設角色：全端 + SA/SD（八段式） |
-| `TEAM.md` | 團隊運作規範（通訊規則 + MCP 工具 + 協作流程 + 成員管理） |
+| `MEMORY-template.md` | 專案記憶骨架（快照 + 待辦 + 進度） |
+| `SOUL-root.md` | 根目錄／預設角色：通用 AI 助手 |
+| `SOUL-admin.md` | admin 角色（服務管理，不接業務） |
+| `SOUL-leader.md` | leader 角色（需求拆解、派工、收斂） |
+| `SOUL-worker.md` | worker 角色（執行、回報） |
+| `TEAM.md` · `TEAM-template.md` | 團隊運作規範（inclusion: manual，不併進 always 入口檔） |
+
+> ⚠️ **尚缺 `AGENTS.md` 與 `USER.md` 的預設 asset**（待辦，見
+> `docs/plans/ark-agent-skills-bot-builder-optimization-plan.md` 的 P1-3）——
+> 目前這兩份要依 SKILL.md 上方的範本自行撰寫。
 
 ### references/（按需載入）
 
