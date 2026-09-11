@@ -26,6 +26,8 @@ SCRIPTS = Path(__file__).resolve().parent.parent
 SKILL_ROOT = SCRIPTS.parent
 
 #: SKILL.md 行數上限（plan AC-023）。要調高必須連同 plan 一起改，不是偷偷放寬。
+#: 🔴 行數一律用 `len(src.splitlines())` —— `count("\n") + 1` 對「以換行結尾」的
+#: 檔案會多算一行（等於把上限偷偷變成 219）。量測工具算錯比沒有量測更糟。
 SKILL_MD_MAX_LINES = 220
 #: build_wiki.py 行數上限（plan AC-026）。v2 是 1305 行、含 18 個模板函式。
 BUILD_WIKI_MAX_LINES = 350
@@ -67,7 +69,7 @@ def test_every_cli_script_has_help(script):
 def test_skill_md_size_and_no_dead_references():
     """AC: AC-023 — SKILL.md ≤220 行且不出現指向已刪除程式的死引用"""
     text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
-    lines = text.count("\n") + 1
+    lines = len(text.splitlines())
     assert lines <= SKILL_MD_MAX_LINES, (
         f"SKILL.md {lines} 行 > 上限 {SKILL_MD_MAX_LINES} —— "
         "v2 的 471 行有一半在描述已刪除的程式，別走回去")
@@ -90,7 +92,7 @@ def test_skill_md_frontmatter_declares_executor():
 def test_build_wiki_stays_scaffold_only():
     """AC: AC-026 — build_wiki.py ≤350 行，且不含 server/UI 模板函式"""
     src = (SCRIPTS / "build_wiki.py").read_text(encoding="utf-8")
-    lines = src.count("\n") + 1
+    lines = len(src.splitlines())
     assert lines <= BUILD_WIKI_MAX_LINES, (
         f"build_wiki.py {lines} 行 > 上限 {BUILD_WIKI_MAX_LINES}（v2 是 1305 行）")
     import ast
@@ -99,6 +101,30 @@ def test_build_wiki_stays_scaffold_only():
                  "_run_py", "_wiki_hybrid_search_py", "_wiki_rag_bridge_py",
                  "_wiki_indexer_py", "_wiki_query_py"):
         assert gone not in fns, f"模板函式復活：{gone}（D-2 已裁定刪除，四層邏輯只在 scripts/）"
+
+
+def test_scaffold_passes_its_own_lint(tmp_path):
+    """骨架產出的知識庫必須能通過它自己產出的 schema 的 lint
+
+    🔴 為什麼需要這條：`build_wiki.py` 同時產 `schema.md`（規則）與
+    `wiki/overview.md`（資料），兩者由**不同的模板函式**各寫一次。
+    改了其中一邊而忘了另一邊，症狀是「每個新專案一建立就帶 2 個 lint error」——
+    而建立者通常不會馬上跑 lint，於是那兩個 error 會被當成「既有負債」接受。
+
+    實例（2026-09-11 抓到）：v3 加了必填的 `trust` 欄位、白名單收斂成 `overview`，
+    但 `_overview_md` 仍寫著 `tags: [index]` 且沒有 `trust` → 缺欄位 + tag 不在白名單。
+    """
+    subprocess.run(
+        [sys.executable, str(SCRIPTS / "build_wiki.py"), str(tmp_path), "shared"],
+        check=True, capture_output=True, text=True)
+    kb = tmp_path / "knowledge" / "shared"
+    r = subprocess.run(
+        [sys.executable, str(SCRIPTS / "wiki_lint.py"),
+         "--wiki", str(kb / "wiki"), "--schema", str(kb / "schema.md"), "--json"],
+        capture_output=True, text=True)
+    import json
+    out = json.loads(r.stdout)
+    assert out["errors"] == [], f"骨架過不了自己的 lint：{out['errors']}"
 
 
 def test_required_references_present():

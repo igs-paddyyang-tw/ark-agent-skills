@@ -55,24 +55,17 @@ v3 把它變成真實可執行的 `scripts/wiki_query.py`，索引落在 `knowle
 
 ## 準則：raw 偏人、wiki 偏 AI、目錄命名要白話
 
-三層知識庫的**主要讀者與定位不同**（是定位差異，非排他）：
-
 | 層 | 主要讀者 | 定位 | 誰寫 |
 |----|---------|------|------|
-| `raw/` | **人** | 原始素材、來源文件，人閱讀與查證的底本 | 只增不改（新增素材） |
-| `wiki/` | **AI** | 結構化知識，主要餵給四層搜尋檢索（附 frontmatter、兩層信任模型） | 由 ingest 蒸餾產出，禁止手寫 |
+| `raw/` | **人** | 原始素材與來源文件，人查證的底本 | 只增不改 |
+| `wiki/` | **AI** | 結構化知識，餵四層搜尋檢索 | ingest 蒸餾產出，禁止手寫 |
 
-> 💡 這是「偏向」不是「排他」—— `wiki/` 頁面仍可給人瀏覽（`outputs.audience: both`），
-> 但它**存在的目的**是 AI 檢索；`raw/` 存在的目的是保留人可查證的原始出處。
-> 判斷內容該進哪層：**問「這是給人讀的原始出處，還是給 AI 檢索的蒸餾結論？」**
+> 💡 這是**偏向不是排他** —— wiki 頁面仍可給人瀏覽（`audience: both`），
+> 但它存在的目的是 AI 檢索。判準：**「這是人查證的原始出處，還是 AI 檢索的蒸餾結論？」**
 
-**目錄命名要白話 —— 一看目錄／檔名就知道放什麼。**
-
-- ✅ 好：`raw/player-analysis/`、`wiki/revenue-kpi.md`、`raw/bq/daily-active.md`
-- ❌ 壞：`raw/data1/`、`wiki/doc2.md`、`raw/tmp/`
-- 判準：新增子目錄或檔案時，**名字本身要能回答「這裡放什麼」**，
-  不要用序號、縮寫、臨時名。命名是給下一個人（和下一個 agent）看的索引。
-
+**目錄／檔名要白話**：`raw/player-analysis/`、`wiki/revenue-kpi.md` ✅；
+`raw/data1/`、`wiki/doc2.md`、`raw/tmp/` ❌。名字本身要能回答「這裡放什麼」，
+不用序號、縮寫、臨時名 —— 命名是給下一個人（和下一個 agent）看的索引。
 ## Agent SOP（決策樹）
 
 ```
@@ -108,26 +101,19 @@ python $S/build_wiki.py   ./myproject demo --install-skill ./myproject/.kiro/ski
 ## JSON 契約
 
 ```json
-{
-  "ok": true,
-  "query": "留存口徑",
-  "results": [{
-    "page": "kpi/retention-definition", "slug": "retention-definition",
-    "title": "留存率口徑定義", "score": 0.0328, "layers": ["L0", "L1", "L3"],
-    "type": "concept", "status": "mature", "trust": "deterministic",
-    "approved": true, "tags": ["kpi"], "summary": "D1 留存 = …"
-  }],
-  "meta": {
-    "total": 7, "top_k": 5, "truncated": false, "out_file": null, "domains": [],
-    "index_used": true, "index_fresh": true,
-    "layers_used": ["L0","L1","L3"], "layers_skipped": {"L2": "no_embeddings"},
-    "tokenizer": "bigram", "bm25_backend": "purepy", "warnings": [], "elapsed_ms": 5
-  }
-}
+{"ok": true, "query": "留存口徑",
+ "results": [{"page": "kpi/retention-definition", "slug": "retention-definition",
+   "title": "留存率口徑定義", "score": 0.0328, "layers": ["L0","L1","L3"],
+   "type": "concept", "status": "mature", "trust": "deterministic",
+   "approved": true, "tags": ["kpi"], "summary": "D1 留存 = …"}],
+ "meta": {"total": 7, "top_k": 5, "truncated": false, "out_file": null, "domains": [],
+   "index_used": true, "index_fresh": true, "layers_used": ["L0","L1","L3"],
+   "layers_skipped": {"L2": "no_embeddings"}, "tokenizer": "bigram",
+   "bm25_backend": "purepy", "warnings": [], "elapsed_ms": 5}}
 ```
 
 錯誤：`{"ok": false, "error": {"code": "...", "msg": "..."}}`，exit 2。
-Schema：`references/query-contract.schema.json`。
+完整 schema（欄位型別與必填）：`references/query-contract.schema.json`。
 
 | code | 意義 |
 |------|------|
@@ -140,9 +126,8 @@ Schema：`references/query-contract.schema.json`。
 | `TAG_NOT_IN_WHITELIST` | tags 不在 schema 白名單，不落盤 |
 | `BUILD_LOCKED` | 另一個 index build 進行中 |
 
-> **stdout 只放機器契約，人看的進度一律 stderr。** 這條在實作中被違反三次
-> （進度混印、漏 import、self-test 先印人類結果），每次都讓 agent 端 `json.loads` 直接炸
-> —— `scripts/tests/test_ingest_guard.py` 對每支腳本每條 `--json` 路徑都驗。
+> **stdout 只放機器契約，人看的進度一律 stderr。** 實作中被違反三次（進度混印、漏 import、
+> self-test 先印人類結果），每次都讓 agent 端 `json.loads` 直接炸 —— 每支腳本每條 `--json` 路徑都有測試。
 
 ## 三條硬規則（由腳本強制，不靠 LLM 記得）
 
@@ -171,10 +156,8 @@ Schema：`references/query-contract.schema.json`。
 
 - **誰建**：`wiki_ingest.py` 落盤後自動 build，或 CI／排程定期 build。**agent 只讀**。
 - **原子性**：先寫 `.index.tmp/` 再 `os.replace`；同時取 lock，第二個 build 回 `BUILD_LOCKED`。
-- **freshness**：比對 manifest 的 `content_hash`。過期時 `index_fresh: false` + warning，
-  **仍用舊索引回答**。
-- **為何查詢端不自動重建**：15 個 instance 併發會撞 lock 並拖慢查詢。
-  維護者要重建用 `--rebuild-if-stale` 或直接 `wiki_index.py build`。
+- **freshness**：比對 manifest `content_hash`；過期時 `index_fresh: false` + warning，**仍用舊索引回答**。
+- **查詢端不自動重建**：15 個 instance 併發會撞 lock 並拖慢查詢。要重建用 `--rebuild-if-stale` 或 `wiki_index.py build`。
 
 ## 🔴 ingest 的授權邊界（executor 化弱化的地方）
 
@@ -213,8 +196,8 @@ knowledge/{name}/
 └── log.md                  append-only：date | op | page | trust | by | note
 ```
 
-> v3 **不再產** `src/skills/wiki_skills/`、`src/server/`、Web UI —— 那是四層引擎的第二份實作。
-> 要取回舊模板：`git show <v2 commit>:ark-wiki-engine/scripts/build_wiki.py`。
+> v3 **不再產** `src/skills/wiki_skills/`、`src/server/`、Web UI（那是四層引擎的第二份實作）。
+> 取回舊模板：`git show <v2 commit>:ark-wiki-engine/scripts/build_wiki.py`。
 
 ## 注意事項
 

@@ -172,10 +172,11 @@ def _overview_md(name: str) -> str:
     return f'''---
 title: "{name} 總覽"
 type: overview
-tags: [index]
+tags: [overview]
 created: {TODAY}
 updated: {TODAY}
 status: seedling
+trust: deterministic
 ---
 
 # {name}
