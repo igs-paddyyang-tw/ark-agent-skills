@@ -208,7 +208,7 @@ journalctl --user -u <svc> --since "-5min" | grep -E "All tools are now trusted|
 | `references/communication-presets.md` | 通訊規則預設 |
 | `scripts/scaffold_dirs.py` | 依 team.yaml 產目錄骨架 |
 | `scripts/validate_team.py` | team.yaml 驗證 |
-| `examples/market-team-agent/` | 🎯 **完整實例**（市場情報團隊）—— 「長好的樣子」，對照 6 instance + 雙知識櫃 + dir="." manager + 完整 team.yaml 怎麼組（範本教填空、本例教全貌）|
+| `examples/market-team/` | 🎯 **完整實例**（市場情報團隊）—— 「長好的樣子」，對照 6 instance + 雙知識櫃 + dir="." manager + 完整 team.yaml 怎麼組（範本教填空、本例教全貌）|
 
 ## 注意事項
 
