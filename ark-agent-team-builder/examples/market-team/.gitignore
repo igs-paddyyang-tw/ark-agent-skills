@@ -6,3 +6,11 @@ logs/
 data/
 *.db
 .index/
+state/
+# skill 是複本（靠 scripts/sync_skills.py 從上游重建）→ 不進版控
+.kiro/skills/
+agents/*/.kiro/skills/
+# 套件啟動時自動產的執行期目錄
+instances/
+output/
+tasks/
