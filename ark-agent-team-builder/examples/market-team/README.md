@@ -32,15 +32,57 @@
 
 ## 怎麼用這個範例
 
+有兩種用法：**A. 對照學習**（看骨架怎麼組）、**B. 直接跑起來**（複製改成你的團隊）。
+
+### A. 對照學習
+
 1. 對照 `team.yaml` 看「6 instance + 完整設定區塊」怎麼組
-2. 對照目錄結構看「雙知識櫃 + memory/archive + artifacts」怎麼擺
+2. 對照目錄結構看「雙知識櫃 + memory + artifacts」怎麼擺
 3. 對照各 SOUL 看「角色人格段」怎麼寫
-4. **不要直接複製當你的專案** —— 換領域、換角色、換 port、填自己的 TG token
 
-## 不含（刻意排除）
+### B. 從骨架跑起來（範例只含骨架，依賴/機密/產物要自己補齊）
 
-- `.index/`（BM25 索引，自動產物，跑 `wiki_index.py build` 會生）
-- `.env`（機密；只留 `.env.example` 骨架）
-- `.venv/`（各自裝 wheel）
+```bash
+# 0. 複製這個範例當你的專案起點
+cp -r examples/market-team ~/my-team && cd ~/my-team
 
-> 建立紀錄見專案 MEMORY「2026-09-11 建 market-team」段。
+# 1. 裝套件（擇一）
+#    a) 系統層（本機慣例）：
+pip install --user --break-system-packages <ark_team_agent-*.whl>
+#    b) 或建 venv：
+uv venv --python 3.13 && uv pip install --python .venv/bin/python <ark_team_agent-*.whl>
+
+# 2. 補 skill 複本（範例不含 4.5MB skill，靠 sync 從上游重建）
+#    前提：本機有 ~/kiro-cli/.kiro/skills（git clone ark-agent-skills）
+python3 scripts/sync_skills.py            # 依角色矩陣拉齊 38 個 skill
+python3 scripts/sync_skills.py --check    # 驗一致
+
+# 3. 填機密（範例只給 .env.example）
+cp .env.example .env
+#    編輯 .env：填 MARKET_TELEGRAM_BOT_TOKEN（BotFather 申請的專屬 token）
+
+# 4. 啟動
+python3 start.py                          # 或 systemctl --user start <svc>
+
+# 5. 兩階段驗證（🔴 別在第一階段就測私訊）
+#    階段一（~20s）：daemon + TG 上線
+curl -s localhost:23040/api/health        # 看 instances.running == total
+#    階段二（首次 2–4 分鐘）：kiro-cli backend 冷啟就緒才會回私訊
+#    看到 log 印 "All tools are now trusted" 或 "💬 REPLY" 才代表可處理
+```
+
+> 🔴 **改成你的團隊時要換**：6 個角色 SOUL 人格、`health_port`、`knowledge_search_order`
+> 的櫃名、`.env` 的 TG token、`sync_skills.py` 的 `MATRIX`（各 agent 該裝哪些 skill）。
+
+### 為什麼範例不含這些（不是缺，是刻意）
+
+| 沒放 | 原因 | 怎麼取得 |
+|------|------|---------|
+| `.kiro/skills/`（4.5MB） | skill 是**複本非 symlink**（symlink 跨機斷鏈） | 跑 `scripts/sync_skills.py` |
+| `.venv/` | 虛擬環境因機而異 | `uv venv` + 裝 wheel |
+| `.env` | 機密（TG token） | 從 `.env.example` 複製填 |
+| `state/` `instances/` `output/` | 套件執行期自動產 | 啟動時自動生 |
+| `.index/` | BM25 索引自動產物 | `wiki_index.py build` 或啟動時生 |
+
+> 💡 這是慣例：**範例放骨架（能長好的樣子），不放依賴/機密/執行產物。**
+> 骨架 + `sync_skills.py` + `.env.example` 三者合起來就能重建出可跑的完整體。
