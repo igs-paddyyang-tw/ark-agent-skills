@@ -104,11 +104,17 @@ def _api_url() -> str:
 
 
 def _resolve_kb(kb_arg: str) -> str:
-    """--kb 未帶時回退到 WEKNORA_KB_ID；都沒有則報錯。"""
+    """--kb 未帶時回退到 WEKNORA_KB_ID；別名經 kb_registry 解析成 UUID；都沒有則報錯。"""
     kb = kb_arg or os.getenv("WEKNORA_KB_ID", "")
     if not kb:
         emit_error("BAD_INPUT", "未指定知識庫 ID",
                    "帶 --kb <id>，或於 .env 設定 WEKNORA_KB_ID")
+    # 別名 → UUID（與 knowledge-chat 一致；非別名則原樣視為 UUID）
+    try:
+        from _weknora_chat import resolve_kb as _reg_resolve
+        kb = _reg_resolve(kb)
+    except Exception:  # noqa: BLE001 — registry 缺失或載入失敗時退回原值
+        pass
     return kb
 
 
