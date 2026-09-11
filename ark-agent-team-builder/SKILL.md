@@ -154,13 +154,40 @@ team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml�
   規劃 port 時預留 28xxx 頻段（1.6.2 起 offset=5000）。
 - **`authority-matrix.yml not found`（non-fatal）** —— 決策鎖用，沒有也能跑。
   要啟用防互鎖決策才在 `config/authority-matrix.yml` 建（選配）。
-
-### 步驟 5：啟動驗證
+### 步驟 5：啟動驗證（**兩階段就緒，別在第一階段就測私訊**）
 
 ```bash
-.venv/bin/python start.py
-curl -s localhost:<health_port>/api/health     # ark_team_agent → /api/health
+.venv/bin/python start.py    # 或 systemctl --user start <svc>
 ```
+
+啟動就緒分**兩個階段**，中間差數分鐘，**私訊要等第二階段**：
+
+**階段一 — daemon + TG 上線（約 20 秒）**
+```bash
+curl -s localhost:<health_port>/api/health     # ark_team_agent → /api/health
+# 看 instances.running == total、preflight P0/P1 == 0
+journalctl --user -u <svc> -n 30 | grep -E "Team ready|Application started"
+```
+此時 `6/6 running` + `Application started` = **daemon 與 TG polling 就緒**，但——
+
+> 🔴 **此刻私訊還不會回！** 各 instance 的 **kiro-cli backend 尚在冷啟**：
+> log 會看到 `0 of 1 mcp servers initialized ... Servers still loading: - team`。
+> kiro-cli 首次啟動要 spawn `team` MCP server + 載入 + 印出就緒訊號
+> **`All tools are now trusted`**，daemon 才判該 instance 可處理訊息。冷啟含 MCP 握手
+> **約 2–4 分鐘**（首次最久，之後 `--resume` 快）。
+
+**階段二 — kiro-cli backend 就緒（首次約 2–4 分鐘）**
+```bash
+# 確認目標 instance 的 kiro-cli 已印就緒訊號（backend.py READY_PATTERN）
+journalctl --user -u <svc> --since "-5min" | grep -E "All tools are now trusted|💬 REPLY"
+```
+看到該 instance 的 `💬 REPLY` 或就緒訊號後，私訊才會有回應。
+
+> 💡 **訊息不會丟**：冷啟期間收到的私訊會進 daemon 佇列（log `Queued message to X`
+> → `Delivered message to X`），kiro-cli 就緒後**補處理**。所以「送了沒回」先別當壞掉——
+> 查 CPU 時間（`/proc/<kiro-cli-pid>/stat` 的 utime/stime 有沒有動）與就緒訊號，
+> 冷啟未完成 ≠ 故障。（2026-09-11 建 market-team-agent 實測：訊息 13:08 進佇列、
+> kiro-cli 13:11 就緒後才回，中間 daemon 一路正常。）
 
 - 三層架構慣例（General manager → leader → worker group）見 `references/`
 - 職人 worker 不設 topic_id，輸出自動發到所屬 leader 的 topic
