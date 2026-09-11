@@ -77,7 +77,7 @@ metadata:
 │   ├── skills/ → ../skills/           #   全套 Skills（symlink 或全部複製）
 │   └── steering/
 │       ├── AGENTS.md                  #   全域行為準則（共用規範來源）
-│       ├── KIRO.md                    #   程式碼規範
+│       ├── CODE.md                    #   程式碼規範
 │       ├── MEMORY.md                  #   admin 記憶
 │       ├── SOUL.md                    #   admin 角色定義（管理者）
 │       ├── USER.md                    #   使用者百科
@@ -99,7 +99,7 @@ metadata:
 │       │   ├── skills/{skill-name}/SKILL.md  ← 從 skills/ 複製子集
 │       │   └── steering/
 │       │       ├── AGENTS.md          #   從根目錄 .kiro/steering/ 複製
-│       │       ├── KIRO.md
+│       │       ├── CODE.md
 │       │       ├── MEMORY.md
 │       │       ├── SOUL.md            #   角色專屬
 │       │       ├── USER.md            #   共用
@@ -559,6 +559,9 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 根目錄的 `.kiro/` **就是 admin-agent 的 workspace**（team.yaml 中 `working_directory: .` 的那個 agent）：
 - admin-agent 的 Kiro CLI 啟動時 cwd = 根目錄，自動載入根目錄 `.kiro/`
 - `steering/AGENTS.md` 是所有 agent 共用規範的**來源**（其他 agent 複製此檔）
+  - 🔴 **SSOT：共用 steering（AGENTS.md / CODE.md / USER.md）要改就改根目錄那份，
+    再重新分配到各 agent。** 子 agent 的是**複本**，直接改子 agent 的會被下次分配覆蓋、
+    且造成多份漂移。角色專屬的 SOUL.md 才各自維護。
 - `skills/` 放全套 Skills（admin 擁有全部能力）
 - `settings/mcp.json` 的 role 必須是 `admin`
 - 非 admin agent 的 .kiro/ 在 `agents/{name}-agent/.kiro/`（不在根目錄）
@@ -647,7 +650,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 - [ ] `agents/{role}.json` 有 knowledgeBase resource 指向 knowledge/
 - [ ] `agents/{role}.json` 有 model（建議 "auto"）+ welcomeMessage
 - [ ] `steering/AGENTS.md` 有「⚠️ reply 必用」+ MCP 工具表 + 編號選項 + 終端回饋 + SDD 流程
-- [ ] `steering/KIRO.md` 有程式碼規範（Python 專案時）
+- [ ] `steering/CODE.md` 有程式碼規範（Python 專案時）
 - [ ] `steering/MEMORY.md` 有專案快照 + 待辦 + 近期進度結構
 - [ ] `SOUL.md` 包含八段式全部 8 個段落
 - [ ] `USER.md` 有個人特徵 + 溝通風格 + 目標 + 習慣四段
@@ -671,7 +674,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 📁 產出清單：
 - .kiro/agents/{role}.json
 - .kiro/steering/AGENTS.md（全域行為準則）
-- .kiro/steering/KIRO.md（程式碼規範）
+- .kiro/steering/CODE.md（程式碼規範）
 - .kiro/steering/MEMORY.md（專案記憶）
 - .kiro/steering/SOUL.md（{size} KB）
 - .kiro/steering/USER.md（使用者百科）
@@ -717,7 +720,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 | 檔案 | 說明 |
 |------|------|
 | `BRAIN.md` | 記憶與資源使用準則（三層資源分工，inclusion: always） |
-| `KIRO.md` | Kiro CLI 行為指南（程式碼規範，fileMatch: *.py） |
+| `CODE.md` | Kiro CLI 行為指南（程式碼規範，fileMatch: *.py） |
 | `MEMORY-template.md` | 專案記憶骨架（快照 + 待辦 + 進度） |
 | `SOUL-root.md` | 根目錄／預設角色：通用 AI 助手 |
 | `SOUL-admin.md` | admin 角色（服務管理，不接業務） |

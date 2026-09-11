@@ -14,7 +14,7 @@ Usage:
     │   ├── skills/                   # 空目錄（由 clone_skills.py 填充）
     │   └── steering/
     │       ├── AGENTS.md
-    │       ├── KIRO.md
+    │       ├── CODE.md
     │       ├── MEMORY.md
     │       ├── SOUL.md
     │       ├── TEAM.md
@@ -28,7 +28,7 @@ Usage:
             ├── skills/               # 空目錄（由 clone_skills.py 填充）
             └── steering/
                 ├── AGENTS.md
-                ├── KIRO.md
+                ├── CODE.md
                 ├── MEMORY.md
                 ├── SOUL.md
                 ├── TEAM.md
@@ -199,13 +199,13 @@ def _build_steering(
             agents_md.write_text(_default_agents_md(), encoding="utf-8")
         created.append(str(agents_md.relative_to(base)))
 
-    # KIRO.md（從 assets 複製）
-    kiro_md = steering_dir / "KIRO.md"
-    if not kiro_md.exists():
-        src = STEERING_ASSETS / "KIRO.md"
+    # CODE.md（從 assets 複製）
+    code_md = steering_dir / "CODE.md"
+    if not code_md.exists():
+        src = STEERING_ASSETS / "CODE.md"
         if src.exists():
-            shutil.copy2(src, kiro_md)
-        created.append(str(kiro_md.relative_to(base)))
+            shutil.copy2(src, code_md)
+        created.append(str(code_md.relative_to(base)))
 
     # MEMORY.md
     memory_md = steering_dir / "MEMORY.md"
