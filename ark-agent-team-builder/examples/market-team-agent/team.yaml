@@ -16,7 +16,8 @@ kiro_files:
   skills:
     policy: skip
   steering:
-    team_md: always
+    team_md: always      # 成員表以 team.yaml 為唯一真相，每次啟動重產
+    soul_md: once        # 手寫人格不覆蓋（其實是預設；顯式寫出讓「不被蓋」一目了然）
 
 channel:
   bot_token_env: MARKET_TELEGRAM_BOT_TOKEN

@@ -140,6 +140,9 @@ team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml�
 | `MEMORY.md` / `BRAIN.md` / `CODE.md` / `USER.md` | once | 不存在才產（骨架）|
 | `TEAM.md` | `always` | 每次依 team.yaml 動態產（成員表唯一真相）|
 
+> 💡 手寫人格靠**預設 once** 就受保護。範例包 team.yaml **顯式寫出 `soul_md: once`**
+> —— 行為與預設相同，但讓看設定的人一眼確認「SOUL 不會被蓋」，不必去記預設值。
+
 > 🔴 **log 印 `Using SOUL.md template for X` 不代表它覆蓋了你的手寫 SOUL。**
 > 那行只是「載入了 template 內容備用」；接著 `policy=once` 判斷 `SOUL.md 已存在 → 跳過寫入`。
 > 手寫人格在 `once` 下安全。（2026-09-11 實跑一度被這行 log 誤導以為被覆蓋，查 backend.py:626-651 確認沒有。）
