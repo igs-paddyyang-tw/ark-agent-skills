@@ -6,7 +6,7 @@
 **目錄章節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生。**
 新增／移除 skill 後執行一次，不要手改表格 —— 手動維護的索引必定過期。
 
-**統計：59 active + 4 stubs = 63 skill 目錄｜稽核：P0=0 P1=0 P2=0 P3=0（2026-09-11）**
+**統計：60 active + 4 stubs = 64 skill 目錄｜稽核：P0=0 P1=0 P2=0 P3=0（2026-09-11）**
 
 > ⚠️ 這行是**手寫的**，而 `gen_readme --check` 只驗下方產生的目錄段、**抓不到它漂掉**
 > （2026-09-11 就發現它停在「60 active + 0 stubs」，實際是 59 + 4）。
