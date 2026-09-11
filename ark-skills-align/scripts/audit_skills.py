@@ -169,6 +169,19 @@ def audit(repo: Path, triggers: dict):
         elif cat not in CATEGORY_CODES:
             add("P1", "invalid-category", name,
                 f"category='{cat}' 不在受控詞彙 {sorted(CATEGORY_CODES)}")
+        # `updated` 必填 —— 2026-09-11 加。
+        #
+        # 🔴 為什麼需要：本 repo 的通則是「引用超過一個月的記載前先實測確認它還成立」，
+        # 而當時 **40/59 個 active skill 連 `updated` 都沒有** → 那條通則根本無法執行。
+        #
+        # ⚠️ 語意是「**最後修改**」，不是「最後驗證過」。回填時刻意用該 skill 目錄的
+        # git 最後變更日（有來源），而**沒有**用那次全庫 frontmatter 批次回填的日期
+        # （`f0e6125` 2026-08-19）—— 那會宣稱一個從未建立過的新鮮度。
+        # 真正的「跑得起來嗎」由 scripts/tests/test_cli_contract.py 驗。
+        if not meta.get("updated"):
+            add("P2", "missing-updated", name,
+                "缺 metadata.updated（語意＝最後修改日；別填批次操作的日期）")
+
         outs = meta.get("outputs")
         if not outs:
             add("P1", "missing-outputs", name, "缺 metadata.outputs")

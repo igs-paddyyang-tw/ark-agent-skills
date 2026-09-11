@@ -10,6 +10,7 @@ metadata:
   author: paddyyang
   schema_version: 1
   status: active
+  updated: 2026-09-09
   category: pipeline
   outputs:
     - { format: md, audience: ai }

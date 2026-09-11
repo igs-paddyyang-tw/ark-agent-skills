@@ -6,10 +6,28 @@
 **目錄章節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生。**
 新增／移除 skill 後執行一次，不要手改表格 —— 手動維護的索引必定過期。
 
-**統計：60 active + 0 stubs = 60 skill 目錄｜稽核：P0=0 P1=0 P2=0 P3=0（2026-09-04）**
+**統計：59 active + 4 stubs = 63 skill 目錄｜稽核：P0=0 P1=0 P2=0 P3=0（2026-09-11）**
 
-> 這行是手寫的 —— 兩道守門是 `python scripts/gen_readme.py --check` 與
-> `python ark-skills-align/scripts/audit_skills.py --repo .`，數字以它們為準。
+> ⚠️ 這行是**手寫的**，而 `gen_readme --check` 只驗下方產生的目錄段、**抓不到它漂掉**
+> （2026-09-11 就發現它停在「60 active + 0 stubs」，實際是 59 + 4）。
+> 數字一律以守門輸出為準。
+
+## 守門（四道，改東西前後都跑）
+
+```bash
+python ark-skills-align/scripts/audit_skills.py --repo .   # metadata 稽核（P0–P3 要全 0）
+python scripts/gen_readme.py --check                       # README 目錄段與 frontmatter 一致
+python -m pytest scripts/tests/ -q                         # 🔴 CLI 契約：每支 --help 必須 rc=0 且無副作用
+python -m pytest ark-wiki-engine/scripts/tests/ -q         # wiki 引擎（68 條）
+python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出契約（16 條）
+```
+
+> 🔴 **前兩道驗的是 metadata 與目錄結構，不驗「程式跑不跑得起來」。**
+> 2026-09-11 實測 74 支 CLI：16 支 `--help` 回非 0、**6 支 rc=0 卻在當下目錄建檔案**
+> （`scaffold_project.py --help` 會產出整個專案骨架到 `./--help/`），
+> 另有 16 支因缺第三方依賴連用法都印不出來。全部已修，並加上第三道守門釘住。
+>
+> 分析報告見 `kiro-cli/docs/reports/2026-09-11-ark-agent-skills-repo-analysis.md`。
 
 ---
 

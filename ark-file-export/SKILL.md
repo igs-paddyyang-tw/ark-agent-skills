@@ -11,6 +11,7 @@ description: |
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-19
   category: pipeline
   outputs:
     - format: md

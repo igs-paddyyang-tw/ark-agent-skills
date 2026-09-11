@@ -22,6 +22,13 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+# 🔴 `--help` 不需要任何第三方依賴 —— 在 import 之前先攔截。
+#    否則沒裝套件的人連「這支怎麼用」都看不到，只會拿到 traceback。
+#    （scripts/tests/test_cli_contract.py 在驗）
+if __name__ == "__main__" and {"-h", "--help"} & set(sys.argv[1:]):
+    print(__doc__ or "")
+    raise SystemExit(0)
+
 import defusedxml.minidom
 from office.soffice import get_soffice_env
 from PIL import Image, ImageDraw, ImageFont

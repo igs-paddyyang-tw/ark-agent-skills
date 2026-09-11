@@ -5,11 +5,15 @@
 repo 原有兩道守門（`audit_skills.py` 驗 metadata、`gen_readme --check` 驗目錄一致），
 但**沒有任何東西在跑這些 script**。2026-09-11 全庫實測 74 支 CLI：
 
-| | 數 |
-|---|--:|
-| `--help` 回非 0 | **16** |
-| `--help` **rc=0 卻在當下目錄建檔案** | **6** |
-| `--help` 因缺第三方依賴而 import 就炸 | 16 |
+| | 數 | 現況 |
+|---|--:|---|
+| `--help` 回非 0 | **16** | ✅ 已修（`__main__` 最前面攔截） |
+| `--help` **rc=0 卻在當下目錄建檔案** | **6** | ✅ 已修（同上） |
+| `--help` 因缺第三方依賴而 import 就炸 | **16** | ✅ 已修（攔截放在第三方 import 之前） |
+
+其中 `ark-skill-creator` 的 4 支不是缺依賴，是 `from scripts.xxx import`
+**假設了執行目錄**（sys.path[0] 是 `scripts/`，而 `scripts` 套件在 skill 根）——
+真 bug，已加 sys.path bootstrap。
 
 🔴 最嚴重的是那 6 支：它們把 `--help` 當成**輸出目錄參數**，
 於是 `scaffold_project.py --help` 會產出**一整個專案骨架（47 個項目）**
@@ -34,33 +38,16 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 
-#: 這些 script 在 import 期就需要第三方套件，本機沒裝 → `--help` 也跑不起來。
+#: 曾經有 16 支在 import 期就需要第三方套件（pypdf / defusedxml / openpyxl / mcp /
+#: anthropic …），`--help` 因此連用法都印不出來，只吐 traceback。
 #:
-#: 🔴 這不是「豁免」，是**分批**：本清單裡的每一支，測試仍會驗它失敗的原因
-#: **確實是缺依賴**（ModuleNotFoundError/ImportError）。若它因為別的原因紅了，
-#: 這支測試照樣會抓到 —— 豁免清單最常見的失敗模式就是「順便蓋掉別的問題」。
+#: 2026-09-11 全部修掉，做法是**把 help 攔截放在第三方 import 之前** ——
+#: help 本來就不該需要任何依賴。清單因此清空，守門改為**無條件**要求。
 #:
-#: 正解（批次 ④）：`--help` 不該需要第三方依賴（延後 import），
-#: 且缺依賴時要印一行人話說明要裝什麼，而不是吐 traceback。
-#: 修好一支就從這裡刪一行。
-NEEDS_DEPS = {
-    "ark-docx-tool/comment.py",
-    "ark-mcp-builder/connections.py",
-    "ark-mcp-builder/evaluation.py",
-    "ark-pdf-tool/check_fillable_fields.py",
-    "ark-pdf-tool/convert_pdf_to_images.py",
-    "ark-pdf-tool/extract_form_field_info.py",
-    "ark-pdf-tool/extract_form_structure.py",
-    "ark-pdf-tool/fill_fillable_fields.py",
-    "ark-pdf-tool/fill_pdf_form_with_annotations.py",
-    "ark-pptx-tool/clean.py",
-    "ark-pptx-tool/thumbnail.py",
-    "ark-skill-creator/improve_description.py",
-    "ark-skill-creator/package_skill.py",
-    "ark-skill-creator/run_eval.py",
-    "ark-skill-creator/run_loop.py",
-    "ark-xlsx-tool/recalc.py",
-}
+#: 🔴 要再加回豁免之前先想清楚：這個清單存在的期間，
+#: 它唯一的價值是「讓紅燈可被分批處理」，代價是「有東西被蓋住」。
+#: 若真的要加，務必連同**失敗原因**一起驗（否則會順便蓋掉別的問題）。
+NEEDS_DEPS: set[str] = set()
 
 
 def _scripts() -> list[str]:

@@ -8,6 +8,7 @@ description: |
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-09-11
   category: process
   outputs:
     - format: md

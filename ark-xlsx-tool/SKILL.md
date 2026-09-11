@@ -4,6 +4,7 @@ description: "當試算表檔案為主要輸入或輸出時，請使用此技能
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-19
   category: document
   outputs:
     - format: md

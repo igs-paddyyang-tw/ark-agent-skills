@@ -4,6 +4,7 @@ description: "任何涉及 .pptx 檔案的情境皆使用此技能——無論�
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-09-11
   category: document
   outputs:
     - format: md

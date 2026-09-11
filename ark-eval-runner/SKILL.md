@@ -4,6 +4,7 @@ description: "當使用者需要對 LLM 輸出進行回歸評測時使用此技�
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-19
   author: paddyyang
   category: pipeline
   outputs:

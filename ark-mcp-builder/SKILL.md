@@ -8,6 +8,7 @@ description: |
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-19
   category: scaffolder
   outputs:
     - format: code

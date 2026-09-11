@@ -4,6 +4,7 @@ description: "當使用者需要將 FastAPI route 定義同步到 docs/ 目錄�
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-19
   author: paddyyang
   category: pipeline
   outputs:

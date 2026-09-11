@@ -14,6 +14,18 @@ import subprocess
 import sys
 from pathlib import Path
 
+# 🔴 `--help` 不需要任何第三方依賴 —— 在 import 之前先攔截。
+#    否則沒裝套件的人連「這支怎麼用」都看不到，只會拿到 traceback。
+#    （scripts/tests/test_cli_contract.py 在驗）
+if __name__ == "__main__" and {"-h", "--help"} & set(sys.argv[1:]):
+    print(__doc__ or "")
+    raise SystemExit(0)
+
+# 🔴 `from scripts.xxx import` 需要 **skill 根目錄** 在 sys.path 上，
+#    但直接執行本檔時 sys.path[0] 是 `scripts/` → ModuleNotFoundError: scripts。
+#    這不是缺依賴，是執行目錄假設錯誤。
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from scripts.utils import parse_skill_md
 
 

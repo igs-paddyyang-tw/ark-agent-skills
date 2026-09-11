@@ -20,6 +20,7 @@ metadata:
   render: none
   depends_on: [ark-md-report]
   status: active
+  updated: 2026-09-09
 ---
 
 # ark-skills-align

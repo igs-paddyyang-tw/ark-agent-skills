@@ -4,6 +4,7 @@ description: "當知識庫入庫前需要進行 prompt injection 消毒時使用
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-19
   author: paddyyang
   category: pipeline
   outputs:

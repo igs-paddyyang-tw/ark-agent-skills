@@ -4,6 +4,7 @@ description: "當使用者想要建立、讀取、編輯或操作 Word 文件（
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-19
   category: document
   outputs:
     - format: md

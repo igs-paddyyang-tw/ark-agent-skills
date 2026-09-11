@@ -4,6 +4,7 @@ description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、
 metadata:
   schema_version: 1
   status: active
+  updated: 2026-08-13
   category: view
   outputs:
     - format: html

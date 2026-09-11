@@ -23,6 +23,7 @@ metadata:
   render: none
   depends_on: [ark-db-query]
   status: active
+  updated: 2026-09-11
 ---
 
 # ark-weknora-cli

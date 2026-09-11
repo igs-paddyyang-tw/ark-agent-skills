@@ -14,6 +14,7 @@ metadata:
       audience: both
   author: paddyyang
   version: "2.0"
+  updated: 2026-08-19
 ---
 
 # 專案計畫 v2.0
