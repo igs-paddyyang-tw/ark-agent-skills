@@ -133,6 +133,44 @@ def test_start_py_skeleton_does_not_inject_empty_skills():
     assert "run_bot()" in code
 
 
+
+def test_every_agent_desc_declares_write_scope():
+    """每個 agent 的 desc 都要講清楚「能不能改 code」
+
+    🔴 預設編制刻意以**寫入權限**當組織軸（不是主題）——
+    主題會重疊（「這算企劃還是工程？」），寫入權限不會。
+    分不清主題最多是問錯人；分不清寫入權限是**兩個人各改各的、然後對不起來**。
+
+    而這條約束**只能寫在 desc 裡**：實測 ark_bot_agent 1.0.15，
+    agents.yaml 的未知欄位（如自創的 `write_scope:`）會被**靜默丟掉** ——
+    載入不報錯，但 AgentDef 上根本沒有那個屬性。
+    desc 則會進派工名單與 context，agent 真的看得到。
+    """
+    ag = yaml.safe_load((ASSETS / "agents.yaml").read_text(encoding="utf-8"))
+    for key, val in ag.items():
+        desc = ((val or {}).get("desc") or "")
+        # 🔴 **單一標記**，不接受同義寫法 —— 允許「只讀不寫」「不碰 code」等變體，
+        #    這條軸就會慢慢變回「大家各自描述」，也就不再可掃描。
+        assert "能改 code：" in desc, (
+            f"agents.yaml 的 {key}.desc 沒有宣告寫入權限：{desc!r}\n"
+            "預設編制以「能不能改 code」為組織軸，每個角色都要用 `能改 code：` 表態。")
+
+
+def test_agents_yaml_has_no_unknown_fields():
+    """agents.yaml 不得出現 AgentDef 沒有的欄位 —— 它會被靜默丟掉
+
+    這正是本 repo 記過最多次的形狀：**設定看起來生效了，其實沒有。**
+    """
+    known = {"dir", "name", "codename", "emoji", "desc", "dispatchable",
+             "persistent", "skip_resume", "resume", "role", "group_members", "timeout"}
+    ag = yaml.safe_load((ASSETS / "agents.yaml").read_text(encoding="utf-8"))
+    for key, val in ag.items():
+        unknown = sorted(set((val or {})) - known)
+        assert not unknown, (
+            f"agents.yaml 的 {key} 有未知欄位 {unknown} —— 會被靜默丟掉。"
+            "要讓 agent 看到的約束請寫進 desc 或 SOUL.md")
+
+
 # ── 衛生：跨 skill ────────────────────────────────────────────
 
 @pytest.mark.parametrize("skill", ["ark-agent-bot-builder", "ark-agent-init"])

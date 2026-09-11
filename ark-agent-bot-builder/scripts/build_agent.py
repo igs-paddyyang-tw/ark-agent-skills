@@ -32,7 +32,8 @@ DIRS = [
 #: 🔴 這份清單必須與 assets/agents.yaml 的 dir 欄位一致 —— 不一致的話
 #: 產出的 agents.yaml 會指向不存在的目錄，而派工當下才會發現。
 #: validate_agent.py 的「契約 3」會交叉驗證這件事。
-AGENT_DIRS = ["admin-agent", "leader-agent", "worker-a-agent"]
+AGENT_DIRS = ["planner-agent", "developer-agent", "consultant-agent",
+              "admin-agent", "leader-agent"]
 
 #: 每個 agent 工作目錄底下的骨架
 AGENT_SUBDIRS = [".kiro/steering", ".kiro/agents", ".kiro/settings",

@@ -1,65 +1,109 @@
-# ═══════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
 # agents.yaml — Agent 定義（唯一來源，專案根哨兵）
 # TG Bot / Web API / dispatch_to_agent 都讀這份。
 #
 # 欄位：dir / name / codename / emoji / desc / dispatchable
-#       persistent（常駐）/ skip_resume（不接續 session）/ role / timeout
+#       persistent（常駐）/ resume（保留記憶）/ role / timeout
 #       group_members（僅 leader，⚔️ team 可派工範圍）
-# ═══════════════════════════════════════════════════════
+#
+# 🔴 **未知欄位會被靜默丟掉**（實測 1.0.15：`write_scope: x` 不會報錯，
+#    但 AgentDef 上根本沒有這個屬性）。所以任何想讓 agent「看到」的約束，
+#    必須寫進 `desc`（會進派工名單與 context）或該 agent 的 SOUL.md，
+#    **不要自創欄位** —— 那是「設定看起來生效了其實沒有」。
+# ═══════════════════════════════════════════════════════════════
+#
+# ── 預設編制：以「能不能寫 code」當組織軸 ──
+#
+#   角色     做什麼                                      能改 code
+#   ───────  ──────────────────────────────────────────  ─────────────────────
+#   🤖 總管   總入口：問答、小改、決定該找誰              ✅ 限一次性 bug fix
+#   📐 企劃   需求與規格：訂規則、寫規格書                ❌
+#   💻 工程師 寫業務邏輯 + 對等測試 + 反證                ✅✅ 唯一的業務邏輯寫手
+#   📖 顧問   問什麼答什麼：查上游／文件／知識庫、記決策  ❌ 只讀不寫
+#   👑 管家   維運：CI · 版控 · 發布 · 上線               ✅ 限維運面
+#   🎯 隊長   team 模式統籌                               ❌
+#
+# 🔴 **為什麼用寫入權限當軸，而不是用主題**：主題會重疊（「這算企劃還是工程？」），
+#    寫入權限不會。而「誰能改 code」是唯一真正需要當場講清楚的邊界 ——
+#    分不清主題最多是問錯人，分不清寫入權限是**兩個人各改各的、然後對不起來**。
+#
+# 📌 **請按你的領域改名**（codename / desc 照改，id 建議保留）。
+#    例：捕魚遊戲 → 總管=🐟魚哥、企劃=🎣、工程師=💻、顧問=📖、管家=👑。
+#    加人只改 leader.group_members，**勿寫進 prompt**；
+#    改完跑 `python validate_agent.py <專案>` 驗交叉引用。
 
 # ── 💬 chat 引擎（Gemini ReAct，不可派工）──
 default:
   dir: "."
   name: "{BOT_NAME}"
   codename: "{CODENAME}"
-  emoji: "🚀"
-  desc: "通用 AI 助手，什麼都能聊"
+  emoji: "🤖"
+  desc: "總入口 —— 問答與小改。能改 code：✅ 僅限一次性 bug fix"
   dispatchable: false
 
-# ── 🚀 manager：👤 agent 模式常駐對象（dir="." 讀根目錄 .kiro/steering）──
+# ── 🤖 manager：👤 agent 模式常駐對象（dir="." 讀根目錄 .kiro/steering）──
 manager:
   dir: "."
   name: "{BOT_NAME}"
   codename: "{CODENAME}"
-  emoji: "🚀"
-  desc: "通用 AI 助手，什麼都能做"
+  emoji: "🤖"
+  desc: "總入口 —— 問答、小改、決定該找誰。能改 code：✅ 僅限一次性 bug fix，成套改動交給工程師"
   dispatchable: false
   persistent: true
   skip_resume: true       # 根目錄 session 多入口共享，fresh start 不帶舊人設
   role: manager
   timeout: 300            # dir="." context 大，給足逾時（全域預設 120s 會撞）
 
-# ── 👑 admin：維運（team/dispatch 用）──
+# ── 📐 企劃：訂規則，不碰實作 ──
+planner:
+  dir: "agents/planner-agent"
+  name: "Planner Agent"
+  codename: "企劃"
+  emoji: "📐"
+  desc: "需求與規格 —— 訂規則、算數值、寫規格書。能改 code：❌ 不寫 code —— 規格與實作分開，才驗得出實作有沒有照規格走"
+  dispatchable: true
+  role: worker
+
+# ── 💻 工程師：唯一的業務邏輯寫手 ──
+developer:
+  dir: "agents/developer-agent"
+  name: "Developer Agent"
+  codename: "工程師"
+  emoji: "💻"
+  desc: "寫業務邏輯 —— 新增／修改／刪除，**必附對等測試與反證**（證明拿掉修正它會紅）。能改 code：✅✅ 唯一的業務邏輯寫手，成套改動都走這裡"
+  dispatchable: true
+  role: worker
+
+# ── 📖 顧問：只讀不寫 ──
+consultant:
+  dir: "agents/consultant-agent"
+  name: "Consultant Agent"
+  codename: "顧問"
+  emoji: "📖"
+  desc: "問什麼答什麼 —— 查上游原始碼／文件／知識庫，記決策日誌。能改 code：❌ 只讀不寫 —— 答案要附出處，查不到就說查不到，不推算"
+  dispatchable: true
+  role: worker
+
+# ── 👑 管家：維運面 ──
 admin:
   dir: "agents/admin-agent"
   name: "Admin Agent"
   codename: "管家"
   emoji: "👑"
-  desc: "系統管理、監控、費控"
+  desc: "維運 —— CI、版控、發布、上線、費控。能改 code：✅ 僅限維運面（CI／腳本／設定），不碰業務邏輯"
   dispatchable: true
   role: admin
 
-# ── 🎯 leader：⚔️ team 統籌 ──
+# ── 🎯 隊長：⚔️ team 統籌 ──
 leader:
   dir: "agents/leader-agent"
   name: "Leader Agent"
   codename: "隊長"
   emoji: "🎯"
-  desc: "任務規劃、拆解需求、協調派工"
+  desc: "team 模式統籌 —— 拆解需求、派工、收斂成一份答覆。能改 code：❌ 不寫 code —— 統籌者下場寫，就沒有人在看全局"
   dispatchable: true
   persistent: true
   role: leader
   # 🔴 只列**已在本檔定義、且 agents/<dir> 真的存在**的成員 ——
   #    指向不存在的成員，派工當下才會發現（validate_agent 會先幫你擋）。
-  #    加 worker：先在下面定義 + 建目錄，再加進這行。勿寫進 prompt。
-  group_members: [worker-a]
-
-# ── worker（依需求增減）──
-worker-a:
-  dir: "agents/worker-a-agent"
-  name: "Worker A"
-  codename: "職人A"
-  emoji: "🔧"
-  desc: "（角色描述）"
-  dispatchable: true
-  role: worker
+  group_members: [planner, developer, consultant]
