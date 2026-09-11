@@ -126,14 +126,25 @@ def test_build_manifest_fields():
 
 
 def test_concurrent_build_one_locked():
-    """AC: AC-005 — 兩個 build 併發 → 一個 BUILD_LOCKED，且 .index/ 完整"""
-    procs = [subprocess.Popen([sys.executable, str(SCRIPTS / "wiki_index.py"), "build",
-                               "--wiki_dir", str(FIXTURE)],
-                              stdout=subprocess.PIPE, text=True) for _ in range(2)]
-    outs = [json.loads(p.communicate()[0]) for p in procs]
-    codes = [o.get("error", {}).get("code") for o in outs if not o["ok"]]
-    assert ErrorCode.BUILD_LOCKED in codes, outs
-    assert any(o["ok"] for o in outs)
+    """AC: AC-005 — lock 被持有時 build 回 BUILD_LOCKED；放開後 build 成功且 .index/ 完整
+
+    🔴 不要改回「同時 spawn 兩個 build 看誰輸」—— 那樣寫過一版，fixture 只有幾頁、
+    build 快到第一個常在第二個取鎖前就做完，10 次會紅 1 次。
+    **斷言一個沒有保證的競爭結果 = 常駐假警報**，而假警報的代價是
+    維運開始習慣性忽略這條檢查。這裡改成由測試自己持鎖，競爭是確定的。
+    """
+    import fcntl, hashlib, tempfile
+    key = hashlib.sha256(str(FIXTURE.resolve()).encode("utf-8")).hexdigest()[:16]
+    lock_path = Path(tempfile.gettempdir()) / f"ark-wiki-index-{key}.lock"
+    lock_path.touch(exist_ok=True)
+    with open(lock_path, "w") as fd:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        code, payload = run("wiki_index.py", "build", "--wiki_dir", str(FIXTURE))
+        assert code == 2 and payload["error"]["code"] == ErrorCode.BUILD_LOCKED, payload
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
+    code, payload = run("wiki_index.py", "build", "--wiki_dir", str(FIXTURE))
+    assert code == 0 and payload["ok"], payload
     for rel in ("manifest.json", "metadata.json", "graph.json", "bm25/postings.json"):
         assert (FIXTURE / ".index" / rel).exists(), rel
 
