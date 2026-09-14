@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import ast
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -159,6 +160,38 @@ def self_built_skills(root: Path) -> set[str]:
     return out
 
 
+def ever_upstream(repo: Path, names: set[str]) -> set[str]:
+    """哪些名字**曾經**在上游存在過（查 git 歷史）。
+
+    🔴 這是「殘留」與「專案自建」的分水嶺，而且沒有它整支工具沒法用：
+    沒有 `sync_skills.py` 的專案不會宣告 `LOCAL_ONLY`，
+    於是它們自己寫的 skill（`ark-slot-math`／`ark-pixi-slot`／`ark-go-game-server`…）
+    看起來全都像懸空。2026-09-14 實測：95 個「懸空」名字裡 **74 個是自建的**，
+    照著刪等於毀掉別人的東西。
+
+    判準：上游 git 歷史裡出現過 `<name>/` 這個路徑 → 是被移除的殘留（可清，內容留在歷史）；
+    從來沒出現過 → 是專案自建（**不可清**，這裡是唯一的一份）。
+
+    ⚠️ 查不到歷史時**不能靜默把全部當自建** —— 那會讓工具在沒有 git 的環境
+    （或淺 clone）回報「懸空 0」，又一個「掃描回報成功而範圍是空的」。
+    此時大聲警告並退回保守判定：全部視為殘留（寧可多報，不可漏報）。
+    """
+    probe = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                           capture_output=True, text=True, cwd=repo)
+    if probe.returncode != 0 or probe.stdout.strip() != "true":
+        print(f"⚠️  {repo} 不是 git work tree → 無法分辨「被移除的殘留」與「專案自建」，"
+              "以下一律視為殘留（保守）")
+        return set(names)
+
+    out = set()
+    for n in sorted(names):
+        r = subprocess.run(["git", "log", "--all", "--oneline", "--", f"{n}/"],
+                           capture_output=True, text=True, cwd=repo)
+        if r.returncode == 0 and r.stdout.strip():
+            out.add(n)
+    return out
+
+
 def collect(root: Path):
     return (scan_matrices(root) + scan_deployed(root)
             + scan_souls(root) + scan_yaml_paths(root))
@@ -193,12 +226,19 @@ def main() -> int:
         return 0
 
     allowed = upstream | self_built_skills(args.consumers)
+    unknown = {n for _, _, names in sites for n in names} - allowed
+    removed = ever_upstream(args.repo, unknown)          # 曾在上游 → 殘留，可清
+    self_built = unknown - removed                        # 從未在上游 → 專案自建，不可清
+
     dangling: dict[str, list[tuple[str, Path]]] = {}
     for p, kind, names in sites:
-        for n in sorted(names - allowed):
+        for n in sorted(names & removed):
             dangling.setdefault(n, []).append((kind, p))
 
     scanned = len(sites)
+    if self_built:
+        print(f"ℹ️  {len(self_built)} 個名字上游從來沒有過 → 判定為專案自建，不列入懸空"
+              f"（{', '.join(sorted(self_built)[:5])}{' …' if len(self_built) > 5 else ''}）")
     if not dangling:
         print(f"✅ 掃了 {scanned} 個引用面，懸空引用 0")
         return 0

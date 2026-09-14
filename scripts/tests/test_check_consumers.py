@@ -152,3 +152,39 @@ def test_name_query_lists_users(world):
     r = run(repo, consumers, "--name", "ark-alive")
     assert r.returncode == 0
     assert "2 處" in r.stdout, r.stdout
+
+
+# ── 專案自建 skill 沒有 LOCAL_ONLY 宣告時，靠上游 git 歷史判別 ──────
+
+def test_never_upstream_name_is_treated_as_self_built(tmp_path):
+    """🔴 沒有 sync_skills.py 的專案不會宣告 LOCAL_ONLY —— 它自己寫的 skill
+    看起來全都像懸空。實測 95 個「懸空」名字裡 **74 個是自建的**
+    （ark-slot-math／ark-pixi-slot／ark-go-game-server…），照著刪等於毀掉別人的東西。
+
+    判準改成查上游 git 歷史：出現過 = 被移除的殘留（可清）；
+    從沒出現過 = 專案自建（這裡是唯一一份，不可清）。
+    """
+    repo = _upstream(tmp_path, ["ark-alive"])
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qm", "init"], cwd=repo, check=True)
+    # 曾經存在、後來移除
+    (repo / "ark-removed").mkdir()
+    (repo / "ark-removed" / "SKILL.md").write_text("x", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qm", "add"], cwd=repo, check=True)
+    import shutil
+    shutil.rmtree(repo / "ark-removed")
+
+    consumers = tmp_path / "projects"
+    for n in ("ark-removed", "ark-never-upstream"):
+        (consumers / "demo" / ".kiro" / "skills" / n).mkdir(parents=True)
+
+    r = run(repo, consumers)
+    assert r.returncode == 1
+    assert "ark-removed" in r.stdout, "被移除的殘留要報"
+    assert "ark-never-upstream" not in r.stdout.split("🔴")[-1], \
+        "從未上游過的自建 skill 不可列為懸空"
+    assert "專案自建" in r.stdout

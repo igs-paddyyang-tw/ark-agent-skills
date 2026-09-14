@@ -101,6 +101,25 @@ python scripts/check_consumers.py                  # 動手後：還有誰指著
 - 觸發測試：衝突矩陣每組獨占詞出 3 個測試 prompt，確認只觸發 owner（配 ark-skill-creator 的 evals 機制）
 - 產最終 alignment report 給使用者（含 before/after skill 數、findings 曲線）
 
+## 多 session 同時作業（2026-09-14 實測出來的協定）
+
+那天有**兩個 agent 同時在改這個 repo**，撞出四種代價，每一種都有對應做法：
+
+| 撞到什麼 | 做法 |
+|---|---|
+| `git add` 後被別人清掉 index，`commit` 變成空的 | **只用 pathspec commit**：`git commit -m ... -- <明確檔案>`（stage+commit 原子完成，不經 index）。禁用 `git add -A` |
+| `commit && push` 串接：commit 失敗但 push 照跑，**推上去的是別人的東西** | commit 與 push 分開下，**看 rc**；push 前確認 `rev-list --left-right --count HEAD...origin/main` 的 ahead 只有自己那幾個 |
+| 為了排除別人的檔案而 `git reset`，把對方在飛的工作一起清掉 | 要退只退自己的：`git reset -- <自己的檔案>` |
+| 主樹有別人的未提交變更、又落後遠端很多，無法 rebase | 用獨立 worktree cherry-pick 後推，主樹全程不動；之後 `git reset --keep origin/main` 對齊 |
+
+🔴 **別靠「機器上只有一個 peer」推論那些 commit 是誰做的** —— commit 的 author
+是同一個人類帳號，對辨識 agent 身分沒有資訊量。要認人看它留下的工作面
+（報告檔、commit 觸及的目錄），不是看還有誰在線上。當天我就據此認錯了對象。
+
+💡 分工用**檔案面**切，不要用「任務」切：
+盤點／移除／整併與消費端同步是一面，`audit_skills.py` 規則與各 skill 的測試是另一面。
+兩邊都會動 `SKILL.md`，所以**動到別人那一面的檔案時，只 commit 自己改的那幾個**。
+
 ## 邊界
 
 - **不重寫任何 skill 的核心邏輯**：只動 description、frontmatter、reference 結構、stub
