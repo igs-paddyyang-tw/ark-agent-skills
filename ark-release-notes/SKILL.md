@@ -30,15 +30,25 @@ metadata:
 
 ## 工作流程
 
-1. 讀取 git log（指定範圍：tag..HEAD / 日期區間 / commit 數）
-2. 分類 commit（feat / fix / refactor / docs / chore / breaking）
-3. 群組化相關 commit（同模組 / 同 issue）
-4. 產出結構化 changelog（Conventional Commits 格式）
-5. 附加統計摘要（檔案數 / 行數 / 貢獻者）
+> 🔴 **先跑腳本產分類骨架（零 LLM、deterministic），LLM 只補 highlight 摘要段。**
+
+1. 跑 `scripts/changelog_gen.py` 產出規則式分類骨架：
+   ```bash
+   python scripts/changelog_gen.py --last 20              # 最近 N 筆
+   python scripts/changelog_gen.py --range v1.0.0..HEAD   # tag 範圍
+   python scripts/changelog_gen.py --since 2026-09-01     # 日期起
+   python scripts/changelog_gen.py --last 20 --output CHANGELOG.md  # 寫檔
+   ```
+   腳本自動：規則式解析 Conventional Commits（feat/fix/refactor/docs/chore/
+   test/perf/build/ci/style，非規範落 other，`!`/`BREAKING CHANGE` 歸 breaking）、
+   分類分組、附統計（commit 數/檔案數/行數/貢獻者）。
+2. **LLM 只補這一步**：讀腳本產出的骨架，替重要變更寫一句話 highlight 摘要
+   （放在檔首「## ⭐ Highlights」段）。不重做分類 —— 分類是腳本的職責。
+3. 定稿：可作為日報素材或 GitHub Release 說明。
 
 ## 產出格式
 
 - 版本標題 + 日期
-- 分類變更列表（feat / fix / breaking / other）
-- 統計摘要
-- 可選：highlight（重要變更一句話摘要）
+- 分類變更列表（breaking / feat / fix / … / other）← 腳本產
+- 統計摘要（commit/檔案/行數/貢獻者）← 腳本產
+- ⭐ Highlights（重要變更一句話摘要）← LLM 補
