@@ -7,7 +7,9 @@ description: |
   適用於 Workflow 中串接資料來源與圖表產生。
   使用此 Skill 當使用者提及 ETL、資料轉換、資料清洗、data transform、
   資料管線、資料前處理、轉換格式、
-  或任何需要將原始資料轉換為圖表標準格式的場景。
+  或任何需要將原始資料轉換為圖表標準格式的場景；
+  也涵蓋管線最後的 Load/匯出步驟 —— 提及匯出檔案、存成 CSV、輸出 JSON、
+  產生 Markdown 檔、資料備份時，用本 skill 的匯出章節將結果寫入磁碟。
 metadata:
   schema_version: 1
   status: active
@@ -281,6 +283,85 @@ def _auto_title(self, p: EtlPipelineParams) -> str:
 | CSV 讀取結果 | `[{"col1": "A", "col2": 10}, ...]` | pandas to_dict("records") |
 | 單一 dict | `{"A": 10, "B": 20}` | 統計結果 |
 | 純數值陣列 | `[1, 2, 3, 4, 5]` | hist 用 |
+
+## Load / 匯出（Sink 步驟）
+
+> 管線最後一哩：把轉換完成的資料寫入磁碟（.md / .csv / .json）。
+> 2026-09-14 併入原 `ark-file-export` 的能力，成為 ETL 的 **Load** 階段
+> （Extract → Transform → **Load**）。觸發詞：匯出檔案 / 存成 CSV / 輸出 JSON /
+> 產生 Markdown 檔 / 資料備份。
+
+### 支援格式與轉換規則
+
+| 格式 | 輸入 | 規則 |
+|------|------|------|
+| `markdown` | dict / list[dict] / str | dict → 兩欄表格；list[dict] → 多欄表格；str → 原樣 |
+| `csv` | list[dict] | 以第一列 keys 為欄位 |
+| `json` | 任意 | `json.dumps(ensure_ascii=False, indent=2)` |
+
+### 匯出實作
+
+```python
+def _sink(content, fmt: str, output_path: str = "") -> str:
+    """記憶體資料 → 磁碟檔案（Load 階段）。"""
+    if fmt == "markdown":
+        text = _to_markdown(content)
+    elif fmt == "csv":
+        text = _to_csv(content)          # list[dict] → CSV
+    elif fmt == "json":
+        text = json.dumps(content, ensure_ascii=False, indent=2)
+    else:
+        raise ValueError(f"不支援的格式: {fmt}")
+    if output_path:                      # 空則只回傳文字不存檔
+        from pathlib import Path
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_path).write_text(text, encoding="utf-8")
+    return text
+
+
+def _to_markdown(content) -> str:
+    """dict → 表格，list[dict] → 表格，str → 原樣。"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        lines = ["| 欄位 | 值 |", "|------|---|"]
+        lines += [f"| {k} | {v} |" for k, v in content.items()]
+        return "\n".join(lines)
+    if isinstance(content, list) and content and isinstance(content[0], dict):
+        headers = list(content[0].keys())
+        lines = [f"| {' | '.join(headers)} |", f"| {' | '.join(['---'] * len(headers))} |"]
+        lines += [f"| {' | '.join(str(row.get(h, '')) for h in headers)} |" for row in content]
+        return "\n".join(lines)
+    return str(content)
+
+
+def _to_csv(content) -> str:
+    """list[dict] → CSV 字串。"""
+    if isinstance(content, list) and content and isinstance(content[0], dict):
+        import csv, io
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=content[0].keys())
+        writer.writeheader()
+        writer.writerows(content)
+        return buf.getvalue()
+    return str(content)
+```
+
+### Workflow 串接（Transform → Load）
+
+```yaml
+- id: save_report
+  type: skill
+  skill: etl_pipeline
+  params:
+    source: "{{ outputs.query.rows }}"
+    sink: "markdown"                         # 觸發 Load 階段
+    output_path: "artifacts/reports/daily_{{ today }}.md"
+  output: saved
+```
+
+> 複雜格式（PDF / Word / Excel / PPT）不走本 skill，請用 `ark-docx-tool` /
+> `ark-pdf-tool` / `ark-xlsx-tool` / `ark-pptx-tool`。
 
 ## 注意事項
 

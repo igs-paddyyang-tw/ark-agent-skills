@@ -11,6 +11,8 @@ description: |
   設定角色的 .kiro、幫我建 agent 配置、新增角色、workspace generator、
   建立開發環境、設定 AI 助手角色、多 CLI 入口、CLAUDE.md 連結、
   或任何需要產出 agent workspace 目錄結構的場景。
+  也是 ark-agent-bot-builder／ark-agent-team-builder 的**下一步**：骨架產完後由本 skill 補人格。
+  不適用於：bot 骨架請用 ark-agent-bot-builder；team daemon 骨架請用 ark-agent-team-builder。
 metadata:
   schema_version: 1
   status: active
@@ -589,7 +591,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 | DevOps | ark-docker-deploy, ark-env-doctor, ark-webapp-generator | 部署運維（排程已併入 webapp-generator） |
 | 數據分析 | ark-db-query, ark-etl-pipeline, ark-chart-generator, ark-kpi-calculator, ark-anomaly-detector, ark-retention-analysis | 數據工程 |
 | 市場研究 | ark-web-scraper, ark-translator, ark-llm-tools | 資訊收集 |
-| 報告產出 | ark-report-template, ark-html-dashboard, ark-chart-generator, ark-file-export | 視覺化 + 報表 |
+| 報告產出 | ark-html-report, ark-html-dashboard, ark-chart-generator, ark-etl-pipeline | 視覺化 + 報表 |
 
 **匹配邏輯：**
 
