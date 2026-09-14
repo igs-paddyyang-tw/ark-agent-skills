@@ -14,7 +14,7 @@
  10. missing-e2e-test：scaffolder/executor 有可執行 script 就必須有測試（P1）
  11. unknown-trigger-owner：觸發詞矩陣的 owner 必須存在（P2）
  12. unpaired-pairing-claim：宣稱「成對／雙軌」必須雙向（P2）
- 13. orphan-asset：references/assets 從 SKILL.md 不可達（P3）
+ 13. orphan-asset：references/assets 從 SKILL.md 不可達（P2）
  14. deprecated-field：metadata.consumed_by 已廢除（P3）
 
 用法：
@@ -334,7 +334,11 @@ def audit(repo: Path, triggers: dict):
                     changed = True
 
         for f in pending:
-            add("P3", "orphan-asset", name,
+            # [2026-09-14] P3→P2：孤兒資產不只是衛生問題，它是「資產先行、接線未跟」
+            # 這個系統性斷線的偵測器（ark-skill-creator / ark-agent-init 都中過招：
+            # 好東西丟進資料夾、SKILL.md 停在舊版）。升 P2 讓這類斷線更醒目、
+            # 機器就能抓，不用等人工 review。（exit code 仍只由 P0+P1 決定，不擋 commit）
+            add("P2", "orphan-asset", name,
                 f"{f.relative_to(skill_dir)} 從 SKILL.md 不可達（agent 讀不到 = 等於不存在）")
 
     # 3.8 宣稱「成對／雙軌」就必須雙向 —— 單向的配對宣告是壞的設計文件
