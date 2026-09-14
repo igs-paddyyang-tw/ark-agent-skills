@@ -6,12 +6,12 @@ description: |
   產出可重用程式 + 截圖 + 日誌。含 self-reflection 驗證機制。
   同時保留 Playwright MCP 作為輕量互動備選。
   使用此 Skill 當使用者提及瀏覽器自動化、Webwright、MCP browser、
-  Playwright MCP、browser tool、網頁抓取、瀏覽器搜尋、web scraping、
+  Playwright MCP、browser tool、
   瀏覽器測試、截圖驗證、visual testing、看一下畫面、
   確認 UI、E2E 驗證、localhost 預覽、craft tool、
   或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
   專責瀏覽器互動自動化、測試、截圖。大規模網頁抓取/反擷取請用 ark-web-scraper。
-  不適用於：網頁內容抓取/網頁擷取請用 ark-web-scraper；網頁自動化測試請用 ark-test-runner。
+  不適用於：網頁內容抓取/網頁擷取/web scraping 請用 ark-web-scraper；網頁自動化測試請用 ark-test-runner。
 metadata:
   schema_version: 1
   status: active
@@ -31,11 +31,21 @@ metadata:
 ## 觸發條件
 
 - 「Webwright」、「瀏覽器自動化」、「MCP browser」
-- 「browser tool」、「網頁抓取」、「web scraping」
-- 「瀏覽器測試」、「截圖驗證」、「visual testing」
+- 「browser tool」、「瀏覽器測試」、「截圖驗證」、「visual testing」
 - 「看一下畫面」、「確認 UI」、「E2E 驗證」
 - 「localhost 預覽」、「craft tool」、「可重用腳本」
 - 前端任務完成後的驗證階段
+
+## Negative Trigger（不適用，指路）
+
+- **網頁抓取 / web scraping / 擷取網頁內容 / 大規模抓取 / 反爬** → 請用 `ark-web-scraper`
+- **pytest / 測試覆蓋率 / coverage** → 請用 `ark-test-runner`
+
+## 三方邊界（一句話各自定位）
+
+- **ark-web-scraper**：大規模網頁抓取 / 反爬（資料擷取為目的）
+- **ark-browser-tool**（本 skill）：瀏覽器互動 / 截圖 / E2E 視覺驗證
+- **ark-test-runner**：pytest 執行與 coverage
 
 ## 核心理念
 
