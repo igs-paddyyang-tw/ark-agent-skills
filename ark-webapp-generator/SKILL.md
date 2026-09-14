@@ -129,8 +129,12 @@ metadata:
 6. **`src/server/api/health.py`** — `GET /api/v1/health`
 7. **`src/server/api/skills.py`** — `GET /api/v1/skills` + `POST /api/v1/skills/invoke`
 8. **`src/server/api/chat.py`** — `POST /api/v1/chat`（指令 → 呼叫 Skill，一般訊息 → Gemini FC 判斷 Skill / Gemini chat，無 API Key 時 echo）
-9. **`src/server/models/slot_mechanics.py`** — SlotMechanics Pydantic 模型
-10. **`src/server/models/vibe_score.py`** — VibeScore Pydantic 模型
+9. **`src/server/models/`** — 空的領域模型目錄（骨架**不預設領域**）
+
+> 🔴 2026-09-14：這裡原本固定產 `slot_mechanics.py` / `vibe_score.py` 兩個
+> **老虎機專屬**模型，而產出的程式碼一個都沒 import 它們 —— 每個新專案都多兩個死檔。
+> 兩者的完整規格保留在 `references/base-skill-spec.md` 附錄 A，
+> 當「領域模型怎麼定義」的示範用。
 
 ---
 

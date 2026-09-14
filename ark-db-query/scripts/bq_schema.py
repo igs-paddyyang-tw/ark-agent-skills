@@ -58,7 +58,8 @@ def main() -> None:
 
         elif args.command == "tables":
             if not args.dataset:
-                C.fail("BAD_INPUT", "tables 需要 --dataset", "")
+                C.fail("BAD_INPUT", "tables 需要 --dataset",
+                        "先跑 datasets 看有哪些，例: bq_schema.py tables --dataset analytics")
             rows = []
             for item in client.list_tables(args.dataset):
                 tbl = client.get_table(item.reference)
@@ -74,13 +75,15 @@ def main() -> None:
 
         elif args.command == "schema":
             if not args.table or "." not in args.table:
-                C.fail("BAD_INPUT", "schema 需要 --table dataset.table", "")
+                C.fail("BAD_INPUT", "schema 需要 --table dataset.table",
+                        "例: bq_schema.py schema --table analytics.player_daily")
             tbl = client.get_table(f"{args.project}.{args.table}")
             rows = _fields_to_dicts(tbl.schema)
 
         else:  # preview — tabledata.list，免費且不掃描
             if not args.table or "." not in args.table:
-                C.fail("BAD_INPUT", "preview 需要 --table dataset.table", "")
+                C.fail("BAD_INPUT", "preview 需要 --table dataset.table",
+                        "例: bq_schema.py preview --table analytics.player_daily --limit 5")
             tbl = client.get_table(f"{args.project}.{args.table}")
             rows = [dict(r) for r in client.list_rows(tbl, max_results=args.limit)]
 

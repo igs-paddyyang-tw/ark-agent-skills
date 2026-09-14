@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ark-webapp-generator 產出檔案完整性驗證腳本。
 
-依據 references/file-manifest.md 中定義的 29 個檔案清單，
+依據 references/file-manifest.md 中定義的必要檔案清單，
 檢查目標目錄下所有必要檔案是否存在。
 
 使用方式：
@@ -10,7 +10,7 @@
 
 範例：
     $ python scripts/validate_output.py ./output/ark_slot_analyzer
-    ✅ 驗證通過：29/29 個檔案皆已產出
+    ✅ 驗證通過：27/27 個檔案皆已產出
 """
 
 import sys
@@ -45,8 +45,8 @@ REQUIRED_FILES: list[str] = [
     "src/server/api/health.py",
     "src/server/api/skills.py",
     "src/server/api/chat.py",
-    "src/server/models/slot_mechanics.py",
-    "src/server/models/vibe_score.py",
+    # 領域模型（slot_mechanics / vibe_score）不在必要清單 ——
+    # 骨架不預設領域，範例見 references/base-skill-spec.md 附錄 A
     # Web Chat UI（4）
     "src/server/templates/base.html",
     "src/server/templates/index.html",

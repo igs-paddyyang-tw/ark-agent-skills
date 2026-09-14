@@ -40,9 +40,8 @@
 │       │   ├── health.py              # GET /api/v1/health
 │       │   ├── skills.py              # GET /api/v1/skills + POST /api/v1/skills/invoke
 │       │   └── chat.py                # POST /api/v1/chat
-│       ├── models/
-│       │   ├── slot_mechanics.py      # SlotMechanics Pydantic 模型
-│       │   └── vibe_score.py          # VibeScore Pydantic 模型
+│       ├── models/                  # 空目錄：領域模型由專案自己定義
+│       │                              # （示範見 base-skill-spec.md 附錄 A）
 │       ├── templates/
 │       │   ├── base.html              # Jinja2 基底模板
 │       │   └── index.html             # Web Chat UI
@@ -96,8 +95,6 @@
 | `src/server/api/health.py` | `GET /api/v1/health` |
 | `src/server/api/skills.py` | `GET /api/v1/skills` + `POST /api/v1/skills/invoke` |
 | `src/server/api/chat.py` | `POST /api/v1/chat`（通用指令解析） |
-| `src/server/models/slot_mechanics.py` | SlotMechanics Pydantic 模型 |
-| `src/server/models/vibe_score.py` | VibeScore Pydantic 模型 |
 
 ### Web Chat UI（4）
 

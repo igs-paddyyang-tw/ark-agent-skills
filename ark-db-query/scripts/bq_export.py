@@ -57,7 +57,8 @@ def main() -> None:
     with C.Timer() as t:
         if args.table:
             if "." not in args.table:
-                C.fail("BAD_INPUT", "--table 格式為 dataset.table", "")
+                C.fail("BAD_INPUT", "--table 格式為 dataset.table",
+                        "例: --table analytics.player_daily（不含 project id）")
             tbl = client.get_table(f"{args.project}.{args.table}")
             iterator = client.list_rows(tbl, page_size=PAGE_SIZE)
             meta.update(bytes_processed=0, estimated_cost_usd=0.0, source="table")

@@ -158,15 +158,18 @@ def q_mongodb(args):
     _need("pymongo", "pymongo")
     from pymongo import MongoClient
     if not args.collection:
-        C.fail("BAD_INPUT", "mongodb 需要 --collection", "")
+        C.fail("BAD_INPUT", "mongodb 需要 --collection",
+               "例: --collection player_profiles")
     if not args.database:
-        C.fail("BAD_INPUT", "mongodb 需要 --database", "")
+        C.fail("BAD_INPUT", "mongodb 需要 --database",
+               "例: --database game（或設環境變數 ARK_DB_NAME）")
     try:
         flt = json.loads(args.filter or "{}")
         proj = json.loads(args.projection) if args.projection else None
         sort = json.loads(args.sort) if args.sort else None
     except json.JSONDecodeError as e:
-        C.fail("BAD_INPUT", f"filter/projection/sort JSON 解析失敗: {e}", "")
+        C.fail("BAD_INPUT", f"filter/projection/sort JSON 解析失敗: {e}",
+               '單引號包整串、內部用雙引號，例: --filter \'{"vip":{"$gte":5}}\'')
         return []
     pw = C.secret(args.password, args.password_env)
     kw = dict(host=args.host, port=args.port or 27017,
@@ -181,7 +184,8 @@ def q_mongodb(args):
         cur = cur.limit(args.limit)
         return [{**doc, "_id": str(doc.get("_id"))} for doc in cur]
     except Exception as e:
-        C.fail("QUERY_FAILED", f"MongoDB 查詢失敗: {e}", "")
+        C.fail("QUERY_FAILED", f"MongoDB 查詢失敗: {e}",
+               "確認 --auth-source（預設 admin）與 --database 是否為同一個庫")
         return []
     finally:
         client.close()

@@ -38,13 +38,14 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ① 流程鏈 Process
 
-> 輸出：MD 給 AI｜`category: process`｜9 個
+> 輸出：MD 給 AI｜`category: process`｜10 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-code-spec-validator` | 驗證 code 與 spec/design 文件的一致性，產出 Drift Report。 |
 | `ark-doc-coauthoring` | 引導使用者透過結構化工作流共同撰寫文件。 |
 | `ark-grill-me` | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
+| `ark-mcp-builder` | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
 | `ark-planning-with-files` | 持久化任務追蹤：複雜任務（3+ 步驟）自動建立 3-File Pattern（task_plan.md / findings.md / progress.md）， 防止 context 丟失、goal… |
 | `ark-project-planning` | 標準化專案計畫流程。 |
 | `ark-prompt-spec-validator` | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
@@ -54,7 +55,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ② 平台生成器 Scaffolders
 
-> 輸出：專案骨架｜`category: scaffolder`｜6 個
+> 輸出：專案骨架｜`category: scaffolder`｜5 個
 
 | Skill | 定位 |
 |-------|------|
@@ -62,7 +63,6 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-agent-init` | 產出完整的 agent workspace 配置（steering、agents、prompts、skills、settings、 knowledge、memory），根據使用者指定的角色自動生成。 |
 | `ark-agent-team-builder` | 產出 ark_team_agent 套件消費端的多 agent 團隊 daemon 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（team daemon / 多 runtime / Kanb… |
 | `ark-docker-deploy` | 產出容器化部署配置（Dockerfile + docker-compose.yaml + .dockerignore + 部署腳本）， 支援 Python / Node / Go 專案自動偵測，mul… |
-| `ark-mcp-builder` | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
 | `ark-webapp-generator` | 產出完整的「webbot」應用骨架 —— 一個 lifespan 一次啟動四層： FastAPI Server + Web Chat UI、BaseSkill 插件系統、WorkflowEngine … |
 
 ## ③ 管線元件 Pipeline

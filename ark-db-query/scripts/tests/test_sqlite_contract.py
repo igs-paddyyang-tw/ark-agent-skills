@@ -129,3 +129,26 @@ def test_input_errors_come_back_as_json_not_traceback(db, args, code):
     out = run(*args, expect_rc=1)
     assert out["success"] is False and out["error"]["code"] == code
     assert out["error"]["hint"], "錯誤要帶 hint —— agent 靠它自我修正"
+
+
+# ── 契約回歸：錯誤一律帶 hint ───────────────────────────────────
+
+def test_no_failure_path_ships_without_a_hint():
+    """🔴 `C.fail(code, msg, "")` = agent 拿到錯誤卻不知道下一步怎麼做。
+
+    本 skill 是 executor：agent 直接吃 stdout，靠 `error.hint` 自我修正。
+    2026-09-14 全庫有 9 支這樣的呼叫（bq_query／bq_schema×3／bq_export／
+    db_query×4），其中只有測試路徑上的那一支被抓到 ——
+    其餘是因為**沒有東西在看它們**。
+
+    靜態掃描而非逐一實跑：那些路徑各自需要 BQ／Mongo 連線，
+    但「有沒有帶 hint」是原始碼就看得出來的事。
+    """
+    import re
+    bad = []
+    for py in sorted((SCRIPTS).glob("*.py")):
+        src = py.read_text(encoding="utf-8")
+        for m in re.finditer(r'C\.fail\(\s*("[^"]+"|[^,]+),\s*(?:f?"[^"]*"|[^,]+),\s*""\s*\)', src):
+            line = src[:m.start()].count("\n") + 1
+            bad.append(f"{py.name}:{line}")
+    assert not bad, "這些失敗路徑沒帶 hint：" + ", ".join(bad)

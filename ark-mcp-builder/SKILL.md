@@ -8,8 +8,9 @@ description: |
 metadata:
   schema_version: 1
   status: active
-  updated: 2026-08-19
-  category: scaffolder
+  updated: 2026-09-14
+  # 2026-09-14 scaffolder → process：它不產骨架，是「怎麼搭 MCP Server」的方法論
+  category: process
   outputs:
     - format: code
       audience: ai
@@ -142,7 +143,8 @@ python scripts/evaluation.py --help          # 免依賴（--help 在 import 之
 python scripts/evaluation.py <eval.xml> --transport stdio --command ... # 需 anthropic + mcp
 ```
 
-> ⚠️ `scripts/` 是**評測 harness，不是骨架產生器** —— 本 skill 的 `category: scaffolder`
-> 指的是它教你搭 MCP Server，產骨架的動作由你依 `reference/` 手做。
+> ⚠️ `scripts/` 是**評測 harness，不是骨架產生器**。本 skill 原本掛 `category: scaffolder`，
+> 但它一個檔案都不產 —— 產骨架的動作由你依 `reference/` 手做。
+> 2026-09-14 改為 `process`（方法論／流程），與其他「教你怎麼做」的 skill 同類。
 > 離線可驗的部分（題庫解析、標籤抽取、header/env 拆解）由
 > `scripts/tests/test_evaluation_parsers.py` 守著。

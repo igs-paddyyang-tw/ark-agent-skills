@@ -111,7 +111,9 @@ def main() -> None:
             job = client.query(sql_exec, job_config=job_cfg)
             rows = [dict(r) for r in job.result(timeout=args.timeout)]
         except Exception as e:
-            C.fail("QUERY_FAILED", f"查詢失敗: {e}", "")
+            C.fail("QUERY_FAILED", f"查詢失敗: {e}",
+                   "先用 --dry-run 估成本與驗語法；權限問題查 gcloud auth "
+                   "application-default login")
     meta = {"db_type": "bigquery", "elapsed_ms": t.elapsed_ms,
             "job_id": job.job_id, "cache_hit": bool(job.cache_hit),
             "bytes_processed": job.total_bytes_processed, **est}

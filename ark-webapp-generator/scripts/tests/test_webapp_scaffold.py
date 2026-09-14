@@ -92,7 +92,7 @@ def test_docstring_count_matches_the_list():
     n = len(_required_files())
     text = VALIDATE.read_text(encoding="utf-8")
     head = text[:text.index("REQUIRED_FILES")]
-    stale = [tok for tok in ("29", "31") if tok != str(n) and tok in head]
+    stale = [tok for tok in ("27", "29", "31") if tok != str(n) and tok in head]
     assert not stale, f"說明區塊寫著 {stale}，但清單長度是 {n}"
 
 
@@ -100,7 +100,7 @@ def test_docstring_count_matches_the_list():
 
 @pytest.mark.parametrize("victim", [
     "src/skills/marketplace/__init__.py",
-    "src/server/models/slot_mechanics.py",
+    "src/skills/registry.py",
     "src/server/main.py",
 ])
 def test_validate_actually_catches_a_missing_file(project, victim):
