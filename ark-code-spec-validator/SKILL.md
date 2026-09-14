@@ -3,8 +3,10 @@ name: ark-code-spec-validator
 description: |
   驗證 code 與 spec/design 文件的一致性，產出 Drift Report。
   偵測 API 端點漂移、Schema 不符、依賴違規、驗收條件覆蓋缺口。
+  並可用 --sync 模式將 FastAPI route 反向同步回 docs/ 的 API 表格（消滅 extra_in_code drift）。
   使用此 Skill 當使用者提及 drift、驗證、spec 一致性、API 比對、
-  驗收條件覆蓋、依賴分析、code 與文件不同步、或要求產出驗證報告。
+  驗收條件覆蓋、依賴分析、code 與文件不同步、或要求產出驗證報告；
+  或提及「API 文件同步」「route 變更同步」「端點文件化」時。
   注意：本 skill 驗證的是 AC（驗收條件）是否有對應測試，
   非程式碼 coverage。如需 coverage 分析，請用 ark-test-runner。
   不適用於：單純的 code review 請用 ark-code-review；網頁抓取請用 ark-web-scraper。
@@ -52,6 +54,22 @@ python -m ark_team_agent.code_spec_validator --full .
 ```
 
 產出同上，但包含 4 個維度的統一報告。
+
+### 反向同步（--sync 模式：route → docs 表格）
+
+當偵測到 `extra_in_code` drift（程式碼有 route、docs 沒有）時，用 `--sync` 自動把
+FastAPI route 寫回 docs/ 的 API 表格，消滅該類 drift：
+
+```bash
+python -m ark_team_agent.code_spec_validator --sync .
+```
+
+- **沿用同一套 route 解析邏輯**（與驗證模式共用，repo 內不存在第二份實作）——
+  差別只在：驗證模式「比對後報告」，`--sync` 模式「比對後寫回 docs 表格」。
+- 更新欄位：`method` / `path` / `summary` / `status_code` / `auth`。
+- 輸出差異摘要：**新增 / 移除 / 變更** 三類，供人工複核。
+- 用途：新增或修改 route 後，一鍵讓 docs/ 的 API 清單追上程式碼（原 `ark-api-doc-sync`
+  的職責，2026-09-14 併入本 skill）。
 
 ---
 
@@ -250,6 +268,7 @@ python .kiro/skills/ark-code-spec-validator/scripts/run_validator.py --target .
 ## 參考
 
 - 詳細維度說明：`references/dimensions.md`
+- AC-ID 命名約定：`references/ac-id-convention.md`
 - 迴圈規則與閾值：`references/loop-rules.md`
 - Pipeline 狀態 Schema：`references/pipeline-state-schema.md`
 - Python module：`src/ark_team_agent/code_spec_validator/`

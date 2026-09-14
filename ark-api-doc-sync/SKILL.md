@@ -1,10 +1,14 @@
 ---
 name: ark-api-doc-sync
-description: "當使用者需要將 FastAPI route 定義同步到 docs/ 目錄下的 API 文件表格時使用此技能。觸發條件包括：提及「API 文件同步」「route 變更同步」「端點文件化」，或在新增/修改 route 後要求更新對應文件。目標是消滅 extra_in_code drift（程式碼有但文件沒有的端點）。不適用於驗證 drift 或規格偏差——該場景請用 ark-code-spec-validator。"
+description: |
+  [DEPRECATED — 已由 ark-code-spec-validator 取代]
+  保留本頁只為讓舊觸發詞（API 文件同步、route 變更同步、端點文件化）仍能導向遷移說明 ——
+  **不要使用本 skill，改用 `ark-code-spec-validator` 的 --sync 模式。**
 metadata:
   schema_version: 1
-  status: active
-  updated: 2026-08-19
+  status: deprecated
+  superseded_by: ark-code-spec-validator
+  updated: 2026-09-14
   author: paddyyang
   category: pipeline
   outputs:
@@ -12,30 +16,18 @@ metadata:
       audience: ai
 ---
 
-# ark-api-doc-sync
+# ark-api-doc-sync（已棄用）
 
-> FastAPI route → docs/ API 表格自動同步。消滅 extra_in_code drift。
+> 🗑️ **此 skill 已於 2026-09-14 併入 `ark-code-spec-validator`。**
 
-## 觸發條件
+FastAPI route → docs/ API 表格的反向同步能力，已整合為 validator 的 `--sync` 模式
+（沿用同一套 route 解析邏輯，避免兩份實作漂移）。
 
-- 使用者提及「API 文件同步」「route 變更同步」「端點文件化」
-- 新增或修改 FastAPI route 後需要更新文件
-- 要求產出或刷新 API 端點清單
+## 遷移
 
-## Negative Trigger
+| 舊用法 | 新用法 |
+|---|---|
+| ark-api-doc-sync（同步 route 到 docs 表格） | `python -m ark_team_agent.code_spec_validator --sync .` |
 
-- 驗證 drift（程式碼 vs 規格偏差）→ 請用 `ark-code-spec-validator`
-- API 設計或規格撰寫 → 不在本 skill 範圍
-
-## 工作流程
-
-1. 掃描指定目錄下所有 FastAPI router 檔案
-2. 解析 route decorator（method / path / summary / response_model）
-3. 比對現有 docs/ 下的 API 表格
-4. 產出差異報告 + 自動更新 Markdown 表格
-5. 輸出同步結果摘要
-
-## 產出格式
-
-- Markdown 表格（method / path / summary / status_code / auth）
-- 差異摘要（新增 / 移除 / 變更）
+舊觸發詞「API 文件同步」「route 變更同步」「端點文件化」仍導向此頁，
+請改用 `ark-code-spec-validator`。
