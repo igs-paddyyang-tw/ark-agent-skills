@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **52 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **50 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -67,20 +67,18 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ③ 管線元件 Pipeline
 
-> 輸出：結構化資料｜`category: pipeline`｜17 個
+> 輸出：結構化資料｜`category: pipeline`｜15 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-agent-cli` | 統一 Agent CLI 閘道：封裝 kiro-cli / claude / gemini / codex 四種 CLI 為單一呼叫介面。 |
 | `ark-anomaly-detector` | 產出 KPI 異常偵測模組 + 告警規則引擎 + MCP Tool + 排程整合。 |
-| `ark-api-doc-sync` | 當使用者需要將 FastAPI route 定義同步到 docs/ 目錄下的 API 文件表格時使用此技能。 |
 | `ark-browser-tool` | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
 | `ark-chart-generator` | 產出 chart_generator.py 標準化圖表 Skill，使用 Matplotlib 將結構化數據轉換為圖表， 輸出至 artifacts/charts 目錄。 |
 | `ark-code-review` | 產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、 風格一致性驗證、安全性掃描、PR 審查報告產生。 |
 | `ark-cost-tracker` | 產出 API 呼叫成本追蹤 Skill，記錄 LLM API 的 token 使用量和費用。 |
 | `ark-data-contract` | 當使用者需要驗證管線元件間的 schema 契約時使用此技能。 |
 | `ark-etl-pipeline` | 產出 etl_pipeline.py 資料轉換 Skill，將任何資料來源（CSV、JSON、API 回傳、 Skill 輸出、資料庫查詢）轉換為 chart_generator 可直接使用的標準格式… |
-| `ark-file-export` | 產出檔案匯出 Skill，將記憶體中的資料（dict/list/str）輸出為 Markdown、CSV、JSON 檔案。 |
 | `ark-kpi-calculator` | 產出標準化 KPI 計算引擎模組 + MCP Tool，支援遊戲類指標（DAU/MAU/ARPU/RTP/留存率/LTV） 與通用指標（轉換率/流失率/NPS）。 |
 | `ark-llm-tools` | 產出 LLM 通用工具 Skills（summarize、analyze、qa、intent_parse）， 搭配 GeminiAdapter 或 LLMAdapter 進行文字摘要、資料分析、問答、… |
 | `ark-security-audit` | 產出 security_audit.py 安全性掃描 Skill，對專案進行程式碼安全性檢查與弱點偵測。 |
@@ -143,6 +141,15 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 |-------|------|
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
+
+## 🗑️ 已移除（保留供遷移）
+
+> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
+
+| Skill | 遷移到 |
+|-------|--------|
+| `ark-api-doc-sync` | 已由 ark-code-spec-validator 取代 |
+| `ark-file-export` | 已由 ark-etl-pipeline 取代 |
 
 <!-- END GENERATED CATALOGUE -->
 
