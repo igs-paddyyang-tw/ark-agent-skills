@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **59 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -93,11 +93,10 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ④ 呈現層 View
 
-> 輸出：HTML / 視覺（給人看）｜`category: view`｜6 個
+> 輸出：HTML / 視覺（給人看）｜`category: view`｜5 個
 
 | Skill | 定位 |
 |-------|------|
-| `ark-canvas-design` | 使用設計哲學創作精美的視覺藝術，輸出 .png 和 .pdf 文件。 |
 | `ark-frontend-design` | 產出獨特、生產級品質的前端介面，具備高設計水準。 |
 | `ark-html-dashboard` | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
 | `ark-html-report` | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
