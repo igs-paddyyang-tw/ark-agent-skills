@@ -72,9 +72,25 @@ category/outputs 齊全且在受控詞彙（P1）、description 重複（相似�
 要看全庫歸屬快照跑 `scripts/audit_skills.py`。
 frontmatter 欄位規格見 `references/metadata-schema.md`。
 
+### 2.5 移除／改名前後：反向掃消費端（強制）
+
+```bash
+python scripts/check_consumers.py --name ark-foo   # 動手前：誰在用？
+python scripts/check_consumers.py                  # 動手後：還有誰指著已刪的名字？
+```
+
+🔴 **上游做移除，就要由上游負責掃消費端。** 消費端各自的 `sync_skills.py --check`
+本來就會擋，但它們在別的 repo、甚至別台機器上 —— 「消費端自己會檢查」在多 repo
+情境下等於沒有檢查。2026-09-14 併掉兩個 skill 後，3 個矩陣 10 處、9 份 SOUL.md、
+12 份已部署複本、1 份蒸餾設定全部靜默指著舊名（sync 印一行「跳過」、蒸餾掃出零筆）。
+
+四個掃描面：角色矩陣（`sync_skills.py` 的 MATRIX/COMMON）· 已部署複本
+（`**/.kiro/skills/`）· 人格清單（SOUL.md 條列）· 蒸餾來源（`distill-sources.yaml`）。
+專案自建 skill（`LOCAL_ONLY`）不算懸空。**消費端根目錄不存在時明說跳過，不假裝通過。**
+
 ### 3. Phase 收尾（強制，不可跳過）
 
-1. `audit_skills.py` P0/P1 = 0
+1. `audit_skills.py` P0/P1 = 0，且 `check_consumers.py` 對本次移除的名字回 0 處
 2. 產 drift report：ark-md-report `review` 型，存 `docs/reports/review/{date}-align-phase-{X}.md`，
    frontmatter `findings_count` 直接引用 audit JSON
 3. 獨立 commit，message 格式：`align(phase-A): D-1 D-2 merge + trigger governance [refs: alignment-directive]`
