@@ -23,8 +23,8 @@ metadata:
     - { format: data, audience: ai }
     - { format: md, audience: both }
   render: none
+  # consumed_by 已於 2026-09-14 廢除（全庫只有本檔填過）；反向關係由 depends_on 推導
   depends_on: []
-  consumed_by: [ark-md-report, ark-daily-news, ark-html-report]
   # 只取代 query —— 內建的 wiki_ingest 有可信的 role gate（見「ingest 的授權邊界」），
   # bash 腳本無法複製那個管控，故不宣稱取代它
   replaces: [mcp-wiki-server, team-mcp.wiki_query]

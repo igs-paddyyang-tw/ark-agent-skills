@@ -81,7 +81,8 @@ def _need(mod: str, pip_name: str):
 def q_sqlite(args, sql, params):
     import sqlite3
     if not args.db_path:
-        C.fail("BAD_INPUT", "sqlite 需要 --db-path", "")
+        C.fail("BAD_INPUT", "sqlite 需要 --db-path",
+               "例: --db-type sqlite --db-path ./data/app.db")
     conn = sqlite3.connect(args.db_path, timeout=args.timeout)
     try:
         conn.row_factory = sqlite3.Row

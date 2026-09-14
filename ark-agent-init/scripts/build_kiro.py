@@ -6,7 +6,7 @@ Usage:
 
 產出：
     {base}/
-    ├── .kiro/                        # admin workspace
+    ├── .kiro/                        # working_directory: "." 的 agent（通常是總機/manager）
     │   ├── agents/{admin}.json
     │   ├── prompts/route-message.md
     │   ├── prompts/service-check.md
@@ -52,6 +52,12 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DIR = SKILL_ROOT / "assets"
 STEERING_ASSETS = ASSETS_DIR / "steering"
 AGENTS_ASSETS = ASSETS_DIR / "agents"
+
+#: team MCP 的現行進入點（套件 ark_team_agent）。
+#: 🔴 舊值是 `src/ark_team_core/team_mcp.py` + `command: "py"` —— 前者是三代前的
+#: 套件名（現在裝的是 ark_team_agent，且以 `-m` 呼叫），後者是 Windows 啟動器，
+#: 在 Linux 上根本不存在。對照組：套件自己在啟動時寫的 mcp.json。
+TEAM_MCP_MODULE = "ark_team_agent.team_mcp"
 PROMPTS_ASSETS = ASSETS_DIR / "prompts"
 
 TODAY = date.today().isoformat()
@@ -80,14 +86,14 @@ def build_kiro(team_path: Path, output_base: Path | None = None) -> list[str]:
         wd = inst.get("working_directory", f"agents/{name}")
         description = inst.get("description", f"{name}")
 
-        if wd == "." or role == "admin":
-            # Admin → 根目錄 .kiro/
-            kiro_dir = base / ".kiro"
-            is_admin = True
-        else:
-            # 其他 agent → agents/{name}/.kiro/
-            kiro_dir = base / wd / ".kiro"
-            is_admin = False
+        # 🔴 落點與授權是兩件事，別綁在一起（2026-09-14 修）：
+        #   落點 = working_directory —— 套件執行期就是照這個欄位去讀 .kiro/
+        #   授權 = role —— admin 才拿得到「可發訊給所有人」的 MCP
+        # 舊碼寫成 `wd == "." or role == "admin"` 同時決定兩者，造成兩個錯：
+        #   ① admin 宣告了 agents/admin-agent 卻被寫到根目錄 → 它的工作目錄空的
+        #   ② wd="." 的 manager 被當成 admin → 拿到 admin 人格與無白名單的 MCP
+        kiro_dir = base / ".kiro" if wd == "." else base / wd / ".kiro"
+        is_admin = role == "admin"
 
         agent_created = _build_agent_kiro(
             kiro_dir=kiro_dir,
@@ -151,10 +157,14 @@ def _build_agent_kiro(
             needs_write = True
     if needs_write:
         allowed = ",".join(non_admin_names)
+        # --home 是「從這個 agent 的工作目錄回到團隊根」的相對路徑。
+        # 🔴 舊碼把它寫死成 admin=`.`／其他=`../..`，等於假設 admin 一定住根目錄；
+        #    改成由實際深度算，admin 搬到 agents/ 底下也不會指錯。
+        home = _relative_home(kiro_dir.parent, base)
         if is_admin:
-            mcp_content = _make_admin_mcp(name, port)
+            mcp_content = _make_admin_mcp(name, port, home)
         else:
-            mcp_content = _make_agent_mcp(name, role, port, allowed)
+            mcp_content = _make_agent_mcp(name, role, port, allowed, home)
         mcp_json.write_text(
             json.dumps(mcp_content, indent=2, ensure_ascii=False),
             encoding="utf-8",
@@ -349,36 +359,42 @@ def _write_agent_json(path: Path, name: str, description: str, is_admin: bool) -
 
 # ── mcp.json ──────────────────────────────────────────────────
 
-def _make_admin_mcp(instance: str, port: int) -> dict:
+def _relative_home(agent_dir: Path, base: Path) -> str:
+    """從 agent 工作目錄回到團隊根的相對路徑（根目錄回 "."）。"""
+    depth = len(agent_dir.resolve().relative_to(base.resolve()).parts)
+    return "." if depth == 0 else "/".join([".."] * depth)
+
+def _make_admin_mcp(instance: str, port: int, home: str = ".") -> dict:
     return {
         "mcpServers": {
             "team": {
-                "command": "py",
+                "command": "python3",
                 "args": [
-                    "src/ark_team_core/team_mcp.py",
+                    "-m", TEAM_MCP_MODULE,
                     "--port", str(port),
                     "--instance", instance,
                     "--role", "admin",
-                    "--allowed-targets", "",
-                    "--home", ".",
+                    "--allowed-targets", "",   # 空 = 不限制（admin 可發訊給所有人）
+                    "--home", home,
                 ],
             }
         }
     }
 
 
-def _make_agent_mcp(instance: str, role: str, port: int, allowed_targets: str) -> dict:
+def _make_agent_mcp(instance: str, role: str, port: int, allowed_targets: str,
+                    home: str = "../..") -> dict:
     return {
         "mcpServers": {
             "team": {
-                "command": "py",
+                "command": "python3",
                 "args": [
-                    "../../src/ark_team_core/team_mcp.py",
+                    "-m", TEAM_MCP_MODULE,
                     "--port", str(port),
                     "--instance", instance,
                     "--role", role,
                     "--allowed-targets", allowed_targets,
-                    "--home", "../..",
+                    "--home", home,
                 ],
             }
         }
@@ -509,15 +525,20 @@ def validate_kiro(project_dir: Path) -> list[str]:
     with open(team_yaml, encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
 
+    seen: dict[str, str] = {}
     for name, inst in cfg.get("instances", {}).items():
         inst = inst or {}
-        role = inst.get("role", "worker")
         wd = inst.get("working_directory", f"agents/{name}")
 
-        if wd == "." or role == "admin":
-            kiro_dir = project_dir / ".kiro"
-        else:
-            kiro_dir = project_dir / wd / ".kiro"
+        # 落點只看 working_directory —— 與 build_kiro() 同一條規則。
+        # 🔴 這裡曾經抄了「role == 'admin' → 根目錄」那條錯規則，
+        #    於是產生器把檔案放錯地方、驗證器也去錯地方找 → 互相背書、永遠綠。
+        kiro_dir = project_dir / ".kiro" if wd == "." else project_dir / wd / ".kiro"
+
+        # 兩個 instance 落在同一個 .kiro/ = 後者靜默共用前者的人格與授權
+        if str(kiro_dir) in seen:
+            errors.append(f"❌ {name} 與 {seen[str(kiro_dir)]} 共用同一個 .kiro/（{wd}）")
+        seen[str(kiro_dir)] = name
 
         prefix = f"{name}/.kiro"
 

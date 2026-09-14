@@ -10,14 +10,17 @@
 
 範例：
     $ python scripts/validate_output.py ./output/ark_slot_analyzer
-    ✅ 驗證通過：31/31 個檔案皆已產出
+    ✅ 驗證通過：29/29 個檔案皆已產出
 """
 
 import sys
 from pathlib import Path
 
 
-# ark-webapp-generator 產出的 31 個必要檔案（依 file-manifest.md）
+# ark-webapp-generator 產出的必要檔案（依 file-manifest.md）
+# ⚠️ 數量以本清單長度為準：說明區塊的手寫數字曾與清單長度對不上，
+#    而註解本身若寫出數字字面，也會被守門判成又一處手寫統計
+#    （scripts/tests/test_webapp_scaffold.py::test_docstring_count_matches_the_list）。
 REQUIRED_FILES: list[str] = [
     # 專案設定檔案（4）
     "requirements.txt",

@@ -152,6 +152,9 @@ __all__ = ["BaseSkill", "SkillParam", "SkillResult", "SkillType", "SkillRegistry
 # ── src/skills/internal/__init__.py ──
 FILES["src/skills/internal/__init__.py"] = ""
 FILES["src/skills/external/__init__.py"] = ""
+# 社群可插拔 Skills 預留目錄 —— SKILL.md、file-manifest.md、validate_output.py
+# 三處都列了它，只有本檔漏產（2026-09-14 由 scripts/tests/test_scaffold.py 抓到）。
+FILES["src/skills/marketplace/__init__.py"] = ""
 
 # ── src/skills/internal/echo.py ──
 FILES["src/skills/internal/echo.py"] = '''from src.skills.base import BaseSkill, SkillParam, SkillResult, SkillType
@@ -521,6 +524,55 @@ uvicorn src.server.main:app --reload --port 8000
 
 # ── src/server/models/__init__.py ──
 FILES["src/server/models/__init__.py"] = ""
+
+# ── src/server/models/ 的資料模型 ──
+# 規格見 references/base-skill-spec.md 附錄 A（欄位、預設值、round-trip 行為）。
+# 🔴 這兩個檔曾經只存在於文件與驗證器裡，scaffold 沒產 → 產出過不了自己的
+#    validate_output.py（26/29）。三份文件對一份腳本，錯的是腳本。
+
+FILES["src/server/models/slot_mechanics.py"] = '''"""SlotMechanics — 老虎機數值規格模型。"""
+from pydantic import BaseModel, Field
+
+
+class SlotMechanics(BaseModel):
+    """老虎機數值規格。
+
+    由 parser_slot_game Skill 從遊戲介紹文本提取，
+    包含 RTP、波動率、核心玩法等結構化數值規格。
+    """
+
+    game_name: str
+    provider: str
+    rtp: float | None = None
+    volatility: str | None = None       # "low" / "medium" / "high" / "very_high"
+    hit_frequency: float | None = None
+    max_multiplier: float | None = None
+    layout: str | None = None           # "5x3"、"6x4 Megaways"
+    mechanics: list[str] = Field(default_factory=list)
+    theme: str | None = None
+    math_logic: str = ""
+    market_fit: str = ""
+    confidence: float = 0.0             # 0-1，由呼叫端負責確保範圍
+'''
+
+FILES["src/server/models/vibe_score.py"] = '''"""VibeScore — 視覺語感評分模型。"""
+from pydantic import BaseModel, Field
+
+
+class VibeScore(BaseModel):
+    """視覺語感評分。
+
+    由 vibe_analyser Skill 分析美術風格、色彩、市場定位產出。
+    """
+
+    overall_score: float                # 1-10
+    art_style: str
+    color_palette: str
+    target_market: list[str] = Field(default_factory=list)
+    similar_games: list[str] = Field(default_factory=list)
+    analysis: str = ""
+'''
+
 
 # ── .kiro/ 預設配置 ──
 FILES[".kiro/steering/AGENTS.md"] = '''# 全域行為準則

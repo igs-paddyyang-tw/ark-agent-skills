@@ -17,7 +17,8 @@ metadata:
     - { format: html, audience: human }
   render: html
   status: active
-  depends_on: [ark-md-report, ark-html-report]
+  # ark-wiki-engine：news_md_writer.py 實際執行 wiki_guard.py（不是「相關」而是真的呼叫）
+  depends_on: [ark-md-report, ark-html-report, ark-wiki-engine]
 ---
 
 # ark-daily-news

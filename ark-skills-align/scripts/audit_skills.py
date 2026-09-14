@@ -10,6 +10,8 @@
   6. deprecated stub 格式檢查（P2）
   7. README 分類表與 frontmatter category 一致性（P2）
   8. empty-skill-dir：目錄存在但無有效內容或 SKILL.md < 5 行（P2）
+  9. dangling-desc-ref：description **文字內容**裡的 ark-* 必須存在（P1）
+ 10. missing-e2e-test：scaffolder/executor 有可執行 script 就必須有測試（P1）
 
 用法：
   python audit_skills.py --repo /path/to/ark-agent-skills [--config audit_config.yml] [--json out.json]
@@ -60,8 +62,20 @@ DEFAULT_EXCLUSIVE_TRIGGERS = {
     "博奕": "ark-html-dashboard",
     "老虎機": "ark-html-dashboard",
     "遊戲面板": "ark-html-dashboard",
-    "CLI 骨架": "ark-llm-cli",
+    # 🔴 owner 曾寫 ark-llm-cli —— 那個 skill 已被 ark-agent-cli 取代並移除，
+    #    於是這條規則實際上「永遠不會有 owner 命中」→ 只要有人在 description
+    #    寫「CLI 骨架」就會被判衝突，而真正的 owner 反而也會被判。
+    #    現在 unknown-trigger-owner（P2）會擋住這種死 owner。
+    "CLI 骨架": "ark-agent-cli",
 }
+
+#: description 裡容許出現、但不是 skill 的 `ark-*` 名字（repo 名、套件名）
+NON_SKILL_ARK_NAMES = {"ark-agent-skills", "ark-team-agent", "ark-bot-agent"}
+
+#: 需要端到端測試的 category —— 它們的**產出別人會直接拿去用**，錯了會擴散
+E2E_REQUIRED_CATEGORIES = {"scaffolder", "executor"}
+
+DESC_ARK_REF_RE = re.compile(r"ark-[a-z0-9]+(?:-[a-z0-9]+)*")
 
 FM_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
@@ -201,18 +215,71 @@ def audit(repo: Path, triggers: dict):
         #
         # `replaces` 刻意不驗：它的語意就是「取代了已移除的東西」，
         # 指向不存在的名字是正確的（例：ark-agent-cli replaces ark-llm-cli）。
-        for field, sev in (("depends_on", "P1"), ("consumed_by", "P2")):
-            for ref in (meta.get(field) or []):
-                base = str(ref).split(".")[0].strip()
-                if base.startswith("ark-") and base not in all_names:
-                    add(sev, "dangling-skill-ref", name,
-                        f"{field} 指向不存在的 skill：{ref}"
-                        f"（{'依賴斷鏈' if field == 'depends_on' else '下游宣告失效'}）")
+        #
+        # [2026-09-14 F-2] `consumed_by` 已廢除 —— 全庫 60 個 active skill 只有 1 個填，
+        # 而 11 對 `A depends_on B` 沒有一對在 B 補了反向宣告。
+        # 守門在守一個沒人維護的欄位，比沒有守門更誤導（會讓人以為依賴關係有被管理）。
+        # 反向關係改由 depends_on **單向真相推導**（見 reverse_deps）。
+        for ref in (meta.get("depends_on") or []):
+            base = str(ref).split(".")[0].strip()
+            if base.startswith("ark-") and base not in all_names:
+                add("P1", "dangling-skill-ref", name,
+                    f"depends_on 指向不存在的 skill：{ref}（依賴斷鏈）")
+        if meta.get("consumed_by"):
+            add("P3", "deprecated-field", name,
+                "metadata.consumed_by 已廢除（2026-09-14）：反向關係由 depends_on 推導，"
+                "請改在下游 skill 宣告 depends_on")
 
         if str(meta.get("schema_version")) not in SCHEMA_VERSIONS:
             add("P2", "missing-schema-version", name,
                 f"metadata.schema_version 應為 {sorted(SCHEMA_VERSIONS)} 之一，"
                 f"實際為 {meta.get('schema_version')!r}")
+
+    # 3.5 description **文字內容**裡的 ark-* 必須存在
+    #
+    # 🔴 [2026-09-14 F-1] 為什麼是獨立一條：dangling-skill-ref 只驗 metadata 欄位，
+    # 而 **agent 讀的是 description**。實例：ark-llm-tools 相鄰兩行同時寫著
+    #   「CLI 整合請用 ark-llm-cli。」（已移除的舊名）
+    #   「不適用於：CLI 整合/閘道開發請用 ark-agent-cli。」（正確的）
+    # 有人補了對的那行但沒刪舊的 —— 同一份文件裡有新舊兩種說法時，舊的那條會被引用。
+    #
+    # 兩種豁免（都不是「清單」，是語意上本來就不該存在的名字）：
+    #   ① 自己 metadata.replaces 列的舊名 —— 「我取代了它」本來就要提到它
+    #   ② NON_SKILL_ARK_NAMES —— repo 名與套件名不是 skill
+    for name, info in active.items():
+        fm = info["fm"] or {}
+        meta = fm.get("metadata") or {}
+        allowed = {str(r).split(".")[0].strip() for r in (meta.get("replaces") or [])}
+        for ref in sorted(set(DESC_ARK_REF_RE.findall(str(fm.get("description", ""))))):
+            if ref in all_names or ref in allowed or ref in NON_SKILL_ARK_NAMES:
+                continue
+            add("P1", "dangling-desc-ref", name,
+                f"description 內文指向不存在的 skill：{ref}"
+                "（agent 讀的是 description —— 舊名沒刪就會被引用）")
+
+    # 3.6 scaffolder / executor 必須有端到端測試
+    #
+    # 🔴 [2026-09-14 F-3] 為什麼只擋這兩類：它們的**產出別人會直接拿去用**，
+    # 一個缺陷會複製到每個用它建出來的專案。實例：ark-webapp-generator 的
+    # scaffold_project.py 產出**過不了自己的 validate_output.py**（缺 3 個檔），
+    # 而在加這條之前沒有任何東西在跑它。
+    #
+    # 前提是「有東西可以跑」：只在該 skill 有非測試的 .py 時才要求
+    # （ark-docker-deploy 是純食譜、0 個 script → 本規則不適用，不是豁免）。
+    #
+    # ⚠️ 這條的價值在於**新 skill 會自動帶上** —— 第一輪加了 `updated` 守門之後
+    # 新 skill 就自動有 updated；測試沒有守門，所以新 skill 就自動沒有測試。
+    for name, info in active.items():
+        meta = (info["fm"] or {}).get("metadata") or {}
+        if meta.get("category") not in E2E_REQUIRED_CATEGORIES:
+            continue
+        d = repo / name
+        pys = [p for p in d.rglob("*.py") if not p.name.startswith("test_")]
+        tests = [p for p in d.rglob("test_*.py")]
+        if pys and not tests:
+            add("P1", "missing-e2e-test", name,
+                f"category={meta.get('category')} 且有 {len(pys)} 支 script，"
+                "但沒有任何 test_*.py（要求：產出 → 立刻用自己的驗證器驗）")
 
     # 4. description 重複偵測
     descs = {n: normalize(str((i["fm"] or {}).get("description", "")))
@@ -228,6 +295,13 @@ def audit(repo: Path, triggers: dict):
                     f"description 相似度 {r:.2f} > 0.90，疑似重複 skill")
 
     # 5. 觸發詞衝突
+    #
+    # ⚠️ owner 本身必須存在 —— owner 若指向已移除的 skill，這條規則會變成
+    #    「所有人都是衝突方，而沒有人是正主」（"CLI 骨架" → ark-llm-cli 就是這樣）。
+    for kw, owner in sorted(triggers.items()):
+        if owner not in all_names:
+            add("P2", "unknown-trigger-owner", owner,
+                f"觸發詞「{kw}」的 owner 不存在 —— 這條規則會把正主也判成衝突")
     for kw, owner in triggers.items():
         kw_n = normalize(kw)
         for name, d in descs.items():
@@ -252,6 +326,14 @@ def audit(repo: Path, triggers: dict):
             if name not in txt:
                 add("P2", "readme-missing", name, "README 未列出此 skill")
 
+    # 反向依賴：由 depends_on 單向推導（取代已廢除的 consumed_by 欄位）
+    reverse_deps: dict[str, list[str]] = {}
+    for name, info in active.items():
+        for ref in ((info["fm"] or {}).get("metadata") or {}).get("depends_on") or []:
+            base = str(ref).split(".")[0].strip()
+            reverse_deps.setdefault(base, []).append(name)
+    reverse_deps = {k: sorted(v) for k, v in sorted(reverse_deps.items())}
+
     counts = {s: 0 for s in ("P0", "P1", "P2", "P3")}
     for f in findings:
         counts[f["severity"]] += 1
@@ -261,6 +343,7 @@ def audit(repo: Path, triggers: dict):
         "deprecated_stubs": len(stubs),
         "findings_count": counts,
         "findings": findings,
+        "reverse_deps": reverse_deps,
     }
 
 

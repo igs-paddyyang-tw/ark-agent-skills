@@ -12,7 +12,7 @@ import time
 import traceback
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 # 🔴 `--help` 不需要任何第三方依賴 —— 在 import 之前先攔截。
 #    否則沒裝套件的人連「這支怎麼用」都看不到，只會拿到 traceback。
@@ -21,9 +21,13 @@ if __name__ == "__main__" and {"-h", "--help"} & set(sys.argv[1:]):
     print(__doc__ or "")
     raise SystemExit(0)
 
-from anthropic import Anthropic
-
-from connections import create_connection
+# 🔴 anthropic / connections（→ mcp）都是**跑評測時**才需要的重量級依賴。
+#    放在 module top-level 會讓純函式（parse_evaluation_file / extract_xml_content
+#    / parse_headers / parse_env_vars）在沒裝 SDK 的機器上連 import 都做不到 ——
+#    於是它們也就無法被測試。改成在真正要連線時才載入。
+#    （同一條判準本 repo 已用在 `--help` 攔截上：不需要依賴的路徑就別要求依賴。）
+if TYPE_CHECKING:  # pragma: no cover - 只給型別檢查用
+    from anthropic import Anthropic
 
 EVALUATION_PROMPT = """You are an AI assistant with access to tools.
 
@@ -91,7 +95,7 @@ def extract_xml_content(text: str, tag: str) -> str | None:
 
 
 async def agent_loop(
-    client: Anthropic,
+    client: "Anthropic",
     model: str,
     question: str,
     tools: list[dict[str, Any]],
@@ -159,7 +163,7 @@ async def agent_loop(
 
 
 async def evaluate_single_task(
-    client: Anthropic,
+    client: "Anthropic",
     model: str,
     qa_pair: dict[str, Any],
     tools: list[dict[str, Any]],
@@ -231,6 +235,8 @@ async def run_evaluation(
 ) -> str:
     """Run evaluation with MCP server tools."""
     print("🚀 Starting Evaluation")
+
+    from anthropic import Anthropic  # 延後載入：只有真的要跑評測才需要 SDK
 
     client = Anthropic()
 
@@ -349,6 +355,8 @@ Examples:
 
     headers = parse_headers(args.headers) if args.headers else None
     env_vars = parse_env_vars(args.env) if args.env else None
+
+    from connections import create_connection  # 延後載入：需要 mcp 套件
 
     try:
         connection = create_connection(

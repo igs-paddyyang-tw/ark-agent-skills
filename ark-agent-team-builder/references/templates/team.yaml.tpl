@@ -1,5 +1,8 @@
 # team.yaml 模板
-# 佔位符：{instances_block}, {channel_block}
+# 佔位符共 2 個：instances_block、channel_block（下方以大括號包住的那兩行）
+# 🔴 本註解刻意「不」寫出帶大括號的字面 —— 否則 naive 的字串替換
+#    會連這行註解一起換掉，產出的 YAML 直接 parse 失敗
+#    （scripts/tests/test_team_scaffold.py 在驗）。
 # 註：kiro_files / access / knowledge_search_order 是真實部署都需要的區塊
 #     （2026-09-11 建 market-team-agent 時發現原範本缺這幾塊，補上）。
 
