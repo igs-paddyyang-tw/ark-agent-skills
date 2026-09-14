@@ -7,7 +7,6 @@ roles:
     description: "訊息路由、任務調度、團隊管理"
     skills:
       - ark-project-planning
-      - ark-internal-comms
       - ark-superpowers
 
   admin:
@@ -61,7 +60,6 @@ roles:
     skills:
       - ark-web-scraper
       - ark-news-daily
-      - ark-landing-page
 
   worker-report:
     description: "報告產出、圖表渲染、定期摘要"

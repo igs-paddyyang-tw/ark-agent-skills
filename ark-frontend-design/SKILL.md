@@ -1,11 +1,12 @@
 ---
 name: ark-frontend-design
 description: |
-  產出獨特、生產級品質的前端介面，具備高設計水準。
+  產出獨特、生產級品質的前端介面，具備高設計水準；並可先產出完整設計系統
+  （色彩、字型、元件、間距規範 + CSS 變數）再據此開發，確保一致性。
   使用此 Skill 當使用者要求建構網頁元件、頁面、artifacts、海報或應用程式
-  （例如網站、Landing Page、Dashboard、React 元件、HTML/CSS 排版，
-  或任何需要美化 Web UI 的場景）。
-  產出具創意、精緻的程式碼與 UI 設計，避免千篇一律的 AI 美學。
+  （例如網站、Landing Page、Dashboard、React 元件、HTML/CSS 排版），
+  或需要建立/套用設計系統、design system、UI 風格、色彩規範、元件庫、視覺規範時。
+  產出具創意、精緻的程式碼與 UI 設計，避免千篇一律的 AI 美學（紫色漸層）。
 metadata:
   schema_version: 1
   status: active
@@ -53,4 +54,56 @@ metadata:
 
 **重要**：實作複雜度要匹配美學願景。極繁主義設計需要精心的程式碼、大量動畫與效果。極簡或精緻設計需要克制、精準，以及對間距、字型和微妙細節的仔細關注。優雅來自於對願景的良好執行。
 
-**不適用於**：產生設計系統（色彩/字型/元件規範）改用 `ark-ui-design-system`；套用既有主題到 artifact 改用 `ark-html-dashboard` 或 `ark-html-report`（內建 token 系統）。
+---
+
+## 設計系統模式（多頁/整個專案時先做這步）
+
+單一 artifact 可直接憑上述美學指南開工；但**多頁面或整個專案**時，先建立設計系統再寫 UI，確保一致性——避免每頁各自收斂成不同風格。
+
+```
+AI 預設 UI = 紫色漸層 + 圓角卡片 + 千篇一律
+→ 先建設計系統（色彩/字型/間距/元件規範），後續所有 UI code 引用它
+```
+
+### 1. 需求分析
+確認：產品類型（遊戲 / SaaS / 電商 / 內部工具）、目標受眾、品牌調性、2-3 個參考網站。
+
+### 2. 產出設計系統（`docs/design-system.md`）
+色彩表（Primary/Secondary/Background/Surface/Text/Text-muted/Success/Error）、
+字型表（H1/H2/Body/Small 的字型/大小/行高）、間距系統（base 4px → 4,8,12,16,24,32,48,64）、
+圓角（sm 4 / md 8 / lg 16）、元件規範（Button/Card/Input 的尺寸/狀態）。
+
+### 3. 產出 CSS 變數
+```css
+:root {
+  --color-primary: #XXXXXX; --color-secondary: #XXXXXX;
+  --color-bg: #XXXXXX; --color-surface: #XXXXXX; --color-text: #XXXXXX;
+  --font-heading: '{font}', sans-serif; --font-body: '{font}', sans-serif;
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 16px; --space-unit: 4px;
+}
+```
+
+### 4. 全專案引用
+後續所有前端 code 必須引用設計系統變數，**禁止 hardcode 色碼**。
+
+### 產業預設
+| 產業 | 主色調 | 風格 |
+|------|--------|------|
+| 遊戲（捕魚/slot） | 深藍 + 金色 | 暗黑科技、霓虹 |
+| SaaS | 藍/紫 + 白 | 乾淨、專業 |
+| 電商 | 橘/紅 + 白 | 活潑、促銷感 |
+| 內部工具 | 灰 + 藍 | 中性、資訊密度高 |
+| 金融 | 深藍 + 綠 | 信任、穩重 |
+
+### 品質檢查
+- [ ] 色彩對比度 ≥ 4.5:1（WCAG AA）
+- [ ] 正文字型 ≥ 14px
+- [ ] 互動元素 ≥ 44px 觸控區域
+- [ ] 暗色/亮色模式都定義（如需要）
+- [ ] 無 hardcode 色碼（全用 CSS 變數）
+
+> 與 `ark-superpowers` 整合：在 ② Spec 階段先建設計系統存入 `docs/design-system.md`，④ Execute 階段所有 UI code 引用它。
+
+---
+
+**不適用於**：套用既有主題到資料型 artifact 改用 `ark-html-dashboard` 或 `ark-html-report`（內建 token 系統）。

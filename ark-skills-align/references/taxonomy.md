@@ -46,7 +46,6 @@
 | skill | outputs |
 |-------|---------|
 | ark-chart-generator | `[{format: png, audience: both}]` |
-| ark-canvas-design | `[{format: png, audience: human}, {format: pdf, audience: human}]` |
 | ark-webapp-generator 等 scaffolder 全類 | `[{format: code, audience: both}]` |
 | Office 四工具 | `[{format: office, audience: human}]` |
 | ark-md-report | `[{format: md, audience: ai}, {format: html, audience: human, via: ark-html-report}]` |

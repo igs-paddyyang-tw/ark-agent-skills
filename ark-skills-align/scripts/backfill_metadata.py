@@ -38,13 +38,12 @@ FALLBACK_CATEGORY_MAP = {
                  "ark-code-review", "ark-translator", "ark-llm-tools",
                  "ark-web-scraper", "ark-browser-tool", "ark-wiki-engine"],
     "view": ["ark-html-dashboard", "ark-data-dashboard", "ark-news-daily",
-                "ark-landing-page", "ark-frontend-design", "ark-ui-design-system",
-                "ark-theme-factory", "ark-canvas-design", "ark-html-report"],
+                "ark-frontend-design",
+                "ark-theme-factory", "ark-html-report"],
     "document": ["ark-report-template", "ark-markdown-formatter", "ark-game-design-doc",
-            "ark-internal-comms", "ark-uml-generator", "ark-docx-tool",
+            "ark-uml-generator", "ark-docx-tool",
             "ark-pptx-tool", "ark-xlsx-tool", "ark-pdf-tool", "ark-md-report"],
-    "domain": ["ark-marketing", "ark-community-ops", "ark-retention-analysis",
-            "ark-executive-assistant"],
+    "domain": ["ark-marketing", "ark-retention-analysis"],
     "ops": ["ark-env-doctor", "ark-dashboard-health", "ark-skills-align"],
 }
 SKILL_TO_CAT = {s: c for c, lst in FALLBACK_CATEGORY_MAP.items() for s in lst}
@@ -60,8 +59,6 @@ DEFAULT_OUTPUTS = {
 }
 OUTPUT_OVERRIDES = {
     "ark-chart-generator": [{"format": "png", "audience": "both"}],
-    "ark-canvas-design": [{"format": "png", "audience": "human"},
-                          {"format": "pdf", "audience": "human"}],
     "ark-docx-tool": [{"format": "office", "audience": "human"}],
     "ark-pptx-tool": [{"format": "office", "audience": "human"}],
     "ark-xlsx-tool": [{"format": "office", "audience": "human"}],

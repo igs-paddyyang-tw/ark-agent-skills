@@ -18,11 +18,11 @@ gamedev_role_skills:
   math-designer:  [ark-game-design-doc, ark-kpi-calculator, ark-chart-generator]
   client-eng:     [ark-skill-creator, ark-code-review, ark-frontend-design]
   server-eng:     [ark-skill-creator, ark-code-review, ark-api-doc-sync]
-  tech-artist:    [ark-frontend-design, ark-canvas-design, ark-ui-design-system]
+  tech-artist:    [ark-frontend-design]
   game-qa:        [ark-test-runner, ark-code-review, ark-anomaly-detector]
   liveops:        [ark-scheduler-generator, ark-kpi-calculator, ark-release-notes]
   game-analyst:   [ark-kpi-calculator, ark-retention-analysis, ark-etl-pipeline, ark-chart-generator]
-  producer:       [ark-project-planning, ark-planning-with-files, ark-internal-comms]
+  producer:       [ark-project-planning, ark-planning-with-files]
   narrative:      [ark-doc-coauthoring, ark-translator]
 ```
 

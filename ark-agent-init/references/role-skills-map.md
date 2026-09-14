@@ -26,7 +26,7 @@ role_skills:
   coder:    [ark-skill-creator, ark-code-review]
   qa:       [ark-code-review, ark-test-runner]
   devops:   [ark-docker-deploy, ark-env-doctor]
-  designer: [ark-frontend-design, ark-canvas-design, ark-ui-design-system]
+  designer: [ark-frontend-design]
   analyst:  [ark-kpi-calculator, ark-chart-generator, ark-etl-pipeline]
 ```
 

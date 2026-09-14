@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **59 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **54 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -93,26 +93,23 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ④ 呈現層 View
 
-> 輸出：HTML / 視覺（給人看）｜`category: view`｜5 個
+> 輸出：HTML / 視覺（給人看）｜`category: view`｜3 個
 
 | Skill | 定位 |
 |-------|------|
-| `ark-frontend-design` | 產出獨特、生產級品質的前端介面，具備高設計水準。 |
+| `ark-frontend-design` | 產出獨特、生產級品質的前端介面，具備高設計水準；並可先產出完整設計系統 （色彩、字型、元件、間距規範 + CSS 變數）再據此開發，確保一致性。 |
 | `ark-html-dashboard` | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
 | `ark-html-report` | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
-| `ark-landing-page` | 快速產出高轉換率 Landing Page：遊戲預註冊頁、活動頁、產品介紹頁。 |
-| `ark-ui-design-system` | 設計系統自動生成：分析專案需求後產出完整設計系統（色彩、字型、元件、間距）， 確保 UI 產出不是 AI 預設風格（紫色漸層）而是專業、一致的設計。 |
 
 ## ⑤ 文件輸出 Document
 
-> 輸出：MD / Office｜`category: document`｜10 個
+> 輸出：MD / Office｜`category: document`｜9 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-daily-news` | 產出科技日報：MD-first 雙軌流程。 |
 | `ark-docx-tool` | 當使用者想要建立、讀取、編輯或操作 Word 文件（.docx 檔案）時使用此技能。 |
 | `ark-game-design-doc` | > 根據遊戲構想或需求描述，產出完整的遊戲企劃文件（Game Design Document, GDD）。 |
-| `ark-internal-comms` | 協助撰寫各類內部溝通文件，使用公司慣用的格式。 |
 | `ark-md-report` | 產出「給 AI 看」的結構化分析報告 Markdown（Content 軌），與 ark-html-report（View 軌）成對。 |
 | `ark-pdf-tool` | 處理 PDF 檔案的所有操作。 |
 | `ark-pptx-tool` | 任何涉及 .pptx 檔案的情境皆使用此技能——無論作為輸入、輸出或兩者皆是。 |
@@ -122,12 +119,10 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑥ 領域 SOP Domain
 
-> 輸出：策略分析 MD｜`category: domain`｜4 個
+> 輸出：策略分析 MD｜`category: domain`｜2 個
 
 | Skill | 定位 |
 |-------|------|
-| `ark-community-ops` | 遊戲社群營運 SOP：社群平台管理、玩家互動、內容排程、危機處理、KOL 合作。 |
-| `ark-executive-assistant` | 部長個人助理。 |
 | `ark-marketing` | 遊戲行銷與成長策略：ASO（應用商店優化）、CRO（轉換率優化）、 文案撰寫、社群行銷、UA（用戶獲取）、LiveOps 活動規劃。 |
 | `ark-retention-analysis` | 玩家留存與 LTV 分析：Cohort 分析、留存曲線、LTV 預測、流失預警。 |
 
