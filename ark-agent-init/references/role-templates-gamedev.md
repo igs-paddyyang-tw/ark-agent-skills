@@ -17,7 +17,7 @@ gamedev_role_skills:
   game-planner:   [ark-game-design-doc, ark-grill-me, ark-doc-coauthoring]
   math-designer:  [ark-game-design-doc, ark-kpi-calculator, ark-chart-generator]
   client-eng:     [ark-skill-creator, ark-code-review, ark-frontend-design]
-  server-eng:     [ark-skill-creator, ark-code-review, ark-api-doc-sync]
+  server-eng:     [ark-skill-creator, ark-code-review, ark-code-spec-validator]
   tech-artist:    [ark-frontend-design]
   game-qa:        [ark-test-runner, ark-code-review, ark-anomaly-detector]
   liveops:        [ark-scheduler-generator, ark-kpi-calculator, ark-release-notes]

@@ -142,15 +142,6 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
-## 🗑️ 已移除（保留供遷移）
-
-> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
-
-| Skill | 遷移到 |
-|-------|--------|
-| `ark-api-doc-sync` | 已由 ark-code-spec-validator 取代 |
-| `ark-file-export` | 已由 ark-etl-pipeline 取代 |
-
 <!-- END GENERATED CATALOGUE -->
 
 ---

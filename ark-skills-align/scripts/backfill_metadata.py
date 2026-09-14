@@ -34,7 +34,7 @@ FALLBACK_CATEGORY_MAP = {
                  "ark-mcp-builder", "ark-docker-deploy"],
     "pipeline": ["ark-db-query", "ark-etl-pipeline", "ark-chart-generator",
                  "ark-kpi-calculator", "ark-anomaly-detector", "ark-cost-tracker",
-                 "ark-file-export", "ark-test-runner", "ark-security-audit",
+                 "ark-test-runner", "ark-security-audit",
                  "ark-code-review", "ark-translator", "ark-llm-tools",
                  "ark-web-scraper", "ark-browser-tool", "ark-wiki-engine"],
     "view": ["ark-html-dashboard", "ark-data-dashboard", "ark-news-daily",
