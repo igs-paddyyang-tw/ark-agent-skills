@@ -12,6 +12,10 @@
   8. empty-skill-dir：目錄存在但無有效內容或 SKILL.md < 5 行（P2）
   9. dangling-desc-ref：description **文字內容**裡的 ark-* 必須存在（P1）
  10. missing-e2e-test：scaffolder/executor 有可執行 script 就必須有測試（P1）
+ 11. unknown-trigger-owner：觸發詞矩陣的 owner 必須存在（P2）
+ 12. unpaired-pairing-claim：宣稱「成對／雙軌」必須雙向（P2）
+ 13. orphan-asset：references/assets 從 SKILL.md 不可達（P3）
+ 14. deprecated-field：metadata.consumed_by 已廢除（P3）
 
 用法：
   python audit_skills.py --repo /path/to/ark-agent-skills [--config audit_config.yml] [--json out.json]
@@ -280,6 +284,82 @@ def audit(repo: Path, triggers: dict):
             add("P1", "missing-e2e-test", name,
                 f"category={meta.get('category')} 且有 {len(pys)} 支 script，"
                 "但沒有任何 test_*.py（要求：產出 → 立刻用自己的驗證器驗）")
+
+    # 3.7 孤兒資產：references/assets 底下沒被 SKILL.md 指到的檔案
+    #
+    # 🔴 [2026-09-14 F-5] agent 只讀 SKILL.md 指到的東西 —— 沒被指到的 references
+    # 等於不存在，但仍佔體積、仍要維護、仍會在有人翻目錄時造成誤導
+    # （「這裡有 4 份參考資料」其實一份都不會被載入）。
+    #
+    # ⚠️ 判定用「檔名 **或中間層目錄名**」出現在 SKILL.md：
+    #    指到 `examples/market-team/` 這種整包範例時不必逐檔列出。
+    #    第一版只比對檔名 → 把整個範例包誤報成 29 個孤兒；
+    #    第二版把**最上層**的 `references`/`assets` 也算「提到」→ 幾乎所有 SKILL.md
+    #    都會寫到 `references/` 這個字，於是整條規則形同虛設（反證測出來的）。
+    #    現在只認第二層以下的目錄名。
+    #    判定是「**從 SKILL.md 可達**」的遞移閉包，不是「SKILL.md 有沒有直接寫到」：
+    #    SKILL.md → 某個 script／reference → 再指到這個檔，一樣算可達
+    #    （例：bot-builder 的 assets/gitignore.txt 由 build_agent.py 複製；
+    #      agent-init 的 role-templates-gamedev.md 由 role-templates.md 索引）。
+    ASSET_DIRS = ("references", "assets", "reference", "examples", "templates")
+    for name, info in active.items():
+        skill_dir = repo / name
+        assets = [f for sub in ASSET_DIRS for f in sorted((skill_dir / sub).rglob("*"))
+                  if (skill_dir / sub).is_dir() and f.is_file()]
+        if not assets:
+            continue
+
+        def _text(p: Path) -> str:
+            try:
+                return p.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                return ""
+
+        # 種子：SKILL.md + 所有 script（script 是 SKILL.md 的執行面，一律視為可達）
+        reachable_text = _text(skill_dir / "SKILL.md")
+        for py in sorted(skill_dir.rglob("*.py")):
+            reachable_text += _text(py)
+
+        pending = list(assets)
+        changed = True
+        while changed:  # 遞移閉包：新可達的檔案再帶出它引用的檔案
+            changed = False
+            for f in list(pending):
+                rel = f.relative_to(skill_dir)
+                hit = (f.name in reachable_text or str(rel) in reachable_text
+                       or any(part in reachable_text for part in rel.parts[1:-1]))
+                if hit:
+                    pending.remove(f)
+                    reachable_text += _text(f)
+                    changed = True
+
+        for f in pending:
+            add("P3", "orphan-asset", name,
+                f"{f.relative_to(skill_dir)} 從 SKILL.md 不可達（agent 讀不到 = 等於不存在）")
+
+    # 3.8 宣稱「成對／雙軌」就必須雙向 —— 單向的配對宣告是壞的設計文件
+    #
+    # 🔴 [2026-09-14 F-6] `ark-md-report` 自稱與 `ark-html-report`「成對」
+    # （Content 軌 / View 軌），而 html-report 的 description **完全沒提過對方**
+    # —— 一份宣稱是雙軌的設計，只有一軌知道另一軌存在。
+    #
+    # ⚠️ 只驗「配對」語意，**不驗一般單向宣告** ——
+    #    「這個給 B 做」本來就不需要 B 回頭認領（全庫 27 條單向多數是這種）。
+    # ⚠️ 判定範圍是**同一個句子** —— 第一版對整段 description 掃 ark-*，
+    #    於是「與 A 成對」那句 + 別句的「不適用於請用 B」被當成「宣稱與 B 成對」。
+    PAIR_WORDS = ("成對", "雙軌", "配對")
+    for name, info in active.items():
+        desc = str((info["fm"] or {}).get("description", ""))
+        for sentence in re.split(r"[。；\n]", desc):
+            if not any(w in sentence for w in PAIR_WORDS):
+                continue
+            for ref in sorted(set(DESC_ARK_REF_RE.findall(sentence))):
+                if ref == name or ref not in active:
+                    continue
+                back = str((active[ref]["fm"] or {}).get("description", ""))
+                if name not in back:
+                    add("P2", "unpaired-pairing-claim", name,
+                        f"宣稱與 {ref} 成對，但 {ref} 的 description 沒有回指 {name}")
 
     # 4. description 重複偵測
     descs = {n: normalize(str((i["fm"] or {}).get("description", "")))

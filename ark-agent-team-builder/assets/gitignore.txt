@@ -15,3 +15,11 @@ secrets/
 !secrets/README.md
 .DS_Store
 Thumbs.db
+
+# ── skill 與執行產物：靠 sync_skills.py / 服務重啟重建，不進版控 ──
+# （SKILL.md 步驟 4 要求的三條；2026-09-14 補 —— 本檔原本沒有，
+#   而 SKILL.md 正文寫著「gitignore 排除」，兩邊對不上）
+.kiro/skills/
+agents/*/.kiro/skills/
+instances/output/tasks/
+.index/

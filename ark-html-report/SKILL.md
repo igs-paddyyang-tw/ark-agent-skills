@@ -1,6 +1,6 @@
 ---
 name: ark-html-report
-description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。只要使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時，就使用此 skill。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout 等），元件與風格可任意組合。
+description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。只要使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時，就使用此 skill。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout 等），元件與風格可任意組合。與 ark-md-report 成對：本 skill 是 View 軌（給人看的網頁），給 AI／知識庫消費的結構化 Markdown 走 ark-md-report。不適用於：互動式數據儀錶板（篩選、排序、Chart.js）請用 ark-html-dashboard。
 metadata:
   schema_version: 1
   status: active

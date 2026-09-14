@@ -206,6 +206,7 @@ python3 scripts/sync_skills.py --check    # 驗一致（doctor/CI 用）
 
 > 💡 skill 是複本 → **gitignore 排除** `.kiro/skills/`、`agents/*/.kiro/skills/`
 > （靠 `sync_skills.py` 重建，不進版控）。這也是為什麼範例包不含 skill 複本。
+> 現成的 `.gitignore` 範本：`assets/gitignore.txt`（已含上述三條 + `state/`、`.env`、`secrets/`）。
 
 ### 步驟 5：啟動驗證（**兩階段就緒，別在第一階段就測私訊**）
 
@@ -259,6 +260,7 @@ journalctl --user -u <svc> --since "-5min" | grep -E "All tools are now trusted|
 | `references/mcp-tools-spec.md` | 團隊 MCP 工具（reply/send_to_instance…） |
 | `references/telegram-ux-patterns.md` | TG UX 慣例 |
 | `references/communication-presets.md` | 通訊規則預設 |
+| `references/troubleshooting.md` | 環境問題排查（venv／依賴／啟動失敗）|
 | `scripts/scaffold_dirs.py` | 依 team.yaml 產目錄骨架 |
 | `scripts/validate_team.py` | team.yaml 驗證 |
 | `examples/market-team/` | 🎯 **完整實例**（市場情報團隊）—— 「長好的樣子」，對照 6 instance + 雙知識櫃 + dir="." manager + 完整 team.yaml 怎麼組（範本教填空、本例教全貌）|

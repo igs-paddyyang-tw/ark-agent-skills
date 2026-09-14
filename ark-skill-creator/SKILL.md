@@ -62,8 +62,8 @@ skill-name/
 │   └── Markdown 指令
 └── 附帶資源（選用）
     ├── scripts/    — 可執行程式碼
-    ├── references/ — 按需載入的文件
-    └── assets/     — 輸出用的檔案（範本、圖示、字型）
+    ├── references/ — 按需載入的文件（`schemas.md` = skill.json / eval 的 JSON Schema）
+    └── assets/     — 輸出用的檔案（範本、圖示、字型；`eval_review.html` = eval 結果檢視頁）
 ```
 
 #### 漸進式揭露

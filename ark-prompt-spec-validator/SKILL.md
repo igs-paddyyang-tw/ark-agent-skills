@@ -29,7 +29,8 @@ metadata:
 # ark-prompt-spec-validator
 
 驗證「給 AI 讀的 Markdown」：規格對不對（L1，靜態）、放給 Agent 跑對不對（L2，行為）。
-與 ark-code-spec-validator 是**同一份報告契約、兩個 validator**：那邊驗 code↔spec，這邊驗 prompt↔spec。
+與 ark-code-spec-validator 是**同一份報告契約、兩個 validator**：那邊驗 code↔spec，這邊驗 prompt↔spec
+（欄位對照見 `references/report-mapping.md`）。
 
 ## 核心原則
 
@@ -69,7 +70,8 @@ python scripts/prompt_lint.py <path-or-dir> [--type skill|prompt|content] \
     [--config .ark-prompt-validator.yaml] [--json l1.json]
 ```
 
-規則清單與嚴重度見 `references/lint-rules.md`（PL-xxx 穩定 ID）。
+規則清單與嚴重度見 `references/lint-rules.md`（PL-xxx 穩定 ID）；
+`--config` 的範本在 `assets/.ark-prompt-validator.example.yaml`（複製到專案根改名去掉 `.example`）。
 exit code：0 = 無 P0/P1；1 = 有 P1；2 = 有 P0。
 
 ### 2. L2 行為 eval（L1 無 P0 才跑）

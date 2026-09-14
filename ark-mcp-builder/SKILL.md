@@ -122,3 +122,27 @@ MCP Server 的品質取決於它能多好地幫助 LLM 完成真實世界的任�
 - 本地 Server 使用 stdio
 - Tool 命名使用一致前綴 + 動作導向
 - 錯誤訊息必須可操作，引導 agent 找到解決方案
+
+## 附帶資源
+
+> 🔴 這一節是 2026-09-14 補的 —— 在那之前 SKILL.md **完全沒提過** `reference/` 與
+> `scripts/`，而 agent 只讀 SKILL.md 指到的東西：那 6 個檔等於不存在。
+
+| 路徑 | 內容 |
+|------|------|
+| `reference/python_mcp_server.md` | Python（FastMCP）實作指南 |
+| `reference/node_mcp_server.md` | Node / TypeScript（MCP SDK）實作指南 |
+| `reference/mcp_best_practices.md` | Tool 命名、錯誤訊息、分頁、權限的通則 |
+| `reference/evaluation.md` | 評測題庫的寫法與評分準則 |
+| `scripts/evaluation.py` | 評測 harness：載題庫 → 跑 agent loop → 抽 `<response>` 比對 |
+| `scripts/connections.py` | MCP 連線封裝（stdio / SSE / streamable HTTP） |
+
+```bash
+python scripts/evaluation.py --help          # 免依賴（--help 在 import 之前攔截）
+python scripts/evaluation.py <eval.xml> --transport stdio --command ... # 需 anthropic + mcp
+```
+
+> ⚠️ `scripts/` 是**評測 harness，不是骨架產生器** —— 本 skill 的 `category: scaffolder`
+> 指的是它教你搭 MCP Server，產骨架的動作由你依 `reference/` 手做。
+> 離線可驗的部分（題庫解析、標籤抽取、header/env 拆解）由
+> `scripts/tests/test_evaluation_parsers.py` 守著。
