@@ -8,8 +8,10 @@ description: |
   （行為 eval：情境輸入 → 預期行為斷言，N 次取通過率），合併產出 Prompt Drift Report。
   使用此 skill 當使用者提及「驗證提詞」「提詞 lint」「prompt drift」「md 符不符合規格」
   「SKILL.md 檢查」「steering 文件驗證」「AI 內文驗證」「提詞 eval」「這份提詞 agent 跑得動嗎」
-  「提詞回歸測試」。不適用於：驗證 Python code 與 spec 一致性請用 ark-code-spec-validator；
-  單一 skill 的建立與 description 優化請用 ark-skill-creator；整庫稽核請用 ark-skills-align。
+  「提詞回歸測試」「LLM 評測」「prompt 評分」「模型品質」「模型切換前後效果對比」
+  「多次取樣通過率」。不適用於：驗證 Python code 與 spec 一致性請用 ark-code-spec-validator；
+  單一 skill 的建立與 description 優化請用 ark-skill-creator；整庫稽核請用 ark-skills-align；
+  pytest 單元測試請用 ark-test-runner。
 metadata:
   author: paddyyang
   schema_version: 1
@@ -42,6 +44,10 @@ metadata:
 - 「steering 文件檢查」「hoyeah 的 leader 提詞跑得對嗎」
 - 「提詞 eval」「提詞回歸」「改了 system prompt 會不會壞」
 - 「prompt drift report」
+- 「LLM 評測」「prompt 評分」「模型切換前後效果對比」「多次取樣通過率」
+  （2026-09-14 併入 `ark-eval-runner` —— 它只有一份規格書，
+  而它描述的「eval 定義檔 + N 次取樣 + 斷言 + 通過率」正是 L2 `prompt_eval.py` 的實作。
+  `cmd` runner 可跑任意 CLI，因此不限於提詞檔，一般 LLM 輸出回歸也走這裡。）
 
 ## 三種文件型別
 
