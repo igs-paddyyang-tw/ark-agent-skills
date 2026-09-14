@@ -5,6 +5,7 @@ description: |
   合併或拆分 PDF、旋轉頁面、加浮水印、建立新 PDF、填寫 PDF 表單、
   加密/解密 PDF、提取圖片、以及對掃描 PDF 進行 OCR 使其可搜尋。
   當使用者提及 .pdf 檔案或要求產出 PDF 時，使用此 Skill。
+  官方 Claude 環境已內建同名 skill 時優先用內建版；本鏡像供自架/Kiro 環境使用。
 metadata:
   schema_version: 1
   status: active
@@ -14,6 +15,9 @@ metadata:
     - format: md
       audience: both
   author: paddyyang
+  upstream: anthropic/skills-pdf
+  upstream_synced: 2026-09-14
+  upstream_sha: unknown
 ---
 
 # PDF 處理指南
