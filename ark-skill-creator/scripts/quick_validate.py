@@ -4,6 +4,14 @@ Quick validation script for skills - minimal version
 """
 
 import sys
+
+# 🔴 `--help` 不需要任何第三方依賴 —— 在 import yaml 之前先攔截。
+#    否則沒裝 pyyaml 的人連「這支怎麼用」都看不到，只會拿到 traceback。
+#    （scripts/tests/test_cli_contract.py 規則 2 在驗）
+if __name__ == "__main__" and {"-h", "--help"} & set(sys.argv[1:]):
+    print(__doc__ or "")
+    raise SystemExit(0)
+
 import os
 import re
 import yaml
@@ -91,14 +99,24 @@ def validate_skill(skill_path):
         if len(compatibility) > 500:
             return False, f"Compatibility is too long ({len(compatibility)} characters). Maximum is 500 characters."
 
-    return True, "Skill is valid!"
+    # ── ark schema v1 補充檢查（warn-only：quick_validate 是本地快篩，
+    #    權威守門在 ark-skills-align 的 audit_skills.py；這裡先提醒省一輪來回）
+    warnings = []
+    meta = frontmatter.get("metadata") or {}
+    if not isinstance(meta, dict) or "schema_version" not in meta:
+        warnings.append("metadata.schema_version 缺失（ark schema v1）")
+    else:
+        for field in ("status", "category"):
+            if field not in meta:
+                warnings.append(f"metadata.{field} 缺失（audit_skills 會列 P1）")
+        if "outputs" not in meta:
+            warnings.append("metadata.outputs 缺失（format/audience）")
+    msg = "Skill is valid!"
+    if warnings:
+        msg += "\n⚠️  ark schema v1 提醒：\n" + "\n".join(f"   - {w}" for w in warnings)
+    return True, msg
 
 if __name__ == "__main__":
-    # 🔴 在讀位置參數之前攔截 —— 否則 `--help` 會被當成路徑，
-    #    輕則 exit≠0，重則在 cwd 產出整包骨架（scripts/tests/test_cli_contract.py 在驗）。
-    if {"-h", "--help"} & set(sys.argv[1:]):
-        print(__doc__ or "")
-        raise SystemExit(0)
     if len(sys.argv) != 2:
         print("Usage: python quick_validate.py <skill_directory>")
         sys.exit(1)
