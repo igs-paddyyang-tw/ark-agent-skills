@@ -25,7 +25,7 @@ metadata:
   render: none
   depends_on: [ark-grill-me]
   author: paddyyang
-  version: "1.1"
+  version: "1.2"
   updated: 2026-09-15
 ---
 
@@ -178,13 +178,15 @@ examples:                         # 2 則，各 ≤5 行；一則典型、一則
 python scripts/profile_lint.py --list-roles
 ```
 
-內建 17 個：
+內建 19 個：
 
 - 工程：`leader`、`fullstack-coder`、`ai-dev`、`qa`、`devops`、`data-analyst`
 - 非工程：`game-designer`、`community-ops`、`marketing`、`executive-assistant`
 - 管理：`admin`
 - 遊戲測試（v1.1 新增）：`test-lead`、`math-verifier`、`automation-engineer`、
   `perf-compat-tester`、`security-fairness-auditor`、`bug-triage-reporter`
+- Manager（v1.2 新增，供「根目錄即 manager」場景 / agent-init --profile 渲染）：
+  `bot-manager`（通用 bot 總機）、`qa-manager`（QA 團隊總機／工程師）
 
 **擴充角色庫的流程**（觸發詞「新增角色類型」「擴充角色庫」）：
 
@@ -277,7 +279,7 @@ P0/P1 清零才進預覽——與 ark-skills-align 的 audit 門檻同型。
 | `references/role-interview.md` | 三檔位題庫（Q1–Q7 + deep 拷問切入點），每題附選項生成規則 |
 | `references/role-profile.schema.json` | 契約 JSON Schema，lint 唯一依據 |
 | `references/agent-init-integration.md` | 接進 ark-agent-init 需要的三個改動 |
-| `assets/roles/*.yaml` | 角色庫（17 個），可直接 lint 通過 |
+| `assets/roles/*.yaml` | 角色庫（19 個），可直接 lint 通過 |
 | `scripts/profile_lint.py` | 守門 + 角色列表導出 |
 | `scripts/render_profile.py` | yaml → IDENTITY.md + 三個 fragment |
 | `evals/evals.json` | ark-skill-creator 測試提示詞 |
