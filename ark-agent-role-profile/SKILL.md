@@ -279,6 +279,7 @@ P0/P1 清零才進預覽——與 ark-skills-align 的 audit 門檻同型。
 | `references/role-interview.md` | 三檔位題庫（Q1–Q7 + deep 拷問切入點），每題附選項生成規則 |
 | `references/role-profile.schema.json` | 契約 JSON Schema，lint 唯一依據 |
 | `references/agent-init-integration.md` | 接進 ark-agent-init 需要的三個改動 |
+| `references/example-instance-profiles.md` | 實例 profile 範例（aiqa）+ 「Bot 全能／Team 分工」原則 + agent.json 範例 |
 | `assets/roles/*.yaml` | 角色庫（19 個），可直接 lint 通過 |
 | `scripts/profile_lint.py` | 守門 + 角色列表導出 |
 | `scripts/render_profile.py` | yaml → IDENTITY.md + 三個 fragment |
