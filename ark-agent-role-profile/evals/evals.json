@@ -1,0 +1,42 @@
+{
+  "skill_name": "ark-agent-role-profile",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "幫 community-agent 定義角色定位，它是社群營運，向 leader-agent 回報。team.yaml 在專案根目錄。",
+      "expected_output": "先給三檔位編號選項；選 standard 後逐題訪談（一次一題、2–4 選項附⭐推薦），relationships 從 team.yaml 讀不問；產出 role-profile.yaml 並通過 profile_lint；預覽只印 IDENTITY 卡 + stance + hard_stops 後才渲染。",
+      "files": [],
+      "expectations": [
+        "第一則回覆是檔位選擇的編號選項，不是開放式問句",
+        "stance 至少 3 條且每條是含動詞的完整句子",
+        "hard_stops 與 scope.does_not 分開落欄位",
+        "執行了 scripts/profile_lint.py 且 P0/P1 為 0 才渲染",
+        "渲染產出 IDENTITY.md 與 SOUL.fragment.md，且 SOUL.fragment.md 不含 MCP Tools 表"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "我們的 SOUL.md 裡 Personality 只寫「專注、精準、交付導向」太空泛了，幫我把 coder-agent 的人格改實。",
+      "expected_output": "從既有 .kiro/steering/SOUL.md 反推 stance 當預選項，用 fullstack-coder 角色庫補候選；把形容詞改成立場句與頂回範例；lint 對原形容詞報 P1。",
+      "files": [],
+      "expectations": [
+        "讀取既有 SOUL.md 而非從零開始問",
+        "產出的 stance 沒有頓號串接形容詞",
+        "examples 含至少一則 kind: pushback",
+        "建議用 ark-agent-init 併回 SOUL.md，而非自己覆寫 .kiro/"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "幫角色庫新增一個「美術總監」角色類型，之後 init 可以直接選。",
+      "expected_output": "走 standard 訪談引出 stance/hard_stops/skills；清空 identity.name 與 relationships；存到 assets/roles/art-director.yaml；跑 --all-roles lint；用 --skills-root 檢查 skills 存在；提醒同步 role-skills-map.md。",
+      "files": [],
+      "expectations": [
+        "新檔案路徑為 assets/roles/art-director.yaml",
+        "relationships 為空 mapping",
+        "examples 至少 2 則且含頂回情境",
+        "不手寫角色一覽表，改用 profile_lint.py --list-roles 導出"
+      ]
+    }
+  ]
+}
