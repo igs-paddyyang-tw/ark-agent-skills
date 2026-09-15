@@ -92,3 +92,45 @@ def test_signature_requires_domain_root():
     p = sig.parameters["domain_root"]
     assert p.default is inspect.Parameter.empty, (
         "domain_root 有了預設值 —— 呼叫端漏傳會靜默產出錯的 sources")
+
+
+# ── source-id bucket 提醒（ADR-009）：提醒但不擋 ────────────────
+
+def _rel(tmp_path, rel: str, capsys):
+    import wiki_ingest
+    root = tmp_path / "pkg"
+    src = root / rel
+    src.parent.mkdir(parents=True, exist_ok=True)
+    src.write_text("# x\n", encoding="utf-8")
+    out = wiki_ingest.relative_source(src, root)
+    return out, capsys.readouterr().err
+
+
+def test_flat_raw_file_gets_a_reminder_but_still_works(tmp_path, capsys):
+    """🔴 契約是 ADR-009 的 `raw/<source-id>/…`，素材直接躺在 raw/ 底下要提醒。
+
+    **不擋**：既有散檔多數已遷移完，這條的價值在攔住新進來的；
+    做成錯誤會讓正在遷移的人卡住。
+    """
+    out, err = _rel(tmp_path, "raw/a.md", capsys)
+    assert out == "raw/a.md", "提醒不該改變回傳值"
+    assert "source-id bucket" in err and "ADR-009" in err
+
+
+def test_bucketed_source_is_silent(tmp_path, capsys):
+    out, err = _rel(tmp_path, "raw/local/a.md", capsys)
+    assert out == "raw/local/a.md"
+    assert "source-id bucket" not in err, "合法形狀不該有雜訊"
+
+
+def test_deeper_bucket_path_is_silent(tmp_path, capsys):
+    out, err = _rel(tmp_path, "raw/statistics/2026/a.md", capsys)
+    assert out == "raw/statistics/2026/a.md"
+    assert "source-id bucket" not in err
+
+
+def test_non_raw_path_is_not_judged_by_this_rule(tmp_path, capsys):
+    """只管 raw/ 底下的版面 —— 別的位置不是這條規則的範圍"""
+    out, err = _rel(tmp_path, "docs/a.md", capsys)
+    assert out == "docs/a.md"
+    assert "source-id bucket" not in err

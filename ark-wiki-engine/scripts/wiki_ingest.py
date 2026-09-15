@@ -132,13 +132,25 @@ def relative_source(source_path: Path, domain_root: Path) -> str:
 
     ⚠️ 素材不在 domain root 底下時**不靜默** —— 回檔名並在 stderr 警告，
     因為那通常代表呼叫端傳錯了 `--wiki_dir`。
+
+    ⚠️ 素材直接躺在 `raw/` 底下（沒有 source-id 分層）時**提醒但不擋** ——
+    契約是 ADR-009 的 `raw/{source-id}/…`（agent 自產用保留 id `local/`）。
+    不擋的理由：既有散檔多數已遷移完，這條的價值在「攔住新進來的」，
+    而把它做成錯誤會讓正在遷移的人卡住。
     """
     try:
-        return source_path.resolve().relative_to(domain_root.resolve()).as_posix()
+        rel = source_path.resolve().relative_to(domain_root.resolve()).as_posix()
     except ValueError:
         print(f"[ingest] ⚠️ 素材不在 domain root 底下，sources 退回檔名："
               f"source={source_path} domain_root={domain_root}", file=sys.stderr)
         return source_path.name
+
+    parts = rel.split("/")
+    if parts[0] == "raw" and len(parts) == 2:
+        print(f"[ingest] ⚠️ 素材沒有放在 source-id bucket 底下：{rel}\n"
+              f"          契約是 raw/<source-id>/…（agent 自產用保留 id `local/`，ADR-009）。"
+              f" 不擋，但新素材請放進 bucket。", file=sys.stderr)
+    return rel
 
 
 def build_wiki_page(source_path: Path, page_name: str, category: str, content: str,
