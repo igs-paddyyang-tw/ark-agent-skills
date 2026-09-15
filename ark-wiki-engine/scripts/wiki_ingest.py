@@ -111,12 +111,43 @@ def detect_type(content: str) -> str:
     return "source"
 
 
-def build_wiki_page(source_path: Path, page_name: str, category: str, content: str) -> str:
+def relative_source(source_path: Path, domain_root: Path) -> str:
+    """`sources:` 要寫的路徑 —— **相對 domain root**，不是呼叫端給的原字串。
+
+    🔴 在此之前是 `str(source_path)`：呼叫端給什麼就寫什麼。
+    於是同一份素材，用不同的呼叫方式 ingest 會得到不同的 `sources:`：
+
+    | 呼叫端給 | 舊寫出 | 正確 |
+    |---|---|---|
+    | `knowledge/pkg/raw/local/a.md` | `knowledge/pkg/raw/local/a.md` | `raw/local/a.md` |
+    | `/abs/path/knowledge/pkg/raw/local/a.md` | `/abs/path/…`（綁死某台機器） | 同上 |
+
+    後果不只是難看：下游用 `sources:` 的上游路徑**取交集**判斷「互補型重複」
+    （兩頁講同一主題但內容互補時相似度反而極低，只有共同上游抓得到）——
+    形狀不一致的值永遠交集不到。而絕對路徑還會綁死某台機器。
+
+    > 💡 這與 `ark_team_agent.team_mcp` 在 **1.7.26** 修過的是同一個病
+    > （當時修了 203 頁的 `raw//home/…` 黏合）。修法也一樣：
+    > **接受多種輸入形狀的入口，輸出必須正規化成一種。**
+
+    ⚠️ 素材不在 domain root 底下時**不靜默** —— 回檔名並在 stderr 警告，
+    因為那通常代表呼叫端傳錯了 `--wiki_dir`。
+    """
+    try:
+        return source_path.resolve().relative_to(domain_root.resolve()).as_posix()
+    except ValueError:
+        print(f"[ingest] ⚠️ 素材不在 domain root 底下，sources 退回檔名："
+              f"source={source_path} domain_root={domain_root}", file=sys.stderr)
+        return source_path.name
+
+
+def build_wiki_page(source_path: Path, page_name: str, category: str, content: str,
+                    domain_root: Path) -> str:
     """產出含 frontmatter 的 wiki 頁面骨架。"""
     today = date.today().isoformat()
     title = extract_title_from_content(content, page_name)
     page_type = detect_type(content)
-    rel_source = str(source_path)
+    rel_source = relative_source(source_path, domain_root)
 
     # 從內容提取 tags（取前 5 個出現的 category keywords）
     tags = []
@@ -248,7 +279,9 @@ def ingest_file(source_path: Path, wiki_dir: Path, category: str, page_name: str
                 "page": str(out_path)}
 
     # ── 步驟 2：骨架
-    wiki_content = build_wiki_page(source_path, page_name, category, content)
+    # domain root = wiki_dir 的上層（`index.md` 與 `raw/` 都在那一層）
+    wiki_content = build_wiki_page(source_path, page_name, category, content,
+                                   wiki_dir.parent)
 
     # ── 步驟 3：taxonomy（在落盤之前 —— 擋下來的頁面不能留在 wiki/）
     if schema is not None:
