@@ -40,7 +40,9 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 import sys
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -65,8 +67,13 @@ TODAY = date.today().isoformat()
 
 # ── 主函式 ────────────────────────────────────────────────────
 
-def build_kiro(team_path: Path, output_base: Path | None = None) -> list[str]:
-    """產出所有 agent 的 .kiro/ 配置。回傳已建立的路徑清單。"""
+def build_kiro(team_path: Path, output_base: Path | None = None,
+               profile: str | None = None) -> list[str]:
+    """產出所有 agent 的 .kiro/ 配置。回傳已建立的路徑清單。
+
+    profile 給定時：根目錄（working_directory="."）的 manager SOUL 改由
+    ark-agent-role-profile 渲染指定角色（非預設 admin/worker 模板）。
+    """
     with open(team_path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
 
@@ -94,6 +101,8 @@ def build_kiro(team_path: Path, output_base: Path | None = None) -> list[str]:
         #   ② wd="." 的 manager 被當成 admin → 拿到 admin 人格與無白名單的 MCP
         kiro_dir = base / ".kiro" if wd == "." else base / wd / ".kiro"
         is_admin = role == "admin"
+        # profile 只作用於根目錄（wd="."）的 manager —— 其餘 instance 走原模板
+        inst_profile = profile if wd == "." else None
 
         agent_created = _build_agent_kiro(
             kiro_dir=kiro_dir,
@@ -106,6 +115,7 @@ def build_kiro(team_path: Path, output_base: Path | None = None) -> list[str]:
             non_admin_names=non_admin_names,
             port=port,
             base=base,
+            profile=inst_profile,
         )
         created.extend(agent_created)
 
@@ -123,6 +133,7 @@ def _build_agent_kiro(
     non_admin_names: list[str],
     port: int,
     base: Path,
+    profile: str | None = None,
 ) -> list[str]:
     """產出單一 agent 的 .kiro/ 目錄。"""
     created: list[str] = []
@@ -134,7 +145,7 @@ def _build_agent_kiro(
     # 1. steering/
     steering_created = _build_steering(
         kiro_dir / "steering", name, role, description,
-        team_name, all_instances, is_admin,
+        team_name, all_instances, is_admin, profile,
     )
     created.extend(steering_created)
 
@@ -188,6 +199,7 @@ def _build_steering(
     team_name: str,
     all_instances: dict,
     is_admin: bool,
+    profile: str | None = None,
 ) -> list[str]:
     """產出 steering/ 下的所有檔案。"""
     created: list[str] = []
@@ -196,7 +208,7 @@ def _build_steering(
     # SOUL.md
     soul = steering_dir / "SOUL.md"
     if not soul.exists():
-        _write_soul(soul, name, role, description, team_name, len(all_instances))
+        _write_soul(soul, name, role, description, team_name, len(all_instances), profile)
         created.append(str(soul.relative_to(base)))
 
     # AGENTS.md（從 assets 複製）
@@ -242,6 +254,37 @@ def _build_steering(
     return created
 
 
+def _render_profile_soul(profile: str) -> str | None:
+    """呼叫 ark-agent-role-profile 的 render_profile 渲染指定角色的 SOUL。
+
+    profile 可以是角色 id（如 qa-manager）或 role-profile.yaml 路徑。
+    成功回傳渲染後的 SOUL 內容（含 profile-sha256 戳記），
+    失敗（角色不存在、render 腳本缺、非零退出）回傳 None。
+    """
+    rp_root = SKILL_ROOT.parent / "ark-agent-role-profile"
+    render = rp_root / "scripts" / "render_profile.py"
+    if not render.exists():
+        return None
+    # profile 是路徑就直接用，否則當角色 id 到角色庫找
+    prof_path = Path(profile)
+    if not prof_path.exists():
+        prof_path = rp_root / "assets" / "roles" / f"{profile}.yaml"
+    if not prof_path.exists():
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            subprocess.run(
+                [sys.executable, str(render), str(prof_path), "--out", tmp],
+                check=True, capture_output=True, text=True,
+            )
+        except (subprocess.CalledProcessError, OSError):
+            return None
+        frag = Path(tmp) / "SOUL.fragment.md"
+        if not frag.exists():
+            return None
+        return frag.read_text(encoding="utf-8")
+
+
 def _write_soul(
     path: Path,
     name: str,
@@ -249,8 +292,22 @@ def _write_soul(
     description: str,
     team_name: str,
     agent_count: int,
+    profile: str | None = None,
 ) -> None:
-    """產出 SOUL.md，依角色選擇模板。"""
+    """產出 SOUL.md，依角色選擇模板。
+
+    profile 給定時（僅根目錄 manager）：改由 ark-agent-role-profile 的
+    render_profile 渲染指定角色的 SOUL（含 profile-sha256 戳記），
+    不使用內建 admin/leader/worker 模板。未給時行為完全不變（向後相容）。
+    """
+    if profile:
+        rendered = _render_profile_soul(profile)
+        if rendered is not None:
+            path.write_text(rendered, encoding="utf-8")
+            return
+        # 渲染失敗（角色不存在等）→ 印警告後退回模板路徑，不中斷
+        print(f"  ⚠️  --profile {profile} 渲染失敗，退回內建模板", file=sys.stderr)
+
     if role == "admin":
         tpl_file = STEERING_ASSETS / "SOUL-admin.md"
     elif role == "leader":
@@ -636,14 +693,26 @@ def main() -> None:
         print(clone_skills(target))
         return
 
-    team_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("team.yaml")
-    output_base = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+    # --profile <role>：抽出後不進位置參數（向後相容：不給則 None）
+    argv = sys.argv[1:]
+    profile: str | None = None
+    if "--profile" in argv:
+        i = argv.index("--profile")
+        if i + 1 < len(argv):
+            profile = argv[i + 1]
+            del argv[i:i + 2]
+        else:
+            print("❌ --profile 需要一個角色 id 或 yaml 路徑")
+            sys.exit(1)
+
+    team_path = Path(argv[0]) if len(argv) > 0 else Path("team.yaml")
+    output_base = Path(argv[1]) if len(argv) > 1 else None
 
     if not team_path.exists():
         print(f"❌ {team_path} not found")
         sys.exit(1)
 
-    created = build_kiro(team_path, output_base)
+    created = build_kiro(team_path, output_base, profile)
     base = output_base or team_path.parent
 
     print(f"\n✅ .kiro/ 配置已產出（{base}）\n")

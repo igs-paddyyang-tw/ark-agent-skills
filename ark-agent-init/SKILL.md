@@ -21,8 +21,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.0"
-  updated: 2026-09-07
+  version: "2.1"
+  updated: 2026-09-15
 ---
 
 # ark-agent-init
@@ -64,6 +64,32 @@ metadata:
 | 指定 admin | 產出 admin 專用 SOUL.md（服務管理、不接業務） |
 | 指定已知角色 | 從 `references/role-templates.md` 查對應模板 |
 | 指定未知角色 | 上網搜尋 → 整理 → 產出 |
+
+### `--profile <role>`：根目錄由指定 manager 角色渲染（v2.1）
+
+```bash
+python build_kiro.py team.yaml <out> --profile qa-manager
+```
+
+- **作用**：根目錄（`working_directory: "."`）的 manager SOUL 改由 `ark-agent-role-profile`
+  渲染指定角色（含 `profile-sha256` 戳記），**不再預設 admin 人格**。
+- **只影響根目錄 instance**；其餘 worker / leader 走原模板。
+- **向後相容**：不給 `--profile` 時行為完全不變（根目錄走原本依 role 選模板的路徑）。
+- **失敗處理**：角色不存在／render 腳本缺 → 印警告後退回內建模板，不中斷。
+- **角色來源**：`ark-agent-role-profile/assets/roles/<role>.yaml`（如 `qa-manager`、`bot-manager`），
+  也接受直接給 yaml 路徑。
+
+> 🔴 **「根目錄即 manager」是一等公民**：`dir: "."` 的 instance 不一定是 admin。
+> 用 `--profile` 讓它由對應的 manager 角色渲染（QA 團隊 → qa-manager、通用 bot → bot-manager）。
+
+### daemon 自動生成 vs 手寫的邊界（建置時務必分清）
+
+| 檔案 | 誰產 | 手寫會怎樣 |
+|---|---|---|
+| `AGENTS.md`、`.kiro/settings/mcp.json`、`steering/TEAM.md` | **daemon 依 team.yaml 生成** | **會被覆寫** —— 別手改，改 team.yaml |
+| `SOUL.md`、`BRAIN.md`、`MEMORY.md`、`USER.md`、`CODE.md` | **手建**（或 `--profile` 渲染 SOUL） | daemon 不生，要自己建 |
+
+> 踩過的坑：手寫根層 AGENTS/mcp.json/TEAM.md 被 daemon 覆寫，以為設定沒生效。
 
 ---
 
@@ -558,8 +584,10 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 
 **根目錄 .kiro/ 建立規則：**
 
-根目錄的 `.kiro/` **就是 admin-agent 的 workspace**（team.yaml 中 `working_directory: .` 的那個 agent）：
-- admin-agent 的 Kiro CLI 啟動時 cwd = 根目錄，自動載入根目錄 `.kiro/`
+根目錄的 `.kiro/` **是 `working_directory: "."` 那個 instance 的 workspace**（manager 或 admin，依 team.yaml）：
+- 該 instance 的 Kiro CLI 啟動時 cwd = 根目錄，自動載入根目錄 `.kiro/`
+- 🔴 **不預設是 admin** —— `dir: "."` 可以是 qa-manager / bot-manager 等 manager 角色，
+  用 `--profile <role>` 讓根目錄 SOUL 由該角色渲染（見上方 `--profile` 段）。
 - `steering/AGENTS.md` 是所有 agent 共用規範的**來源**（其他 agent 複製此檔）
   - 🔴 **SSOT：`AGENTS.md` 要改就改根目錄那份，再重新分配到各 agent。**
     子 agent 的是**複本**，直接改子 agent 的會被下次分配覆蓋、且造成多份漂移。
