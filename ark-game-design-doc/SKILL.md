@@ -6,6 +6,7 @@ description: >
   營運與商業模式等章節。支援完整 GDD 和精簡版 One Pager 兩種輸出模式。
   當使用者提到遊戲企劃、遊戲設計文件、GDD、game design document、遊戲規格書、
   遊戲提案、遊戲概念文件、寫遊戲企劃、設計遊戲時，請務必使用此技能。
+  不適用於：工程規格書與 ADR 請用 ark-superpowers（本 skill 出的是遊戲企劃，不是技術規格）。
 metadata:
   schema_version: 1
   status: active

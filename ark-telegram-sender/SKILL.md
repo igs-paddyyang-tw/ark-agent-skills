@@ -7,6 +7,7 @@ description: |
   失敗一律以回傳值表示、錯誤描述取自 Bot API 的 description（不是「HTTP 400」而已）。
   使用此 skill 當需要「發送 TG 訊息」「推送通知」「傳檔案到 Telegram」
   「發送日報摘要」「告警通知」，或任何需要透過 Bot API 發送內容到指定 chat／topic 的場景。
+  不適用於：要建一個會對話的 TG bot 請用 ark-agent-bot-builder（套件消費端）或 ark-webapp-generator（獨立應用）；本 skill 只負責把東西發出去。
 metadata:
   author: paddyyang
   schema_version: 1

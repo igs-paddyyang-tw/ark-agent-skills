@@ -6,6 +6,7 @@ description: |
   使用此 skill 當使用者需要「呼叫 agent」「問 claude/kiro/gemini」「CLI 對話」
   「統一 LLM 後端呼叫」「多模型切換」、或需要從命令列直接測試 agent 回覆時。
   取代 ark-llm-cli 的定位，提供更完整的多 backend 支援與輸出清理。
+  不適用於：摘要／分析／問答／意圖解析等 LLM 工具函式請用 ark-llm-tools（本 skill 只做後端呼叫的統一入口）。
 metadata:
   author: paddyyang
   schema_version: 1

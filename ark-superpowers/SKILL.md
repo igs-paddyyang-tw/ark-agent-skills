@@ -10,6 +10,7 @@ description: |
   寫 spec、規格文件、需求文件、設計文件、design doc、ADR、架構決策、
   執行計畫、execution plan、技術提案、系統設計、RFC、里程碑、
   或任何需要產出結構化工程決策文件的場景。
+  不適用於：與使用者一來一往共同起草請用 ark-doc-coauthoring；遊戲企劃文件請用 ark-game-design-doc；照 plan 執行請用 ark-spec-executor。
 metadata:
   schema_version: 1
   status: active

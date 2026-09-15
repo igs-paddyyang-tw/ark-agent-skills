@@ -6,6 +6,7 @@ description: |
   參考 Augment CIV + LangGraph Plan-and-Execute。
   使用此 Skill 當使用者提及 執行計畫、run plan、自動交付、spec executor、
   跑 plan、驗收、自動執行任務、或任何需要按 plan 逐步完成開發的場景。
+  不適用於：plan 還沒寫請先用 ark-superpowers 產；需求釐清與任務分配的流程請用 ark-project-planning（本 skill 是拿到 plan 之後才開始）。
 metadata:
   schema_version: 1
   status: active

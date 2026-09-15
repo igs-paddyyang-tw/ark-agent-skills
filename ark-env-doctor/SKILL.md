@@ -6,6 +6,7 @@ description: |
   ModuleNotFoundError、ImportError、新手環境設定、一鍵安裝、
   DevContainer 建立、或任何「我的環境跑不起來」相關問題。
   也適用於產出 setup 腳本、修復腳本、或環境診斷報告。
+  不適用於：已部署服務的端點與可用性請用 ark-dashboard-health（本 skill 修的是開發機環境）。
 metadata:
   schema_version: 1
   status: active

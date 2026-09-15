@@ -4,6 +4,7 @@ description: |
   玩家留存與 LTV 分析：Cohort 分析、留存曲線、LTV 預測、流失預警。
   使用此 Skill 當使用者提及留存分析、retention、LTV、流失率、
   cohort、玩家生命週期、D1/D7/D30、或任何需要分析玩家留存的場景。
+  不適用於：留存策略與活動規劃請用 ark-marketing；指標計算公式請用 ark-kpi-calculator（本 skill 做的是分析）。
 metadata:
   schema_version: 1
   status: active

@@ -5,6 +5,7 @@ description: |
   文案撰寫、社群行銷、UA（用戶獲取）、LiveOps 活動規劃。
   使用此 Skill 當使用者提及行銷策略、ASO、CRO、文案、廣告素材、
   用戶獲取、留存策略、LiveOps、活動企劃、或任何遊戲行銷場景。
+  不適用於：留存數據的 cohort／LTV 分析請用 ark-retention-analysis（本 skill 出的是策略與素材，不是數據結論）。
 metadata:
   schema_version: 1
   status: active

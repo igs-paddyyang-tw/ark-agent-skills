@@ -6,6 +6,7 @@ description: |
   支援手動輸入或串接資料來源結果，含 news_md_writer 步驟自動寫入 knowledge/raw/。
   使用此 Skill 當使用者提及科技日報、tech daily、產出日報、新聞日報、
   或任何需要將新聞轉化為 MD + HTML 雙軌產出的場景。
+  不適用於：一般分析報告請用 ark-md-report／ark-html-report（本 skill 專責新聞素材的日報流程）。
 metadata:
   author: paddyyang
   schema_version: 1

@@ -6,6 +6,7 @@ description: |
   使用此 Skill 當使用者提及 planning with files、任務追蹤、持久化計畫、
   3-file pattern、防止遺忘、長任務管理、Manus workflow、
   或任何需要跨 session 保持任務狀態的場景。
+  不適用於：照 plan.md 自動執行與驗收請用 ark-spec-executor（同樣用 plan.md，但本 skill 管的是跨 session 不忘記，不是執行）。
 metadata:
   schema_version: 1
   status: active

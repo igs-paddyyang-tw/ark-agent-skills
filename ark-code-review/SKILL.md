@@ -5,6 +5,7 @@ description: |
   風格一致性驗證、安全性掃描、PR 審查報告產生。
   使用此 Skill 當使用者提及程式碼審查、code review、PR 審查、
   程式碼品質、lint、或任何需要檢查程式碼品質的場景。
+  不適用於：專案層級的弱點掃描與依賴漏洞請用 ark-security-audit；code 與 spec 的一致性請用 ark-code-spec-validator。
 metadata:
   schema_version: 1
   status: active

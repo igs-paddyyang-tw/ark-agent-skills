@@ -7,6 +7,7 @@ description: |
   使用此 Skill 當使用者提及異常偵測、告警規則、KPI 監控、
   anomaly detection、數據告警、指標異常、DAU 突降、
   或任何需要自動偵測數據異常並發送通知的場景。
+  不適用於：指標定義與計算邏輯請用 ark-kpi-calculator；服務端點是否活著請用 ark-dashboard-health（本 skill 偵測的是數值異常，不是服務故障）。
 metadata:
   schema_version: 1
   status: active

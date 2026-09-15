@@ -7,6 +7,7 @@ description: |
   使用此 Skill 當使用者提及安全性掃描、security audit、弱點偵測、
   vulnerability scan、程式碼安全、依賴檢查、
   或任何需要檢查專案安全性的場景。
+  不適用於：風格與可讀性的人工審查請用 ark-code-review（本 skill 只找安全弱點）。
 metadata:
   schema_version: 1
   status: active

@@ -7,6 +7,7 @@ description: |
   chunk 自足章節，可直接被 ark-wiki-engine ingest 與日報 CollectorRunner 消費。
   使用此 skill 當使用者要求「產出分析報告」「review 報告」「給 AI 看的報告」「決策摘要文件」
   「報告要能入 wiki」「雙軌報告」，或任何分析結論需要被下游 agent/wiki/日報消費的場景。
+  不適用於：給人看的網頁視圖請用 ark-html-report；報告要進知識庫由 ark-wiki-engine ingest，不要自己寫進 wiki/。
 metadata:
   schema_version: 1
   status: active

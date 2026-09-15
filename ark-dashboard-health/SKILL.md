@@ -6,6 +6,7 @@ description: |
   使用此 Skill 當使用者提及 dashboard 正常嗎、API 測試、SSE 測試、
   健康檢查、端點測試、dashboard health、服務可用性、
   或任何需要驗證 Web Dashboard 是否正常運作的場景。
+  不適用於：本機環境跑不起來（缺套件／venv／版本）請用 ark-env-doctor（本 skill 測的是已部署服務的端點）。
 metadata:
   schema_version: 1
   status: active

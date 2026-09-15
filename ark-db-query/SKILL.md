@@ -10,6 +10,7 @@ description: |
   使用此 skill 當使用者或 agent 提及：資料庫查詢、SQL、db query、BigQuery、BQ、查資料表、
   資料庫連線、取代 BQ MCP、query 資料、拉數據、匯出資料表，或任何需要從資料庫取得資料的場景 ——
   即使只是「幫我看一下某張表有什麼欄位」也應使用本 skill 的 bq_schema.py 而非 MCP。
+  不適用於：知識庫語意問答請用 ark-weknora-cli；wiki 頁面查詢請用 ark-wiki-engine（本 skill 只查結構化資料庫）。
 metadata:
   schema_version: "1.1"
   status: active

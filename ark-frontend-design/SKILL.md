@@ -7,6 +7,7 @@ description: |
   （例如網站、Landing Page、Dashboard、React 元件、HTML/CSS 排版），
   或需要建立/套用設計系統、design system、UI 風格、色彩規範、元件庫、視覺規範時。
   產出具創意、精緻的程式碼與 UI 設計，避免千篇一律的 AI 美學（紫色漸層）。
+  不適用於：分析報告頁請用 ark-html-report；數據儀錶板請用 ark-html-dashboard（本 skill 做的是產品介面本身）。
 metadata:
   schema_version: 1
   status: active

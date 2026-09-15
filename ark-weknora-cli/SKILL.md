@@ -14,6 +14,7 @@ description: |
   「查口徑」「這個指標怎麼算」「WeKnora sql-only」「路由這個查詢」「對數驗證」，
   或需要「把資料放上 WeKnora」「新增知識」「更新知識」「更新口徑」「上傳文件到知識庫」
   「建知識庫」「問智能體」「查知識庫」，或任何需要以業務口徑查數據 / 維護知識庫內容的場景。
+  不適用於：SQL／BigQuery 等結構化查詢請用 ark-db-query；本機 wiki 頁面請用 ark-wiki-engine。
 metadata:
   author: paddyyang
   schema_version: 1

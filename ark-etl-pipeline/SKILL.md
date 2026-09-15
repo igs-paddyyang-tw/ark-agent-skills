@@ -10,6 +10,7 @@ description: |
   或任何需要將原始資料轉換為圖表標準格式的場景；
   也涵蓋管線最後的 Load/匯出步驟 —— 提及匯出檔案、存成 CSV、輸出 JSON、
   產生 Markdown 檔、資料備份時，用本 skill 的匯出章節將結果寫入磁碟。
+  不適用於：從資料庫取數請用 ark-db-query；轉換完的繪圖請用 ark-chart-generator（本 skill 只做中間那段轉換與匯出）。
 metadata:
   schema_version: 1
   status: active

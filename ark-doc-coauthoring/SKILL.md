@@ -5,6 +5,7 @@ description: |
   使用此 Skill 當使用者想要撰寫文件、提案、技術規格、決策文件或類似結構化內容。
   此工作流幫助使用者有效傳遞上下文、透過迭代精煉內容、並驗證文件對讀者有效。
   當使用者提及撰寫文件、建立提案、草擬規格或類似文件任務時觸發。
+  不適用於：已定案要落成 Spec／ADR／執行計畫請用 ark-superpowers；分析結論的報告請用 ark-md-report。
 metadata:
   schema_version: 1
   status: active

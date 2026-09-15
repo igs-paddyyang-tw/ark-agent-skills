@@ -101,6 +101,36 @@ python scripts/check_consumers.py                  # 動手後：還有誰指著
 - 觸發測試：衝突矩陣每組獨占詞出 3 個測試 prompt，確認只觸發 owner（配 ark-skill-creator 的 evals 機制）
 - 產最終 alignment report 給使用者（含 before/after skill 數、findings 曲線）
 
+## 邊界宣告：逐案補，不設規則（2026-09-14 定）
+
+`description` 的「不適用於 …請用 ark-X」是**路由用的**：agent 選 skill 時只讀 description。
+2026-09-14 盤點時 31/50 沒有邊界宣告，**刻意沒有做成守門規則** ——
+多數 skill 根本沒有可混淆的鄰居，強制只會產生填充文字，而填充文字會稀釋真正的邊界。
+
+判準：**指名「會被誤觸的那一個」，指不出來就不要寫。**
+
+補了 23 個，都是有具體鄰居的：
+
+| 群 | 誰會被誤觸 |
+|---|---|
+| 查資料 | db-query（結構化）／ weknora-cli（口徑問答）／ wiki-engine（本機 wiki） |
+| 指標 | kpi-calculator（怎麼算）／ anomaly-detector（算完之後的異常）／ retention-analysis（深入分析）／ marketing（策略，不是分析） |
+| 健檢 | dashboard-health（已部署端點）／ env-doctor（開發機環境） |
+| 程式碼檢查 | code-review（風格可讀性）／ security-audit（弱點）／ code-spec-validator（對不對得上 spec） |
+| 資料管線 | db-query 取數 → etl-pipeline 轉換 → chart-generator 靜態圖／html-dashboard 互動 |
+| 產 HTML | frontend-design（產品介面）／ html-report（報告頁）／ html-dashboard（儀錶板） |
+| 文件 | superpowers（Spec/ADR）／ doc-coauthoring（一來一往起草）／ game-design-doc（遊戲企劃）／ md-report（分析結論） |
+| 「計畫」三義 | project-planning（需求到交付的流程）／ spec-executor（拿到 plan 之後執行）／ planning-with-files（跨 session 不忘記） |
+
+**刻意不加的 8 個**（沒有鄰居會被誤觸，加了是雜訊）：
+`ark-cost-tracker` · `ark-docker-deploy` · `ark-translator` · `ark-uml-generator` ·
+`ark-mcp-builder` · `ark-pdf-tool` · `ark-pptx-tool`（Office 系以副檔名區分，本身就不會混）
+以及 `ark-xlsx-tool`（它其實已經有邊界，只是寫法沒用「請用 ark-」，掃描沒認出來）。
+
+⚠️ 寫的時候會撞到**觸發詞衝突矩陣**：在「不適用於」句裡寫別人的獨占詞
+（`派工`、`寫 spec`、`覆蓋率`…）一樣會被 audit 判 P1 —— 那不是誤判，
+因為 agent 路由讀的是整段文字，不會分辨那句是正面還是反面。換個說法即可。
+
 ## 多 session 同時作業（2026-09-14 實測出來的協定）
 
 那天有**兩個 agent 同時在改這個 repo**，撞出四種代價，每一種都有對應做法：

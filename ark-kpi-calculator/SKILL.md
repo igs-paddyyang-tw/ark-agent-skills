@@ -6,6 +6,7 @@ description: |
   使用此 Skill 當使用者提及 KPI 計算、指標引擎、DAU、ARPU、RTP、留存率、
   LTV、遊戲數據指標、calculate kpi、metrics engine、
   或任何需要產出標準化指標計算邏輯的場景。
+  不適用於：指標算出來之後的異常偵測與告警請用 ark-anomaly-detector；留存與 LTV 的深入分析請用 ark-retention-analysis（本 skill 只負責「怎麼算」）。
 metadata:
   schema_version: 1
   status: active
