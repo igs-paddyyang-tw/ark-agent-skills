@@ -13,6 +13,8 @@ description: |
   不適用於：從資料庫取數請用 ark-db-query；轉換完的繪圖請用 ark-chart-generator（本 skill 只做中間那段轉換與匯出）。
 metadata:
   schema_version: 1
+  # 2026-09-14 T2 併入
+  replaces: [ark-file-export]
   status: active
   updated: 2026-08-19
   category: pipeline

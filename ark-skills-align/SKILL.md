@@ -77,7 +77,29 @@ frontmatter 欄位規格見 `references/metadata-schema.md`。
 ```bash
 python scripts/check_consumers.py --name ark-foo   # 動手前：誰在用？
 python scripts/check_consumers.py                  # 動手後：還有誰指著已刪的名字？
+ln -sf ../../scripts/hooks/pre-push .git/hooks/pre-push   # 裝一次：推送時自動觸發
 ```
+
+判準要走完**三段**，只做第①段會靜默掉能力（輸出已經把三段印出來）：
+
+| 段 | 問什麼 | 依據 |
+|:--:|---|---|
+| ① | 該不該刪 | 上游 git 歷史有過＝殘留；沒有過＝**專案自建，不可動** |
+| ② | 接手者是誰 | `metadata.replaces` → 移除 commit 的箭頭／併入式宣告 → 推不出來就**明說不確定** |
+| ③ | **這個 agent 該不該有接手者** | 接手者是 scaffolder 而這個 agent 是職人／管家 → 是刪不是換；舊名若是套件無差別 bundle 的，補回去等於把清掉的注入量加回來 |
+
+🔴 第②段**不猜**：批次移除的 commit 會同行並列好幾個名字，靠「同行出現」推斷會得到
+錯的接手者（實測 `ark-executive-assistant` 被推成 `ark-community-ops`，兩者只是同批被刪）。
+**猜錯的接手者比「不知道」更糟** —— 照著它補裝會裝進一個同樣不存在的東西。
+自己做的整併請回頭補 `replaces:`，那是唯一權威來源。
+
+### 為什麼不進排程
+
+殘留只在一個時刻產生：**上游移除／改名 skill 的那一刻**。
+排程掃出來的東西沒有收件人，而「沒人讀的紅燈」正是那 241 處累積起來的原因。
+所以改成 `scripts/hooks/pre-push`：**只在這次推送刪掉 skill 時**才檢查，分兩級 ——
+消費端 **sync 矩陣**還列著就擋下（修法是改另一個 repo 的一行，推的人當下就能做）；
+只有**已部署複本**就警告不擋（那要逐一判第③段，不該在推送當下逼人決定）。
 
 🔴 **上游做移除，就要由上游負責掃消費端。** 消費端各自的 `sync_skills.py --check`
 本來就會擋，但它們在別的 repo、甚至別台機器上 —— 「消費端自己會檢查」在多 repo

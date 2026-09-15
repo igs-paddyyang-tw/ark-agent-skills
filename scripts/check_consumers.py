@@ -192,6 +192,62 @@ def ever_upstream(repo: Path, names: set[str]) -> set[str]:
     return out
 
 
+#: 移除 commit 訊息裡「明確的」接手宣告。**只認箭頭／併入式**——
+#: 批次移除的 commit 會在同一行並列好幾個名字，靠「同行出現」推斷會得到錯的接手者
+#: （2026-09-15 實測：ark-executive-assistant 被推成 ark-community-ops，兩個都只是同批被刪）。
+#: 猜錯的接手者比「不知道」更糟，所以推不出來就明說不確定並指向那個 commit。
+_ARROW = re.compile(r"(ark-[a-z0-9-]+)\s*(?:→|->)\s*(ark-[a-z0-9-]+)")
+_MERGE = re.compile(r"(ark-[a-z0-9-]+)\s*(?:併入|整合進|已由)\s*(ark-[a-z0-9-]+)")
+
+
+def _removal_msg(repo: Path, name: str) -> tuple[str, str]:
+    out = subprocess.run(
+        ["git", "log", "--all", "--diff-filter=D", "--format=%h%x01%s%x01%b", "-n", "1",
+         "--", f"{name}/SKILL.md"], capture_output=True, text=True, cwd=repo).stdout
+    parts = (out.split("\x01") + ["", "", ""])[:3]
+    return parts[0].strip(), (parts[1] + "\n" + parts[2])
+
+
+def resolve_successors(repo: Path, names: set[str], existing: set[str]) -> dict:
+    """舊名 → (接手者 | None, 說明)。三段判準的第②段。
+
+    來源優先序：
+      ① 現存 skill 的 `metadata.replaces`（權威，但全庫只有 3 個 skill 有填）
+      ② 移除 commit 訊息裡的箭頭／併入式宣告（接手者自己也被移除時追一層）
+      ③ 都推不出來 → 不確定，附上移除 commit 讓人自己看
+    """
+    replaces: dict[str, str] = {}
+    for d in sorted(repo.glob("ark-*")):
+        sk = d / "SKILL.md"
+        if not sk.is_file():
+            continue
+        head = sk.read_text(encoding="utf-8", errors="replace")[:2000]
+        m = re.search(r"^\s*replaces:\s*\[([^\]]*)\]", head, re.M)
+        if m:
+            for old in m.group(1).split(","):
+                old = old.strip().strip("'\"").split(".")[0]
+                if old.startswith("ark-"):
+                    replaces[old] = d.name
+
+    out = {}
+    for n in sorted(names):
+        if n in replaces:
+            out[n] = (replaces[n], "replaces 欄位")
+            continue
+        h, msg = _removal_msg(repo, n)
+        succ = next((y for pat in (_ARROW, _MERGE) for x, y in pat.findall(msg) if x == n), None)
+        hops = 0
+        while succ and succ not in existing and hops < 3:   # 接手者自己也被移除 → 追一層
+            _, m2 = _removal_msg(repo, succ)
+            nxt = next((y for pat in (_ARROW, _MERGE) for x, y in pat.findall(m2) if x == succ), None)
+            if not nxt:
+                break
+            succ, hops = nxt, hops + 1
+        out[n] = (succ, "移除 commit" + (f"（追 {hops} 層）" if hops else "")) if succ \
+            else (None, f"不確定 —— 見移除 commit {h}")
+    return out
+
+
 def collect(root: Path):
     return (scan_matrices(root) + scan_deployed(root)
             + scan_souls(root) + scan_yaml_paths(root))
@@ -243,12 +299,31 @@ def main() -> int:
         print(f"✅ 掃了 {scanned} 個引用面，懸空引用 0")
         return 0
 
+    succ_map = resolve_successors(args.repo, set(dangling), upstream)
     print(f"\n🔴 {len(dangling)} 個名字在上游已不存在，但消費端還指著它：")
+    gaps = 0
     for n, where in sorted(dangling.items()):
-        print(f"\n  {n}（{len(where)} 處）")
+        succ, why = succ_map[n]
+        tag = f"接手者 {succ}（{why}）" if succ else f"{why}"
+        print(f"\n  {n}（{len(where)} 處）· {tag}")
         for kind, p in where:
-            print(f"    [{kind:8}] {p.relative_to(args.consumers)}")
-    print(f"\n掃了 {scanned} 個引用面。移除／改名 skill 時，這些都要一起改。")
+            mark = ""
+            if succ and kind == "deployed":
+                if (p / succ).is_dir():
+                    mark = "  ✅ 接手者已在同一個 agent"
+                else:
+                    mark = "  🔴 接手者未安裝 —— 刪掉等於少一個能力"
+                    gaps += 1
+            print(f"    [{kind:8}] {p.relative_to(args.consumers)}{mark}")
+
+    print(f"\n掃了 {scanned} 個引用面。")
+    print("移除前照三段判準走，只做第①段會靜默掉能力：")
+    print("  ① 該不該刪 —— 上游歷史有過＝殘留；沒有過＝專案自建，不可動")
+    print("  ② 接手者是誰 —— 改名／併入 vs 純淘汰（上面已標，不確定的請看那個 commit）")
+    print("  ③ 這個 agent 該不該有接手者 —— 接手者是 scaffolder 而這個 agent 是職人／管家，"
+          "或舊名本來就是套件無差別 bundle 的，那就是刪、不是換")
+    if gaps:
+        print(f"\n⚠️ 其中 {gaps} 處的接手者不在同一個 agent —— 第③段要逐一判，別無差別補裝。")
     return 1
 
 

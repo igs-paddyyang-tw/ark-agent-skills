@@ -12,6 +12,8 @@ description: |
   不適用於：單純的 code review 請用 ark-code-review；網頁抓取請用 ark-web-scraper。
 metadata:
   schema_version: 1
+  # 2026-09-14 T1 併入（--sync 模式）
+  replaces: [ark-api-doc-sync]
   status: active
   updated: 2026-09-11
   category: process

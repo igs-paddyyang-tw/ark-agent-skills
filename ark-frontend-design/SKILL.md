@@ -10,6 +10,8 @@ description: |
   不適用於：分析報告頁請用 ark-html-report；數據儀錶板請用 ark-html-dashboard（本 skill 做的是產品介面本身）。
 metadata:
   schema_version: 1
+  # 2026-09-14 整合（設計系統模式 + Landing Page）
+  replaces: [ark-ui-design-system, ark-landing-page]
   status: active
   updated: 2026-08-19
   category: view

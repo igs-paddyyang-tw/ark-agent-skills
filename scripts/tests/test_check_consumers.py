@@ -188,3 +188,76 @@ def test_never_upstream_name_is_treated_as_self_built(tmp_path):
     assert "ark-never-upstream" not in r.stdout.split("🔴")[-1], \
         "從未上游過的自建 skill 不可列為懸空"
     assert "專案自建" in r.stdout
+
+
+# ── 第②③段：接手者解析與「這個 agent 有沒有裝」 ──────────────────
+
+def _git(repo, *args, msg=None):
+    if args[0] == "commit":
+        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                        "commit", "-qm", msg], cwd=repo, check=True)
+    else:
+        subprocess.run(["git", *args], cwd=repo, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _repo_with_removal(tmp_path, removed: str, commit_msg: str, keep=("ark-alive",)):
+    """建一個上游：先有 removed，再以 commit_msg 移除它。"""
+    repo = _upstream(tmp_path, [*keep, removed])
+    _git(repo, "init", "-q"); _git(repo, "add", "-A"); _git(repo, "commit", msg="init")
+    import shutil
+    shutil.rmtree(repo / removed)
+    _git(repo, "add", "-A"); _git(repo, "commit", msg=commit_msg)
+    return repo
+
+
+def test_successor_read_from_arrow_in_removal_commit(tmp_path):
+    repo = _repo_with_removal(tmp_path, "ark-old",
+                              "chore: 移除 2 個 stub\n\n- ark-old → ark-alive\n")
+    consumers = tmp_path / "projects"
+    (consumers / "demo" / ".kiro" / "skills" / "ark-old").mkdir(parents=True)
+    r = run(repo, consumers)
+    assert r.returncode == 1
+    assert "接手者 ark-alive" in r.stdout, r.stdout
+
+
+def test_site_is_marked_by_whether_the_successor_is_installed_here(tmp_path):
+    """第③段的材料：接手者在不在**同一個 agent**，決定刪掉會不會少一個能力"""
+    repo = _repo_with_removal(tmp_path, "ark-old", "chore: 移除\n\n- ark-old → ark-alive\n")
+    consumers = tmp_path / "projects"
+    has = consumers / "demo" / "agents" / "a" / ".kiro" / "skills"
+    lacks = consumers / "demo" / "agents" / "b" / ".kiro" / "skills"
+    (has / "ark-old").mkdir(parents=True); (has / "ark-alive").mkdir()
+    (lacks / "ark-old").mkdir(parents=True)
+
+    r = run(repo, consumers)
+    out = r.stdout
+    assert "接手者已在同一個 agent" in out and "接手者未安裝" in out, out
+    assert "1 處的接手者不在同一個 agent" in out, out
+
+
+def test_batch_removal_does_not_invent_a_successor(tmp_path):
+    """🔴 批次移除的 commit 會同行並列好幾個名字 —— 不可據此推斷接手關係。
+
+    實測代價：`ark-executive-assistant` 被推成 `ark-community-ops`，
+    而兩者只是同一批被刪。**猜錯的接手者比「不知道」更糟** ——
+    照著它補裝會裝進一個同樣不存在的東西。
+    """
+    repo = _repo_with_removal(
+        tmp_path, "ark-old",
+        "chore: 移除冷門 skill\n\n- ark-old\n- ark-alive 保留\n")
+    consumers = tmp_path / "projects"
+    (consumers / "demo" / ".kiro" / "skills" / "ark-old").mkdir(parents=True)
+    r = run(repo, consumers)
+    assert "接手者 ark-alive" not in r.stdout, "同行並列被誤判成接手關係"
+    assert "不確定" in r.stdout and "見移除 commit" in r.stdout, r.stdout
+
+
+def test_output_states_all_three_stages(tmp_path):
+    """輸出要把三段講出來 —— 只做第①段（該不該刪）就會靜默掉能力"""
+    repo = _repo_with_removal(tmp_path, "ark-old", "chore: 移除\n\n- ark-old → ark-alive\n")
+    consumers = tmp_path / "projects"
+    (consumers / "demo" / ".kiro" / "skills" / "ark-old").mkdir(parents=True)
+    out = run(repo, consumers).stdout
+    for stage in ("① 該不該刪", "② 接手者是誰", "③ 這個 agent 該不該有接手者"):
+        assert stage in out, f"缺 {stage}"
