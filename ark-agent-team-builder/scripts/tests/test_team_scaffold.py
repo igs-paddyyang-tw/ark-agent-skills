@@ -25,6 +25,7 @@ SCRIPTS = Path(__file__).resolve().parent.parent
 SKILL_ROOT = SCRIPTS.parent
 TEMPLATE = SKILL_ROOT / "references" / "templates" / "team.yaml.tpl"
 EXAMPLE = SKILL_ROOT / "examples" / "market-team" / "team.yaml"
+SKILLS_REPO = SKILL_ROOT.parent   # 上游 skill 庫根目錄
 
 #: 範本的兩個佔位符 —— 用最小合法內容填，只要能通過驗證器即可
 INSTANCES_BLOCK = """\
@@ -162,3 +163,34 @@ def test_validate_actually_catches_broken_config(tmp_path, mutate, expect):
     r = _validate(broken)
     assert r.returncode == 1, f"弄壞了卻仍然通過（{expect}）：\n{r.stdout}"
     assert expect in r.stdout, r.stdout
+
+
+# ── 出貨的範例包不得指向上游已移除的 skill ──────────────────────
+
+def test_shipped_example_references_only_existing_skills():
+    """🔴 範例包是新專案照抄的東西 —— 它指到已移除的 skill，等於量產斷鏈。
+
+    2026-09-15 實測漏掉過一次：`ark-ingest-guard` 併入 `ark-wiki-engine` 時，
+    三個真實消費端的矩陣都改了，**唯獨這份範例沒改**，
+    而它還被複製進 nana-team-agent 的 skill 複本裡（靠掃消費端才反向發現）。
+
+    上游自己的範例不在 `check_consumers.py` 的掃描範圍（它掃 `projects/`），
+    所以這條由本 skill 自己守。
+    """
+    import ast
+    ex = SKILL_ROOT / "examples" / "market-team" / "scripts" / "sync_skills.py"
+    if not ex.is_file():
+        pytest.skip("範例包沒有 sync_skills.py")
+
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(ex.read_text(encoding="utf-8"))):
+        tgt = (getattr(node.targets[0], "id", "") if isinstance(node, ast.Assign)
+               else getattr(node.target, "id", "") if isinstance(node, ast.AnnAssign) else None)
+        if tgt in ("MATRIX", "COMMON"):
+            v = ast.literal_eval(node.value)
+            names |= set(v) if isinstance(v, list) else {s for lst in v.values() for s in lst}
+
+    assert names, "沒解析到任何 skill 名字 —— MATRIX 是 AnnAssign，別只判 ast.Assign"
+    upstream = {d.name for d in SKILLS_REPO.glob("ark-*") if (d / "SKILL.md").is_file()}
+    missing = sorted(n for n in names if n.startswith("ark-") and n not in upstream)
+    assert not missing, f"範例包指向上游已不存在的 skill：{missing}"

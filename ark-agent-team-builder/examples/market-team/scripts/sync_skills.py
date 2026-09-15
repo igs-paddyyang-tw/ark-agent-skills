@@ -57,8 +57,9 @@ MATRIX: dict[str, list[str]] = {
     "trend-agent": ["ark-web-scraper", "ark-daily-news", "ark-marketing",
                     "ark-md-report", "ark-html-report", "ark-weknora-cli"],
     # 📝 情報報告：彙整分析為 MD→HTML→TG 報告
-    "report-agent": ["ark-md-report", "ark-html-report", "ark-chart-generator",
-                     "ark-ingest-guard"],
+    # 2026-09-15：ark-ingest-guard 已併入 ark-wiki-engine（wiki_guard.py），
+    #   而 COMMON 已含 wiki-engine → 直接移除，不重列
+    "report-agent": ["ark-md-report", "ark-html-report", "ark-chart-generator"],
 }
 
 ROOT = Path(__file__).resolve().parent.parent
