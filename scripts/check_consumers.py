@@ -253,6 +253,35 @@ def collect(root: Path):
             + scan_souls(root) + scan_yaml_paths(root))
 
 
+def collect_self_examples(repo: Path):
+    """上游**自己的 `examples/`** 也是消費面 —— 而且是傳染力最強的那個。
+
+    🔴 2026-09-15 漏過一次：`ark-ingest-guard` 併入 `ark-wiki-engine` 時，
+    三個真實消費端的矩陣都改了，**唯獨 `ark-agent-team-builder/examples/` 的
+    範例沒改** —— 而範例正是新專案照抄的東西，留著等於量產斷鏈。
+    那次是靠 nana 剛好有一份 skill 複本才反向命中，**下次未必有複本**。
+
+    只掃 `ark-*/examples/`：skill 目錄本身就是這個庫，不能當成「已部署複本」。
+    """
+    sites = []
+    for ex in sorted(repo.glob("ark-*/examples")):
+        if not ex.is_dir():
+            continue
+        for p, kind, names in collect(ex):
+            sites.append((p, f"self-{kind}"[:8], names))
+    return sites
+
+
+def _show(p: Path, args) -> str:
+    """站點可能在 consumers 底下，也可能在上游自己的 examples/ 底下。"""
+    for base, tag in ((args.consumers, ""), (args.repo, "«上游範例» ")):
+        try:
+            return tag + str(p.relative_to(base))
+        except ValueError:
+            continue
+    return str(p)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--consumers", type=Path, default=DEFAULT_CONSUMERS,
@@ -269,7 +298,7 @@ def main() -> int:
     upstream = upstream_skills(args.repo)
     print(f"上游 {len(upstream)} 個 skill · 消費端根目錄 {args.consumers}")
 
-    sites = collect(args.consumers)
+    sites = collect(args.consumers) + collect_self_examples(args.repo)
     if not sites:
         print("⏭  沒有掃到任何消費端引用面（矩陣／複本／SOUL／蒸餾設定）")
         return 0
@@ -278,7 +307,7 @@ def main() -> int:
         users = [(p, kind) for p, kind, names in sites if args.name in names]
         print(f"\n「{args.name}」的使用者：{len(users)} 處")
         for p, kind in users:
-            print(f"  [{kind:8}] {p.relative_to(args.consumers)}")
+            print(f"  [{kind:8}] {_show(p, args)}")
         return 0
 
     allowed = upstream | self_built_skills(args.consumers)
@@ -314,7 +343,7 @@ def main() -> int:
                 else:
                     mark = "  🔴 接手者未安裝 —— 刪掉等於少一個能力"
                     gaps += 1
-            print(f"    [{kind:8}] {p.relative_to(args.consumers)}{mark}")
+            print(f"    [{kind:8}] {_show(p, args)}{mark}")
 
     print(f"\n掃了 {scanned} 個引用面。")
     print("移除前照三段判準走，只做第①段會靜默掉能力：")

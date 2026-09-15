@@ -261,3 +261,33 @@ def test_output_states_all_three_stages(tmp_path):
     out = run(repo, consumers).stdout
     for stage in ("① 該不該刪", "② 接手者是誰", "③ 這個 agent 該不該有接手者"):
         assert stage in out, f"缺 {stage}"
+
+
+# ── 上游自己的 examples/ 也要掃（傳染力最強的那個面）──────────────
+
+def test_upstream_example_is_scanned_even_with_no_consumers(tmp_path):
+    """🔴 範例是新專案照抄的東西 —— 它指到已移除的 skill 等於量產斷鏈。
+
+    2026-09-15 漏過一次：三個真實消費端的矩陣都改了，唯獨範例沒改，
+    而那次是靠某個消費端**剛好有一份 skill 複本**才反向命中的。
+    這條測試刻意把 consumers 設成空目錄，證明**沒有任何複本時也抓得到**。
+    """
+    repo = _repo_with_removal(tmp_path, "ark-old", "chore: 移除\n\n- ark-old → ark-alive\n")
+    ex = repo / "ark-alive" / "examples" / "demo" / "scripts"
+    ex.mkdir(parents=True)
+    (ex / "sync_skills.py").write_text(
+        _sync_script({"w-agent": ["ark-old"]}, []), encoding="utf-8")
+
+    empty = tmp_path / "no-consumers"
+    empty.mkdir()
+    r = run(repo, empty)
+    assert r.returncode == 1, "沒有任何消費端複本時就抓不到 → 盲區還在"
+    assert "ark-old" in r.stdout and "«上游範例»" in r.stdout, r.stdout
+
+
+def test_library_itself_is_not_mistaken_for_a_deployed_copy(tmp_path):
+    """只掃 `ark-*/examples/` —— skill 目錄本身就是這個庫，不是誰的複本"""
+    repo = _repo_with_removal(tmp_path, "ark-old", "chore: 移除\n\n- ark-old → ark-alive\n")
+    empty = tmp_path / "no-consumers"; empty.mkdir()
+    r = run(repo, empty)
+    assert r.returncode == 0, r.stdout
