@@ -1,0 +1,41 @@
+{
+  "skill_name": "ark-agent-team-design",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我要建一支遊戲測試團隊 agent，目標是每個版本產出有證據的放行建議。要幾個 agent、誰向誰報？",
+      "expected_output": "第一則回覆給三檔位編號選項並指出命中 game-qa 樣板；quick 只問專案名與入口；產出 team-spec.yaml 通過 team_spec_lint；gen_team 產 team.yaml（過 validate_team）+ 8 個 stub（0 TODO）+ authority-matrix + NEXT.md。",
+      "files": [],
+      "expectations": [
+        "編制為 admin×1 / leader×1 / worker×6，與 assets/patterns/game-qa.yaml 一致",
+        "worker 全部有 group 指向 test-lead",
+        "team.yaml 含 kiro_files.skills.policy: skip 與 steering.team_md: always",
+        "6 條決策鎖中 4 條 approver 為 human",
+        "不填任何 stance / hard_stops，只產 stub 與 NEXT.md"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "幫我規劃一支客服團隊的 agent，處理玩家客訴、退款申請、FAQ 回覆。",
+      "expected_output": "無樣板命中 → standard 6 題；逐能力問「獨立／併入／刪」並說明拆分判準（判準不同、權限不同、可 deterministic）；退款屬 human 批准的決策鎖；base_role 不在角色庫的用 custom，stub 含 TODO 並在 NEXT.md 列出需訪談的 instance。",
+      "files": [],
+      "expectations": [
+        "一次只問一題，每題 2–4 選項附⭐",
+        "退款相關決策在 decision_locks 且 approver 為 human",
+        "custom base_role 的 stub 帶 TODO，且 team_spec_lint 不擋（只擋 profile_lint）",
+        "不上網搜「客服團隊該有哪些角色」"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "現有 team.yaml 已經有 leader-agent 和 3 個 worker，我想再加一個報告 agent。",
+      "expected_output": "diff 模式：讀既有 team.yaml 當已選，只新增 report instance（group 指向既有 leader），不改 port / token / access；只產新 instance 的 stub。",
+      "files": [],
+      "expectations": [
+        "既有 instance 不被改寫",
+        "新 worker 的 group 為既有 leader",
+        "gen_team 對既有檔案印「已存在，略過」而非覆蓋"
+      ]
+    }
+  ]
+}

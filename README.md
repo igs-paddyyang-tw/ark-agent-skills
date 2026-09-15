@@ -33,16 +33,17 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **51 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **52 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
 
-> 輸出：MD 給 AI｜`category: process`｜11 個
+> 輸出：MD 給 AI｜`category: process`｜12 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-agent-role-profile` | 以三檔位訪談（quick / standard / deep）引出 agent 的角色定位，產出結構化 `role-profile.yaml`（identity / stance / scope / … |
+| `ark-agent-team-design` | 從業務目標設計 agent team 的編制：三檔位訪談（quick 套用編制樣板 / standard 6 題 / deep 交 ark-grill-me 拷問），產出 `team-spec.yam… |
 | `ark-code-spec-validator` | 驗證 code 與 spec/design 文件的一致性，產出 Drift Report。 |
 | `ark-doc-coauthoring` | 引導使用者透過結構化工作流共同撰寫文件。 |
 | `ark-grill-me` | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |

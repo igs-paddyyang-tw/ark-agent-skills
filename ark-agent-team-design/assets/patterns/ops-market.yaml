@@ -1,0 +1,27 @@
+# 市場情報團隊（6 人）— 對齊 ark-agent-team-builder/examples/market-team
+schema_version: 1
+team_id: ops-market
+name: 市場情報團隊
+goal: 持續監控競品與趨勢，產出可行動的情報報告
+deliverables: [競品分析, 趨勢報告, 每週情報 MD/HTML 報告]
+entry: market
+defaults:
+  bot_token_env: MARKET_TELEGRAM_BOT_TOKEN
+  health_port: 23040
+  daily_limit_usd: 10.0
+  knowledge_search_order: [market-team, shared]
+instances:
+  - { id: market, tier: manager, base_role: custom, emoji: 🗺️, purpose: 總機：意圖路由、知識查詢、競品/趨勢總覽, persistent: true }
+  - { id: leader, tier: leader, base_role: leader, emoji: 🎯, purpose: 拆解情報需求、派工、驗收彙整, persistent: true }
+  - { id: admin, tier: admin, base_role: admin, emoji: 👑, purpose: 監控、費控、服務健康, persistent: true }
+  - { id: competitor, tier: worker, base_role: marketing, group: leader, emoji: 🔍, purpose: 產品/定價/功能對比、競爭態勢, persistent: false }
+  - { id: trend, tier: worker, base_role: data-analyst, group: leader, emoji: 📈, purpose: 市場動態、新品、法規、玩家偏好, persistent: false }
+  - { id: report, tier: worker, base_role: executive-assistant, group: leader, emoji: 📝, purpose: 彙整分析為 MD→HTML→TG 報告, persistent: false }
+escalation:
+  - { from: competitor, to: leader }
+  - { from: trend, to: leader }
+  - { from: report, to: leader }
+  - { from: leader, to: market }
+decision_locks:
+  - { decision: 對外發布報告, approver: human, proposer: report, allowed: [] }
+  - { decision: 新增監控來源, approver: leader, proposer: competitor, allowed: [competitor, trend] }

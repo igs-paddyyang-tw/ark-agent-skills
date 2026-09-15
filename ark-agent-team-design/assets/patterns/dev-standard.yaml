@@ -1,0 +1,26 @@
+# 研發團隊（5 人）— 取代 team-builder role-presets 的「標準/全端」表
+schema_version: 1
+team_id: dev-standard
+name: 研發團隊
+goal: 以 SDD 流程把需求變成可驗收、可部署的功能
+deliverables: [Spec / Design / Plan, 可驗收功能, 測試報告, 部署紀錄]
+entry: dev-admin
+defaults:
+  bot_token_env: DEV_TELEGRAM_BOT_TOKEN
+  health_port: 24050
+  daily_limit_usd: 20.0
+instances:
+  - { id: dev-admin, tier: admin, base_role: admin, emoji: 👑, purpose: 服務監控、成本、版本，不接業務, persistent: true }
+  - { id: pm, tier: leader, base_role: leader, emoji: 🧭, purpose: 釐清需求、產 Spec、拆解派工、驗收, persistent: true }
+  - { id: coder, tier: worker, base_role: fullstack-coder, group: pm, emoji: 🛠️, purpose: 依 Spec 實作與撰寫測試, persistent: false }
+  - { id: qa, tier: worker, base_role: qa, group: pm, emoji: 🔍, purpose: 對照驗收條件測試、回歸、bug 可重現, persistent: false }
+  - { id: devops, tier: worker, base_role: devops, group: pm, emoji: 🚢, purpose: 容器化、部署、監控、環境診斷, persistent: false }
+escalation:
+  - { from: coder, to: pm }
+  - { from: qa, to: pm }
+  - { from: devops, to: pm }
+  - { from: pm, to: dev-admin }
+decision_locks:
+  - { decision: 部署 production, approver: human, proposer: devops, allowed: [devops] }
+  - { decision: 修改 Spec, approver: human, proposer: pm, allowed: [] }
+  - { decision: 寫入 src/, approver: pm, proposer: coder, allowed: [coder] }

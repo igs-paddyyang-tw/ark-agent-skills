@@ -1,0 +1,82 @@
+# 遊戲測試團隊（8 人）— 對應 2026-09-15 one page plan 手工編制
+schema_version: 1
+team_id: game-qa
+name: 遊戲測試團隊
+goal: 每個版本產出有證據的放行建議（功能/數值/效能/安全/日報），人類只做最後放行決策
+deliverables: [測試計畫, 放行建議報告, 每日測試日報, RTP 驗證報告, 壓測與相容報告, 安全公平審計報告]
+entry: qa-admin
+defaults:
+  bot_token_env: QA_TELEGRAM_BOT_TOKEN
+  health_port: 24040
+  daily_limit_usd: 20.0
+  knowledge_search_order: [game-qa, shared]
+instances:
+  - id: qa-admin
+    tier: admin
+    base_role: admin
+    emoji: 👑
+    purpose: 管 daemon / crash / 版本與成本，不接業務，只轉交
+    persistent: true
+  - id: test-lead
+    tier: leader
+    base_role: test-lead
+    emoji: 🧭
+    purpose: 對照 Spec 定測試計畫、派工、彙整證據、給放行建議（不下結論）
+    persistent: true
+  - id: functional-qa
+    tier: worker
+    base_role: qa
+    group: test-lead
+    emoji: 🔍
+    purpose: 逐條驗收規則／狀態機／UI 流程，bug 必可重現
+    persistent: false
+  - id: math-verifier
+    tier: worker
+    base_role: math-verifier
+    group: test-lead
+    emoji: 🎰
+    purpose: RTP／掉率／機率表統計驗證，回報樣本數與信賴區間
+    persistent: false
+  - id: automation-engineer
+    tier: worker
+    base_role: automation-engineer
+    group: test-lead
+    emoji: 🤖
+    purpose: 回歸腳本化與 CI 門；唯一可寫 src/ 與 tests/ 的測試角色
+    persistent: false
+  - id: perf-compat-tester
+    tier: worker
+    base_role: perf-compat-tester
+    group: test-lead
+    emoji: 📱
+    purpose: 壓力、長時、多裝置／解析度、弱網與斷線重連
+    persistent: false
+  - id: security-auditor
+    tier: worker
+    base_role: security-fairness-auditor
+    group: test-lead
+    emoji: 🛡️
+    purpose: 封包竄改、時序攻擊、經濟漏洞、刷分路徑
+    persistent: false
+  - id: bug-triage-reporter
+    tier: worker
+    base_role: bug-triage-reporter
+    group: test-lead
+    emoji: 🗂️
+    purpose: bug 去重、分級、追蹤，每日 MD/HTML 雙軌日報（deterministic 為主）
+    persistent: true
+escalation:
+  - { from: functional-qa, to: test-lead }
+  - { from: math-verifier, to: test-lead }
+  - { from: automation-engineer, to: test-lead }
+  - { from: perf-compat-tester, to: test-lead }
+  - { from: security-auditor, to: test-lead }
+  - { from: bug-triage-reporter, to: test-lead }
+  - { from: test-lead, to: qa-admin }
+decision_locks:
+  - { decision: 放行上線, approver: human, proposer: test-lead, allowed: [] }
+  - { decision: 修改被測程式碼或測試碼, approver: test-lead, proposer: automation-engineer, allowed: [automation-engineer] }
+  - { decision: 判定 RTP 偏差為缺陷, approver: test-lead, proposer: math-verifier, allowed: [math-verifier] }
+  - { decision: 對外揭露測試數字, approver: human, proposer: null, allowed: [] }
+  - { decision: 對 production 環境操作, approver: human, proposer: null, allowed: [] }
+  - { decision: 修改 Spec 或驗收條件, approver: human, proposer: test-lead, allowed: [] }

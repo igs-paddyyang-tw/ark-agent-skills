@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ark-agent-team-design/team-spec.schema.json",
+  "title": "team-spec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "team_id", "name", "goal", "deliverables", "entry", "instances", "escalation", "decision_locks"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "team_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 30 },
+    "name": { "type": "string", "maxLength": 40 },
+    "goal": { "type": "string", "minLength": 8, "maxLength": 120 },
+    "deliverables": { "type": "array", "items": { "type": "string" }, "maxItems": 8 },
+    "entry": { "type": "string" },
+    "defaults": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "bot_token_env": { "type": "string" },
+        "health_port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+        "daily_limit_usd": { "type": "number" },
+        "knowledge_search_order": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "instances": {
+      "type": "array", "minItems": 2, "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "tier", "base_role", "purpose"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 24 },
+          "tier": { "enum": ["manager", "admin", "leader", "worker"] },
+          "base_role": { "type": "string", "pattern": "^([a-z0-9]+(-[a-z0-9]+)*|custom)$" },
+          "purpose": { "type": "string", "minLength": 6, "maxLength": 80 },
+          "emoji": { "type": "string", "maxLength": 4 },
+          "group": { "type": "string" },
+          "persistent": { "type": "boolean" },
+          "private_chat": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "escalation": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": { "from": { "type": "string" }, "to": { "type": "string" } }
+      }
+    },
+    "decision_locks": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["decision", "approver"],
+        "properties": {
+          "decision": { "type": "string", "maxLength": 40 },
+          "approver": { "type": "string" },
+          "proposer": { "type": ["string", "null"] },
+          "allowed": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
