@@ -212,3 +212,27 @@ def test_validate_actually_catches_a_missing_file(project, victim):
     r = subprocess.run([sys.executable, str(BUILD), "--validate", str(project)],
                        capture_output=True, text=True)
     assert r.returncode == 1, f"刪了 {victim} 卻仍然通過：\n{r.stdout}"
+
+
+# ── v2.1：根目錄即 manager 的目錄佈局 ──────────────────────────
+
+def test_root_has_no_steering_agents_md(project):
+    """根目錄（wd="."）不產 steering/AGENTS.md —— 它用專案根那份（SSOT），
+    否則兩份都被 Kiro 載入造成漂移。子 agent 仍各有一份複本。"""
+    root_agents = project / ".kiro" / "steering" / "AGENTS.md"
+    assert not root_agents.exists(), "根 steering/ 不該產 AGENTS.md（用專案根那份）"
+    # 子 agent 仍需要複本
+    worker_agents = project / "agents" / "worker-agent" / ".kiro" / "steering" / "AGENTS.md"
+    assert worker_agents.exists(), "子 agent steering/ 應有 AGENTS.md 複本"
+
+
+@pytest.mark.parametrize("name,inst", list(_instances().items()))
+def test_agent_json_prompt_path_has_no_dotdot(project, name, inst):
+    """agent.json 的 prompt/resources 路徑相對自己的 .kiro/，不得寫死 ../../
+    （asset 舊版寫 ../../ 假設兩層深，對根目錄 0 層與其他深度都會指錯）。"""
+    wd = inst["working_directory"]
+    kiro_dir = _kiro_dir(project, wd)
+    agent_json = kiro_dir / "agents" / f"{name}.json"
+    content = agent_json.read_text(encoding="utf-8")
+    assert "../.." not in content, f"{name}/agents/{name}.json 含寫死的 ../.. 路徑"
+    assert "file://.kiro/steering/SOUL.md" in content, f"{name} prompt 路徑不是相對自己 .kiro/"

@@ -11,7 +11,7 @@
 ## 🎯 Your Core Mission
 
 1. **接收任務** — 從 leader 接收明確任務，確認驗收條件
-2. **執行交付** — 按規格完成工作，產出到 output/
+2. **執行交付** — 按規格完成工作，產出到 artifacts/
 3. **回報結果** — 用 reply 回報完成狀態 + 產出路徑
 4. **知識沉澱** — 將學到的知識寫入 knowledge/wiki/
 
@@ -28,7 +28,7 @@
 收到任務
   ↓ 確認驗收條件
   ↓ 執行工作
-  ↓ 產出到 output/
+  ↓ 產出到 artifacts/
   ↓ reply 回報結果
   ↓ 更新 MEMORY.md
 ```

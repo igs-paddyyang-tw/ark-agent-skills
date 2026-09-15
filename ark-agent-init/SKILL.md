@@ -97,59 +97,64 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 
 ```
 {target}/
-├── .kiro/                             # 根目錄 workspace = admin-agent（working_directory: .）
-│   ├── agents/admin-agent.json        #   admin 角色定義
-│   ├── prompts/{prompt-1}.md          #   admin 提詞
-│   ├── prompts/{prompt-2}.md
-│   ├── settings/mcp.json              #   admin MCP 設定（role: admin）
-│   ├── skills/ → ../skills/           #   全套 Skills（symlink 或全部複製）
+├── AGENTS.md                          # 🔴 全隊共用規範 SSOT —— 只在專案根一份
+│                                      #   （根目錄 instance 直接載入這份；steering/ 不再產 AGENTS.md）
+├── .kiro/                             # 根目錄 workspace = team-spec 的 entry instance
+│   │                                  #   🔴 不預設是 admin —— 可為 manager（用 --profile <role> 渲染）
+│   ├── agents/{entry}.json            #   entry 角色定義（prompt→.kiro/steering/SOUL.md，相對自己）
+│   ├── prompts/{prompt-1}.md
+│   ├── settings/mcp.json              #   entry MCP 設定
+│   ├── skills/                        #   🔴 從 skills/ 複製子集（非 symlink —— symlink 跨機斷鏈）
+│   │                                  #      靠 sync_skills.py 同步更新，gitignore 排除
 │   └── steering/
-│       ├── AGENTS.md                  #   全域行為準則（共用規範來源）
-│       ├── CODE.md                    #   程式碼規範
-│       ├── MEMORY.md                  #   admin 記憶
-│       ├── SOUL.md                    #   admin 角色定義（管理者）
+│       ├── CODE.md                    #   程式碼規範（fileMatch）
+│       ├── MEMORY.md                  #   entry 記憶
+│       ├── SOUL.md                    #   人格（--profile 給定則由 role-profile 渲染，含 sha 戳記）
 │       ├── USER.md                    #   使用者百科
-│       └── TEAM.md                    #   團隊運作規範（daemon 自動產生）
+│       └── TEAM.md                    #   團隊運作規範（inclusion: manual；daemon 覆寫）
+│                                      #   🔴 steering/ 無 AGENTS.md（用專案根那份）
 │
-├── skills/                            # 共用 Skills 倉庫（git clone ark-kiro-skills）
-│   ├── ark-superpowers/SKILL.md
-│   ├── ark-wiki-engine/SKILL.md
-│   ├── ark-skill-creator/SKILL.md
+├── skills/                            # 共用 Skills 倉庫（git clone ark-agent-skills）
 │   └── ...（全部 Skills）
 │
 ├── agents/                            # 各 agent 工作目錄
 │   └── {name}-agent/
-│       ├── .kiro/                     #   agent workspace（按角色分配子集）
-│       │   ├── agents/{role}.json
-│       │   ├── prompts/{prompt-1}.md
-│       │   ├── prompts/{prompt-2}.md
+│       ├── .kiro/
+│       │   ├── agents/{role}.json     #   prompt→.kiro/steering/SOUL.md（相對自己，非 ../../）
+│       │   ├── prompts/{prompt}.md
 │       │   ├── settings/mcp.json
-│       │   ├── skills/{skill-name}/SKILL.md  ← 從 skills/ 複製子集
+│       │   ├── skills/{skill}/        #   從 skills/ 複製子集（非 symlink；sync 更新）
 │       │   └── steering/
-│       │       ├── AGENTS.md          #   從根目錄 .kiro/steering/ 複製
+│       │       ├── AGENTS.md          #   複本（供該 agent 載入；根那份是 SSOT）
 │       │       ├── CODE.md
 │       │       ├── MEMORY.md
 │       │       ├── SOUL.md            #   角色專屬
-│       │       ├── USER.md            #   共用
-│       │       └── TEAM.md            #   系統自動產生
-│       ├── docs/.gitkeep
-│       ├── artifacts/.gitkeep
-│       └── knowledge/                 #   私有知識庫
-│           ├── schema.md
-│           ├── index.md
-│           ├── log.md
-│           ├── raw/.gitkeep
-│           └── wiki/overview.md
+│       │       ├── USER.md
+│       │       └── TEAM.md            #   daemon 產生
+│       └── memory/{daily,archive}/    #   agent 私有記憶（歸檔在 memory/archive/）
 │
+├── knowledge/                         # 團隊知識庫（依產出來源分櫃）
+│   ├── shared/                        #   🔴 全隊共用 —— wiki 引擎與 bot 啟動讀這層
+│   │   ├── {schema,index,log}.md      #      少一層 shared/ 會靜默失效（記過四次）
+│   │   └── {wiki,raw}/
+│   └── {instance}/                    #   各 instance 私有知識（agent.json 指 ./knowledge/{instance}）
+│       ├── {schema,index,log}.md
+│       └── {wiki,raw}/
+│
+├── memory/                            # 團隊記憶
+│   ├── daily/                         #   每日對話（bot 寫）
+│   └── archive/                       #   🔴 MEMORY 歸檔（1.8.1 起；非 knowledge/raw/memory-archive）
+│
+├── artifacts/{reports,sim,perf,triage}/ # 🔴 產出落點（非 output/）
 ├── docs/                              # 團隊文件
-├── src/                               # 業務程式碼
-├── tests/                             # 測試
-├── knowledge/                         # 團隊知識庫
 ├── team.yaml                          # 團隊配置
 ├── scheduler.yaml                     # 排程
 ├── start.py                           # 啟動腳本
 └── .env                               # 環境變數
 ```
+
+> 🔴 **skills 是複本不是 symlink**：symlink 跨機／跨 OS 會斷鏈，改用「複製 + `sync_skills.py`
+> 同步版本更新」，並 gitignore 排除 `.kiro/skills/`（靠 sync 重建，不進版控）。
 
 > **注意：** `product.md`、`tech.md`、`structure.md` 不在 init 預設產出中。
 > 這些是專案特定檔案，由使用者依需求手動建立（或後續用 ark-superpowers 產出）。
@@ -248,7 +253,8 @@ Kiro 的 steering 是**多檔 + `inclusion` 分層**，比單一 `AGENTS.md` 表
 > 🔴 **團隊級 knowledge 要建 `knowledge/shared/` 層**（`shared/wiki/` + `shared/raw/`
 > + `schema/index/log`）—— Wiki 引擎（ark-wiki-engine）與 bot 啟動實際讀的是 `shared/`，
 > 不是扁平的 `knowledge/wiki/`。少一層 `shared/` 會讓索引讀不到且**不報錯**。
-> 另建 `knowledge/raw/memory-archive/`（MEMORY 歸檔落點，路徑寫死不可搬）。
+> 另 MEMORY 歸檔落 **`memory/archive/`**（1.8.1 起 —— 記憶歸記憶，不進 knowledge；
+> 舊 `knowledge/raw/memory-archive/` 已作廢並遷出）。
 > 詳見 `references/architecture-drift-feedback.md`。
 
 ### memory/ 目錄（每個 agent 必有，v2.0 補）

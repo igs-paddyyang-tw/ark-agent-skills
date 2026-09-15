@@ -103,6 +103,7 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
         is_admin = role == "admin"
         # profile 只作用於根目錄（wd="."）的 manager —— 其餘 instance 走原模板
         inst_profile = profile if wd == "." else None
+        is_root = wd == "."
 
         agent_created = _build_agent_kiro(
             kiro_dir=kiro_dir,
@@ -116,6 +117,7 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
             port=port,
             base=base,
             profile=inst_profile,
+            is_root=is_root,
         )
         created.extend(agent_created)
 
@@ -134,6 +136,7 @@ def _build_agent_kiro(
     port: int,
     base: Path,
     profile: str | None = None,
+    is_root: bool = False,
 ) -> list[str]:
     """產出單一 agent 的 .kiro/ 目錄。"""
     created: list[str] = []
@@ -145,7 +148,7 @@ def _build_agent_kiro(
     # 1. steering/
     steering_created = _build_steering(
         kiro_dir / "steering", name, role, description,
-        team_name, all_instances, is_admin, profile,
+        team_name, all_instances, is_admin, profile, is_root,
     )
     created.extend(steering_created)
 
@@ -200,6 +203,7 @@ def _build_steering(
     all_instances: dict,
     is_admin: bool,
     profile: str | None = None,
+    is_root: bool = False,
 ) -> list[str]:
     """產出 steering/ 下的所有檔案。"""
     created: list[str] = []
@@ -212,8 +216,11 @@ def _build_steering(
         created.append(str(soul.relative_to(base)))
 
     # AGENTS.md（從 assets 複製）
+    # 🔴 根目錄（is_root）不在 steering/ 產 AGENTS.md —— 根目錄的 .kiro/steering/AGENTS.md
+    #    與專案根 AGENTS.md 會「兩份都被 Kiro 載入」造成漂移。根目錄用專案根那份（SSOT）。
+    #    子 agent 仍在自己的 steering/ 放一份（複本，供該 agent 載入）。
     agents_md = steering_dir / "AGENTS.md"
-    if not agents_md.exists():
+    if not is_root and not agents_md.exists():
         src = STEERING_ASSETS / "AGENTS.md"
         if src.exists():
             shutil.copy2(src, agents_md)
@@ -629,7 +636,12 @@ def validate_kiro(project_dir: Path) -> list[str]:
                 errors.append(f"⚠️ {prefix}/settings/mcp.json 格式錯誤: {e}")
 
         # steering 必要檔案
-        for fname in ("SOUL.md", "AGENTS.md", "MEMORY.md", "USER.md", "TEAM.md"):
+        # 🔴 根目錄（wd="."）不要求 steering/AGENTS.md —— 它用專案根 AGENTS.md（SSOT），
+        #    build_kiro 也刻意不在根 steering/ 產 AGENTS.md（避免兩份都被載入）。
+        required_steering = ("SOUL.md", "AGENTS.md", "MEMORY.md", "USER.md", "TEAM.md")
+        if wd == ".":
+            required_steering = ("SOUL.md", "MEMORY.md", "USER.md", "TEAM.md")
+        for fname in required_steering:
             if not (kiro_dir / "steering" / fname).exists():
                 errors.append(f"❌ {prefix}/steering/{fname} 缺少")
 

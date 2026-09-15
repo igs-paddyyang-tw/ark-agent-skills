@@ -38,7 +38,7 @@ inclusion: always
 - Skill 的新增與修改**唯一路徑**：提案 → 審批 → apply
 - 對話記錄 **只進 memory**，絕不進 knowledge/
 - knowledge/wiki/ **只有使用者明確要求**才寫入
-- output/ 的內容**不會被 recall 搜尋到**
+- artifacts/ 的內容**不會被 recall 搜尋到**
 
 ## Memory vs Wiki vs Output 分工
 
@@ -46,7 +46,7 @@ inclusion: always
 |--------|------|------|
 | 「這是我經歷的事嗎？」 | 是 | memory/ |
 | 「這是可重複引用的知識嗎？」 | 是 | knowledge/wiki/（使用者要求時） |
-| 「這是要交付的產出嗎？」 | 是 | output/（reports/skills/exports/drafts/） |
+| 「這是要交付的產出嗎？」 | 是 | artifacts/（reports/sim/perf/triage/） |
 | 「使用者沒說要存」 | — | 不寫 wiki、不寫 output |
 
 ## 本 Agent 附註
