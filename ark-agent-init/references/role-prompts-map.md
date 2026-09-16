@@ -25,11 +25,12 @@ role_prompts:
     architect:      [analyze-req, scaffold-api]
     fullstack-coder: [analyze-req]
     qa:             [test-plan]
-    qa-manager:     [test-plan]
+    qa-manager:     [test-plan, data-query-routing]
     game-planner:   [gdd-draft, feature-spec]
-    math-designer:  [par-sheet, balance-tuning]
+    math-designer:  [par-sheet, balance-tuning, data-query-routing]
     liveops:        [event-spec]
-    game-analyst:   [kpi-review]
+    game-analyst:   [kpi-review, data-query-routing]
+    data-analyst:   [data-query-routing]
     producer:       [milestone-plan]
 ```
 

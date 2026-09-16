@@ -712,10 +712,33 @@ def validate_kiro(project_dir: Path) -> list[str]:
             if not (kiro_dir / "steering" / fname).exists():
                 errors.append(f"❌ {prefix}/steering/{fname} 缺少")
 
-        # prompts 至少 1 個
-        prompts = list((kiro_dir / "prompts").glob("*.md")) if (kiro_dir / "prompts").exists() else []
+        # prompts 至少 1 個（含 work/ 子目錄）
+        pdir = kiro_dir / "prompts"
+        prompts = list(pdir.rglob("*.md")) if pdir.exists() else []
         if not prompts:
             errors.append(f"⚠️ {prefix}/prompts/ 無提詞模板")
+        for pf in prompts:
+            body = pf.read_text(encoding="utf-8", errors="replace")
+            rel = pf.relative_to(kiro_dir)
+            # ① 產出的提詞不得殘留模板變數 {{...}}（該在 build 時渲染掉）
+            if "{{" in body:
+                errors.append(f"❌ {prefix}/{rel}：殘留未渲染變數 {{{{...}}}}")
+            # ② frontmatter schema：任務提詞須有 name/description/layer
+            fm_ok = body.startswith("---") and "\n---" in body[3:]
+            if not fm_ok:
+                errors.append(f"⚠️ {prefix}/{rel}：缺 frontmatter")
+            else:
+                head = body.split("\n---", 1)[0]
+                for key in ("name:", "description:", "layer:"):
+                    if key not in head:
+                        errors.append(f"⚠️ {prefix}/{rel}：frontmatter 缺 {key.rstrip(':')}")
+
+    # 對照表 ↔ asset 一致性：role-prompts-map 列的 work 提詞必須存在於 assets（消滅幻覺索引）
+    table = _load_role_prompts()
+    for role_id, stems in (table.get("work") or {}).items():
+        for stem in stems:
+            if not (PROMPTS_ASSETS / "work" / f"{stem}.md").exists():
+                errors.append(f"❌ role-prompts-map work['{role_id}'] 列了 '{stem}' 但 assets/prompts/work/{stem}.md 不存在")
 
     return errors
 

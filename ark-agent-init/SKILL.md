@@ -101,7 +101,7 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 │                                      #   （根目錄 instance 直接載入這份；steering/ 不再產 AGENTS.md）
 ├── .kiro/                             # 根目錄 workspace = team-spec 的 entry instance
 │   │                                  #   🔴 不預設是 admin —— 可為 manager（用 --profile <role> 渲染）
-│   ├── agents/{entry}.json            #   entry 角色定義（prompt→.kiro/steering/SOUL.md，相對自己）
+│   ├── agents/{entry}.json            #   entry 角色定義（prompt→file://../../.kiro/steering/SOUL.md）
 │   ├── prompts/{prompt-1}.md
 │   ├── settings/mcp.json              #   entry MCP 設定
 │   ├── skills/                        #   🔴 從 skills/ 複製子集（非 symlink —— symlink 跨機斷鏈）
@@ -120,7 +120,7 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 ├── agents/                            # 各 agent 工作目錄
 │   └── {name}-agent/
 │       ├── .kiro/
-│       │   ├── agents/{role}.json     #   prompt→.kiro/steering/SOUL.md（相對自己，非 ../../）
+│       │   ├── agents/{role}.json     #   prompt→file://../../.kiro/steering/SOUL.md（基準是 .kiro/agents/，回自己 workspace 根）
 │       │   ├── prompts/{prompt}.md
 │       │   ├── settings/mcp.json
 │       │   ├── skills/{skill}/        #   從 skills/ 複製子集（非 symlink；sync 更新）
@@ -300,12 +300,12 @@ agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不
 {
   "name": "{role-id}",
   "description": "{一句話描述}",
-  "prompt": "file://.kiro/steering/SOUL.md",
+  "prompt": "file://../../.kiro/steering/SOUL.md",
   "model": "auto",
   "tools": ["*"],
   "allowedTools": ["*"],
   "resources": [
-    "file://.kiro/steering/**/*.md",
+    "file://../../.kiro/steering/**/*.md",
     "skill://.kiro/skills/**/SKILL.md",
     {
       "type": "knowledgeBase",
