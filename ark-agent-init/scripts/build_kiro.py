@@ -473,6 +473,10 @@ def _build_prompts(prompts_dir: Path, role: str, is_admin: bool, base: Path) -> 
 
     if is_admin or role == "admin":
         files = ["route-message.md", "service-check.md"]
+    elif role == "manager":
+        # manager 是總機/入口 —— 需要意圖路由提詞（原本漏了 manager 分支，
+        # 會落到 else 拿 worker 的 daily-report，對總機不對）
+        files = ["route-message.md"]
     elif role == "leader":
         files = ["daily-report.md", "team-check.md"]
     else:
