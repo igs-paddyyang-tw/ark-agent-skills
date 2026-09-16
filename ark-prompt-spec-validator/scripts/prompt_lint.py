@@ -66,7 +66,7 @@ PLACEHOLDER_RES = [
     re.compile(r"\{\{[^}]*\}\}"), re.compile(r"\{(TODO|TBD|FIXME)\}", re.I), re.compile(r"\[(TODO|TBD)\]", re.I),
     re.compile(r"<填入[^>]*>"), re.compile(r"\bXXX\b"), re.compile(r"\blorem ipsum\b", re.I),
 ]
-PATH_RE = re.compile(r"(?<![\w/])((?:scripts|references|assets|evals)/[\w./\-]+)")
+PATH_RE = re.compile(r"(?<![\w/])((?:scripts|references|assets|evals)/[\w./\-*]+)")
 SKILL_REF_RE = re.compile(r"(?<![\w./\-])(ark-[a-z0-9]+(?:-[a-z0-9]+)*)(?![\w./\-])")
 TRIGGER_QUOTE_RE = re.compile(r"「([^」]{2,40})」")
 MUST_RE = re.compile(r"(必須|一律|永遠|務必|always|must)\s*", re.I)
@@ -235,12 +235,13 @@ def lint_file(path: Path, dtype: str, cfg: dict, repo_skills: dict, rep: Report)
             add("PL-011", "P1", fm_lines + line_of(prose, m.start()), f"殘留 placeholder：'{m.group()}'")
     root = skill_root(path)
     if root:  # 路徑引用以 skill 根目錄為準，其次檔案所在目錄
-        for m in PATH_RE.finditer(body):
+        # 用 prose（已剝 fenced code block）—— ```bash 內的是命令範例（教使用者在自己 repo 跑），非本 skill 檔案引用
+        for m in PATH_RE.finditer(prose):
             p = m.group(1).rstrip(".,;:)")
-            if "*" in p or "{" in p or "<" in p:
+            if "*" in p or "{" in p or "<" in p:  # glob / 模板變數 / 佔位符不當確切檔名找
                 continue
             if not (root / p).exists() and not (path.parent / p).exists():
-                add("PL-012", "P1", fm_lines + line_of(body, m.start()), f"引用路徑不存在：{p}")
+                add("PL-012", "P1", fm_lines + line_of(prose, m.start()), f"引用路徑不存在：{p}")
     # contradictions (heuristic)
     lines = body.splitlines()
     plines = prose.splitlines()
