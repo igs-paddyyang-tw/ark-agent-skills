@@ -89,23 +89,37 @@ def main() -> None:
                         kw.update(username=args.user, password=pw)
                     MongoClient(**kw).admin.command("ping")
                 else:
-                    import json as _j  # noqa
-                    sys_argv_bak = sys.argv
-                    # 重用 db_query 的驅動函式跑 SELECT 1
-                    import db_query as DQ
-                    class A:  # 最小參數物件
-                        pass
-                    a = A()
-                    for k in ("host", "port", "database", "user",
-                              "password_env", "timeout", "db_path"):
-                        setattr(a, k, getattr(args, k, None))
-                    a.password, a.limit, a.allow_write = None, 1, False
-                    fn = {"postgresql": DQ.q_postgresql, "mysql": DQ.q_mysql,
-                          "mssql": DQ.q_mssql}[args.db_type]
-                    fn(a, "SELECT 1 AS ok", [])
-                    sys.argv = sys_argv_bak
+                    # 重用 drivers 的串流工廠跑 SELECT 1（修 F-16：不再假 args 反向 import q_*）
+                    import drivers as D
+                    import types as _t
+                    a = _t.SimpleNamespace(
+                        db_type=args.db_type, host=args.host, port=args.port,
+                        database=args.database, user=args.user,
+                        password=None, password_env=args.password_env,
+                        db_path=getattr(args, "db_path", None),
+                        timeout=args.timeout, connect_timeout=None, query_timeout=None,
+                        allow_write=False)
+                    list(D.iter_rows(a, "SELECT 1 AS ok", []))
             return f"連線 + 最小查詢 OK（{t.elapsed_ms} ms）"
         results.append(check("connect_and_ping", _connect_and_ping))
+
+    # F-15：BQ 憑證檢查與 bq_client.get_client 同一份邏輯
+    if args.db_type == "bigquery":
+        def _bq_creds():
+            import os as _os
+            if not _os.getenv("GOOGLE_APPLICATION_CREDENTIALS") and not _os.getenv("ARK_BQ_ADC_OK"):
+                raise RuntimeError("未設 GOOGLE_APPLICATION_CREDENTIALS 且未設 ARK_BQ_ADC_OK=1")
+            return "憑證就緒（與 bq_client.get_client 同判定）"
+        results.append(check("bq_credentials", _bq_creds))
+
+    # 新增：ledger 可寫檢查（多 agent 治理前置）
+    def _ledger_writable():
+        import ledger as L
+        if L.disabled():
+            return "ledger 已停用（ARK_DB_LEDGER_DISABLED=1）"
+        L._ensure_writable()
+        return f"ledger 目錄可寫: {L.ledger_dir()}"
+    results.append(check("ledger_writable", _ledger_writable))
 
     ok = all(r["ok"] for r in results)
     C.emit({"rows": results, "count": len(results),

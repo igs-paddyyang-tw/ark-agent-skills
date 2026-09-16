@@ -78,8 +78,11 @@ def main() -> None:
     C.guard_read_only(sql, args.allow_write)  # L1 allowlist
 
     import bq_client as BC  # 同目錄
+    import ledger as L
     client = get_client(args.project, args.location)
     params = BC.build_params(getattr(args, "params", None), getattr(args, "param_types", None))
+    aid, aid_src = L.agent_id(args)
+    sha = L.sql_sha256(sql)
 
     # --- 第一步永遠 dry-run：拿 bytes 估算 + statement_type（L3） ---
     with C.Timer() as t_dry:
@@ -91,10 +94,11 @@ def main() -> None:
            "price_per_tib_usd": PRICE_PER_TIB}
 
     if args.dry_run:
-        C.emit({"rows": [], "count": 0, "truncated": False, "out_file": None},
+        C.emit({"rows": [], "count": 0, "truncated": False, "truncated_by": None,
+                "out_file": None},
                {"db_type": "bigquery", "mode": "dry_run",
                 "elapsed_ms": t_dry.elapsed_ms, **est,
-                "statement_type": stmt_type,
+                "statement_type": stmt_type, "agent_id": aid, "sql_sha256": sha,
                 "would_exceed_cap": total_bytes > args.max_bytes_billed,
                 "max_bytes_billed": args.max_bytes_billed})
 
@@ -103,6 +107,9 @@ def main() -> None:
                f"查詢將掃描 {total_bytes:,} bytes，超過上限 {args.max_bytes_billed:,}",
                "縮小掃描範圍（partition/日期過濾/指定欄位），或明確調高 --max-bytes-billed")
 
+    # 預算檢查（ADR-004）：dry-run 後、執行前擋
+    L.check_budget(aid, est["estimated_cost_usd"])
+
     # --- 真正執行：不改寫 SQL，max_results 取筆數（修 F-05/F-06），逾時 cancel（修 F-07） ---
     max_results = None if args.no_limit else args.limit
     query_timeout = getattr(args, "query_timeout", None) or args.timeout
@@ -110,9 +117,20 @@ def main() -> None:
         rows, job = BC.execute(client, sql, params,
                                max_bytes_billed=args.max_bytes_billed,
                                max_results=max_results, timeout=query_timeout)
+    L.append({"agent_id": aid, "agent_id_source": aid_src, "db_type": "bigquery",
+              "project": args.project, "sql_sha256": sha, "statement_type": stmt_type,
+              "bytes_processed": job.total_bytes_processed,
+              "estimated_cost_usd": est["estimated_cost_usd"],
+              "elapsed_ms": t.elapsed_ms, "exit_code": 0,
+              "allow_write": bool(args.allow_write)})
     meta = {"db_type": "bigquery", "elapsed_ms": t.elapsed_ms,
             "job_id": job.job_id, "cache_hit": bool(job.cache_hit),
-            "bytes_processed": job.total_bytes_processed, **est}
+            "bytes_processed": job.total_bytes_processed, "agent_id": aid,
+            "sql_sha256": sha,
+            "gate": {"read_only": "L1+L3" if not args.allow_write else "off",
+                     "bytes_cap": args.max_bytes_billed,
+                     "budget_remaining_usd": L.budget_remaining(aid)},
+            **est}
     C.finalize_rows(rows, args, meta)
 
 
