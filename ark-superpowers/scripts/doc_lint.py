@@ -149,6 +149,15 @@ def lint(path: Path, fp: dict, sections: dict | None = None) -> list[dict]:
         findings.append({"id": "SP-007", "severity": "P1", "line": 1,
                          "msg": f"language 非 zh-TW/en：{fm['language']}"})
 
+    # SP-032 approved 內容雜湊一致（手改 approved 文件被抓，ADR-003）
+    if fm.get("status") == "approved" and fm.get("approved_hash"):
+        import hashlib
+        body = text.split("\n---", 2)[-1]
+        actual = hashlib.sha1(body.encode("utf-8")).hexdigest()[:12]
+        if actual != fm["approved_hash"]:
+            findings.append({"id": "SP-032", "severity": "P0", "line": 1,
+                             "msg": "status:approved 但內容雜湊 ≠ approved_hash（未走新版本而手改）"})
+
     # SP-004 section_missing（精確鍵或錨點，取代子字串比對）
     if sections and dtype in sections:
         present = h2_keys(text)

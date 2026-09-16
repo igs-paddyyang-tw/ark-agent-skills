@@ -1,0 +1,19 @@
+# lifecycle.yaml — 文件狀態機（ADR-003）。狀態轉移只由 build_docs.py status/supersede 觸發。
+version: "2.0"
+types:
+  spec:      { enum: [draft, review, approved, deprecated], initial: draft }
+  plan:      { enum: [draft, review, approved, deprecated], initial: draft }
+  one-pager: { enum: [draft, review, approved, deprecated], initial: draft }
+  design:    { enum: [draft, review, approved, superseded, deprecated], initial: draft }
+  adr:       { enum: [proposed, review, accepted, rejected, deprecated, superseded], initial: proposed }
+
+# 合法轉移（from -> [to...]）
+transitions:
+  draft:      [review]
+  review:     [draft, approved, rejected]
+  approved:   [superseded, deprecated, draft]   # draft = 開新版本（--bump minor/major）
+  proposed:   [review, accepted, rejected]      # adr
+  accepted:   [superseded, deprecated]
+
+# 版本規則（semver）：approved 時 1.0.0；同 ID 內容改 = patch；新增/移除 ID = minor；
+# 改目標/非目標或移除 approved 的 FR = major。變更紀錄每列以 ID 為單位（ADDED/MODIFIED/REMOVED）。

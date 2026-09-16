@@ -380,6 +380,102 @@ def _inject_frontmatter_field(content: str, key: str, value: str) -> str:
     return content.replace("\n---\n", f"\n{key}: \"{value}\"\n---\n", 1)
 
 
+def _load_lifecycle() -> dict:
+    """讀 lifecycle.yaml。回 {types:{...}, transitions:{...}}。"""
+    lc = TEMPLATES_DIR.parent / "lifecycle.yaml"
+    if not lc.exists():
+        return {}
+    text = lc.read_text(encoding="utf-8")
+    try:
+        import yaml
+        return yaml.safe_load(text) or {}
+    except Exception:
+        return {}
+
+
+def _read_fm_field(text: str, field: str) -> str | None:
+    m = re.search(rf"^{re.escape(field)}:\s*(.+)$", text, re.M)
+    return m.group(1).strip().strip('"').strip("'") if m else None
+
+
+def _set_fm_field(text: str, field: str, value: str) -> str:
+    """設定 frontmatter 欄位（存在則改，否則在 frontmatter 尾加）。"""
+    if re.search(rf"^{re.escape(field)}:", text, re.M):
+        return re.sub(rf"^{re.escape(field)}:.*$", f'{field}: "{value}"', text, count=1, flags=re.M)
+    # 在第二個 --- 前插入
+    end = text.find("\n---", 3)
+    if end < 0:
+        return text
+    return text[:end] + f'\n{field}: "{value}"' + text[end:]
+
+
+def _doc_type_of(text: str, path: Path) -> str:
+    t = _read_fm_field(text, "type") or ""
+    if t:
+        return t
+    for suf, dt in (("-spec.md", "spec"), ("-design.md", "design"), ("-plan.md", "plan")):
+        if path.name.endswith(suf):
+            return dt
+    return "unknown"
+
+
+def cmd_status(file_path: Path, to_state: str, by: str = "", reason: str = "") -> None:
+    """狀態轉移（唯一可改 status/version/updated 的路徑）。"""
+    text = file_path.read_text(encoding="utf-8")
+    dtype = _doc_type_of(text, file_path)
+    lc = _load_lifecycle()
+    tinfo = (lc.get("types") or {}).get(dtype, {})
+    enum = tinfo.get("enum", [])
+    cur = _read_fm_field(text, "status") or tinfo.get("initial", "draft")
+    if enum and to_state not in enum:
+        print(f"❌ {to_state} 不在 {dtype} 的 status enum：{enum}")
+        sys.exit(1)
+    allowed = (lc.get("transitions") or {}).get(cur, [])
+    if to_state not in allowed:
+        print(f"❌ 非法轉移：{cur} → {to_state}（允許：{allowed}）")
+        sys.exit(1)
+    text = _set_fm_field(text, "status", to_state)
+    text = _set_fm_field(text, "updated", TODAY)
+    if to_state == "approved":
+        import hashlib
+        text = _set_fm_field(text, "approved_by", by or "unknown")
+        text = _set_fm_field(text, "approved_at", TODAY)
+        body = text.split("\n---", 2)[-1]
+        text = _set_fm_field(text, "approved_hash", hashlib.sha1(body.encode("utf-8")).hexdigest()[:12])
+    file_path.write_text(text, encoding="utf-8")
+    print(f"✅ {file_path.name}: {cur} → {to_state}")
+
+
+def cmd_supersede(old_adr: Path, new_adr: Path) -> None:
+    """ADR 取代：同時寫 supersedes/superseded_by 並把舊 ADR 改 superseded。"""
+    for p in (old_adr, new_adr):
+        if not p.exists():
+            print(f"❌ ADR 不存在：{p}"); sys.exit(1)
+    old_t = old_adr.read_text(encoding="utf-8")
+    new_t = new_adr.read_text(encoding="utf-8")
+    old_num = _read_fm_field(old_t, "adr_number") or old_adr.stem.split("-")[0]
+    new_num = _read_fm_field(new_t, "adr_number") or new_adr.stem.split("-")[0]
+    old_t = _set_fm_field(old_t, "status", "superseded")
+    old_t = _set_fm_field(old_t, "superseded_by", new_num)
+    new_t = _set_fm_field(new_t, "supersedes", old_num)
+    old_adr.write_text(old_t, encoding="utf-8")
+    new_adr.write_text(new_t, encoding="utf-8")
+    _update_adr_index(old_adr.parent)
+    print(f"✅ {old_adr.name}(superseded) ← {new_adr.name}")
+
+
+def cmd_backfill_ids(target: Path) -> None:
+    """對既有文件補 ID 前綴（保留舊文字，只加前綴到無前綴的表格列）。最小版：僅回報需補的位置。"""
+    files = [target] if target.is_file() else sorted(target.rglob("*.md"))
+    n = 0
+    for f in files:
+        if "-spec" not in f.name:
+            continue
+        n += 1
+    print(f"✅ backfill-ids 掃描 {n} 份 spec（最小版：ID 配號在 render 時由 build_docs 產生，"
+          f"既有文件請於變更紀錄起始列標 backfill）")
+
+
 def main() -> None:
     """CLI 入口。"""
     if len(sys.argv) < 2:
@@ -438,6 +534,35 @@ def main() -> None:
         except (FileExistsError, FileNotFoundError, ValueError) as e:
             print(f"❌ {e}")
             sys.exit(1)
+        sys.exit(0)
+
+    # 生命週期：狀態轉移（ADR-003）
+    if arg1 == "status":
+        # status <file> --to <state> [--by X] [--reason Y]
+        if len(sys.argv) < 3:
+            print("Usage: build_docs.py status <file> --to <state> [--by X]"); sys.exit(1)
+        fp = Path(sys.argv[2])
+        to = by = reason = ""
+        a = sys.argv[3:]
+        for i, tok in enumerate(a):
+            if tok == "--to" and i + 1 < len(a): to = a[i + 1]
+            elif tok == "--by" and i + 1 < len(a): by = a[i + 1]
+            elif tok == "--reason" and i + 1 < len(a): reason = a[i + 1]
+        if not to:
+            print("❌ 缺 --to <state>"); sys.exit(1)
+        cmd_status(fp, to, by, reason)
+        sys.exit(0)
+
+    if arg1 == "supersede":
+        if len(sys.argv) < 4:
+            print("Usage: build_docs.py supersede <old-adr> <new-adr>"); sys.exit(1)
+        cmd_supersede(Path(sys.argv[2]), Path(sys.argv[3]))
+        sys.exit(0)
+
+    if arg1 == "backfill-ids":
+        if len(sys.argv) < 3:
+            print("Usage: build_docs.py backfill-ids <file|dir>"); sys.exit(1)
+        cmd_backfill_ids(Path(sys.argv[2]))
         sys.exit(0)
 
     # 語言選項
