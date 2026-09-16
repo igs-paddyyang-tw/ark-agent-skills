@@ -38,7 +38,9 @@ def main() -> None:
     if not agent_id:
         emit_error("BAD_INPUT", "未指定 agent-id", "帶 --agent-id 或設 WEKNORA_AGENT_ID")
 
-    payload = {"query": args.query, "agent_id": agent_id}
+    # 🔴 預設帶 knowledge_base_ids: []（空陣列）—— 服務端 wiki_search 在缺此欄位時
+    # 會踩 regex bug（實測：不帶就掛、帶 [] 正常）。--kb-id 有值時才覆蓋為指定範圍。
+    payload = {"query": args.query, "agent_id": agent_id, "knowledge_base_ids": []}
     if args.kb_id:
         payload["knowledge_base_ids"] = [resolve_kb(k) for k in args.kb_id]
 
