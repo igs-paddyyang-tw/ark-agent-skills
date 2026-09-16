@@ -90,6 +90,7 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
     for name, inst in instances.items():
         inst = inst or {}
         role = inst.get("role", "worker")
+        role_id = inst.get("base_role")  # work 層提詞依此配發（= role-profile 的 base_role）
         wd = inst.get("working_directory", f"agents/{name}")
         description = inst.get("description", f"{name}")
 
@@ -118,6 +119,7 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
             base=base,
             profile=inst_profile,
             is_root=is_root,
+            role_id=role_id,
         )
         created.extend(agent_created)
 
@@ -137,6 +139,7 @@ def _build_agent_kiro(
     base: Path,
     profile: str | None = None,
     is_root: bool = False,
+    role_id: str | None = None,
 ) -> list[str]:
     """產出單一 agent 的 .kiro/ 目錄。"""
     created: list[str] = []
@@ -186,7 +189,8 @@ def _build_agent_kiro(
         created.append(str(mcp_json.relative_to(base)))
 
     # 4. prompts/
-    prompts_created = _build_prompts(kiro_dir / "prompts", role, is_admin, base)
+    prompts_created = _build_prompts(kiro_dir / "prompts", role, is_admin, base,
+                                     role_id=role_id, agent_name=name, all_instances=all_instances)
     created.extend(prompts_created)
 
     return created
@@ -467,28 +471,87 @@ def _make_agent_mcp(instance: str, role: str, port: int, allowed_targets: str,
 
 # ── prompts/ ──────────────────────────────────────────────────
 
-def _build_prompts(prompts_dir: Path, role: str, is_admin: bool, base: Path) -> list[str]:
-    """產出 prompts/ 下的提詞模板。"""
+def _load_role_prompts() -> dict:
+    """解析 references/role-prompts-map.md 的 `role_prompts:` YAML 錨點。
+
+    回傳 {'ops': {tier: [prompt...]}, 'work': {role_id: [prompt...]}}。
+    找不到對照表或解析失敗 → 回退到硬編最小 ops 表（不中斷）。
+    """
+    ref = SKILL_ROOT / "references" / "role-prompts-map.md"
+    fallback = {"ops": {"admin": ["route-message", "service-check"],
+                        "manager": ["route-message"],
+                        "leader": ["daily-report", "team-check"],
+                        "worker": ["daily-report"]},
+                "work": {}}
+    if not ref.exists():
+        return fallback
+    text = ref.read_text(encoding="utf-8")
+    # 抓 ```yaml ... ``` 裡含 role_prompts: 的 block
+    import re as _re
+    m = _re.search(r"```ya?ml\n(.*?role_prompts:.*?)\n```", text, _re.DOTALL)
+    if not m:
+        return fallback
+    try:
+        data = yaml.safe_load(m.group(1)) or {}
+        rp = data.get("role_prompts")
+        return rp if isinstance(rp, dict) else fallback
+    except yaml.YAMLError:
+        return fallback
+
+
+def _render_prompt_vars(text: str, agent_name: str, role: str, all_instances: dict) -> str:
+    """渲染提詞裡的 {{var}} 模板變數（來源 team.yaml）。"""
+    leaders = [n for n, v in (all_instances or {}).items() if (v or {}).get("role") == "leader"]
+    leader_name = leaders[0] if leaders else (agent_name or "leader-agent")
+    members = ", ".join((all_instances or {}).keys())
+    return (text
+            .replace("{{leader_name}}", leader_name)
+            .replace("{{team_members}}", members)
+            .replace("{{agent_name}}", agent_name or "")
+            .replace("{{role}}", role or "")
+            .replace("{{artifacts_dir}}", "artifacts/"))
+
+
+def _build_prompts(prompts_dir: Path, role: str, is_admin: bool, base: Path,
+                   role_id: str | None = None, agent_name: str = "",
+                   all_instances: dict | None = None) -> list[str]:
+    """產出 prompts/：依對照表配發 ops(依 tier) + work(依 role_id) 聯集，渲染變數後落盤。
+
+    對照表在 references/role-prompts-map.md（唯一清單來源，非硬編）。
+    - ops 提詞來源 assets/prompts/，落 prompts/
+    - work 提詞來源 assets/prompts/work/，落 prompts/work/
+    - role_id 找不到對照 → 只配 ops + 提示（不靜默）
+    - work 對照列了但 asset 缺檔 → 印錯（幻覺索引）
+    """
     created: list[str] = []
+    table = _load_role_prompts()
+    tier = "admin" if (is_admin or role == "admin") else role
 
-    if is_admin or role == "admin":
-        files = ["route-message.md", "service-check.md"]
-    elif role == "manager":
-        # manager 是總機/入口 —— 需要意圖路由提詞（原本漏了 manager 分支，
-        # 會落到 else 拿 worker 的 daily-report，對總機不對）
-        files = ["route-message.md"]
-    elif role == "leader":
-        files = ["daily-report.md", "team-check.md"]
-    else:
-        files = ["daily-report.md"]
+    # ops 層（依 tier）
+    for stem in table.get("ops", {}).get(tier, []):
+        src = PROMPTS_ASSETS / f"{stem}.md"
+        dst = prompts_dir / f"{stem}.md"
+        if src.exists() and not dst.exists():
+            content = _render_prompt_vars(src.read_text(encoding="utf-8"), agent_name, role, all_instances or {})
+            dst.write_text(content, encoding="utf-8")
+            created.append(str(dst.relative_to(base)))
 
-    for fname in files:
-        dst = prompts_dir / fname
-        if not dst.exists():
-            src = PROMPTS_ASSETS / fname
-            if src.exists():
-                shutil.copy2(src, dst)
+    # work 層（依 role_id）
+    work_map = table.get("work", {})
+    if role_id and role_id in work_map:
+        for stem in work_map[role_id]:
+            src = PROMPTS_ASSETS / "work" / f"{stem}.md"
+            if not src.exists():
+                print(f"  ⚠️  work 提詞 '{stem}'（role={role_id}）對照表有列但 assets/prompts/work/ 缺檔", file=sys.stderr)
+                continue
+            (prompts_dir / "work").mkdir(parents=True, exist_ok=True)
+            dst = prompts_dir / "work" / f"{stem}.md"
+            if not dst.exists():
+                content = _render_prompt_vars(src.read_text(encoding="utf-8"), agent_name, role, all_instances or {})
+                dst.write_text(content, encoding="utf-8")
                 created.append(str(dst.relative_to(base)))
+    elif role_id:
+        print(f"  ℹ️  role_id '{role_id}' 無 work 提詞對照，只配 ops 層", file=sys.stderr)
 
     return created
 

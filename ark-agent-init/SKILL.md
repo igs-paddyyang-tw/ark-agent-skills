@@ -773,6 +773,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 |------|------|
 | `role-templates.md` | 已知角色索引（10 種內建角色） |
 | `role-skills-map.md` | 角色 → Skills 對應表 |
+| `role-prompts-map.md` | 🆕 角色 → Prompts 對應表（`role_prompts:` 錨點，ops/work 雙層；`_build_prompts` 讀此表非硬編）|
 | `skill-selection-map.md` | 🗺️ **Skill 選用地圖**（問題類型 → 用哪個 skill / 怎麼串鏈）—— 放進專案 AGENTS.md，教大腦調度既有武器 |
 | `knowledge-schema-template.md` | 知識庫 schema 模板 |
 | `prompt-schema-v1.md` | 🆕 提詞資產 frontmatter 契約（prompts/ 的 ops/work 雙層 + 範例段 + 模板變數）|

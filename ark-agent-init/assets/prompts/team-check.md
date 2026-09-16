@@ -22,9 +22,9 @@ example: true
 ## 輸出樣板
 
 ```
-團隊：{X}/{N} running
-任務板：進行中 {a} · 待派 {b} · 已完成 {c}
-動作：{已派工 <task> 給 <member> | 追蹤 <task> | 無}
+團隊：<X>/<N> running
+任務板：進行中 <a> · 待派 <b> · 已完成 <c>
+動作：<已派工 TASK 給 MEMBER | 追蹤 TASK | 無>
 ```
 
 ## 範例

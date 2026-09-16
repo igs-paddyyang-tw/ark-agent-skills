@@ -23,11 +23,11 @@ example: true
 ## 輸出樣板
 
 ```
-# {{agent_name}} 日報 · {date}
+# {{agent_name}} 日報 · <date>
 ## 今日完成
-- {task}（{產出路徑，落 {{artifacts_dir}}}）
+- <task>（產出路徑，落 {{artifacts_dir}}）
 ## 明日計劃
-- {task}
+- <task>
 ```
 
 ## 範例
