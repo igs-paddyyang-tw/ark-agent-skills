@@ -51,4 +51,4 @@ python3 scripts/sync_skills.py --check    # 驗一致（doctor/CI 用）
 - 上游庫：`~/kiro-cli/.kiro/skills`（`git clone igs-paddyyang-tw/ark-agent-skills`）
 - skill 是**複本非 symlink**（symlink 跨機斷鏈）→ 靠 sync 重建 → gitignore 排除
 - 前提：team.yaml `kiro_files.skills.policy: skip`（否則套件 `_deploy_skills` 推翻矩陣）
-- 完整範例：`ark-agent-team-builder/examples/market-team/scripts/sync_skills.py`
+- sync_skills.py 的角色→skill 矩陣即本檔的 `role_skills:` 錨點（唯一真相）；各 team repo 自建 sync 腳本依此矩陣

@@ -199,7 +199,7 @@ python3 scripts/sync_skills.py --check    # 驗一致（doctor/CI 用）
 
 > 🔴 **只裝該裝的，別全員裝同一批** —— skill 會進 agent 的 context window，
 > 裝無關的只是稀釋注意力。矩陣就是「角色邊界」的具體化。
-> 完整範例見 `examples/market-team/scripts/sync_skills.py`（6-agent 矩陣）。
+> sync_skills.py 的角色→skill 矩陣參考 `ark-agent-init/references/role-skills-map.md`（唯一真相）。
 
 > 🔴 前提：team.yaml 的 `kiro_files.skills.policy: skip`。否則套件 `_deploy_skills`
 > 每次啟動會用 bundled skill **推翻**你的角色矩陣（步驟 3 的 policy 表已說明）。
@@ -263,7 +263,6 @@ journalctl --user -u <svc> --since "-5min" | grep -E "All tools are now trusted|
 | `references/troubleshooting.md` | 環境問題排查（venv／依賴／啟動失敗）|
 | `scripts/scaffold_dirs.py` | 依 team.yaml 產目錄骨架 |
 | `scripts/validate_team.py` | team.yaml 驗證 |
-| `examples/market-team/` | 🎯 **完整實例**（市場情報團隊）—— 「長好的樣子」，對照 6 instance + 雙知識櫃 + dir="." manager + 完整 team.yaml 怎麼組（範本教填空、本例教全貌）|
 
 ## 注意事項
 
