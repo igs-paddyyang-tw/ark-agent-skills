@@ -71,6 +71,20 @@ def _has_non_ascii(text: str) -> bool:
     return bool(re.search(r"[^\x00-\x7f]", text))
 
 
+def _render_placeholders(content: str, title: str, author: str) -> str:
+    """統一 placeholder 替換（C-5：new 與 upgrade 共用同一份清單，消 F-2）。
+
+    涵蓋 zh-TW 與 en 模板的所有標量 placeholder。ADR 專屬的 {NNN}/{決策標題}
+    由呼叫端在此之前替換（需 adr 編號上下文）。
+    """
+    for ph in ("{名稱}", "{專案名稱}", "{Project Name}"):
+        content = content.replace(ph, title)
+    for ph in ("{作者}", "{Author}"):
+        content = content.replace(ph, author)
+    content = content.replace("YYYY-MM-DD", TODAY)
+    return content
+
+
 def _to_kebab(title: str, slug: str | None = None) -> str:
     """將標題轉為 kebab-case 檔名。
 
@@ -213,9 +227,7 @@ def build_doc(
         elif doc_type == "plan":
             filename = f"{kebab_name}-plan.md"
 
-    content = content.replace("{名稱}", title)
-    content = content.replace("{作者}", author)
-    content = content.replace("YYYY-MM-DD", TODAY)
+    content = _render_placeholders(content, title, author)
 
     # 確保輸出目錄存在
     output_dir = project_dir / OUTPUT_DIR_MAP[doc_type]
@@ -315,12 +327,7 @@ def upgrade_onepager(project_dir: Path, onepager_path: Path, lang: str = "zh-TW"
             filename = f"{slug}-plan.md"
             output_dir = project_dir / "docs" / "plans"
 
-        tmpl_content = tmpl_content.replace("{名稱}", title)
-        tmpl_content = tmpl_content.replace("{專案名稱}", title)
-        tmpl_content = tmpl_content.replace("{Project Name}", title)
-        tmpl_content = tmpl_content.replace("{作者}", author)
-        tmpl_content = tmpl_content.replace("{Author}", author)
-        tmpl_content = tmpl_content.replace("YYYY-MM-DD", TODAY)
+        tmpl_content = _render_placeholders(tmpl_content, title, author)
 
         # 加入 upgraded_from 欄位到 frontmatter
         onepager_rel = str(onepager_path.relative_to(project_dir)) if project_dir in onepager_path.parents else str(onepager_path)

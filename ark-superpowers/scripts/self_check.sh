@@ -78,6 +78,20 @@ else
     echo "$parity_output" | sed 's/^/     /'
 fi
 
+# ── W0：指紋新鮮度 + CLI 契約（build_docs new 全型零工具 placeholder + 骨架 doc_lint exit 2）──
+echo "▸ W0 契約驗證..."
+PY="${PYTHON:-python3}"
+if "$PY" "$SCRIPT_DIR/build_fingerprints.py" >/dev/null 2>&1; then
+    PASS=$((PASS + 1)); echo "  ✅ fingerprints 可重建"
+else
+    FAIL=$((FAIL + 1)); ERRORS+=("build_fingerprints 失敗"); echo "  ❌ build_fingerprints 失敗"
+fi
+if "$PY" -m pytest "$SCRIPT_DIR/tests/test_cli_contract.py" -q >/dev/null 2>&1; then
+    PASS=$((PASS + 1)); echo "  ✅ CLI 契約（test_cli_contract）全過"
+else
+    FAIL=$((FAIL + 1)); ERRORS+=("test_cli_contract 失敗"); echo "  ❌ CLI 契約失敗（見 pytest）"
+fi
+
 # ── 結果摘要 ─────────────────────────────────────────────────────
 echo ""
 echo "═══════════════════════════════════════════════════════"
