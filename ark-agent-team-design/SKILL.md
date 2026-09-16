@@ -24,8 +24,8 @@ metadata:
   render: none
   depends_on: [ark-agent-role-profile, ark-grill-me]
   author: paddyyang
-  version: "1.0"
-  updated: 2026-09-15
+  version: "1.1"
+  updated: 2026-09-16
 ---
 
 # ark-agent-team-design
@@ -69,7 +69,7 @@ stub 裡 stance 等欄位若角色庫有 `base_role` 就複製，沒有就留 `T
 3. 落 spec → team-spec.yaml
 4. lint   → python scripts/team_spec_lint.py team-spec.yaml（P0/P1 清零）
 5. 預覽   → 印編制表（層／instance／base_role／group）+ 決策鎖，編號選項確認
-6. 生成   → python scripts/gen_team.py team-spec.yaml --out {project}
+6. 生成   → python scripts/gen_team.py team-spec.yaml --out {project} [--target team|bot|hybrid]
 7. 交接   → 回報產出 + 下一步（team-builder 裝 wheel；role-profile 補 TODO stub）
 ```
 
@@ -141,6 +141,25 @@ decision_locks:                       # 生成 authority-matrix 的原料
 
 > entry instance 的 `working_directory: .`，其 role-profile 放專案根 `role-profile.yaml`
 > （對應 init 規則：根目錄 `.kiro/` 就是它的 workspace）。
+
+### `--target {team|bot|hybrid}`：一份 spec 產不同 runtime（v1.1）
+
+```bash
+python scripts/gen_team.py spec.yaml --out {project} --target hybrid
+```
+
+| target | 產出 | 用途 |
+|---|---|---|
+| **team**（預設） | team.yaml | 純 team daemon（ark_team_agent）|
+| **bot** | agents.yaml（只 default+manager）+ bot.yaml（`team_leader: ""`）| 純 bot（ark_bot_agent），關派工 |
+| **hybrid** | 上兩者 + scheduler.yaml | team + bot 雙 runtime 共用工作區 |
+
+- **hybrid single-owner 原則**（避免兩 runtime 互搶）：
+  - 派工只有 team daemon 做 → bot 的 `agents.yaml` 只放 `default`（不填 leader/group_members）
+  - `bot.yaml` 的 `modes.team_leader: ""`（空）→ bot 側不啟 team 派工
+  - bot `features.web_ui: true`、TG 不啟 → 不與 team 搶 TG poller
+- **長任務移出 instances**：`scheduled_jobs[]`（spec）→ `scheduler.yaml`（模擬/壓測等長任務由排程觸發，不占常駐 instance）。
+- 三個 target 產出都過各自 validator（`validate_team.py` / `validate_agent.py`）。
 
 ---
 

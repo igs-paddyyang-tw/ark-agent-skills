@@ -69,6 +69,52 @@ def build_team_yaml(spec: dict) -> dict:
     }
 
 
+def build_agents_yaml(spec: dict) -> dict:
+    """hybrid/bot target：agents.yaml —— 只填 default + manager，關 team 模式。
+
+    🔴 只放 default(entry manager)—— 不填 leader/group_members，
+    這樣 bot runtime 不會啟動 team 派工（team 派工由 team daemon 那側負責）。
+    """
+    entry = spec["entry"]
+    entry_inst = next(i for i in spec["instances"] if i["id"] == entry)
+    name = inst_name(entry)
+    return {
+        "default": {
+            "name": name,
+            "description": f"{entry_inst.get('emoji', '🤖')} {entry_inst['purpose']}",
+            "role": "manager",
+        },
+        # 🔴 刻意不填 leader / group_members —— 關掉 bot 側的 team 派工
+    }
+
+
+def build_bot_yaml(spec: dict) -> dict:
+    """hybrid/bot target：bot.yaml —— team_leader 空（關派工）、TG 不啟、Tier 0 + Web UI。"""
+    d = spec.get("defaults") or {}
+    return {
+        "server": {"host": "127.0.0.1", "port": d.get("health_port", 13030) + 5000},
+        "modes": {
+            "default": "chat",
+            "team_leader": "",   # 🔴 空 = 關 team 派工（bot 側不搶派工）
+        },
+        "features": {"web_ui": True},   # Tier 0 + Web UI；TG 不啟（不搶 poller）
+        "backend": {"type": "kiro-cli"},
+    }
+
+
+def build_scheduler_yaml(spec: dict) -> dict:
+    """hybrid target：scheduler.yaml —— 長任務（模擬/壓測）從 scheduled_jobs 產。"""
+    jobs = []
+    for j in spec.get("scheduled_jobs", []):
+        jobs.append({
+            "id": j["id"],
+            "schedule": j["schedule"],
+            "task": j["task"],
+            "target": inst_name(j["target"]) if j.get("target") else inst_name(spec["entry"]),
+        })
+    return {"jobs": jobs}
+
+
 def build_stub(i: dict, spec: dict, roles_dir: Path | None) -> tuple[dict, bool]:
     """回傳 (profile, has_todo)。"""
     by_id = {x["id"]: x for x in spec["instances"]}
@@ -180,6 +226,8 @@ def main() -> int:
     ap.add_argument("--roles-dir", type=Path, default=DEFAULT_ROLES_DIR if DEFAULT_ROLES_DIR.exists() else None)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--skip-lint", action="store_true")
+    ap.add_argument("--target", choices=["team", "bot", "hybrid"], default="team",
+                    help="team(預設,team.yaml)｜bot(agents.yaml+bot.yaml)｜hybrid(全部+scheduler.yaml)")
     a = ap.parse_args()
 
     if not a.skip_lint:
@@ -193,7 +241,16 @@ def main() -> int:
     spec = yaml.safe_load(a.spec.read_text(encoding="utf-8"))
     out = a.out
     header = f"# {spec['name']}（{spec['team_id']}）— 由 ark-agent-team-design 生成，來源 {a.spec.name}\n# 啟動前先讀 NEXT.md。access.allowed_users 換成實際 TG user_id。\n\n"
-    print(write(out / "team.yaml", header + dump(build_team_yaml(spec)), a.force))
+    # target 決定產哪些設定檔（team.yaml 一律產；bot/hybrid 加 agents.yaml + bot.yaml）
+    if a.target in ("team", "hybrid"):
+        print(write(out / "team.yaml", header + dump(build_team_yaml(spec)), a.force))
+    if a.target in ("bot", "hybrid"):
+        bot_hdr = f"# {spec['name']}（{spec['team_id']}）bot runtime — team_leader 空（關派工）、TG 不啟\n\n"
+        print(write(out / "agents.yaml", bot_hdr + dump(build_agents_yaml(spec)), a.force))
+        print(write(out / "bot.yaml", bot_hdr + dump(build_bot_yaml(spec)), a.force))
+    if a.target == "hybrid":
+        sched_hdr = "# 長任務（模擬/壓測）—— 由 scheduler 觸發，移出 instances\n\n"
+        print(write(out / "scheduler.yaml", sched_hdr + dump(build_scheduler_yaml(spec)), a.force))
     print(write(out / "team-spec.yaml", a.spec.read_text(encoding="utf-8"), a.force))
 
     todo_ids: list[str] = []
@@ -216,7 +273,7 @@ def main() -> int:
             (base / sub).mkdir(parents=True, exist_ok=True)
             (base / sub / ".gitkeep").touch()
 
-    for sub in ("knowledge/shared/wiki", "knowledge/shared/raw", "knowledge/raw/memory-archive", "config"):
+    for sub in ("knowledge/shared/wiki", "knowledge/shared/raw", "memory/daily", "memory/archive", "config"):
         (out / sub).mkdir(parents=True, exist_ok=True)
         (out / sub / ".gitkeep").touch()
     print(write(out / "config/authority-matrix.yml", dump(build_authority(spec)), a.force))

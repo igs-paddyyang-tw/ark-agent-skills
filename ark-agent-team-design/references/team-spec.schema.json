@@ -58,6 +58,20 @@
           "allowed": { "type": "array", "items": { "type": "string" } }
         }
       }
+    },
+    "scheduled_jobs": {
+      "type": "array",
+      "description": "長任務（模擬/壓測等）移出 instances，由 scheduler 觸發；hybrid target 產 scheduler.yaml",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "schedule", "task"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 30 },
+          "schedule": { "type": "string", "description": "cron 或 interval，如 '0 2 * * *' 或 '@daily'" },
+          "task": { "type": "string", "maxLength": 120 },
+          "target": { "type": ["string", "null"], "description": "派給哪個 instance，空=entry" }
+        }
+      }
     }
   }
 }
