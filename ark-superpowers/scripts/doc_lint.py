@@ -24,6 +24,74 @@ HERE = Path(__file__).resolve().parent
 SKILL_ROOT = HERE.parent
 TEMPLATES_DIR = SKILL_ROOT / "references" / "templates"
 FINGERPRINTS = SKILL_ROOT / "references" / "fingerprints.json"
+SECTIONS_YAML = SKILL_ROOT / "references" / "sections.yaml"
+
+
+def infer_type(path: Path, fm: dict) -> str:
+    """doc_type ← frontmatter type，其次檔名後綴。"""
+    t = (fm.get("type") or "").strip()
+    if t in ("spec", "design", "plan", "adr", "one-pager"):
+        return t
+    for suf, dt in (("-spec.md", "spec"), ("-design.md", "design"), ("-plan.md", "plan")):
+        if path.name.endswith(suf):
+            return dt
+    return t or "unknown"
+
+
+def load_sections() -> dict:
+    """讀 sections.yaml（PyYAML 選用，否則極簡解析）。回 {type: [{key,zh,en,required}]}。"""
+    if not SECTIONS_YAML.exists():
+        return {}
+    text = SECTIONS_YAML.read_text(encoding="utf-8")
+    try:
+        import yaml
+        types = (yaml.safe_load(text) or {}).get("types", {})
+        return {t: (v.get("sections", []) if isinstance(v, dict) else v)
+                for t, v in types.items()}
+    except Exception:
+        pass
+    out: dict = {}
+    cur = None
+    for ln in text.splitlines():
+        m = re.match(r"^  ([\w-]+):\s*$", ln)
+        if m:
+            cur = m.group(1); out[cur] = []; continue
+        m = re.search(r"key:\s*([\w-]+).*?zh:\s*(.+?)\s*,.*?en:\s*(.+?)\s*,.*?required:\s*(true|false)", ln)
+        if m and cur is not None:
+            out[cur].append({"key": m.group(1), "zh": m.group(2).strip(),
+                             "en": m.group(3).strip(), "required": m.group(4) == "true"})
+    return out
+
+
+def parse_frontmatter(text: str) -> dict:
+    if not text.startswith("---"):
+        return {}
+    end = text.find("\n---", 3)
+    if end < 0:
+        return {}
+    fm = {}
+    for ln in text[3:end].splitlines():
+        if ":" in ln and not ln.startswith((" ", "\t", "-")):
+            k, _, v = ln.partition(":")
+            fm[k.strip()] = v.strip().strip('"').strip("'")
+    return fm
+
+
+def h2_keys(text: str) -> set[str]:
+    """正規化 H2 標題：去編號、去括號註記。回 H2 標題集合（用於精確鍵比對）。"""
+    keys = set()
+    for ln in text.splitlines():
+        m = re.match(r"^##\s+(.+)$", ln)
+        if m:
+            h = re.sub(r"^\d+\.?\s*", "", m.group(1))       # 去 "3. "
+            h = re.sub(r"[（(].*", "", h).strip()            # 去括號註記
+            keys.add(h)
+    return keys
+
+
+def anchor_keys(text: str) -> set[str]:
+    return set(re.findall(r"<!--\s*sec:([\w-]+)\s*-->", text))
+
 
 # 與 build_fingerprints.normalize 必須一致
 _MIN_LEN = 8
@@ -61,12 +129,37 @@ def load_fingerprints() -> dict:
     return json.loads(FINGERPRINTS.read_text(encoding="utf-8"))
 
 
-def lint(path: Path, fp: dict) -> list[dict]:
+def lint(path: Path, fp: dict, sections: dict | None = None) -> list[dict]:
     findings: list[dict] = []
     text = path.read_text(encoding="utf-8", errors="replace")
     prose = strip_fences(text)
     line_set = set(fp["lines"])
     cell_set = set(fp["cells"])
+    fm = parse_frontmatter(text)
+    dtype = infer_type(path, fm)
+    lang = (fm.get("language") or "zh-TW").strip()
+
+    # SP-006 frontmatter_required
+    for req in ("title", "type", "status", "created", "language", "version"):
+        if req not in fm:
+            findings.append({"id": "SP-006", "severity": "P0", "line": 1,
+                             "msg": f"frontmatter 缺必填欄位：{req}"})
+    # SP-007 frontmatter_enum（language）
+    if fm.get("language") and fm["language"] not in ("zh-TW", "en"):
+        findings.append({"id": "SP-007", "severity": "P1", "line": 1,
+                         "msg": f"language 非 zh-TW/en：{fm['language']}"})
+
+    # SP-004 section_missing（精確鍵或錨點，取代子字串比對）
+    if sections and dtype in sections:
+        present = h2_keys(text)
+        anchors = anchor_keys(text)
+        for sec in sections[dtype]:
+            if not sec.get("required"):
+                continue
+            want = sec["en"] if lang == "en" else sec["zh"]
+            if want not in present and sec["key"] not in anchors:
+                findings.append({"id": "SP-004", "severity": "P0", "line": 1,
+                                 "msg": f"缺必要章節：{want}（key={sec['key']}）"})
 
     for i, raw in enumerate(prose.splitlines(), 1):
         # SP-002 placeholder（正文，不含 fenced code）
@@ -104,10 +197,11 @@ def main() -> int:
     args = ap.parse_args()
 
     fp = load_fingerprints()
+    sections = load_sections()
     worst = 0
     for f in args.files:
         p = Path(f)
-        findings = lint(p, fp)
+        findings = lint(p, fp, sections)
         rc = exit_code(findings)
         worst = max(worst, rc)
         p0 = sum(1 for x in findings if x["severity"] == "P0")

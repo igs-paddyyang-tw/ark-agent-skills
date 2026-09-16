@@ -1,0 +1,64 @@
+# sections.yaml — 文件章節單一來源（取代 check_doc_completeness 的 REQUIRED_SECTIONS_ZH/_EN 兩張手工表）
+# doc_lint 比對規則：H2 標題去編號/括號後須等於 zh 或 en 值（依 frontmatter language），
+# 或該 H2 上一行有 <!-- sec:<key> --> 錨點。子字串比對不再存在。
+# parity：每個 key 都有 zh 與 en。required=false 的章節不強制存在。
+version: "2.0"
+types:
+  spec:
+    sections:
+      - { key: summary,     zh: 摘要,           en: Summary,                       required: true }
+      - { key: motivation,  zh: 動機,           en: Motivation,                    required: true }
+      - { key: goals,       zh: 目標與非目標,   en: Goals & Non-Goals,             required: true }
+      - { key: stories,     zh: 使用者故事,     en: User Stories,                  required: true }
+      - { key: nfr,         zh: 非功能性需求,   en: Non-Functional Requirements,   required: true }
+      - { key: constraints, zh: 約束條件,       en: Constraints,                   required: true }
+      - { key: metrics,     zh: 成功指標,       en: Success Metrics,               required: true }
+      - { key: open,        zh: 開放問題,       en: Open Questions,                required: true }
+  design:
+    sections:
+      - { key: overview,    zh: 概述,           en: Overview,                      required: true }
+      - { key: context,     zh: 背景,           en: Context,                       required: true }
+      - { key: adr,         zh: 架構決策,       en: Architecture Decisions,        required: true }
+      - { key: architecture, zh: 系統架構,      en: System Architecture,           required: true }
+      - { key: failure,     zh: 故障隔離與降級策略, en: Failure Isolation & Degradation, required: true }
+      - { key: security,    zh: 安全性考量,     en: Security Considerations,       required: false }
+      - { key: observability, zh: 可觀測性,     en: Observability,                 required: false }
+      - { key: techstack,   zh: 技術棧選擇,     en: Technology Stack,              required: false }
+  plan:
+    sections:
+      - { key: summary,     zh: 摘要,           en: Summary,                       required: true }
+      - { key: milestones,  zh: 里程碑,         en: Milestones,                    required: true }
+      - { key: risk,        zh: 風險管理,       en: Risk Management,               required: true }
+      - { key: verification, zh: 驗證標準,      en: Verification Criteria,         required: true }
+      - { key: rollback,    zh: 回滾計畫,       en: Rollback Plan,                 required: true }
+      - { key: deps,        zh: 依賴與前置條件, en: Dependencies & Prerequisites,  required: false }
+      - { key: comms,       zh: 溝通計畫,       en: Communication Plan,            required: false }
+  adr:
+    sections:
+      - { key: context,     zh: 背景,           en: Context,                       required: true }
+      - { key: options,     zh: 選項,           en: Options,                       required: true }
+      - { key: decision,    zh: 決策,           en: Decision,                      required: true }
+      - { key: consequences, zh: 後果,          en: Consequences,                  required: true }
+  spec-onepager:
+    sections:
+      - { key: problem,     zh: 問題,           en: Problem,                       required: true }
+      - { key: proposal,    zh: 提案,           en: Proposal,                      required: true }
+      - { key: goals,       zh: 目標,           en: Goals,                         required: true }
+      - { key: metrics,     zh: 成功指標,       en: Success Metrics,               required: true }
+  design-onepager:
+    sections:
+      - { key: context,     zh: 背景,           en: Context,                       required: true }
+      - { key: options,     zh: 方案比較,       en: Options Comparison,            required: true }
+      - { key: decision,    zh: 決策,           en: Decision,                      required: true }
+  plan-onepager:
+    sections:
+      - { key: goal,        zh: 目標,           en: Goal,                          required: true }
+      - { key: milestones,  zh: 里程碑,         en: Milestones,                    required: true }
+      - { key: risks,       zh: 關鍵風險,       en: Key Risks,                     required: true }
+      - { key: acceptance,  zh: 驗收條件,       en: Acceptance Criteria,           required: true }
+  one-pager:
+    sections:
+      - { key: problem_goal, zh: 問題與目標,    en: Problem & Goal,                required: true }
+      - { key: proposal,    zh: 方案,           en: Proposal,                      required: true }
+      - { key: execution,   zh: 執行計畫,       en: Execution Plan,                required: true }
+      - { key: risk_accept, zh: 風險與驗收,     en: Risks & Acceptance,            required: true }
