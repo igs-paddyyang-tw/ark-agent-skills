@@ -775,6 +775,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 | `role-skills-map.md` | 角色 → Skills 對應表 |
 | `skill-selection-map.md` | 🗺️ **Skill 選用地圖**（問題類型 → 用哪個 skill / 怎麼串鏈）—— 放進專案 AGENTS.md，教大腦調度既有武器 |
 | `knowledge-schema-template.md` | 知識庫 schema 模板 |
+| `prompt-schema-v1.md` | 🆕 提詞資產 frontmatter 契約（prompts/ 的 ops/work 雙層 + 範例段 + 模板變數）|
 | `defaults/README.md` | 預設角色說明 |
 | `architecture-drift-feedback.md` | 🔴 **模板 vs 演化實例的三項缺口回饋**（knowledge/shared 層、memory/ 目錄、artifacts/）—— 維護本 skill 前必讀 |
 

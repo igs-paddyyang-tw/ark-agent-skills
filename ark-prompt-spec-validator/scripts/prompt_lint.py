@@ -130,7 +130,12 @@ def infer_type(path: Path, overrides: dict) -> str:
     if path.name in {"SOUL.md"} or path.name.endswith((".prompt.md", "-prompt.md")):
         return "prompt"
     parts = {p.lower() for p in path.parts}
-    if parts & {"steering", "prompts", "personas"}:
+    # 🔴 prompts/ 放的是「任務提詞模板」（content：有 layer frontmatter、允許 {{var}}），
+    #    不是「人格提詞」（prompt：SOUL/personas，要求角色/邊界章節）。
+    #    任務提詞當 prompt 驗會誤報「缺人格章節」+「{{}} 殘留」。
+    if "prompts" in parts:
+        return "content"
+    if parts & {"steering", "personas"}:
         return "prompt"
     return "content"
 
