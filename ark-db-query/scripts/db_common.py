@@ -76,33 +76,84 @@ class _Encoder(json.JSONEncoder):
             return repr(o)
 
 
+CONTRACT_VERSION = "1.1"
+
+# exit code 分流（ADR-005/AC-16）—— 舊呼叫方若只判 != 0 不受影響
+EXIT_CODES = {
+    "BAD_INPUT": 2, "GATE_BLOCKED": 3, "BUDGET_EXCEEDED": 4,
+    "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8,
+}
+
+
+def _skill_version() -> str:
+    try:
+        from __version__ import SKILL_VERSION
+        return SKILL_VERSION
+    except Exception:
+        return "unknown"
+
+
 def emit(data: dict, meta: dict) -> None:
-    print(json.dumps({"success": True, "data": data, "meta": meta},
+    meta = {"skill_version": _skill_version(), **meta}
+    print(json.dumps({"success": True, "contract": CONTRACT_VERSION,
+                      "data": data, "meta": meta},
                      ensure_ascii=False, cls=_Encoder))
     sys.exit(0)
 
 
 def fail(code: str, message: str, hint: str = "") -> None:
-    print(json.dumps({"success": False,
+    print(json.dumps({"success": False, "contract": CONTRACT_VERSION,
                       "error": {"code": code, "message": message, "hint": hint}},
                      ensure_ascii=False))
-    sys.exit(1)
+    sys.exit(EXIT_CODES.get(code, 1))
 
 
 def finalize_rows(rows: list[dict], args, meta: dict) -> None:
-    """統一收尾：全量落盤（--out），stdout 只回截斷樣本，保護 agent context window。"""
+    """統一收尾：全量落盤（--out），stdout 回截斷樣本（筆數 + 位元組雙上限），保護 context。"""
     count = len(rows)
     out_file = getattr(args, "out", None)
     fmt = getattr(args, "out_format", None) or "jsonl"
     if out_file:
         write_rows(rows, out_file, fmt)
     max_stdout = getattr(args, "max_stdout_rows", None) or DEFAULT_STDOUT_ROWS
-    truncated = count > max_stdout
+    sample = rows[:max_stdout]
+    truncated_by = "rows" if count > max_stdout else None
+    # bytes 截斷（AC-18）：單 cell > 2 KiB 截短，整體 > max_stdout_bytes 逐筆縮減
+    max_bytes = getattr(args, "max_stdout_bytes", None) or int(
+        os.getenv("ARK_DB_STDOUT_BYTES", str(64 * 1024)))
+    sample, bytes_hit = _cap_bytes(sample, max_bytes)
+    if bytes_hit:
+        truncated_by = "bytes"
     emit(
-        {"rows": rows[:max_stdout], "count": count,
-         "truncated": truncated, "out_file": out_file},
+        {"rows": sample, "count": count,
+         "truncated": truncated_by is not None,
+         "truncated_by": truncated_by, "out_file": out_file},
         meta,
     )
+
+
+_CELL_MAX = 2 * 1024
+
+
+def _cap_bytes(rows: list[dict], max_bytes: int):
+    """單 cell > 2 KiB 截短；整體序列化 > max_bytes 時逐筆丟棄尾端。回 (rows, hit)。"""
+    hit = False
+    capped = []
+    for r in rows:
+        nr = {}
+        for k, v in r.items():
+            s = v if isinstance(v, str) else None
+            if s is not None and len(s.encode("utf-8")) > _CELL_MAX:
+                nr[k] = s[:_CELL_MAX] + f"…[truncated {len(s)} chars]"
+                hit = True
+            else:
+                nr[k] = v
+        capped.append(nr)
+    # 整體位元組上限：逐筆丟棄尾端直到符合
+    while capped and len(json.dumps(capped, ensure_ascii=False, cls=_Encoder).encode("utf-8")) > max_bytes:
+        capped.pop()
+        hit = True
+    return capped, hit
 
 
 def write_rows(rows: list[dict], path: str, fmt: str = "jsonl") -> None:

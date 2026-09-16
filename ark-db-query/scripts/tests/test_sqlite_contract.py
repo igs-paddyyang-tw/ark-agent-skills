@@ -78,7 +78,8 @@ def test_parameterized_query_binds_instead_of_interpolating(db):
     "INSERT INTO players (name, vip) VALUES ('x', 1)",
 ])
 def test_read_only_gate_blocks_writes(db, sql):
-    out = run("--db-type", "sqlite", "--db-path", db, "--sql", sql, expect_rc=1)
+    # v3.0 ADR-005：GATE_BLOCKED 的 exit code 從 1 分流為 3（契約演進，非遷就實作）
+    out = run("--db-type", "sqlite", "--db-path", db, "--sql", sql, expect_rc=3)
     assert out["success"] is False
     assert out["error"]["code"] == "GATE_BLOCKED"
 
@@ -126,7 +127,7 @@ def test_out_file_gets_the_full_result_not_the_sample(db, tmp_path):
 ])
 def test_input_errors_come_back_as_json_not_traceback(db, args, code):
     args = tuple(str(db) if a == "X" else a for a in args)
-    out = run(*args, expect_rc=1)
+    out = run(*args, expect_rc=2)   # v3.0：BAD_INPUT exit code 分流為 2
     assert out["success"] is False and out["error"]["code"] == code
     assert out["error"]["hint"], "錯誤要帶 hint —— agent 靠它自我修正"
 
