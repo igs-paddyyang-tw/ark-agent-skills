@@ -1,6 +1,6 @@
 {
-  "_note": "KB 別名 → UUID 對照表。--kb-id 接受別名或直接 UUID。KB_API_KEY 可列 kb-list。2026-09-10 新增 backend-errors（老虎機後端錯誤庫，game-dev-agent 管理）。",
-  "game-dev": "a32f7777-fecc-43c7-ad06-580bc4e6e372",
-  "hoyeah-library": "f98aedab-af2a-4107-a27a-7774025937a5",
-  "backend-errors": "bee81293-62d3-4c7d-9b2f-3b6433457500"
+  "_note": "KB 別名 → UUID 對照表。真實 UUID 不進 repo（F-7）：本檔為佔位，部署端填入自己環境的值。範例見 assets/kb_registry.example.json。W1 起改由 knowledge/shared/weknora/kb_registry.json 提供單一來源。",
+  "game-dev": "REPLACE_WITH_YOUR_KB_UUID",
+  "hoyeah-library": "REPLACE_WITH_YOUR_KB_UUID",
+  "backend-errors": "REPLACE_WITH_YOUR_KB_UUID"
 }

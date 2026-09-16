@@ -59,7 +59,7 @@ knowledge-chat 專用。KB ID 是 UUID 難記，`kb_registry.json` 存「別名 
 `--kb-id` 吃別名（查表）或直接 UUID（fallback）。唯讀 key 看不到 kb-list，故手動維護、納入版控、人審更新。
 
 ```json
-{ "player-profile": "a32f7777-fecc-43c7-ad06-580bc4e6e372" }
+{ "player-profile": "REPLACE_WITH_YOUR_KB_UUID" }
 ```
 
 ## 快速使用
@@ -202,12 +202,16 @@ uncertain 一律落 R-3（escalation 哲學）。KPI 關鍵詞內建 15 個，�
 
 ## 環境變數
 
+> 🔴 程式碼零硬編環境值（v2 F-7）：全部走 `.env`，缺值即 `BAD_INPUT`。
+> 範本見 `assets/.env.example`；KB 別名對照表範本見 `assets/kb_registry.example.json`
+> （複製為 `kb_registry.json` 並填入自己環境的 UUID）。
+
 | 變數 | 預設 | 用途 |
 |------|------|------|
-| `WEKNORA_API_URL` | `http://192.168.5.120:8080/api/v1` | WeKnora REST base（weknora_ingest.py 寫入用） |
+| `WEKNORA_API_URL` | （空，必填） | WeKnora REST base（見 `assets/.env.example`；缺值 BAD_INPUT） |
 | `WEKNORA_API_KEY` | （空） | 查詢 / 檢索用 API Key（唯讀 scope 即可；問答必填） |
 | `WEKNORA_KB_API_KEY` | （空） | 知識庫讀寫用 API Key（需 editor scope）；weknora_ingest.py 優先用，未設回退 `WEKNORA_API_KEY` |
-| `WEKNORA_AGENT_ID` | `0d9333e6-...59bcfaa00eb` | agent-chat 預設智能體；`--agent-id` 未帶時使用 |
+| `WEKNORA_AGENT_ID` | （空） | agent-chat 預設智能體；`--agent-id` 未帶時使用（缺值 BAD_INPUT） |
 | `WEKNORA_KB_ID` | （空） | knowledge-chat / 寫入的預設知識庫；`--kb-id` / `--kb` 未帶時使用 |
 | `ARK_WEKNORA_CMD` | 依 `--endpoint`：`weknora_agent_chat.py` / `weknora_knowledge_chat.py` | 覆蓋底層客戶端指令（覆蓋時 `--endpoint` 選擇失效） |
 | `ARK_WEKNORA_ROUTER_ENABLED` | `1` | 設 `0` 完全停用路由（flag off = 行為與現況一致） |

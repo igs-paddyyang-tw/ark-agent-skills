@@ -126,8 +126,18 @@ def main() -> int:
     p.add_argument("--auto-registry", action="store_true",
                    help="R-2 成功時自動把口徑落成 seedling 條目")
     p.add_argument("--session-id", default=None)
+    p.add_argument("--endpoint", choices=["agent", "knowledge"], default="agent",
+                   help="透傳到 weknora_sql_query 的底層問答路徑（F-13）："
+                        "agent（預設）/ knowledge（查自建 KB，取回 references）")
+    p.add_argument("--kb", action="append", default=[],
+                   help="endpoint=knowledge 時的知識庫（別名或 UUID，可多個）；透傳為 --kb-id")
     args = p.parse_args()
     t0 = time.time()
+
+    # 透傳到下層 weknora_sql_query 的共用 argv（F-13）
+    passthrough = ["--endpoint", args.endpoint]
+    for k in args.kb:
+        passthrough += ["--kb-id", k]
 
     if os.environ.get("ARK_WEKNORA_ROUTER_ENABLED", "1") == "0":
         print(json.dumps({"route": "disabled", "action": "fallback_manual",
@@ -151,7 +161,7 @@ def main() -> int:
 
     # ── R-2：KPI 型問句 → WeKnora sql-only（探索式問句跳過）──────────────
     if not exploratory and is_kpi_query(args.query):
-        sq_argv = ["--query", args.query, "--mode", "sql-only"]
+        sq_argv = ["--query", args.query, "--mode", "sql-only"] + passthrough
         if args.session_id:
             sq_argv += ["--session-id", args.session_id]
         code, res = run_py("weknora_sql_query.py", sq_argv)
@@ -181,7 +191,7 @@ def main() -> int:
         # code 2/4 → 降級 R-3，繼續往下
 
     # ── R-3：探索直連 ─────────────────────────────────────────────────────
-    dr_argv = ["--query", args.query, "--mode", "direct"]
+    dr_argv = ["--query", args.query, "--mode", "direct"] + passthrough
     if args.session_id:
         dr_argv += ["--session-id", args.session_id]
     code, res = run_py("weknora_sql_query.py", dr_argv)

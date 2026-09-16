@@ -22,8 +22,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _weknora_chat import chat, emit_error, emit_success, resolve_kb
 
-_DEFAULT_AGENT_ID = "0d9333e6-6c9b-4210-a519-59b7cfaa00eb"
-
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__,
@@ -36,7 +34,7 @@ def main() -> None:
     p.add_argument("--new-session", action="store_true", help="開新 session（不帶 session-id）")
     args = p.parse_args()
 
-    agent_id = args.agent_id or os.getenv("WEKNORA_AGENT_ID", _DEFAULT_AGENT_ID)
+    agent_id = args.agent_id or os.getenv("WEKNORA_AGENT_ID", "")
     if not agent_id:
         emit_error("BAD_INPUT", "未指定 agent-id", "帶 --agent-id 或設 WEKNORA_AGENT_ID")
 

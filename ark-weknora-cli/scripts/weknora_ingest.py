@@ -29,7 +29,7 @@ stdlib + httpx，輸出統一 JSON envelope（對齊 scripts/_common.py 契約�
                                             跨知識庫搜尋，驗證新知識可檢索
 
 環境變數：
-  WEKNORA_API_URL   WeKnora REST base（預設 http://192.168.5.120:8080/api/v1）
+  WEKNORA_API_URL   WeKnora REST base（必填，見 assets/.env.example）
   WEKNORA_API_KEY   API Key（必填；於 .env 設定）
 
 Exit code：成功 0；失敗 1（envelope 內 error.code 承載細分原因）。
@@ -93,14 +93,17 @@ def timer() -> float:
 def elapsed_ms(t0: float) -> int:
     return int((time.monotonic() - t0) * 1000)
 
-_DEFAULT_API_URL = "http://192.168.5.120:8080/api/v1"
 _TIMEOUT_SEC = 60.0
 # parse_status 終態：到達其一即停止輪詢
 _TERMINAL = {"completed", "failed", "cancelled"}
 
 
 def _api_url() -> str:
-    return os.getenv("WEKNORA_API_URL", _DEFAULT_API_URL).rstrip("/")
+    url = os.getenv("WEKNORA_API_URL", "").rstrip("/")
+    if not url:
+        emit_error("BAD_INPUT", "未設定 WEKNORA_API_URL",
+                   "於 .env 補上 WEKNORA_API_URL（見 assets/.env.example）")
+    return url
 
 
 def _resolve_kb(kb_arg: str) -> str:

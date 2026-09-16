@@ -1,0 +1,6 @@
+{
+  "_note": "KB 別名 → UUID 對照表範例。--kb-id 接受別名或直接 UUID。真實 UUID 不進 repo（F-7）——部署端請複製本檔並填入自己環境的 UUID，或改放 knowledge/shared/weknora/kb_registry.json（W1）。KB_API_KEY 可用 kb-list 查得 UUID。",
+  "game-dev": "REPLACE_WITH_YOUR_KB_UUID",
+  "hoyeah-library": "REPLACE_WITH_YOUR_KB_UUID",
+  "backend-errors": "REPLACE_WITH_YOUR_KB_UUID"
+}

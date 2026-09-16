@@ -1,0 +1,5 @@
+# ark-weknora-cli 過渡期依賴（F-6）
+# W0–W3 仍使用 httpx 自建傳輸；W4 移除 httpx 後本檔清空為 stdlib-only。
+# 底層 _weknora_chat.py / weknora_ingest.py import httpx；dotenv 為選配（缺則跳過 .env 載入）。
+httpx>=0.27,<1.0
+python-dotenv>=1.0  # 選配：載入專案根 .env；缺少時腳本以 try/except 略過

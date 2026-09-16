@@ -32,7 +32,7 @@ try:
 except Exception:  # noqa: BLE001
     pass
 
-DEFAULT_API_URL = "http://192.168.5.120:8080/api/v1"
+# F-7 修正：不硬編環境值。WEKNORA_API_URL 由 .env 提供，缺值即 BAD_INPUT。
 DEFAULT_TIMEOUT = float(os.getenv("ARK_WEKNORA_TIMEOUT", "180"))
 _KB_REGISTRY = Path(__file__).resolve().parent.parent / "kb_registry.json"
 
@@ -55,7 +55,11 @@ def emit_error(code: str, message: str, hint: str = "") -> None:
 
 
 def api_url() -> str:
-    return os.getenv("WEKNORA_API_URL", DEFAULT_API_URL).rstrip("/")
+    url = os.getenv("WEKNORA_API_URL", "").rstrip("/")
+    if not url:
+        emit_error("BAD_INPUT", "未設定 WEKNORA_API_URL",
+                   "於 .env 補上 WEKNORA_API_URL（見 assets/.env.example）")
+    return url
 
 
 def api_key() -> str:

@@ -41,6 +41,10 @@ import shlex
 import subprocess
 import sys
 import time
+from pathlib import Path
+
+# 腳本所在目錄（絕對定位，修 F-2：路徑不再相對 cwd）
+HERE = Path(__file__).resolve().parent
 
 # ── 輸出一律 UTF-8（修 Windows terminal 亂碼）─────────────────────────────
 for _stream in (sys.stdout, sys.stderr):
@@ -57,7 +61,6 @@ SQL_DENY_RE = re.compile(
     r"\b(INSERT|UPDATE|DELETE|MERGE|DROP|CREATE|ALTER|TRUNCATE|GRANT|REVOKE)\b",
     re.IGNORECASE,
 )
-KB_CITE_RE = re.compile(r"<kb\s[^>]*chunk_id=", re.IGNORECASE)
 HAS_NUMBER_RE = re.compile(r"\d")
 
 SQL_ONLY_PROMPT = """你是資料口徑助理。針對下列問題，只回傳一個 JSON 物件，不要任何其他文字、
@@ -71,23 +74,26 @@ SQL_ONLY_PROMPT = """你是資料口徑助理。針對下列問題，只回傳�
 問題：{query}"""
 
 
-def default_cmd(endpoint: str = "agent") -> str:
-    """依 endpoint 選底層客戶端腳本。
+def default_cmd(endpoint: str = "agent") -> list[str]:
+    """依 endpoint 選底層客戶端腳本，回傳完整指令 list（絕對路徑，修 F-2）。
 
-    agent     → scripts/weknora_agent_chat.py（agent-chat，範圍跟 agent 配置）
-    knowledge → scripts/weknora_knowledge_chat.py（knowledge-chat，帶 kb_ids）
+    agent     → weknora_agent_chat.py（agent-chat，範圍跟 agent 配置）
+    knowledge → weknora_knowledge_chat.py（knowledge-chat，帶 kb_ids）
+    以 sys.executable + HERE 絕對定位，不再相對 cwd、不再假設 python/py 在 PATH。
     ARK_WEKNORA_CMD 可整體覆蓋（覆蓋時 endpoint 選擇失效，由該指令自行決定）。
     """
-    py = "py" if os.name == "nt" else "python"
     script = "weknora_agent_chat.py" if endpoint == "agent" else "weknora_knowledge_chat.py"
-    return f"{py} scripts/{script}"
+    return [sys.executable, str(HERE / script)]
 
 
 def call_client(query: str, session_id: str | None, timeout: int,
                 endpoint: str = "agent", kb_ids: list[str] | None = None) -> tuple[dict, int]:
     """呼叫底層 chat 客戶端，回傳（外層 JSON, elapsed_ms）。失敗 raise RuntimeError。"""
-    cmd_str = os.environ.get("ARK_WEKNORA_CMD") or default_cmd(endpoint)
-    cmd = shlex.split(cmd_str, posix=(os.name != "nt"))
+    override = os.environ.get("ARK_WEKNORA_CMD")
+    if override:
+        cmd = shlex.split(override, posix=(os.name != "nt"))
+    else:
+        cmd = list(default_cmd(endpoint))
     cmd += ["--query", query]
     cmd += ["--session-id", session_id] if session_id else ["--new-session"]
     # knowledge endpoint 需帶 kb_ids（未帶則底層回退 WEKNORA_KB_ID）
@@ -163,6 +169,7 @@ def run(args) -> int:
     result = {
         "mode": args.mode, "ok": False, "answer": "", "sql": "", "caliber": "",
         "sources": [], "confidence": "", "session_id": "", "elapsed_ms": 0,
+        "references": [], "ref_count": 0,
         "flags": [], "raw_answer": "",
     }
     query = SQL_ONLY_PROMPT.format(query=args.query) if args.mode == "sql-only" else args.query
@@ -177,17 +184,26 @@ def run(args) -> int:
 
     data = outer.get("data") or {}
     raw_answer = str(data.get("answer", ""))
+    # F-1 修正：信任訊號改讀結構化 references（底層 parse_sse 收集、放在 data.references），
+    # 不再用正則在回答文字裡找 <kb chunk_id=（那讀不到真實引用）。
+    references = data.get("references")
+    references = references if isinstance(references, list) else []
+    ref_count = (outer.get("meta") or {}).get("ref_count")
+    if not isinstance(ref_count, int):
+        ref_count = len(references)
     result.update(
         session_id=data.get("session_id", ""),
         elapsed_ms=(outer.get("meta") or {}).get("elapsed_ms", elapsed),
         raw_answer=raw_answer,
+        references=references,
+        ref_count=ref_count,
     )
     if not outer.get("success", False):
         result["flags"].append("client_reported_failure")
         print(json.dumps(result, ensure_ascii=False))
         return EXIT_CLIENT_FAIL
 
-    has_citation = bool(KB_CITE_RE.search(raw_answer))
+    has_citation = ref_count > 0
     if has_citation:
         result["flags"].append("kb_citation_present")
 
