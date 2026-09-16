@@ -110,7 +110,14 @@ def test_template_keeps_the_blocks_real_deployment_needs(tmp_path):
 
 
 def test_shipped_example_is_valid():
-    """隨 skill 出貨的 market-team 範例本身必須合法（別人會照抄）"""
+    """隨 skill 出貨的範例本身必須合法（別人會照抄）。
+
+    ⚠️ 2026-09-16 `examples/market-team` 已被移除（建 team 標準流程已涵蓋）。
+    這條改成「**有就驗、沒有就跳過**」而不是刪掉 —— 哪天再放範例回來，
+    它會自動重新受守（刪掉的話就得有人記得再加一次）。
+    """
+    if not EXAMPLE.is_file():
+        pytest.skip("目前沒有出貨範例包（examples/market-team 已於 2026-09-16 移除）")
     r = _validate(EXAMPLE)
     assert r.returncode == 0, f"範例包過不了 validate：\n{r.stdout}"
 
