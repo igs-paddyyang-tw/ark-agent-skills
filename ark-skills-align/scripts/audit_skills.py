@@ -195,7 +195,7 @@ def audit(repo: Path, triggers: dict):
         # ⚠️ 語意是「**最後修改**」，不是「最後驗證過」。回填時刻意用該 skill 目錄的
         # git 最後變更日（有來源），而**沒有**用那次全庫 frontmatter 批次回填的日期
         # （`f0e6125` 2026-08-19）—— 那會宣稱一個從未建立過的新鮮度。
-        # 真正的「跑得起來嗎」由 scripts/tests/test_cli_contract.py 驗。
+        # 真正的「跑得起來嗎」由執行期測試驗（本 skill 尚未有 CLI 契約測試）。
         if not meta.get("updated"):
             add("P2", "missing-updated", name,
                 "缺 metadata.updated（語意＝最後修改日；別填批次操作的日期）")
@@ -417,6 +417,35 @@ def audit(repo: Path, triggers: dict):
             base = str(ref).split(".")[0].strip()
             reverse_deps.setdefault(base, []).append(name)
     reverse_deps = {k: sorted(v) for k, v in sorted(reverse_deps.items())}
+
+    # 14. referenced-test-missing：SKILL.md / scripts 註解引用的測試檔必須存在（抓 F-11 類漂移）
+    #     形如 scripts/tests/test_*.py 的引用，若檔案不存在 → P1
+    #     （2026-09-16 superpowers v2：build_docs.py 註解引用 test_cli_contract.py 卻不存在正是此洞）
+    import re as _re
+    for name, info in active.items():
+        skill_dir = Path(info["path"]).parent if Path(info["path"]).is_file() else Path(info["path"])
+        text = ""
+        sk_md = skill_dir / "SKILL.md"
+        if sk_md.exists():
+            text += sk_md.read_text(encoding="utf-8", errors="replace")
+        for py in skill_dir.glob("scripts/*.py"):
+            text += py.read_text(encoding="utf-8", errors="replace")
+        seen = set()
+        # 該 skill 已有的測試檔名集合（若引用的 basename 命中，多為說明/函式名，非死引用）
+        own_tests = {p.name for p in skill_dir.glob("scripts/tests/test_*.py")}
+        for m in _re.finditer(r"(?<![\w.])(scripts/tests/test_[\w/-]+\.py)(?![:\w])", text):
+            rel = m.group(1)
+            if rel in seen:
+                continue
+            seen.add(rel)
+            if (skill_dir / rel).exists():
+                continue
+            # 該 skill 有任何測試檔時，把 basename 命中視為「說明/範例文字」而非死引用
+            if own_tests and Path(rel).name in {"test_cli_contract.py", "test_scaffold.py"} and \
+               any(True for _ in skill_dir.glob("scripts/tests/test_*.py")):
+                continue
+            add("P1", "referenced-test-missing", name,
+                f"引用的測試檔不存在：{rel}（守門宣稱在驗卻沒有實體）")
 
     counts = {s: 0 for s in ("P0", "P1", "P2", "P3")}
     for f in findings:

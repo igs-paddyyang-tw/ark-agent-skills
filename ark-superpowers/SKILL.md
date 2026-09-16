@@ -181,6 +181,56 @@ One Pager 的 frontmatter 有 `upgraded_to` 欄位，升級後指向完整文件
 
 ---
 
+## v2：契約引擎（守門 + ID + 生命週期 + intake）
+
+> v2 把守門從「形狀檢查」下沉到「模板指紋 + 章節錨點 + SP-xxx 規則」。
+> 詳細設計見 `docs/2026-09-16-v2-design.md`（5 ADR）與 `docs/2026-09-16-v2-spec.md`（24 AC）。
+
+### 契約單一來源（references/）
+
+| 檔案 | 用途 |
+|------|------|
+| `references/sections.yaml` | 8 型 × zh/en 章節鍵單一來源（取代舊 REQUIRED_SECTIONS 兩張手工表） |
+| `references/id-scheme.md` | 全鏈 ID 前綴（FR/NFR/C/SC/OQ/DD/CMP/API/ADR/CF；AC 由 ark-spec-executor 擁有） |
+| `references/lifecycle.yaml` | status enum × 轉移 × 初值（狀態機） |
+| `references/fingerprints.json` | 模板指紋（由 `build_fingerprints.py` 產，勿手改） |
+| `references/intake/{spec,design,plan}.md` | 訪談題庫（每題對應章節鍵+ID 前綴，不知道寫 OQ） |
+
+### 指令（scripts/）
+
+```bash
+# 從決策摘要起手（推薦入口）—— D-x 逐字進 C-x、未決進 OQ-x（blocking）
+python scripts/build_docs.py from-decision docs/reports/decision/<date>-x.md --slug x
+# 單檔 / 跨文件內容守門
+python scripts/doc_lint.py docs/specs/x-spec.md            # SP-001~007/032/050
+python scripts/doc_lint.py --chain docs/specs/x-spec.md    # + SP-020 related_* 參照
+# 生命週期（唯一可改 status/version/updated 的路徑）
+python scripts/build_docs.py status docs/specs/x-spec.md --to review
+python scripts/build_docs.py status docs/specs/x-spec.md --to approved --by <who>
+python scripts/build_docs.py supersede docs/designs/adr/003-x.md docs/designs/adr/009-y.md
+python scripts/build_fingerprints.py                        # 模板改後重建指紋
+```
+
+### doc_lint 規則（SP-xxx，exit 0 無 P0/P1；1 有 P1；2 有 P0）
+
+| ID | 嚴重度 | 規則 |
+|----|--------|------|
+| SP-001 | P0 | template_residue：正文/cell 命中模板指紋（還是模板原文） |
+| SP-002 | P0 | placeholder_token：`{…}`/`[NEEDS CLARIFICATION]`/TODO/TBD/（待填） |
+| SP-004 | P0 | section_missing：必要章節（精確鍵或 `<!-- sec:key -->` 錨點） |
+| SP-006 | P0 | frontmatter_required：title/type/status/created/language/version |
+| SP-007 | P1 | frontmatter_enum：language 非 zh-TW/en |
+| SP-020 | P0/P1 | related_* 路徑存在且型別正確（`--chain`） |
+| SP-032 | P0 | approved 內容雜湊 ≠ approved_hash（手改被抓） |
+| SP-050 | P0 | clarify_gate：status≠draft 卻有 blocking OQ / [NEEDS CLARIFICATION] |
+| SP-060 | P1 | from-decision 輸入非 type:decision 或無 D-x 表 |
+| SP-070 | — | plan 型委派 `ark-spec-executor/scripts/plan_lint.py` |
+
+> 骨架必 FAIL（exit 2）—— 空殼文件擋在 pre-commit 與 executor 之前。
+> pre-commit / Kiro hook 依 `doc_lint` exit code 判定，不再 grep 表情符號。
+
+---
+
 ## Executor 相容性
 
 > 本章節定義 plan 任務表的格式契約，確保 `ark-spec-executor` 能自動解析並執行。
