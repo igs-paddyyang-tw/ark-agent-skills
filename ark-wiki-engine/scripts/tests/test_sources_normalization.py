@@ -106,15 +106,31 @@ def _rel(tmp_path, rel: str, capsys):
     return out, capsys.readouterr().err
 
 
-def test_flat_raw_file_gets_a_reminder_but_still_works(tmp_path, capsys):
-    """🔴 契約是 ADR-009 的 `raw/<source-id>/…`，素材直接躺在 raw/ 底下要提醒。
-
-    **不擋**：既有散檔多數已遷移完，這條的價值在攔住新進來的；
-    做成錯誤會讓正在遷移的人卡住。
-    """
+def test_normalization_itself_is_silent(tmp_path, capsys):
+    """`relative_source()` 只負責正規化，bucket 提醒不在這裡（單一實作）"""
     out, err = _rel(tmp_path, "raw/a.md", capsys)
     assert out == "raw/a.md", "提醒不該改變回傳值"
-    assert "source-id bucket" in err and "ADR-009" in err
+    assert "bucket" not in err, "提醒應由 warn_if_not_bucketed 單一負責"
+
+
+def test_bucket_warning_is_emitted_exactly_once(tmp_path, capsys):
+    """🔴 回歸：2026-09-16 兩個 session 各自做了一份 bucket 提醒 ——
+    一處在 `relative_source()` 內、一處是 `warn_if_not_bucketed()`，
+    同一次 ingest 印出**兩則重複警告**。已收斂成一份。
+
+    多個 agent 同時在同一個檔案加功能時，「都做對了」也會變成雜訊。
+    """
+    import wiki_ingest
+    root = tmp_path / "pkg"
+    src = root / "raw" / "a.md"
+    src.parent.mkdir(parents=True)
+    src.write_text("# x\n", encoding="utf-8")
+    (root / "wiki").mkdir()
+
+    wiki_ingest.build_wiki_page(src, "a", "source", "# x\n", root)
+    err = capsys.readouterr().err
+    assert err.count("[ingest]") == 1, f"警告印了 {err.count('[ingest]')} 次：\n{err}"
+    assert "ADR-009" in err or "raw/<source-id>" in err, err
 
 
 def test_bucketed_source_is_silent(tmp_path, capsys):
