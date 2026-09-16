@@ -476,6 +476,117 @@ def cmd_backfill_ids(target: Path) -> None:
           f"既有文件請於變更紀錄起始列標 backfill）")
 
 
+def _parse_decision(text: str) -> tuple[list[dict], list[str], list[str]]:
+    """解析 grill-me 決策摘要。回 (decisions[{n,point,decision}], boundaries[], open_qs[])。"""
+    decisions, boundaries, open_qs = [], [], []
+    section = None
+    for ln in text.splitlines():
+        s = ln.strip()
+        if "已確認決策" in s:
+            section = "d"; continue
+        if "邊界條件" in s:
+            section = "b"; continue
+        if "未決事項" in s:
+            section = "o"; continue
+        if s.startswith("### ") or s.startswith("## "):
+            section = None; continue
+        if section == "d" and s.startswith("|"):
+            cells = [c.strip() for c in s.strip("|").split("|")]
+            if len(cells) >= 3 and cells[0].isdigit():
+                decisions.append({"n": int(cells[0]), "point": cells[1], "decision": cells[2]})
+        elif section == "b" and s.startswith("- "):
+            boundaries.append(s[2:])
+        elif section == "o" and (s.startswith("- [ ]") or s.startswith("- ")):
+            open_qs.append(re.sub(r"^- (\[ \])?\s*", "", s))
+    return decisions, boundaries, open_qs
+
+
+def cmd_from_decision(project_dir: Path, decision_path: Path, slug: str) -> None:
+    """從決策摘要確定性產 spec 草稿（ADR-005）：D-x 逐字進 C-x、未決事項進 OQ-x（blocking）。"""
+    if not decision_path.exists():
+        print(f"❌ 決策摘要不存在：{decision_path}"); sys.exit(1)
+    text = decision_path.read_text(encoding="utf-8")
+    fm_type = _read_fm_field(text, "type")
+    decisions, boundaries, open_qs = _parse_decision(text)
+    if fm_type != "decision" or not decisions:
+        print("❌ SP-060：輸入非 type: decision 或無已確認決策表，退回請改用 new spec")
+        sys.exit(1)
+    # 產 C-x 表與 OQ-x 表（逐字，不摘要）
+    c_rows = "\n".join(f"| C-{d['n']:03d} | {d['decision']} | D-{d['n']} |" for d in decisions)
+    oq_rows = "\n".join(f"| OQ-{i+1:03d} | {q} | true | | |" for i, q in enumerate(open_qs)) \
+        or "| OQ-001 | （無未決事項） | false | | |"
+    bnd = "\n".join(f"- {b}" for b in boundaries) or "-"
+    out_dir = project_dir / "docs" / "specs"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{slug}-spec.md"
+    if out.exists():
+        print(f"❌ 已存在：{out}"); sys.exit(1)
+    rel = str(decision_path)
+    content = f"""---
+title: "{slug} 規格文件"
+type: spec
+status: draft
+created: {TODAY}
+language: zh-TW
+version: "0.1.0"
+related_reports: ["{rel}"]
+---
+
+# {slug} — 規格文件
+
+## 摘要（Summary）
+<!-- sec:summary -->
+（依 intake/spec.md 題庫補：一句話說明這份 spec 要解決什麼）
+
+## 動機（Motivation）
+<!-- sec:motivation -->
+（為什麼要做）
+
+## 目標與非目標（Goals & Non-Goals）
+<!-- sec:goals -->
+（目標 ≥ 2、非目標 ≥ 1）
+
+## 使用者故事（User Stories）
+<!-- sec:stories -->
+| FR-ID | 角色 | 需求 | 驗收情境 | 驗證層級 |
+|-------|------|------|----------|----------|
+
+## 非功能性需求（NFR）
+<!-- sec:nfr -->
+| NFR-ID | 維度 | 指標 | 目標值 | 驗證方式 |
+|--------|------|------|--------|----------|
+
+## 約束條件（Constraints）
+<!-- sec:constraints -->
+| C-ID | 約束 | 來源 |
+|------|------|------|
+{c_rows}
+
+## 成功指標（Success Metrics）
+<!-- sec:metrics -->
+| SC-ID | 指標 | 目標值 |
+|-------|------|--------|
+
+## 開放問題（Open Questions）
+<!-- sec:open -->
+| OQ-ID | 問題 | blocking | 負責人 | 期限 |
+|-------|------|----------|--------|------|
+{oq_rows}
+
+## 變更紀錄（Changelog）
+<!-- sec:changelog -->
+| 版本 | 日期 | 變更 | 誰 |
+|------|------|------|-----|
+| 0.1.0 | {TODAY} | 初版（from-decision，{len(decisions)} 個 D-x → C-x） | — |
+
+<!-- 邊界條件（來自決策摘要，供補 NFR/約束時參考）:
+{bnd}
+-->
+"""
+    out.write_text(content, encoding="utf-8")
+    print(f"✅ {out.name}：{len(decisions)} 個 D-x → C-x、{len(open_qs)} 個未決 → OQ-x（blocking）")
+
+
 def main() -> None:
     """CLI 入口。"""
     if len(sys.argv) < 2:
@@ -563,6 +674,21 @@ def main() -> None:
         if len(sys.argv) < 3:
             print("Usage: build_docs.py backfill-ids <file|dir>"); sys.exit(1)
         cmd_backfill_ids(Path(sys.argv[2]))
+        sys.exit(0)
+
+    if arg1 == "from-decision":
+        # from-decision <decision.md> --slug <slug>
+        if len(sys.argv) < 3:
+            print("Usage: build_docs.py from-decision <decision.md> --slug <slug>"); sys.exit(1)
+        dp = Path(sys.argv[2])
+        slug = ""
+        a = sys.argv[3:]
+        for i, tok in enumerate(a):
+            if tok == "--slug" and i + 1 < len(a):
+                slug = a[i + 1]
+        if not slug:
+            slug = dp.stem
+        cmd_from_decision(Path.cwd(), dp, slug)
         sys.exit(0)
 
     # 語言選項

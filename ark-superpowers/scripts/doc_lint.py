@@ -170,6 +170,16 @@ def lint(path: Path, fp: dict, sections: dict | None = None) -> list[dict]:
                 findings.append({"id": "SP-004", "severity": "P0", "line": 1,
                                  "msg": f"缺必要章節：{want}（key={sec['key']}）"})
 
+    # SP-050 clarify_gate（ADR-005）：status≠draft 卻有 blocking OQ 或 [NEEDS CLARIFICATION]
+    status = fm.get("status", "draft")
+    if status not in ("draft", "proposed"):
+        if re.search(r"^\|\s*OQ-\d+.*\btrue\b", text, re.M):
+            findings.append({"id": "SP-050", "severity": "P0", "line": 1,
+                             "msg": f"status={status} 但仍有 blocking:true 的 OQ（clarify 未過）"})
+        if "[NEEDS CLARIFICATION]" in text:
+            findings.append({"id": "SP-050", "severity": "P0", "line": 1,
+                             "msg": f"status={status} 但仍有 [NEEDS CLARIFICATION]"})
+
     for i, raw in enumerate(prose.splitlines(), 1):
         # SP-002 placeholder（正文，不含 fenced code）
         for m in PLACEHOLDER_RE.finditer(raw):
@@ -199,10 +209,37 @@ def exit_code(findings: list[dict]) -> int:
     return 0
 
 
+def chain_lint(path: Path) -> list[dict]:
+    """--chain 跨文件檢查（SP-020）：related_* 指向的檔案存在且型別正確。"""
+    findings: list[dict] = []
+    text = path.read_text(encoding="utf-8", errors="replace")
+    fm = parse_frontmatter(text)
+    base = path.parent
+    # 找 related_spec / related_design 這類欄位（值為路徑）
+    for field, want_type in (("related_spec", "spec"), ("related_design", "design"),
+                             ("related_plan", "plan")):
+        val = fm.get(field)
+        if not val or val in ('""', "''"):
+            continue
+        # 可能是相對 repo 根或相對檔案；試兩種
+        cands = [Path(val), base / val, base.parent.parent / val]
+        found = next((c for c in cands if c.exists()), None)
+        if not found:
+            findings.append({"id": "SP-020", "severity": "P0", "line": 1,
+                             "msg": f"{field} 指向的檔案不存在：{val}"})
+            continue
+        ft = parse_frontmatter(found.read_text(encoding="utf-8", errors="replace")).get("type", "")
+        if ft and ft != want_type:
+            findings.append({"id": "SP-020", "severity": "P1", "line": 1,
+                             "msg": f"{field} 型別不符：期望 {want_type} 實為 {ft}"})
+    return findings
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="文件內容守門（SP-xxx）")
     ap.add_argument("files", nargs="+")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--chain", action="store_true", help="跨文件檢查（related_* 路徑存在等 SP-020）")
     args = ap.parse_args()
 
     fp = load_fingerprints()
@@ -211,6 +248,8 @@ def main() -> int:
     for f in args.files:
         p = Path(f)
         findings = lint(p, fp, sections)
+        if args.chain:
+            findings += chain_lint(p)
         rc = exit_code(findings)
         worst = max(worst, rc)
         p0 = sum(1 for x in findings if x["severity"] == "P0")
