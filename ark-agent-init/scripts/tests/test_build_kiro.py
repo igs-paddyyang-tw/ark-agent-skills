@@ -226,13 +226,33 @@ def test_root_has_no_steering_agents_md(project):
     assert worker_agents.exists(), "子 agent steering/ 應有 AGENTS.md 複本"
 
 
-@pytest.mark.parametrize("name,inst", list(_instances().items()))
-def test_agent_json_prompt_path_has_no_dotdot(project, name, inst):
-    """agent.json 的 prompt/resources 路徑相對自己的 .kiro/，不得寫死 ../../
-    （asset 舊版寫 ../../ 假設兩層深，對根目錄 0 層與其他深度都會指錯）。"""
-    wd = inst["working_directory"]
-    kiro_dir = _kiro_dir(project, wd)
-    agent_json = kiro_dir / "agents" / f"{name}.json"
-    content = agent_json.read_text(encoding="utf-8")
-    assert "../.." not in content, f"{name}/agents/{name}.json 含寫死的 ../.. 路徑"
-    assert "file://.kiro/steering/SOUL.md" in content, f"{name} prompt 路徑不是相對自己 .kiro/"
+@pytest.mark.parametrize("name,inst", sorted(_instances().items()))
+def test_agent_json_points_at_its_own_steering_with_dotdot(project, name, inst):
+    """`file://` 的基準是**放這個 json 的目錄**，也就是 `<X>/.kiro/agents/`。
+
+    所以指向「自己那層的 steering」必須是 `../../.kiro/steering/...`：
+
+    | agent 在哪 | `file://../../.kiro/steering/SOUL.md` 解析成 |
+    |---|---|
+    | 根目錄（wd="."） | `<專案根>/.kiro/steering/SOUL.md` ✅ |
+    | `agents/worker-agent`（任何深度） | `agents/worker-agent/.kiro/steering/SOUL.md` ✅ |
+
+    🔴 `../../` **不是「假設兩層深」** —— 它是從 `.kiro/agents/` 回到
+    **這個 agent 自己的 workspace 根**，與 agent 位在幾層無關。
+    寫成 `file://.kiro/steering/SOUL.md` 會解析成
+    `<X>/.kiro/agents/.kiro/steering/SOUL.md`（多一層 `.kiro/agents/`）。
+
+    2026-09-15 曾被改成無 `../..` 的版本（`92646c3`），2026-09-16 revert。
+    證據（不是推論）：兩個**實際在跑**的部署（`nana-team-agent`、`paddy-bot`）
+    都用 `file://../../.kiro/steering/SOUL.md`，且專案 CLAUDE.md 的
+    「`file://` 相對路徑陷阱」明寫基準是 `.kiro/agents/`。
+
+    ⚠️ 本測試**實際解析路徑**並確認檔案存在 —— 只比對字串會讓下一個人再翻一次。
+    """
+    kiro = _kiro_dir(project, inst["working_directory"])
+    d = json.loads((kiro / "agents" / f"{name}.json").read_text(encoding="utf-8"))
+
+    assert d["prompt"] == "file://../../.kiro/steering/SOUL.md", d["prompt"]
+    resolved = (kiro / "agents" / d["prompt"].removeprefix("file://")).resolve()
+    assert resolved == (kiro / "steering" / "SOUL.md").resolve(), resolved
+    assert resolved.is_file(), f"{name}: prompt 指到的檔案不存在 {resolved}"
