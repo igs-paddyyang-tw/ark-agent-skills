@@ -20,8 +20,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.0"
-  updated: 2026-09-08
+  version: "3.1"
+  updated: 2026-09-16
 ---
 
 # ark-agent-bot-builder
@@ -167,6 +167,47 @@ Tier 0（Skills+Wiki）永遠可用；Tier 1（TG）需 token；Tier 2（Gemini�
 | 💬 chat | Gemini ReAct | 有 API 費用 | `bot.yaml` modes.chat |
 | 👤 agent | kiro-cli | 零費用 | modes.default_agent |
 | ⚔️ team | kiro-cli + 三階段工作流 | 零費用 | modes.team_leader + leader.group_members |
+
+## hybrid：與 ark_team_agent 共用工作區（v3.1）
+
+當一個專案要**同時**跑 team daemon（多 agent 派工）與 bot（TG/Web UI），兩個 runtime
+共用同一個工作區。關鍵是 **single-owner**：每件事只有一個 runtime 負責，避免互搶。
+
+> 用 `ark-agent-team-design --target hybrid` 從一份 team-spec 一次產好 team.yaml + agents.yaml + bot.yaml + scheduler.yaml。本節說明 bot 側該長怎樣。
+
+### single-owner 決策（D1–D7）
+
+| # | 決策 | 誰擁有 | bot 側怎麼設 |
+|---|---|---|---|
+| D1 | **派工** | team daemon | `bot.yaml` `modes.team_leader: ""`（空 → bot 不啟 team 派工） |
+| D2 | **TG poller** | 只有一個 | bot **TG 不啟**（`features.web_ui: true`，靠 Web UI/API 進來），避免與 team 搶同 token |
+| D3 | **.kiro 寫入** | 只有 init | 兩 runtime 都讀，只有 `ark-agent-init` 寫；daemon 產的 AGENTS/mcp.json/TEAM 別手改 |
+| D4 | **memory 寫入** | bot | daily 由 bot 寫；team worker 各自 memory |
+| D5 | **knowledge ingest** | 明確歸屬 | 誰 ingest 寫在 skill；避免兩邊各寫一份 |
+| D6 | **長任務** | scheduler | 模擬/壓測走 `scheduler.yaml` 的 job，不占常駐 instance |
+| D7 | **agents.yaml** | 只 default+manager | 不填 leader/group_members（那是 team daemon 的事） |
+
+### 命名：`bot_start.py`（避開 team 的 `start.py`）
+
+hybrid 專案的 team daemon 入口是 `start.py`（run_team）。bot 側入口命名 **`bot_start.py`**（run_bot），
+兩個入口並存不衝突。
+
+### bot 側設定要點
+
+```yaml
+# agents.yaml —— 只填 default + manager，關 team 模式
+default: { name: <manager>, role: manager }
+# 🔴 不填 leader / group_members
+
+# bot.yaml
+modes: { default: chat, team_leader: "" }   # team_leader 空 = 不派工
+features: { web_ui: true }                    # Tier 0 + Web UI；TG 不啟（不搶 poller）
+```
+
+### 驗收
+
+照本節在既有 team 工作區疊加 bot runtime 後：兩者不搶 TG（bot 走 Web UI）、
+不重複派工（bot `team_leader` 空）、`.kiro/` 只有 init 寫。
 
 ## 注意事項
 

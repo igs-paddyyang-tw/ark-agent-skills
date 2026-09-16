@@ -81,6 +81,19 @@ def validate(path: Path) -> list[str]:
         if role and role not in _VALID_ROLES:
             errors.append(f"{name}: invalid role '{role}' (valid: {_VALID_ROLES})")
 
+        # profile 欄（選配）：宣告了 profile 就要能追溯到渲染出的 SOUL
+        # —— SOUL 必須帶 profile-sha256 戳記，否則是人工漂移（改了 yaml 沒重渲染，或根本沒用 profile 渲染）
+        prof = inst.get("profile")
+        if prof:
+            wd = inst.get("working_directory", f"agents/{name}")
+            soul = (path.parent / ".kiro" / "steering" / "SOUL.md") if wd == "." \
+                else (path.parent / wd / ".kiro" / "steering" / "SOUL.md")
+            if soul.exists():
+                head = soul.read_text(encoding="utf-8", errors="replace")[:200]
+                if "profile-sha256" not in head:
+                    errors.append(f"{name}: 宣告 profile='{prof}' 但 SOUL.md 無 profile-sha256 戳記"
+                                  f"（人工漂移？用 role-profile render_profile 重渲染）")
+
     # health_port 檢查
     port = cfg.get("health_port")
     if port is not None and not isinstance(port, int):

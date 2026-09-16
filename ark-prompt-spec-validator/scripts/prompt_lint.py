@@ -121,8 +121,16 @@ def infer_type(path: Path, overrides: dict) -> str:
             return t
     if path.name == "SKILL.md":
         return "skill"
+    # 🔴 steering/ 下並非全是 prompt —— 只有人格檔（SOUL）是 prompt；
+    #    MEMORY/AGENTS/USER/CODE/BRAIN 是內容檔（content），當 prompt 驗會誤報 P1。
+    #    先用檔名分流，再看目錄。
+    stem = path.name.removesuffix(".md").upper()
+    if stem in {"MEMORY", "AGENTS", "USER", "CODE", "BRAIN", "TEAM"}:
+        return "content"
+    if path.name in {"SOUL.md"} or path.name.endswith((".prompt.md", "-prompt.md")):
+        return "prompt"
     parts = {p.lower() for p in path.parts}
-    if parts & {"steering", "prompts", "personas"} or path.name.endswith(".prompt.md"):
+    if parts & {"steering", "prompts", "personas"}:
         return "prompt"
     return "content"
 
