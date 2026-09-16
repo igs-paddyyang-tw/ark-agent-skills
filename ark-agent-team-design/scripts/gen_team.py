@@ -43,8 +43,11 @@ def build_team_yaml(spec: dict) -> dict:
             "working_directory": "." if is_entry else f"agents/{name}",
             "description": f"{i.get('emoji', '🤖')} {i['purpose']}",
             "role": i["tier"],
-            "profile": "role-profile.yaml" if is_entry else f"agents/{name}/role-profile.yaml",
         }
+        # 🔴 profile 不寫成 team.yaml 的裸欄位 —— 套件 ark_team_agent 不認得它，
+        #    啟動會回「欄位不存在→已忽略+WARNING」（實測 2026-09-16）。
+        #    改由 annotate_profiles() 在 dump 後插成「# profile:」註解行：
+        #    套件不讀註解（無 WARNING），validate_team / 人 仍可追溯。
         if i["tier"] == "worker":
             row["group"] = inst_name(i["group"])
         if i.get("persistent") is False:
@@ -219,6 +222,39 @@ def dump(obj: dict) -> str:
     return yaml.safe_dump(obj, allow_unicode=True, sort_keys=False, width=100)
 
 
+def annotate_profiles(team_yaml_text: str, spec: dict) -> str:
+    """在 team.yaml 的每個 instance 名稱行後插入「# profile: <path>」註解。
+
+    🔴 profile 是 skill 端 metadata（追溯 instance↔role-profile），套件不讀。
+    寫成註解而非裸欄位 → 套件啟動不會回「欄位不存在」WARNING，
+    而 validate_team 與人仍能從註解讀到 profile 路徑。
+    """
+    entry = spec["entry"]
+    # instance 名（team.yaml 的 key）→ profile 路徑
+    prof_of: dict[str, str] = {}
+    for i in spec["instances"]:
+        name = inst_name(i["id"])
+        prof_of[name] = "role-profile.yaml" if i["id"] == entry \
+            else f"agents/{name}/role-profile.yaml"
+    out_lines: list[str] = []
+    in_instances = False
+    for line in team_yaml_text.splitlines():
+        out_lines.append(line)
+        if line.rstrip() == "instances:":
+            in_instances = True
+            continue
+        if in_instances:
+            # instance key 行：兩層縮排（"  name-agent:"），非更深欄位
+            stripped = line.strip()
+            if line.startswith("  ") and not line.startswith("    ") \
+                    and stripped.endswith(":") and stripped[:-1] in prof_of:
+                name = stripped[:-1]
+                out_lines.append(f"    # profile: {prof_of[name]}  # skill metadata（套件忽略，供 validate_team/追溯）")
+            elif line and not line.startswith(" "):
+                in_instances = False  # 離開 instances 區塊
+    return "\n".join(out_lines) + ("\n" if team_yaml_text.endswith("\n") else "")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("spec", type=Path)
@@ -243,7 +279,7 @@ def main() -> int:
     header = f"# {spec['name']}（{spec['team_id']}）— 由 ark-agent-team-design 生成，來源 {a.spec.name}\n# 啟動前先讀 NEXT.md。access.allowed_users 換成實際 TG user_id。\n\n"
     # target 決定產哪些設定檔（team.yaml 一律產；bot/hybrid 加 agents.yaml + bot.yaml）
     if a.target in ("team", "hybrid"):
-        print(write(out / "team.yaml", header + dump(build_team_yaml(spec)), a.force))
+        print(write(out / "team.yaml", annotate_profiles(header + dump(build_team_yaml(spec)), spec), a.force))
     if a.target in ("bot", "hybrid"):
         bot_hdr = f"# {spec['name']}（{spec['team_id']}）bot runtime — team_leader 空（關派工）、TG 不啟\n\n"
         print(write(out / "agents.yaml", bot_hdr + dump(build_agents_yaml(spec)), a.force))

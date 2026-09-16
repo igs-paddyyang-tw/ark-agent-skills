@@ -14,6 +14,37 @@ import yaml
 _NAME_PATTERN = re.compile(r"^[a-z][a-z0-9-]*-agent$")
 _VALID_ROLES = {"admin", "manager", "leader", "worker"}
 
+# instances 區塊裡「  <name>:」的 instance key 行 與 其下「    # profile: <path>」註解
+_INST_KEY = re.compile(r"^  ([a-z][a-z0-9-]*-agent):\s*$")
+_PROFILE_COMMENT = re.compile(r"^\s*#\s*profile:\s*(\S+)")
+
+
+def _parse_profile_comments(raw: str) -> dict[str, str]:
+    """解析 team.yaml 原文，回傳 {instance_name: profile_path}。
+
+    profile 寫成「# profile:」註解（非裸欄位，套件不認得裸欄位會 WARNING）。
+    追溯目前 instance 名下最近的 profile 註解。
+    """
+    out: dict[str, str] = {}
+    cur: str | None = None
+    in_instances = False
+    for line in raw.splitlines():
+        if line.rstrip() == "instances:":
+            in_instances = True
+            continue
+        if not in_instances:
+            continue
+        if line and not line.startswith(" "):
+            break  # 離開 instances 區塊
+        m = _INST_KEY.match(line)
+        if m:
+            cur = m.group(1)
+            continue
+        pm = _PROFILE_COMMENT.match(line)
+        if pm and cur:
+            out[cur] = pm.group(1)
+    return out
+
 
 def validate(path: Path) -> list[str]:
     """回傳錯誤清單，空 = 通過。"""
@@ -22,10 +53,15 @@ def validate(path: Path) -> list[str]:
         return [f"{path} not found"]
 
     with open(path, encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
+        raw = f.read()
+    cfg = yaml.safe_load(raw)
 
     if not isinstance(cfg, dict):
         return ["team.yaml is not a valid YAML mapping"]
+
+    # profile 是「# profile:」註解（非裸欄位 —— 套件不認得裸欄位會 WARNING）。
+    # 從原文解析每個 instance 名下的 profile 註解，供下方追溯檢查。
+    profile_of = _parse_profile_comments(raw)
 
     # 必要區塊
     for key in ("defaults", "cost_guard", "hang_detector", "instances", "health_port"):
@@ -81,9 +117,9 @@ def validate(path: Path) -> list[str]:
         if role and role not in _VALID_ROLES:
             errors.append(f"{name}: invalid role '{role}' (valid: {_VALID_ROLES})")
 
-        # profile 欄（選配）：宣告了 profile 就要能追溯到渲染出的 SOUL
-        # —— SOUL 必須帶 profile-sha256 戳記，否則是人工漂移（改了 yaml 沒重渲染，或根本沒用 profile 渲染）
-        prof = inst.get("profile")
+        # profile（來自「# profile:」註解，選配）：宣告了就要能追溯到渲染出的 SOUL
+        # —— SOUL 必須帶 profile-sha256 戳記，否則是人工漂移（改了 yaml 沒重渲染，或沒用 profile 渲染）
+        prof = profile_of.get(name)
         if prof:
             wd = inst.get("working_directory", f"agents/{name}")
             soul = (path.parent / ".kiro" / "steering" / "SOUL.md") if wd == "." \

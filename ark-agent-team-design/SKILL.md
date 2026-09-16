@@ -134,7 +134,7 @@ decision_locks:                       # 生成 authority-matrix 的原料
 
 | 輸出 | 內容 | 下游 |
 |---|---|---|
-| `team.yaml` | 依 team-builder 範本：defaults / kiro_files（skills skip、team_md always、soul_md once）/ channel / access / cost_guard / hang_detector / instances（含 `group`、`profile:`）/ health_port | team-builder 步驟 3 直接用；過 `validate_team.py` |
+| `team.yaml` | 依 team-builder 範本：defaults / kiro_files（skills skip、team_md always、soul_md once）/ channel / access / cost_guard / hang_detector / instances（含 `group`；`profile` 寫成 **`# profile:` 註解**，非裸欄位 —— 套件不認得裸欄位會 WARNING，實測 2026-09-16）/ health_port | team-builder 步驟 3 直接用；過 `validate_team.py`（讀 profile 註解驗 SOUL 戳記） |
 | `agents/{id}-agent/role-profile.yaml` | stub：identity / relationships / scope.escalates_to 由 spec 填；stance 等從 base_role 複製或 `TODO` | role-profile 補完 → lint → render |
 | `config/authority-matrix.yml` | 由 `decision_locks` 生成 | 套件決策鎖（選配） |
 | `NEXT.md` | 依序列出剩餘步驟與指令（裝 wheel → 補 TODO stub → init → sync → eval → start） | 人看 |
