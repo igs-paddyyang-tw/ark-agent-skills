@@ -158,14 +158,17 @@ def read_sql(args) -> str:
 
 
 def guard_read_only(sql: str, allow_write: bool) -> None:
-    """Deterministic 守門：預設只放行讀查詢，寫入需明示 --allow-write。"""
-    if allow_write:
-        return
-    for stmt in filter(None, (s.strip() for s in sql.split(";"))):
-        if _WRITE_RE.match(stmt):
-            fail("GATE_BLOCKED",
-                 f"偵測到寫入語句（預設 read-only）: {stmt[:60]}...",
-                 "確認為刻意寫入後加 --allow-write 重跑")
+    """Deterministic 守門（ADR-001 L1）：allowlist + 註解剝除，寫入需 --allow-write。
+
+    v3.0 改為呼叫 gate.py 的 allowlist 機制（取代 v2.0 只錨語句開頭的 denylist 正則），
+    封閉 F-01（前置註解繞過）/ F-02（巢狀/腳本寫入）。
+    """
+    import gate  # 同目錄
+    allowed, layer, reason, token = gate.check(sql, allow_write)
+    if not allowed:
+        fail("GATE_BLOCKED",
+             f"read-only 守門攔截（{layer}）: {reason}",
+             "確認為刻意寫入後加 --allow-write 重跑；或用 --gate-explain 看細節")
 
 
 class Timer:

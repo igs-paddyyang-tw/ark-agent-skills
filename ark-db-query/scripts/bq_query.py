@@ -42,7 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--out", help="全量結果落盤路徑")
     ap.add_argument("--out-format", choices=["jsonl", "json", "csv"], default="jsonl")
     ap.add_argument("--max-stdout-rows", type=int, default=C.DEFAULT_STDOUT_ROWS)
-    ap.add_argument("--timeout", type=int, default=int(os.getenv("ARK_BQ_TIMEOUT_S", "120")))
+    ap.add_argument("--timeout", type=int, default=int(os.getenv("ARK_BQ_TIMEOUT_S", "120")),
+                    help="（相容別名）等同 --query-timeout")
+    ap.add_argument("--query-timeout", type=int, default=None,
+                    help="查詢執行逾時秒數；逾時後 job 會被 cancel")
+    ap.add_argument("--params", help='named params JSON object，如 \'{"start":"2026-09-01"}\'（對應 @start）')
+    ap.add_argument("--param-types", help='覆寫 param 型別 JSON，如 \'{"start":"DATE"}\'')
     return ap
 
 
@@ -70,20 +75,17 @@ def main() -> None:
     C.load_env()
     args = build_parser().parse_args()
     sql = C.read_sql(args)
-    C.guard_read_only(sql, args.allow_write)
+    C.guard_read_only(sql, args.allow_write)  # L1 allowlist
 
-    client = get_client(args.project, args.location)  # 內含 DRIVER_MISSING/憑證檢查
-    from google.cloud import bigquery
+    import bq_client as BC  # 同目錄
+    client = get_client(args.project, args.location)
+    params = BC.build_params(getattr(args, "params", None), getattr(args, "param_types", None))
 
-    # --- 第一步永遠 dry-run：拿 bytes 估算，是否繼續由呼叫端決定 ---
-    dry_cfg = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
+    # --- 第一步永遠 dry-run：拿 bytes 估算 + statement_type（L3） ---
     with C.Timer() as t_dry:
-        try:
-            dry_job = client.query(sql, job_config=dry_cfg)
-        except Exception as e:
-            C.fail("QUERY_FAILED", f"dry-run 失敗（SQL 可能有誤）: {e}",
-                   "先用 bq_schema.py schema --table ds.tbl 核對欄位名")
-    total_bytes = dry_job.total_bytes_processed or 0
+        total_bytes, stmt_type = BC.dry_run(client, sql, params)
+    if not args.allow_write:
+        BC.gate_l3(stmt_type)  # L3 伺服端守門
     est = {"bytes_processed": total_bytes,
            "estimated_cost_usd": estimate_cost_usd(total_bytes),
            "price_per_tib_usd": PRICE_PER_TIB}
@@ -92,6 +94,7 @@ def main() -> None:
         C.emit({"rows": [], "count": 0, "truncated": False, "out_file": None},
                {"db_type": "bigquery", "mode": "dry_run",
                 "elapsed_ms": t_dry.elapsed_ms, **est,
+                "statement_type": stmt_type,
                 "would_exceed_cap": total_bytes > args.max_bytes_billed,
                 "max_bytes_billed": args.max_bytes_billed})
 
@@ -100,20 +103,13 @@ def main() -> None:
                f"查詢將掃描 {total_bytes:,} bytes，超過上限 {args.max_bytes_billed:,}",
                "縮小掃描範圍（partition/日期過濾/指定欄位），或明確調高 --max-bytes-billed")
 
-    # --- 真正執行 ---
-    if not args.no_limit and "limit" not in sql.lower().split()[-2:]:
-        sql_exec = f"{sql.rstrip().rstrip(';')}\nLIMIT {args.limit}"
-    else:
-        sql_exec = sql
-    job_cfg = bigquery.QueryJobConfig(maximum_bytes_billed=args.max_bytes_billed)
+    # --- 真正執行：不改寫 SQL，max_results 取筆數（修 F-05/F-06），逾時 cancel（修 F-07） ---
+    max_results = None if args.no_limit else args.limit
+    query_timeout = getattr(args, "query_timeout", None) or args.timeout
     with C.Timer() as t:
-        try:
-            job = client.query(sql_exec, job_config=job_cfg)
-            rows = [dict(r) for r in job.result(timeout=args.timeout)]
-        except Exception as e:
-            C.fail("QUERY_FAILED", f"查詢失敗: {e}",
-                   "先用 --dry-run 估成本與驗語法；權限問題查 gcloud auth "
-                   "application-default login")
+        rows, job = BC.execute(client, sql, params,
+                               max_bytes_billed=args.max_bytes_billed,
+                               max_results=max_results, timeout=query_timeout)
     meta = {"db_type": "bigquery", "elapsed_ms": t.elapsed_ms,
             "job_id": job.job_id, "cache_hit": bool(job.cache_hit),
             "bytes_processed": job.total_bytes_processed, **est}

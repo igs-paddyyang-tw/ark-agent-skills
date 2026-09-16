@@ -34,7 +34,7 @@ class FakeQueryJob:
         self._raise_timeout = raise_timeout
         self.statement_type = "SELECT"
 
-    def result(self, timeout=None):
+    def result(self, timeout=None, max_results=None):
         if self._raise_timeout:
             raise TimeoutError("job exceeded timeout")
         return []
