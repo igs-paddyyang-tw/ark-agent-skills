@@ -111,6 +111,41 @@ def detect_type(content: str) -> str:
     return "source"
 
 
+def warn_if_not_bucketed(rel: str) -> str | None:
+    """素材沒放在 `raw/{source-id}/` 底下 → 回一句警告（不擋）。
+
+    ## 契約來源
+
+    **ADR-009（accepted）**：`knowledge/{domain}/raw/{source-id}/`，
+    與 `sources.yaml` 的 `id` 恆等；**`local/` 為保留 id**（agent 自產，
+    不出現在註冊表）。見 `kb-unified-sync-design-doc.md`。
+
+    ## 為什麼是警告而不是拒絕
+
+    拒絕會擋住 agent 的正常工作，而它當下沒有辦法自己修（素材已經寫好了）。
+    警告讓「放錯層」在 ingest 當下就看得見，而不是等下游的 provenance
+    守門在**別人的 repo** 裡紅。
+
+    ## 為什麼需要它（實證，不是預防性設計）
+
+    2026-09-15~16 **一天之內發生兩次**：agent 蒸餾完把素材寫在
+    `raw/` 直接底下（`package-dev` 一次、`shared` 一次），
+    而 `shared/raw/local/` 本來就存在 —— 不是沒有 bucket，是不知道要用。
+    兩次都讓消費端 repo 的守門紅、擋住發版。
+
+    > 💡 判準：**契約寫在 ADR 裡，而產出端沒有任何提示** ——
+    > 那個契約就只存在於「讀過那份 ADR 的人」腦中。
+    """
+    if not rel.startswith("raw/"):
+        return None
+    rest = rel[len("raw/"):]
+    if "/" in rest:
+        return None
+    return (f"[ingest] ⚠️ 素材沒放在 bucket 底下：sources 會寫成 {rel!r}。"
+            f" 依 ADR-009 應為 raw/{{source-id}}/…（agent 自產請用 raw/local/）。"
+            f" 下游的 provenance 守門會擋。")
+
+
 def relative_source(source_path: Path, domain_root: Path) -> str:
     """`sources:` 要寫的路徑 —— **相對 domain root**，不是呼叫端給的原字串。
 
@@ -160,6 +195,9 @@ def build_wiki_page(source_path: Path, page_name: str, category: str, content: s
     title = extract_title_from_content(content, page_name)
     page_type = detect_type(content)
     rel_source = relative_source(source_path, domain_root)
+    _bucket_warn = warn_if_not_bucketed(rel_source)
+    if _bucket_warn:
+        print(_bucket_warn, file=sys.stderr)
 
     # 從內容提取 tags（取前 5 個出現的 category keywords）
     tags = []

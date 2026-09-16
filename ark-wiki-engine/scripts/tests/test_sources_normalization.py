@@ -134,3 +134,55 @@ def test_non_raw_path_is_not_judged_by_this_rule(tmp_path, capsys):
     out, err = _rel(tmp_path, "docs/a.md", capsys)
     assert out == "docs/a.md"
     assert "source-id bucket" not in err
+
+
+# ── bucket 警告（ADR-009）────────────────────────────────────
+
+class TestBucketWarning:
+    """素材沒放在 `raw/{source-id}/` 底下 → 警告（不擋）。
+
+    🔴 **這是實證驅動的，不是預防性設計**：2026-09-15~16 一天內兩次，
+    agent 蒸餾完把素材寫在 `raw/` 直接底下，而目標 domain 的
+    `raw/local/` 本來就存在 —— 不是沒有 bucket，是不知道要用。
+    兩次都讓消費端 repo 的 provenance 守門紅、擋住發版。
+    """
+
+    def test_flat_raw_warns(self):
+        """反證：讓 `warn_if_not_bucketed` 一律回 None → 這條紅。"""
+        assert wiki_ingest.warn_if_not_bucketed("raw/x.md")
+
+    @pytest.mark.parametrize("rel", [
+        "raw/local/x.md",          # agent 自產的保留 id
+        "raw/digest/2026/x.md",    # 多層也算
+        "wiki/x.md",               # 不是 raw/ 開頭 → 不管
+    ])
+    def test_bucketed_or_irrelevant_is_silent(self, rel):
+        """🔴 合契約的**不得**警告 —— 常駐假警報會讓人忽略整個輸出。"""
+        assert wiki_ingest.warn_if_not_bucketed(rel) is None
+
+    def test_warning_says_what_to_do(self):
+        """警告要可行動：說出正確格式與保留 id，不是只說「錯了」。
+
+        > 💡 本專案記過：只說「必填」的拒絕訊息會讓對方隨便填一個值了事。
+        """
+        msg = wiki_ingest.warn_if_not_bucketed("raw/x.md")
+        assert "ADR-009" in msg
+        assert "raw/local/" in msg
+
+    def test_ingest_emits_the_warning_to_stderr(self, tmp_path, capsys):
+        """端到端：真的 ingest 一個散檔時，警告出現在 **stderr**。
+
+        🔴 stdout 是機器契約（`--json`）—— 警告混進去會讓 agent 端
+        `json.loads` 直接炸（本檔上方的 stdout/stderr 分工註解記過）。
+
+        反證：把那行 `print(..., file=sys.stderr)` 拿掉 → 這條紅。
+        """
+        domain = tmp_path / "dom"
+        (domain / "raw").mkdir(parents=True)
+        src = domain / "raw" / "loose.md"
+        src.write_text("# 標題\n內容\n", encoding="utf-8")
+
+        wiki_ingest.build_wiki_page(src, "loose", "source", "# 標題\n內容", domain)
+        cap = capsys.readouterr()
+        assert "bucket" in cap.err, f"警告沒進 stderr：{cap.err!r}"
+        assert "bucket" not in cap.out, "警告漏進 stdout（會破壞 --json 契約）"
