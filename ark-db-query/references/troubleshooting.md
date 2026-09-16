@@ -5,8 +5,10 @@
 | DRIVER_MISSING | 驅動未安裝 | 依 hint 執行 pip install 後重跑一次；再失敗回報使用者 |
 | CONN_FAILED | 連線失敗 | 跑 `db_health.py --db-type ...` 取得逐項診斷，回報失敗的 check |
 | QUERY_FAILED | SQL/查詢錯誤 | 先跑 `bq_schema.py schema` 核對欄位名與型別，修正 SQL 重跑 |
-| GATE_BLOCKED | 守門攔截 | 掃描超限 → 縮小掃描範圍（見 bq-cookbook）；寫入攔截 → 確認意圖後 --allow-write |
-| BAD_INPUT | 參數錯誤 | 依 message 修正呼叫參數 |
+| GATE_BLOCKED | 守門攔截（exit 3） | 掃描超限 → 縮小掃描範圍（見 bq-cookbook）；寫入攔截 → 確認意圖後 --allow-write；`--gate-explain` 看被哪層擋 |
+| BUDGET_EXCEEDED | 每日預算攔截（exit 4） | 停止並回報使用者；確認業務必要才調高 `ARK_BQ_DAILY_BUDGET_USD` |
+| BAD_INPUT | 參數錯誤（exit 2） | 依 message 修正呼叫參數；ledger 目錄不可寫也走此碼 → 設 `ARK_DB_LEDGER_DIR` |
+| TIMEOUT | 查詢逾時（exit 7，BQ job 已 cancel） | 縮小掃描範圍或提高 `--query-timeout` |
 
 # 常見情境
 
@@ -25,5 +27,5 @@ host/port 錯或網路不通。db_health.py 的 connect_and_ping 會給出實際
 Linux: `apt-get install freetds-dev` 後重裝。Windows 用官方 wheel 通常免編譯。
 
 ## stdout 不是合法 JSON
-腳本保證 stdout 只有一個 JSON object；若混入其他輸出，多半是驅動套件印了警告 ——
-以最後一行 JSON 為準，並回報此現象（屬 P2 bug）。
+v3.0 起 stdout 純度已機制化：所有 driver 呼叫的輸出重導至 stderr，
+stdout 保證只有單一 JSON object。若仍見混入，屬 P2 bug（不該再需要「取最後一行」）。

@@ -34,6 +34,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--out", help="結果落盤路徑")
     ap.add_argument("--out-format", choices=["jsonl", "json", "csv"], default="json")
     ap.add_argument("--max-stdout-rows", type=int, default=100)
+    ap.add_argument("--brief", action="store_true",
+                    help="tables 指令：跳過每表 get_table（免 N+1，只回 table_id/type）")
     return ap
 
 
@@ -62,6 +64,10 @@ def main() -> None:
                         "先跑 datasets 看有哪些，例: bq_schema.py tables --dataset analytics")
             rows = []
             for item in client.list_tables(args.dataset):
+                if args.brief:
+                    # --brief：跳過每表 get_table（修 F-14 N+1），只用 list_tables 的欄位
+                    rows.append({"table_id": item.table_id, "type": item.table_type})
+                    continue
                 tbl = client.get_table(item.reference)
                 rows.append({
                     "table_id": item.table_id,

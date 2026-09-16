@@ -24,8 +24,8 @@ metadata:
   depends_on: []
   replaces: [bq-mcp-server]
   author: paddyyang
-  version: "2.0"
-  updated: 2026-08-19
+  version: "3.0"
+  updated: 2026-09-16
 ---
 
 # ark-db-query v2.0
@@ -102,18 +102,35 @@ python scripts/db_query.py --db-type mongodb --host $MONGO_HOST --database playe
 }
 ```
 
-失敗（exit code 1）：`{"success": false, "error": {"code", "message", "hint"}}`
-`code` 枚舉：`DRIVER_MISSING | CONN_FAILED | QUERY_FAILED | GATE_BLOCKED | BAD_INPUT`
+失敗（exit code 依 code 分流，見下表）：`{"success": false, "error": {"code", "message", "hint"}}`
+`code` 枚舉與 exit code（v3.0 分流，舊呼叫方只判 `!= 0` 不受影響）：
 
-## Deterministic 守門（內建，非提詞約束）
+| exit | code | 語意 | bash 分流 |
+|-----:|------|------|-----------|
+| 0 | — | 成功 | |
+| 2 | `BAD_INPUT` | 參數/SQL 輸入錯 | 修參數重跑 |
+| 3 | `GATE_BLOCKED` | read-only / bytes 上限攔截 | 改 SQL 或明示 override |
+| 4 | `BUDGET_EXCEEDED` | 每日預算攔截 | 停止，回報使用者 |
+| 5 | `CONN_FAILED` | 連線 | 跑 db_health |
+| 6 | `QUERY_FAILED` | 執行錯 | 核對 schema |
+| 7 | `TIMEOUT` | 查詢逾時（BQ job 已 cancel） | 縮小範圍 |
+| 8 | `DRIVER_MISSING` | 驅動 | pip install |
+
+## Deterministic 守門（三層，v3.0 下沉到引擎/契約層）
 
 | 守門 | 機制 | 覆寫方式 |
 |------|------|----------|
-| read-only 預設 | DML/DDL 正則攔截 → `GATE_BLOCKED` | `--allow-write` |
-| BQ 成本上限 | 強制 `maximum_bytes_billed`（預設 1 GiB） | `--max-bytes-billed` / `ARK_BQ_MAX_BYTES_BILLED` |
-| BQ 先估後跑 | 執行前必跑 dry-run，超限直接擋 | 無（上限內才放行） |
-| context 保護 | stdout 預設最多 20 筆，全量走 `--out` 檔案 | `--max-stdout-rows`（不建議調大） |
-| 憑證不落 log | 密碼走 `--password-env` 讀環境變數 | —（`--password` 明文保留但不建議） |
+| read-only L1 | allowlist（語句首必為 SELECT/WITH/SHOW/DESCRIBE/EXPLAIN/PRAGMA）+ 剝註解 → `GATE_BLOCKED` | `--allow-write` |
+| read-only L2 | 引擎 read-only session（pg/mysql/sqlite 真唯讀；mssql ROLLBACK 兜底，見 gate-matrix.md） | `--allow-write` |
+| read-only L3（BQ） | dry-run 的 `statement_type != SELECT` 伺服端攔截 | `--allow-write` |
+| BQ 成本上限 | 強制 `maximum_bytes_billed`（預設 1 GiB），先 dry-run 估算超限直接擋 | `--max-bytes-billed` / `ARK_BQ_MAX_BYTES_BILLED` |
+| 每日預算 | 檔案鎖 ledger，當日累計+估算超預算 → `BUDGET_EXCEEDED` | `ARK_BQ_DAILY_BUDGET_USD` / `ARK_DB_LEDGER_DISABLED=1` |
+| 筆數/串流 | server-side 串流 cursor 逐筆讀到 limit 就停（不全量進 RAM） | `--limit` / `--no-limit`（配 `--out`） |
+| 查詢逾時 | 引擎機制（statement_timeout 等），逾時回 `TIMEOUT`；BQ job 必 cancel | `--query-timeout` |
+| context 保護 | stdout 筆數上限 20 + 位元組上限 64 KiB，全量走 `--out` | `--max-stdout-rows` / `--max-stdout-bytes` |
+| 憑證不落 log | 密碼走 `--password-env`；`--password` 明文已 deprecated（stderr 警告） | — |
+
+> 大結果集匯出：BQ 走 `bq_export.py`，非 BQ 走 `db_export.py`（串流落盤，契約一致）。
 
 ## BQ MCP → 本 skill 對照表（遷移用）
 
@@ -165,7 +182,14 @@ MCP 掛載與本 skill 的資源差異：MCP 是常駐 server，N 個 agent 掛�
 | 路徑 | 用途 | 載入時機 |
 |------|------|----------|
 | `scripts/db_common.py` | 共用契約/守門/落盤（其餘腳本 import，不直接呼叫） | — |
+| `scripts/gate.py` | L1 allowlist + 註解剝除守門（db_common 呼叫） | — |
+| `scripts/bq_client.py` | BQ client 層：dry-run/L3/max_results/cancel/params | — |
+| `scripts/drivers.py` | 連線工廠 + iter_rows 串流（5 引擎）+ L2 read-only | — |
+| `scripts/ledger.py` | 檔案鎖成本 ledger + 預算 + 稽核 | — |
+| `scripts/db_export.py` | 非 BQ 大結果串流匯出（契約同 bq_export） | 結果集大時 |
+| `scripts/__version__.py` | 單一版號來源（meta.skill_version） | — |
 | `references/bq-cookbook.md` | BQ 常用查詢範本（省 bytes 寫法、分區過濾、去重） | 寫 BQ SQL 前 |
+| `references/gate-matrix.md` | 各引擎 L1/L2/L3 守門能力矩陣（MSSQL 差異揭露） | 判斷守門差異時 |
 | `references/troubleshooting.md` | 錯誤碼 → 處置對照 | 收到 success:false 時 |
 
 ## 注意事項
