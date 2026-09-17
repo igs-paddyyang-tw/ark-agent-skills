@@ -138,11 +138,12 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑧ 執行器 Executor
 
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜2 個
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜3 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
+| `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），查 Dashboard/Panel/告警數據，支援 Prometheus/Loki/CloudWatch/InfluxDB。 |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
 <!-- END GENERATED CATALOGUE -->
