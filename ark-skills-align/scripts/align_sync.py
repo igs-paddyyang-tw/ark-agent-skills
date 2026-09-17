@@ -190,6 +190,43 @@ def cmd_resolve(root: Path, path: Path) -> int:
     return 1
 
 
+def cmd_heartbeat(root: Path, force: bool) -> int:
+    """最近一次 verify --remote 結果組一行送 TG（team 頻道，D-1）+ 寫 /api/health.skills。
+    同版且無變化時只寫 health、不發 TG（force 例外）。TG chat id 走 ARK_TEAM_CHAT_ID。"""
+    import os
+    matrix = load_matrix(root)
+    url = matrix.get("upstream", {}).get("manifest_url", "")
+    manifest = fetch_manifest(url) if url else None
+    cur_rel = matrix.get("upstream", {}).get("release", "")
+    deployment = root.name
+    if manifest is None:
+        state = {"deployment": deployment, "release": cur_rel, "manifest": "unreachable"}
+        changed = True
+    else:
+        latest = manifest.get("release", "")
+        lag = 0 if cur_rel == latest else 1
+        state = {"deployment": deployment, "release": cur_rel, "latest_release": latest,
+                 "lag": lag, "manifest": "ok"}
+        changed = lag > 0
+    # 寫 /api/health 的 skills 區塊（本機檔，套件會讀）
+    hp = root / ".kiro" / "skills.verify.json"
+    hp.parent.mkdir(parents=True, exist_ok=True)
+    prev = json.loads(hp.read_text(encoding="utf-8")) if hp.exists() else {}
+    hp.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+    # 同版且與上次相同 → 只寫 health 不發 TG
+    same_as_prev = (prev.get("release") == state.get("release")
+                    and prev.get("lag") == state.get("lag")
+                    and prev.get("manifest") == state.get("manifest"))
+    line = (f"{deployment} · release {state.get('release')} → latest {state.get('latest_release','?')} "
+            f"(lag {state.get('lag','?')}, manifest {state.get('manifest')})")
+    if (changed or force) and not (same_as_prev and not force):
+        chat = os.getenv("ARK_TEAM_CHAT_ID", "")
+        print(f"[TG→team{'('+chat+')' if chat else ''}] {line}")
+    else:
+        print(f"[health-only] {line}（同版無變化，不發 TG）")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="消費端 skill 版本對齊")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -197,6 +234,7 @@ def main() -> int:
     sub.add_parser("verify").add_argument("--remote", action="store_true")
     sub.add_parser("resolve").add_argument("path")
     ap_apply = sub.add_parser("apply"); ap_apply.add_argument("--wave", type=int); ap_apply.add_argument("--yes", action="store_true")
+    ap_hb = sub.add_parser("heartbeat"); ap_hb.add_argument("--force", action="store_true")
     args = ap.parse_args()
     root = Path.cwd()
     if args.cmd == "plan":
@@ -205,6 +243,8 @@ def main() -> int:
         return cmd_verify(root, args.remote)
     if args.cmd == "resolve":
         return cmd_resolve(root, Path(args.path))
+    if args.cmd == "heartbeat":
+        return cmd_heartbeat(root, args.force)
     if args.cmd == "apply":
         if not args.yes:
             print("需 --yes（由人私訊 manager 確認，C-5）;先看 plan"); return 10

@@ -31,6 +31,27 @@ while read -r _ lsha _ rsha; do
                    | sed 's|/SKILL.md$||')"
 done
 deleted="$(printf '%s' "$deleted" | grep -v '^$' | sort -u)"
+
+# ── v2（2026-09-17）：偵測 major bump / 契約變更（AC-19，D-x 決策後）──
+# 既有只管「移除」；v2 加「同名 skill 的破壞性升版」。
+# 用 origin/main..HEAD 的 diff（不搶 pre-push 的 stdin），偵測 version major 變化。
+majorbump=""
+base="$(git merge-base origin/main HEAD 2>/dev/null || echo '')"
+if [[ -n "$base" ]]; then
+  for f in $(git diff --name-only "$base..HEAD" -- 'ark-*/SKILL.md' 2>/dev/null); do
+    old="$(git show "$base:$f" 2>/dev/null | grep -m1 '^\s*version:' | grep -oE '[0-9]+' | head -1)"
+    new="$(git show "HEAD:$f" 2>/dev/null | grep -m1 '^\s*version:' | grep -oE '[0-9]+' | head -1)"
+    [[ -n "$old" && -n "$new" && "$new" -gt "$old" ]] && majorbump+=$'\n'"$(dirname "$f") ($old.x→$new.0)"
+  done
+fi
+if [[ -n "$(printf '%s' "$majorbump" | grep -v '^$')" ]]; then
+  echo "pre-push: 📢 偵測到 major 升版（破壞性）："
+  printf '%s' "$majorbump" | grep -v '^$' | sed 's|^|    |'
+  echo "pre-push: 建議產 Alignment Notice 廣播到 team 頻道（D-1）："
+  echo "          python .kiro/skills/ark-skills-align/scripts/check_consumers.py --impact --json impact.json"
+  echo "          python .kiro/skills/ark-skills-align/scripts/notice_build.py impact.json --out docs/reports/review/\$(date +%F)-align-notice.md"
+fi
+
 [[ -z "$deleted" ]] && exit 0
 
 echo "pre-push: 本次推送移除了 skill：$(printf '%s' "$deleted" | tr '\n' ' ')"
