@@ -7,6 +7,7 @@ description: |
   使用此 Skill 當使用者提及翻譯、translate、多語言、i18n、
   中翻英、英翻中、日翻中、或任何需要語言轉換的場景。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-08-19

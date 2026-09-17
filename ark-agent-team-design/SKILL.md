@@ -24,7 +24,7 @@ metadata:
   render: none
   depends_on: [ark-agent-role-profile, ark-grill-me]
   author: paddyyang
-  version: "1.1"
+  version: "1.1.0"
   updated: 2026-09-16
 ---
 

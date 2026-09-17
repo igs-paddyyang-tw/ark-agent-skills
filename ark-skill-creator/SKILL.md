@@ -12,7 +12,7 @@ metadata:
   schema_version: 1
   status: active
   updated: 2026-09-14
-  version: "2.0"
+  version: "2.0.0"
   category: process
   outputs:
     - format: md

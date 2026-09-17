@@ -16,6 +16,7 @@ description: |
   「建知識庫」「問智能體」「查知識庫」，或任何需要以業務口徑查數據 / 維護知識庫內容的場景。
   不適用於：SQL／BigQuery 等結構化查詢請用 ark-db-query；本機 wiki 頁面請用 ark-wiki-engine。
 metadata:
+  version: "1.0.0"
   author: paddyyang
   schema_version: 1
   category: ops

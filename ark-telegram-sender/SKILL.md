@@ -12,7 +12,7 @@ metadata:
   author: paddyyang
   schema_version: 1
   category: pipeline
-  version: "2.0"
+  version: "2.0.0"
   updated: 2026-08-13
   outputs:
     - { format: data, audience: human }

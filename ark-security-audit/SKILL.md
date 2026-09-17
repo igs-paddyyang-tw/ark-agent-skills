@@ -9,6 +9,7 @@ description: |
   或任何需要檢查專案安全性的場景。
   不適用於：風格與可讀性的人工審查請用 ark-code-review（本 skill 只找安全弱點）。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-08-19

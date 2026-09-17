@@ -11,6 +11,7 @@ description: |
   「執行 skills 整併計畫 / alignment directive」，或任何需要批次修改、驗證、
   重組 ark-agent-skills repo 的場景。單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
 metadata:
+  version: "1.0.0"
   author: paddyyang
   schema_version: 1
   category: ops

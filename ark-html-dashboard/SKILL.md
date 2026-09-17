@@ -12,6 +12,7 @@ description: |
   博奕遊戲面板請參考 references/gaming-preset.md。
   不適用於靜態 PNG 圖表（請使用 ark-chart-generator）。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-08-19

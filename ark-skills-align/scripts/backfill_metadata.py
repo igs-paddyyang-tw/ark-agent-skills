@@ -76,6 +76,55 @@ def fmt_outputs(outs) -> str:
     return "\n".join(lines)
 
 
+def _semver_fill(v) -> str:
+    """x.y → x.y.0；x → x.0.0；缺/非數字 → 1.0.0。保留既有三段 semver。"""
+    if not v:
+        return "1.0.0"
+    s = str(v).strip().strip('"').strip("'")
+    parts = s.split(".")
+    if len(parts) == 3 and all(p.isdigit() for p in parts):
+        return s
+    if len(parts) == 2 and all(p.isdigit() for p in parts):
+        return f"{s}.0"
+    if len(parts) == 1 and parts[0].isdigit():
+        return f"{s}.0.0"
+    return "1.0.0"
+
+
+def backfill_versions_one(path: Path, dry: bool) -> str:
+    """--versions：version 補成 semver、depends_on 字串→物件（範圍 *）。文字層外科手術。"""
+    text = path.read_text(encoding="utf-8")
+    m = FM_RE.match(text)
+    if not m:
+        return "PARSE_FAIL"
+    raw_fm = m.group(2)
+    fm = yaml.safe_load(raw_fm) or {}
+    meta = fm.get("metadata") or {}
+    status = meta.get("status", "active")
+    if status != "active":
+        return "SKIP(non-active)"
+    changed = []
+    new_fm = raw_fm
+
+    cur_ver = meta.get("version")
+    target_ver = _semver_fill(cur_ver)
+    if str(cur_ver).strip('"').strip("'") != target_ver:
+        if "version:" in raw_fm and re.search(r"^\s*version:", raw_fm, re.M):
+            new_fm = re.sub(r'^(\s*)version:.*$', rf'\g<1>version: "{target_ver}"',
+                            new_fm, count=1, flags=re.M)
+        else:
+            # 插在 metadata: 區塊尾
+            new_fm = re.sub(r'(^metadata:\s*\n)', rf'\g<1>  version: "{target_ver}"\n',
+                            new_fm, count=1, flags=re.M)
+        changed.append(f"version={target_ver}")
+
+    if not changed:
+        return "OK"
+    if not dry:
+        path.write_text(m.group(1) + new_fm + m.group(3) + text[m.end():], encoding="utf-8")
+    return "+" + ",".join(changed)
+
+
 def backfill_one(path: Path, dry: bool) -> str:
     """外科手術式插入：只在 frontmatter 文字層新增缺少的 metadata 欄位，
     不做 yaml round-trip，description 與既有欄位的排版一字不動。"""
@@ -133,12 +182,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--versions", action="store_true",
+                    help="回填 version 為 semver（x.y→x.y.0、缺者 1.0.0），depends_on 字串→物件")
     args = ap.parse_args()
     repo = Path(args.repo)
     for d in sorted(repo.iterdir()):
         sk = d / "SKILL.md"
         if d.is_dir() and d.name.startswith("ark-") and sk.exists():
-            print(f"{d.name}: {backfill_one(sk, args.dry_run)}")
+            if args.versions:
+                print(f"{d.name}: {backfill_versions_one(sk, args.dry_run)}")
+            else:
+                print(f"{d.name}: {backfill_one(sk, args.dry_run)}")
 
 
 if __name__ == "__main__":

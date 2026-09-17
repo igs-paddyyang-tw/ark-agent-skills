@@ -15,7 +15,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "3.0"
+  version: "3.0.0"
   updated: 2026-09-04
   outputs:
     # wiki_query / wiki_context 的 JSON 契約歸受控詞彙 data

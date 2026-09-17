@@ -8,6 +8,7 @@ description: |
   也適用於產出 setup 腳本、修復腳本、或環境診斷報告。
   不適用於：已部署服務的端點與可用性請用 ark-dashboard-health（本 skill 修的是開發機環境）。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-08-19

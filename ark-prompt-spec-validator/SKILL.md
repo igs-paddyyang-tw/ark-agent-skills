@@ -22,7 +22,7 @@ metadata:
   render: none
   depends_on: [ark-md-report]
   status: active
-  version: "1.0"
+  version: "1.0.0"
   updated: 2026-09-11
 ---
 

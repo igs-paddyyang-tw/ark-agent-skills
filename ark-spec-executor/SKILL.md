@@ -8,6 +8,7 @@ description: |
   跑 plan、驗收、自動執行任務、或任何需要按 plan 逐步完成開發的場景。
   不適用於：plan 還沒寫請先用 ark-superpowers 產；需求釐清與任務分配的流程請用 ark-project-planning（本 skill 是拿到 plan 之後才開始）。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-08-19

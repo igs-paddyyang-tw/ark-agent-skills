@@ -8,6 +8,7 @@ description: >
   遊戲提案、遊戲概念文件、寫遊戲企劃、設計遊戲時，請務必使用此技能。
   不適用於：工程規格書與 ADR 請用 ark-superpowers（本 skill 出的是遊戲企劃，不是技術規格）。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-08-19

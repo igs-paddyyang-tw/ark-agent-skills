@@ -7,6 +7,7 @@ description: |
   當使用者提及撰寫文件、建立提案、草擬規格或類似文件任務時觸發。
   不適用於：已定案要落成 Spec／ADR／執行計畫請用 ark-superpowers；分析結論的報告請用 ark-md-report。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-08-19

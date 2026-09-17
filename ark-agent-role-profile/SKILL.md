@@ -25,7 +25,7 @@ metadata:
   render: none
   depends_on: [ark-grill-me]
   author: paddyyang
-  version: "1.2"
+  version: "1.2.0"
   updated: 2026-09-15
 ---
 

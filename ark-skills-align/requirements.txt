@@ -1,0 +1,2 @@
+# ark-skills-align 依賴（audit_skills / backfill_metadata / gen_manifest / align_sync 用）
+pyyaml>=6.0

@@ -9,6 +9,7 @@ description: |
   產出具創意、精緻的程式碼與 UI 設計，避免千篇一律的 AI 美學（紫色漸層）。
   不適用於：分析報告頁請用 ark-html-report；數據儀錶板請用 ark-html-dashboard（本 skill 做的是產品介面本身）。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   # 2026-09-14 整合（設計系統模式 + Landing Page）
   replaces: [ark-ui-design-system, ark-landing-page]

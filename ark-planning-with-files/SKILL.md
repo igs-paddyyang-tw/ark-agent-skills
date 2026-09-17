@@ -15,7 +15,7 @@ metadata:
     - format: md
       audience: both
   author: paddyyang
-  version: "1.0"
+  version: "1.0.0"
   updated: 2026-05-16
   reference: https://github.com/OthmanAdi/planning-with-files
 ---

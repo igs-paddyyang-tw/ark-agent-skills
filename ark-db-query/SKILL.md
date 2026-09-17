@@ -24,7 +24,7 @@ metadata:
   depends_on: []
   replaces: [bq-mcp-server]
   author: paddyyang
-  version: "3.0"
+  version: "3.0.0"
   updated: 2026-09-16
 ---
 

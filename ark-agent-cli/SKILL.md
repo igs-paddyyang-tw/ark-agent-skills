@@ -8,6 +8,7 @@ description: |
   取代 ark-llm-cli 的定位，提供更完整的多 backend 支援與輸出清理。
   不適用於：摘要／分析／問答／意圖解析等 LLM 工具函式請用 ark-llm-tools（本 skill 只做後端呼叫的統一入口）。
 metadata:
+  version: "1.0.0"
   author: paddyyang
   schema_version: 1
   status: active

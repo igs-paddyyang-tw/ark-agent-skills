@@ -11,7 +11,7 @@ metadata:
   author: paddyyang
   schema_version: 1
   category: document
-  version: "2.1"
+  version: "2.1.0"
   updated: 2026-08-13
   outputs:
     - { format: md, audience: ai }

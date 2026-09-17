@@ -9,6 +9,7 @@ description: |
   「報告要能入 wiki」「雙軌報告」，或任何分析結論需要被下游 agent/wiki/日報消費的場景。
   不適用於：給人看的網頁視圖請用 ark-html-report；報告要進知識庫由 ark-wiki-engine ingest，不要自己寫進 wiki/。
 metadata:
+  version: "1.0.0"
   schema_version: 1
   status: active
   updated: 2026-09-11
