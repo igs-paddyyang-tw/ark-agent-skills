@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **52 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **53 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -101,10 +101,11 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑤ 文件輸出 Document
 
-> 輸出：MD / Office｜`category: document`｜9 個
+> 輸出：MD / Office｜`category: document`｜10 個
 
 | Skill | 定位 |
 |-------|------|
+| `ark-book` | 教學產出專用 skill：把一個主題（skill 用法、流程、工具、案例）寫成「一本書」，雙軌輸出—— Content 軌 Markdown 章節給 AI 當知識庫（chunk 自足、frontmat… |
 | `ark-daily-news` | 產出科技日報：MD-first 雙軌流程。 |
 | `ark-docx-tool` | 當使用者想要建立、讀取、編輯或操作 Word 文件（.docx 檔案）時使用此技能。 |
 | `ark-game-design-doc` | > 根據遊戲構想或需求描述，產出完整的遊戲企劃文件（Game Design Document, GDD）。 |

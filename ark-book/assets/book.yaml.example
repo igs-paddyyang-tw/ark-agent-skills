@@ -1,0 +1,29 @@
+title: "用 ark-agent-skills 建立你的第一位個人助理"
+slug: first-personal-agent
+subtitle: "從一個模糊目標到一位會自我驗收的 Agent"
+author: paddyyang
+version: 1
+status: draft
+language: zh-Hant
+level: beginner
+audience: "研七新成員，會用 ChatGPT，還沒建過自己的 Agent"
+outcomes:
+  - 用 ark-grill-me 把模糊目標拷問成一句可執行的目標
+  - 用 ark-agent-role-profile 產出含 hard_stops 的人格檔並通過 profile_lint
+  - 讀懂 prompt-spec-validator 的 Drift Report 並決定該改規格還是改實作
+prerequisites: []
+scope_out:
+  - 多 leader 團隊的路由設計
+  - wheel 打包與 systemd 部署細節
+tags: [agent-team, onboarding, role-profile]
+sources:
+  - sources/agent-team-closed-loop-workflow.md
+chapters:
+  - 00-preface
+  - 01-give-it-a-soul
+shelf: agent-basics
+cover:
+  spine_color: green
+  emoji: "📗"
+created: 2026-09-17
+updated: 2026-09-17

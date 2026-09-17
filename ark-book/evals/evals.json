@@ -1,0 +1,23 @@
+{
+  "skill_name": "ark-book",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "把 /mnt/user-data/uploads/agent-team-closed-loop-workflow.md 這份閉環工作流程寫成一本給研七新成員的書，讀者是會用 ChatGPT 但沒建過 Agent 的人，重點是讓他們照著做出自己的第一位個人助理。目錄先給我看，確認後再寫。",
+      "expected_output": "先產出 book.yaml（audience/outcomes/scope_out/chapters）與目錄供確認；確認後每章七段式、含 [!ASK]/[!MYTH]/[!TRY]、punchline；book_lint PASS、book_build 產 site/index.html、book_register 登錄 catalog.json；交付訊息含 lint/site/catalog 狀態。",
+      "files": ["agent-team-closed-loop-workflow.md"]
+    },
+    {
+      "id": 2,
+      "prompt": "庚霖的遊戲測試助理已經跑起來了，他手上有三份 RTP 驗證的 Drift Report 和一份 role-profile.yaml。幫我把「怎麼讓 QA 助理只給建議不下放行決策」這件事寫成教材，要能放進我們的圖書館，之後其他做測試的人可以借走。",
+      "expected_output": "判斷為 ark-book（不是 ark-md-report）；素材放 sources/；至少一章以 hard_stops 為核心，動手做包含 profile_lint 指令與預期輸出；_calibration.md 收錄庚霖的訂正並被章節引用；全鏈 lint/build/register 通過。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "這份 ark-wiki-engine 的 SKILL.md 太長了，幫我整理成一份人看得懂的說明頁就好",
+      "expected_output": "不觸發 ark-book（單頁說明、沒有教學路徑與多章節）；應走 ark-html-report 或直接回覆摘要，最多一句話提議「若要做成多章教材可用 ark-book」。",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+/* neon — 霓虹獎勵：深紫底、桃紅/青霓虹、金屬金字。母題：金屬漸層標題 + 霓虹 callout，punchline 是跑馬燈牌 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#14082B; --surface:#1E1140; --surface-2:#2A1856; --border:rgba(255,255,255,.12);
+  --text:#F3ECFF; --text-2:#C9B8F0; --text-3:#8F7DBF;
+  --accent:#FF3FA4; --accent-soft:rgba(255,63,164,.14);
+  --ok:#3DFFB0; --warn:#FFC93C; --danger:#FF5A5A; --info:#3FE0FF;
+  --c1:#FF3FA4; --c2:#3FE0FF; --c3:#FFC93C; --c4:#9B5CFF; --c5:#3DFFB0; --c6:#C9B8F0;
+  --font-display:"Space Grotesk","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --font-mono:"JetBrains Mono","Noto Sans TC",monospace;
+  --radius:14px; --radius-sm:8px;
+  --shadow:0 0 0 1px rgba(255,255,255,.06),0 20px 50px rgba(0,0,0,.55),0 0 40px rgba(255,63,164,.15);
+  --maxw:840px;
+  --oak:#1E1140; --oak-dark:#0D0520; --brass:#FFC93C; --brass-2:#FFE08A;
+}
+body[data-style="neon"]{background-image:radial-gradient(ellipse at 20% 0%,rgba(155,92,255,.35),transparent 55%),radial-gradient(ellipse at 90% 100%,rgba(255,63,164,.25),transparent 50%)}
+body[data-style="neon"] .page{border:1px solid rgba(255,255,255,.08)}
+body[data-style="neon"] .page::before{background:linear-gradient(90deg,rgba(63,224,255,.25),transparent)}
+body[data-style="neon"] .shelf{background:linear-gradient(180deg,#0D0520,#1E1140);border-right:1px solid rgba(63,224,255,.35);box-shadow:inset -20px 0 40px rgba(63,224,255,.06)}
+body[data-style="neon"] .shelf .board{background:linear-gradient(90deg,#3FE0FF,#FF3FA4);height:3px;box-shadow:0 0 14px #FF3FA4}
+body[data-style="neon"] .spine{background:#2A1856;color:#F3ECFF;border:1px solid rgba(255,255,255,.1);border-radius:8px;box-shadow:none}
+body[data-style="neon"] .spine[aria-current="true"]{border-color:#3FE0FF;box-shadow:0 0 0 1px #3FE0FF,0 0 18px rgba(63,224,255,.7);transform:translateX(6px)}
+body[data-style="neon"] .spine[aria-current="true"]::before{background:#3FE0FF;box-shadow:0 0 8px #3FE0FF}
+body[data-style="neon"] .shelf .book-title{color:#FFE08A}
+body[data-style="neon"] .ch-head h1,body[data-style="neon"] .cover h1{
+  background:linear-gradient(180deg,#FFF3C4 0%,#FFC93C 45%,#B8860B 55%,#FFE08A 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 0 rgba(0,0,0,.6)) drop-shadow(0 0 12px rgba(255,201,60,.35));font-weight:900;letter-spacing:.01em}
+body[data-style="neon"] .punchline{background:#0D0520;border:2px solid #FF3FA4;border-radius:12px;color:#FFE08A;
+  box-shadow:0 0 0 4px #14082B,0 0 0 6px #3FE0FF,0 0 30px rgba(255,63,164,.6),inset 0 0 30px rgba(255,63,164,.15);text-align:center;font-weight:900}
+body[data-style="neon"] .punchline small{color:#3FE0FF;letter-spacing:.2em;text-transform:uppercase}
+body[data-style="neon"] .section>h2{border-bottom:1px solid rgba(63,224,255,.4);color:#3FE0FF}
+body[data-style="neon"] .section h3{color:#FFC93C}
+body[data-style="neon"] .callout{background:rgba(255,255,255,.04);border:1px solid var(--border);border-left-width:4px}
+body[data-style="neon"] .callout.ask{box-shadow:0 0 18px rgba(63,224,255,.25);border-color:#3FE0FF}
+body[data-style="neon"] .callout.myth{box-shadow:0 0 18px rgba(255,90,90,.25);border-color:#FF5A5A}
+body[data-style="neon"] .callout.try{box-shadow:0 0 18px rgba(255,201,60,.25);border-color:#FFC93C;background:rgba(255,201,60,.06)}
+body[data-style="neon"] .callout.tip{border-color:#3DFFB0}
+body[data-style="neon"] pre{background:#0D0520;border:1px solid rgba(63,224,255,.3);color:#3FE0FF}
+body[data-style="neon"] :not(pre)>code{color:#FFC93C;background:rgba(255,201,60,.12)}
+body[data-style="neon"] .section.recap li{background:#2A1856;border:1px solid rgba(255,255,255,.08)}
+body[data-style="neon"] .section.recap li:first-child{border-left:4px solid #FFC93C;box-shadow:0 0 18px rgba(255,201,60,.3)}
+body[data-style="neon"] .nav button{background:linear-gradient(180deg,#FF6BBE,#FF3FA4);color:#fff;font-weight:900;box-shadow:0 0 16px rgba(255,63,164,.6)}
+body[data-style="neon"] .progress{background:#0D0520}
+body[data-style="neon"] .progress i{background:linear-gradient(90deg,#3FE0FF,#FF3FA4);box-shadow:0 0 10px #FF3FA4}
+body[data-style="neon"] .cover .plate{border-color:#3FE0FF;color:#3FE0FF}
+body[data-style="neon"] .cover .toc li{background:#2A1856;border:1px solid rgba(255,255,255,.08)}
+body[data-style="neon"] th{background:#2A1856}

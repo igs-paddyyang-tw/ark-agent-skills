@@ -1,0 +1,61 @@
+/* manga — 收藏：奶白底網點、對白框 callout、稀有度星級。母題：callout 是對白框，難度用 ★ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#FBF7F2; --surface:#FFFFFF; --surface-2:#F5EEF3; --border:rgba(60,40,60,.14);
+  --text:#2E2430; --text-2:#5B4D5E; --text-3:#9A8C9C;
+  --accent:#E96A9C; --accent-soft:rgba(233,106,156,.12);
+  --ok:#5AC49A; --warn:#F5B840; --danger:#E5506B; --info:#7C6CE0;
+  --c1:#E96A9C; --c2:#7C6CE0; --c3:#5AC49A; --c4:#F5B840; --c5:#6BB8E8; --c6:#9A8C9C;
+  --font-display:"Zen Maru Gothic","Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --font-mono:"JetBrains Mono","Noto Sans TC",monospace;
+  --radius:18px; --radius-sm:10px;
+  --shadow:0 0 0 2px #2E2430, 8px 8px 0 rgba(233,106,156,.35);
+  --maxw:820px;
+  --oak:#2E2430; --oak-dark:#1E161F; --brass:#F5B840; --brass-2:#FFD27A;
+}
+body[data-style="manga"]{background-image:radial-gradient(rgba(46,36,48,.14) 1.2px,transparent 1.3px);background-size:9px 9px}
+body[data-style="manga"] .page{border-radius:22px;border:2px solid #2E2430;overflow:hidden}
+body[data-style="manga"] .page::before{display:none}
+body[data-style="manga"] .page::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(#2E2430 1.4px,transparent 1.5px);background-size:7px 7px;opacity:.35;pointer-events:none}
+body[data-style="manga"] .shelf{background:linear-gradient(180deg,#2E2430,#1E161F);border-right:2px solid #2E2430}
+body[data-style="manga"] .shelf .book-title{color:#FFD27A;font-family:var(--font-display)}
+body[data-style="manga"] .shelf .board{background:#E96A9C;height:6px;box-shadow:none;border-radius:3px}
+body[data-style="manga"] .spine{background:#fff;color:#2E2430;border-radius:12px;border:2px solid #2E2430;box-shadow:3px 3px 0 #E96A9C;font-weight:700}
+body[data-style="manga"] .spine .n{opacity:1;color:#7C6CE0;font-weight:900}
+body[data-style="manga"] .spine[aria-current="true"]{background:#FFE7F0;box-shadow:3px 3px 0 #7C6CE0;transform:translateX(8px)}
+body[data-style="manga"] .spine[aria-current="true"]::before{display:none}
+body[data-style="manga"] .ch-head .badge{background:#2E2430;color:#FFD27A;border-radius:999px;padding:2px 10px}
+body[data-style="manga"] .chapter[data-level] .ch-head .badge::before{content:"★ "}
+body[data-style="manga"] .ch-head h1{font-family:var(--font-display);font-weight:900;color:#2E2430}
+body[data-style="manga"] .punchline{position:relative;background:#fff;border:2px solid #2E2430;border-radius:22px;padding:20px 26px;font-family:var(--font-display);font-weight:900;color:#2E2430;box-shadow:4px 4px 0 #E96A9C}
+body[data-style="manga"] .punchline::after{content:"";position:absolute;left:44px;bottom:-16px;width:26px;height:26px;background:#fff;border:2px solid #2E2430;border-top:0;border-left:0;transform:rotate(45deg) skew(10deg,10deg)}
+body[data-style="manga"] .punchline small{color:#E96A9C}
+body[data-style="manga"] .section>h2{border-bottom:0;font-family:var(--font-display);font-weight:900;padding-left:14px;border-left:8px solid #E96A9C;border-radius:4px}
+body[data-style="manga"] .section h3{color:#7C6CE0;font-family:var(--font-display)}
+body[data-style="manga"] .section.roadmap ol li::before{background:#7C6CE0;font-family:var(--font-display)}
+body[data-style="manga"] .callout{position:relative;background:#fff;border:2px solid #2E2430;border-left-width:2px;border-radius:18px;box-shadow:4px 4px 0 var(--info)}
+body[data-style="manga"] .callout::before{content:"";position:absolute;left:28px;bottom:-14px;width:22px;height:22px;background:#fff;border:2px solid #2E2430;border-top:0;border-left:0;transform:rotate(45deg) skew(12deg,12deg)}
+body[data-style="manga"] .callout .ct{color:var(--info);font-family:var(--font-display);font-size:14px}
+body[data-style="manga"] .callout.ask{box-shadow:4px 4px 0 #7C6CE0}
+body[data-style="manga"] .callout.tip{box-shadow:4px 4px 0 #5AC49A}
+body[data-style="manga"] .callout.tip .ct{color:#3E9E78}
+body[data-style="manga"] .callout.myth{box-shadow:4px 4px 0 #E5506B;background:#FFF3F5}
+body[data-style="manga"] .callout.myth .ct{color:#E5506B}
+body[data-style="manga"] .callout.myth::before{background:#FFF3F5}
+body[data-style="manga"] .callout.try{box-shadow:4px 4px 0 #F5B840;background:#FFF9EC}
+body[data-style="manga"] .callout.try .ct{color:#C98A12}
+body[data-style="manga"] .callout.try::before{background:#FFF9EC}
+body[data-style="manga"] pre{background:#2E2430;border-radius:14px}
+body[data-style="manga"] :not(pre)>code{color:#7C6CE0;background:#EFECFB}
+body[data-style="manga"] .section.recap li{background:#fff;border:2px solid #2E2430;border-radius:14px;box-shadow:3px 3px 0 #7C6CE0}
+body[data-style="manga"] .section.recap li::before{background:#7C6CE0}
+body[data-style="manga"] .section.recap li:first-child{border-left:2px solid #2E2430;box-shadow:3px 3px 0 #E96A9C}
+body[data-style="manga"] .section.recap li:first-child::before{background:#E96A9C}
+body[data-style="manga"] .section.recap li:first-child::after{content:"★ punchline";color:#E96A9C}
+body[data-style="manga"] .nav button{background:#E96A9C;border-radius:999px;font-weight:900;box-shadow:3px 3px 0 #2E2430}
+body[data-style="manga"] .progress i{background:linear-gradient(90deg,#E96A9C,#7C6CE0)}
+body[data-style="manga"] .cover h1{font-family:var(--font-display);font-weight:900}
+body[data-style="manga"] .cover .plate{border-radius:999px;border:2px solid #2E2430;background:#FFE7F0;color:#2E2430}
+body[data-style="manga"] .cover .toc li{border:2px solid #2E2430;border-radius:14px;background:#fff;box-shadow:3px 3px 0 #F5EEF3}

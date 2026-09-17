@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<style>
+/* ============ 1. 風格：由 assets/styles/{name}.css 注入（token 契約 + 該風格母題） ============ */
+{{STYLE_CSS}}
+
+/* ============ 2. 基礎樣式 ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+h1,h2,h3,h4{font-family:var(--font-display);line-height:1.3;font-weight:700}
+code,pre,kbd{font-family:var(--font-mono)}
+img{max-width:100%}
+:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+
+/* ============ 3. 版面：書脊目錄 + 書頁 ============ */
+.book{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--surface-2);z-index:20}
+.progress i{display:block;height:100%;width:0;background:var(--warn);transition:width .2s}
+
+.shelf{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 18px 28px 22px;
+  background:linear-gradient(90deg,var(--oak-dark, #2E1E13),var(--oak, #4A3323));color:#F3EAD3;
+  border-right:6px solid var(--oak-dark, #2E1E13)}
+.shelf .book-title{font-family:var(--font-display);font-size:15px;line-height:1.4;color:var(--brass-2, #D4B15C);margin-bottom:6px}
+.shelf .book-meta{font-size:12px;opacity:.75;margin-bottom:22px}
+.shelf .board{height:10px;margin:8px -18px 12px -22px;background:linear-gradient(180deg,#6B4A32,#2E1E13);box-shadow:0 6px 10px rgba(0,0,0,.45)}
+.spine{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;cursor:pointer;color:#F3EAD3;font:inherit;font-size:13px;
+  padding:9px 12px;margin-bottom:3px;border-radius:2px 4px 4px 2px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 0 rgba(0,0,0,.35),2px 2px 0 rgba(0,0,0,.35);
+  transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.spine .n{font-size:11px;opacity:.7;min-width:18px}
+.spine .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.spine .m{font-size:11px;opacity:.6}
+.spine[aria-current="true"]{transform:translateX(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 0 rgba(0,0,0,.35),6px 6px 12px rgba(0,0,0,.55)}
+.spine[aria-current="true"]::before{content:"";width:2px;align-self:stretch;background:var(--brass-2, #D4B15C);margin-left:-6px;border-radius:1px}
+.c-green{background:linear-gradient(90deg,#1F3D2B,#2F5A3F)}
+.c-wine{background:linear-gradient(90deg,#6A2626,#8C3B3B)}
+.c-navy{background:linear-gradient(90deg,#20304A,#2F4668)}
+.c-brown{background:linear-gradient(90deg,#4A3323,#6B4A32)}
+.c-brass{background:linear-gradient(90deg,#8C6E2A,#B08D3C);color:#2B2117}
+.shelf-toggle{display:none}
+
+.desk{padding:36px 40px 80px;display:flex;flex-direction:column;align-items:center;min-width:0}
+.page{width:100%;max-width:min(var(--maxw),100%);min-width:0;overflow-wrap:anywhere;background:var(--surface);box-shadow:var(--shadow);padding:56px 64px 48px 72px;position:relative;min-height:70vh}
+.page::before{content:"";position:absolute;left:0;top:0;bottom:0;width:22px;background:linear-gradient(90deg,rgba(0,0,0,.18),rgba(0,0,0,.04) 60%,transparent)}
+.chapter{display:none}
+.chapter.active{display:block}
+
+/* ============ 4. 元件 ============ */
+.ch-head{margin-bottom:22px}
+.ch-head .kicker{font-size:13px;color:var(--text-3);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.ch-head h1{font-size:clamp(26px,3vw,36px);font-weight:900;letter-spacing:.01em}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:var(--radius-sm);background:var(--accent-soft);color:var(--accent)}
+.punchline{margin:22px 0 30px;padding:18px 22px;border-left:4px solid var(--warn);background:var(--accent-soft);font-family:var(--font-display);font-size:20px;line-height:1.5;font-weight:600}
+.punchline small{display:block;font-size:12px;color:var(--text-3);font-family:var(--font-body);font-weight:400;margin-bottom:4px}
+
+.section{margin-top:38px}
+.section>h2{font-size:22px;padding-bottom:10px;margin-bottom:18px;border-bottom:1px solid var(--border)}
+.section h3{font-size:18px;margin:26px 0 10px;color:var(--accent)}
+.section p{margin:0 0 14px;max-width:70ch}
+.section ul,.section ol{margin:0 0 14px 1.4em}
+.section li{margin-bottom:6px}
+.section li>p{margin-bottom:6px}
+.section hr{border:0;border-top:1px solid var(--border);margin:22px 0}
+.section.problem p:last-of-type{font-weight:700}
+.section.roadmap ol{counter-reset:s;list-style:none;margin-left:0}
+.section.roadmap ol li{counter-increment:s;position:relative;padding-left:40px;margin-bottom:10px}
+.section.roadmap ol li::before{content:counter(s);position:absolute;left:0;top:2px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:700}
+
+.callout{margin:18px 0;padding:14px 18px 12px;border-radius:var(--radius);background:var(--surface-2);border-left:4px solid var(--info)}
+.callout .ct{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;gap:8px;align-items:center}
+.callout p{margin-bottom:8px}
+.callout p:last-child{margin-bottom:0}
+.callout.ask{border-left-color:var(--info)}
+.callout.tip{border-left-color:var(--ok)}
+.callout.myth{border-left-color:var(--danger)}
+.callout.try{border-left-color:var(--warn);background:var(--accent-soft)}
+.callout.note{border-left-color:var(--text-3)}
+.callout.warning{border-left-color:var(--danger);background:rgba(122,46,46,.08)}
+.callout.low-confidence{border-left-color:var(--danger)}
+
+blockquote:not(.callout){margin:16px 0;padding:6px 18px;border-left:3px solid var(--border);color:var(--text-2)}
+pre{background:var(--oak-dark, #2E1E13);color:#F3EAD3;padding:16px 18px;border-radius:var(--radius);overflow:auto;font-size:13.5px;line-height:1.6;margin:12px 0 16px;position:relative}
+pre[data-lang]{padding-right:60px}
+pre[data-lang]::before{content:attr(data-lang);position:absolute;right:12px;top:8px;font-size:11px;opacity:.6}
+:not(pre)>code{background:var(--surface-2);padding:1px 6px;border-radius:var(--radius-sm);font-size:.9em;color:var(--danger)}
+.table-wrap{overflow-x:auto;margin:12px 0 18px}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-weight:700}
+
+.section.recap ul{list-style:none;margin:0;display:grid;gap:10px}
+.section.recap li{background:var(--surface-2);padding:12px 16px 12px 44px;position:relative;border-radius:var(--radius)}
+.section.recap li::before{content:"";position:absolute;left:16px;top:18px;width:14px;height:14px;border-radius:50%;background:var(--accent)}
+.section.recap li:first-child{border-left:4px solid var(--warn)}
+.section.recap li:first-child::before{background:var(--warn)}
+.section.recap li:first-child::after{content:"punchline";position:absolute;right:14px;top:12px;font-size:11px;color:var(--text-3);font-family:var(--font-mono)}
+
+.sources{margin-top:34px;font-size:13px;color:var(--text-3)}
+.sources summary{cursor:pointer;font-weight:700}
+.sources ul{margin:8px 0 0 1.2em}
+.sources code{color:var(--text-2)}
+
+.nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:42px;padding-top:18px;border-top:1px solid var(--border)}
+.nav button{appearance:none;font:inherit;font-size:14px;background:var(--accent);color:var(--surface);border:0;padding:9px 16px;border-radius:var(--radius);cursor:pointer}
+.nav button[disabled]{opacity:.35;cursor:default}
+.nav .pos{font-size:13px;color:var(--text-3)}
+
+.cover{padding:20px 0 10px}
+.cover .plate{display:inline-block;border:2px solid var(--warn);padding:4px 14px;font-size:12px;letter-spacing:.14em;color:var(--text-2);margin-bottom:22px}
+.cover h1{font-size:clamp(32px,4vw,48px);font-weight:900;margin-bottom:12px}
+.cover .sub{font-size:20px;color:var(--text-2);font-family:var(--font-display);margin-bottom:26px}
+.cover .who{margin:26px 0 8px;font-weight:700}
+.cover .outs{margin:0 0 26px 1.3em}
+.cover .outs li{margin-bottom:6px}
+.cover .toc{list-style:none;margin:0;display:grid;gap:8px}
+.cover .toc li{display:grid;grid-template-columns:44px 1fr auto;gap:12px;padding:10px 14px;background:var(--surface-2);border-radius:var(--radius);align-items:center}
+.cover .toc .n{font-family:var(--font-mono);font-size:12px;color:var(--text-3)}
+.cover .toc .m{font-size:12px;color:var(--text-3)}
+.cover .toc a{text-decoration:none;color:var(--text);font-weight:600}
+.cover .meta{margin-top:30px;font-size:13px;color:var(--text-3);display:flex;gap:22px;flex-wrap:wrap}
+
+.foot{width:100%;max-width:var(--maxw);margin-top:22px;font-size:12px;color:var(--text-3);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* ============ 5. 響應式 / 列印 / 動效 ============ */
+@media (max-width:900px){
+  .book{grid-template-columns:minmax(0,1fr)}
+  .shelf{position:fixed;left:0;top:0;bottom:0;width:min(82vw,300px);z-index:30;transform:translateX(-100%);transition:transform .25s}
+  .shelf.open{transform:none}
+  .shelf-toggle{display:inline-flex;position:fixed;left:14px;bottom:14px;z-index:31;appearance:none;border:0;background:var(--accent);color:var(--surface);font:inherit;font-size:14px;padding:10px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,.35);cursor:pointer}
+  .desk{padding:16px 12px 70px}
+  .page{padding:34px 22px 36px 32px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  .shelf,.shelf-toggle,.progress,.nav{display:none!important}
+  body{background:#fff;color:#000}
+  .book{display:block}
+  .desk{padding:0}
+  .page{box-shadow:none;max-width:none;padding:0 0 24px}
+  .page::before{display:none}
+  .chapter{display:block!important;break-before:page}
+  .chapter:first-child{break-before:auto}
+  .callout,pre{box-shadow:none;break-inside:avoid}
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:.85em}
+}
+</style>
+</head>
+<body data-style="{{STYLE}}"{{BODY_ATTR}}>
+<div class="progress" aria-hidden="true"><i id="bar"></i></div>
+<div class="book">
+  <nav class="shelf" id="shelf" aria-label="目錄">
+    <div class="book-title">{{TITLE}}</div>
+    <div class="book-meta">{{SHELF_META}}</div>
+    {{SIDEBAR}}
+    <div class="board"></div>
+  </nav>
+  <button class="shelf-toggle" id="shelfToggle" aria-controls="shelf" aria-expanded="false">目錄</button>
+
+  <main class="desk">
+    <article class="page" id="page">
+{{CHAPTERS}}
+    </article>
+    <div class="foot">
+      <span>{{FOOT_LEFT}}</span>
+      <span>{{FOOT_RIGHT}}</span>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  var chapters = Array.prototype.slice.call(document.querySelectorAll('.chapter'));
+  var spines = Array.prototype.slice.call(document.querySelectorAll('.spine'));
+  var bar = document.getElementById('bar');
+  var shelf = document.getElementById('shelf'), toggle = document.getElementById('shelfToggle');
+  var idx = 0;
+  function key(){ return 'ark-book:{{SLUG}}:v{{VERSION}}'; }
+  function idFor(i){ return chapters[i].id; }
+  function go(i, push){
+    idx = Math.max(0, Math.min(chapters.length-1, i));
+    chapters.forEach(function(c,k){ c.classList.toggle('active', k===idx); });
+    spines.forEach(function(s,k){ s.setAttribute('aria-current', k===idx ? 'true':'false'); });
+    document.querySelectorAll('[data-prev]').forEach(function(b){ b.disabled = idx===0; });
+    document.querySelectorAll('[data-next]').forEach(function(b){ b.disabled = idx===chapters.length-1; });
+    bar.style.width = ((idx+1)/chapters.length*100)+'%';
+    if(push!==false){ try{ history.replaceState(null,'','#'+idFor(idx)); }catch(e){} }
+    try{ localStorage.setItem(key(), idFor(idx)); }catch(e){}
+    if(shelf.classList.contains('open')){ shelf.classList.remove('open'); toggle.setAttribute('aria-expanded','false'); }
+    window.scrollTo({top:0});
+  }
+  function fromHash(){
+    var h = (location.hash||'').replace('#','');
+    var i = chapters.findIndex(function(c){ return c.id===h; });
+    return i;
+  }
+  spines.forEach(function(s,k){ s.addEventListener('click', function(){ go(k); }); });
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-prev],[data-next],[data-go]');
+    if(!b) return;
+    if(b.hasAttribute('data-prev')) go(idx-1);
+    else if(b.hasAttribute('data-next')) go(idx+1);
+    else { var t = chapters.findIndex(function(c){ return c.id===b.getAttribute('data-go'); }); if(t>=0){ e.preventDefault(); go(t); } }
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.target.matches('input,textarea')) return;
+    if(e.key==='ArrowRight') go(idx+1); else if(e.key==='ArrowLeft') go(idx-1);
+  });
+  toggle.addEventListener('click', function(){ var o = shelf.classList.toggle('open'); toggle.setAttribute('aria-expanded', o?'true':'false'); });
+  window.addEventListener('hashchange', function(){ var i = fromHash(); if(i>=0) go(i,false); });
+  var start = fromHash();
+  if(start<0){ try{ var saved = localStorage.getItem(key()); start = chapters.findIndex(function(c){ return c.id===saved; }); }catch(e){} }
+  go(start<0?0:start, false);
+})();
+</script>
+{{STAMPS}}
+</body>
+</html>

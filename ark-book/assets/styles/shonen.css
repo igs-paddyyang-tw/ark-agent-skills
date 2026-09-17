@@ -1,0 +1,75 @@
+/* shonen — 熱血：白底、能量色、黃白粗字多層描邊、放射線、斜切能量帶。母題：章名壓在能量帶上，每章一種能量色 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#F6F6F8; --surface:#FFFFFF; --surface-2:#F0F0F4; --border:rgba(17,17,17,.14);
+  --text:#111111; --text-2:#3D3D46; --text-3:#7A7A88;
+  --accent:#FF4A1C; --accent-soft:rgba(255,74,28,.10);
+  --ok:#12B76A; --warn:#FFD400; --danger:#E11D48; --info:#2563EB;
+  --c1:#FF4A1C; --c2:#FFD400; --c3:#2563EB; --c4:#12B76A; --c5:#9333EA; --c6:#111111;
+  --font-display:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --font-mono:"JetBrains Mono","Noto Sans TC",monospace;
+  --radius:6px; --radius-sm:3px;
+  --shadow:0 0 0 3px #111, 12px 12px 0 #111;
+  --maxw:840px;
+  --oak:#111111; --oak-dark:#000000; --brass:#FFD400; --brass-2:#FFE566;
+  --energy:#FF4A1C;
+}
+/* 每章一種能量色：依書脊色循環 */
+body[data-style="shonen"] .chapter[data-spine="c-green"]{--energy:#12B76A}
+body[data-style="shonen"] .chapter[data-spine="c-wine"]{--energy:#E11D48}
+body[data-style="shonen"] .chapter[data-spine="c-navy"]{--energy:#2563EB}
+body[data-style="shonen"] .chapter[data-spine="c-brown"]{--energy:#FF4A1C}
+body[data-style="shonen"] .chapter[data-spine="c-brass"]{--energy:#9333EA}
+
+body[data-style="shonen"]{background-image:repeating-linear-gradient(135deg,rgba(17,17,17,.04) 0 1px,transparent 1px 14px)}
+body[data-style="shonen"] .page{border:3px solid #111;padding-top:0;overflow:hidden}
+body[data-style="shonen"] .page::before{display:none}
+body[data-style="shonen"] .shelf{background:#111;border-right:3px solid #111}
+body[data-style="shonen"] .shelf .board{background:#FFD400;height:6px;box-shadow:none}
+body[data-style="shonen"] .shelf .book-title{color:#FFD400}
+body[data-style="shonen"] .spine{background:#fff;color:#111;border:2px solid #111;border-radius:0;box-shadow:3px 3px 0 #FFD400;font-weight:900;transform:skewX(-6deg)}
+body[data-style="shonen"] .spine>*{transform:skewX(6deg)}
+body[data-style="shonen"] .spine .n{opacity:1;color:#FF4A1C}
+body[data-style="shonen"] .spine[aria-current="true"]{background:#FFD400;box-shadow:4px 4px 0 #FF4A1C;transform:skewX(-6deg) translateX(8px)}
+body[data-style="shonen"] .spine[aria-current="true"]::before{display:none}
+body[data-style="shonen"] .ch-head{margin:0 -64px 26px -72px;padding:54px 64px 34px 72px;position:relative;color:#fff;
+  background:var(--energy);
+  background-image:repeating-conic-gradient(from 0deg at 85% 20%,rgba(255,255,255,.16) 0 4deg,transparent 4deg 12deg);
+  clip-path:polygon(0 0,100% 0,100% 82%,0 100%)}
+body[data-style="shonen"] .ch-head .kicker{color:#fff;font-weight:900}
+body[data-style="shonen"] .ch-head .badge{background:#111;color:#FFD400}
+body[data-style="shonen"] .ch-head h1{font-weight:900;color:#FFD400;font-size:clamp(30px,3.4vw,42px);line-height:1.15;
+  text-shadow:3px 3px 0 #111,-3px 3px 0 #111,3px -3px 0 #111,-3px -3px 0 #111,0 3px 0 #111,0 -3px 0 #111,3px 0 0 #111,-3px 0 0 #111,6px 6px 0 rgba(0,0,0,.35)}
+body[data-style="shonen"] .punchline{background:#111;color:#fff;border:0;border-left:10px solid var(--energy);font-weight:900;font-size:21px;
+  transform:skewX(-4deg);box-shadow:6px 6px 0 var(--energy)}
+body[data-style="shonen"] .punchline>*{transform:skewX(4deg);display:block}
+body[data-style="shonen"] .punchline small{color:#FFD400}
+body[data-style="shonen"] .section>h2{border-bottom:4px solid #111;font-weight:900;display:inline-block;padding-right:24px;
+  background:linear-gradient(transparent 60%,rgba(255,212,0,.6) 60%)}
+body[data-style="shonen"] .section h3{color:var(--energy);font-weight:900}
+body[data-style="shonen"] .section.problem p:last-of-type{font-size:19px;color:var(--energy)}
+body[data-style="shonen"] .section.roadmap ol li::before{background:#111;color:#FFD400;border-radius:0;transform:skewX(-8deg)}
+body[data-style="shonen"] .callout{border:2px solid #111;border-left-width:2px;border-radius:0;box-shadow:5px 5px 0 #111;background:#fff}
+body[data-style="shonen"] .callout .ct{display:inline-block;background:#111;color:#fff;padding:2px 10px;margin:-14px 0 8px -18px;transform:skewX(-8deg)}
+body[data-style="shonen"] .callout .ct{clip-path:none}
+body[data-style="shonen"] .callout.ask .ct{background:#2563EB}
+body[data-style="shonen"] .callout.myth .ct{background:#E11D48}
+body[data-style="shonen"] .callout.try{background:#FFF7CC;box-shadow:5px 5px 0 #FFD400}
+body[data-style="shonen"] .callout.try .ct{background:#FF4A1C}
+body[data-style="shonen"] .callout.tip .ct{background:#12B76A}
+body[data-style="shonen"] pre{background:#111;border-radius:0;box-shadow:5px 5px 0 var(--energy)}
+body[data-style="shonen"] :not(pre)>code{background:#111;color:#FFD400}
+body[data-style="shonen"] .section.recap li{background:#fff;border:2px solid #111;border-radius:0;box-shadow:4px 4px 0 #111}
+body[data-style="shonen"] .section.recap li:first-child{border-left:10px solid #FFD400}
+body[data-style="shonen"] .section.recap li:first-child::after{background:#FFD400;color:#111;padding:0 6px;font-weight:900;transform:skewX(-8deg)}
+body[data-style="shonen"] .nav{border-top:3px solid #111}
+body[data-style="shonen"] .nav button{background:#111;color:#FFD400;border-radius:0;font-weight:900;box-shadow:4px 4px 0 var(--energy);transform:skewX(-8deg)}
+body[data-style="shonen"] .progress{background:#111}
+body[data-style="shonen"] .progress i{background:#FFD400}
+body[data-style="shonen"] .cover{padding-top:48px}
+body[data-style="shonen"] .cover h1{font-weight:900;color:#111;text-shadow:6px 6px 0 #FFD400}
+body[data-style="shonen"] .cover .plate{border:3px solid #111;background:#FFD400;color:#111;font-weight:900;transform:skewX(-8deg)}
+body[data-style="shonen"] .cover .toc li{border:2px solid #111;border-radius:0;background:#fff}
+body[data-style="shonen"] .foot{color:#111}
+@media (max-width:900px){body[data-style="shonen"] .ch-head{margin:0 -22px 22px -32px;padding:40px 22px 28px 32px}}

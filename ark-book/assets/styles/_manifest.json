@@ -1,0 +1,25 @@
+{
+  "manifest_version": 1,
+  "default": "library",
+  "note": "每個風格 = 一個 css 檔：必須完整供應 ark-html-report token 契約（--bg ~ --maxw），可另加以 body[data-style=X] 為前綴的母題覆寫。新增風格：加一個 css + 在此登錄，book_build.py 自動可用。",
+  "styles": [
+    { "name": "library", "label": "圖書館", "dark": false,
+      "inspiration": "圖書館：泛黃書頁、橡木書架、黃銅標籤",
+      "use_for": "方法論、長讀型教材、需要沉浸閱讀的內容", "motif": "書脊目錄，當前章抽出" },
+    { "name": "felt", "label": "牌桌", "dark": false,
+      "inspiration": "麻雀格闘倶楽部：深綠牌桌、象牙牌、金光、黃白粗字黑厚描邊、斜切構圖",
+      "use_for": "規格、契約、守門類——講「本格」與勝負的硬內容", "motif": "章節是一張牌；punchline 是斜切的『ツモ』橫幅" },
+    { "name": "neon", "label": "霓虹", "dark": true,
+      "inspiration": "Huuuge Casino：高飽和紫藍桃紅、金屬金字、霓虹輪廓、777 與寶石",
+      "use_for": "成果展示、案例書、想讓人看到『做出來了』的內容", "motif": "金屬漸層標題 + 霓虹發光 callout；punchline 是跑馬燈牌" },
+    { "name": "shonen", "label": "熱血", "dark": false,
+      "inspiration": "七龍珠 Dokkan：黃白粗字多層描邊、能量色、放射線、名場面放大",
+      "use_for": "快速上手、衝刺教程、要讀者立刻動手的短書", "motif": "章名壓在斜切能量帶上，章首放射線；每章一種能量色" },
+    { "name": "manga", "label": "收藏", "dark": false,
+      "inspiration": "二次元與收藏：網點、對白框、角色卡與稀有度星級",
+      "use_for": "新人手冊、輕鬆入門、需要降低防備心的內容", "motif": "callout 是對白框；難度用 ★ 稀有度；角落網點" },
+    { "name": "console", "label": "實機", "dark": true,
+      "inspiration": "實機畫面與易懂玩法：HUD 邊框、進度條、等寬字，讓人看見自己會按什麼",
+      "use_for": "腳本與工具操作手冊、指令密集的內容", "motif": "章節有 HUD 角括、閱讀進度像 HP 條、章號顯示為 STAGE" }
+  ]
+}

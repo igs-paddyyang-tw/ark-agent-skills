@@ -1,0 +1,23 @@
+/* library — 圖書館：泛黃書頁、橡木書架、黃銅標籤。母題：書脊目錄 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#F3EAD3; --surface:#FAF4E4; --surface-2:#E8DCBE; --border:rgba(43,33,23,.18);
+  --text:#2B2117; --text-2:#5C4A3A; --text-3:#8A7660;
+  --accent:#1F3D2B; --accent-soft:rgba(31,61,43,.10);
+  --ok:#2E6B45; --warn:#B08D3C; --danger:#7A2E2E; --info:#20304A;
+  --c1:#1F3D2B; --c2:#7A2E2E; --c3:#20304A; --c4:#B08D3C; --c5:#4A3323; --c6:#8A7660;
+  --font-display:"Noto Serif TC","Songti TC","PMingLiU",Georgia,serif;
+  --font-body:"Noto Serif TC","Noto Sans TC","Microsoft JhengHei","PingFang TC",serif;
+  --font-mono:"JetBrains Mono","Noto Sans TC",monospace;
+  --radius:4px; --radius-sm:2px;
+  --shadow:0 2px 0 var(--surface-2), 0 10px 24px rgba(46,30,19,.18);
+  --maxw:820px;
+  --oak:#4A3323; --oak-dark:#2E1E13; --brass:#B08D3C; --brass-2:#D4B15C;
+}
+:root[data-theme="dark"] {
+  --bg:#1B1612; --surface:#241E17; --surface-2:#14100D; --border:rgba(238,227,203,.16);
+  --text:#EEE3CB; --text-2:#C9B896; --text-3:#9A8A70;
+  --accent:#8FBF9F; --accent-soft:rgba(143,191,159,.14);
+  --shadow:0 2px 0 var(--surface-2), 0 10px 24px rgba(0,0,0,.6);
+  --oak:#241811; --oak-dark:#0F0A07; --brass:#C9A24F; --brass-2:#E0BE68;
+}
