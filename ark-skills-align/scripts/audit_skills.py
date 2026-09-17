@@ -118,10 +118,32 @@ def audit(repo: Path, triggers: dict):
     findings = []
     fid = [0]
 
+    # 穩定規則 ID（AL-xxx）：規則名 → AL 編號（不再用執行序號 F-N）
+    # 既有規則賦 AL-0xx（語意不變，向後相容 AC-BC-1）；版本系列 AL-1xx（W1 新增）
+    RULE_ID = {
+        "frontmatter-parse": "AL-001", "name-mismatch": "AL-002",
+        "missing-description": "AL-003", "missing-category": "AL-004",
+        "category-is-status": "AL-005", "invalid-category": "AL-006",
+        "missing-outputs": "AL-007", "invalid-output-entry": "AL-008",
+        "duplicate-description": "AL-009", "trigger-conflict": "AL-010",
+        "stub-format": "AL-011", "readme-missing": "AL-012",
+        "readme-category-mismatch": "AL-013", "empty-skill-dir": "AL-014",
+        "dangling-skill-ref": "AL-015", "dangling-desc-ref": "AL-016",
+        "unknown-trigger-owner": "AL-017", "unpaired-pairing-claim": "AL-018",
+        "orphan-asset": "AL-019", "referenced-test-missing": "AL-020",
+        "missing-schema-version": "AL-021", "missing-updated": "AL-022",
+        "deprecated-field": "AL-023", "legacy-category": "AL-024",
+        # 版本系列（W1）
+        "version-missing": "AL-101", "contract-changed-no-bump": "AL-102",
+        "major-no-breaking": "AL-103", "depends-on-no-range": "AL-104",
+        "upstream-dep-unsatisfiable": "AL-105", "updated-before-contract": "AL-106",
+        "tested-against-missing": "AL-107",
+    }
+
     def add(sev, rule, skill, msg):
         fid[0] += 1
         findings.append({
-            "id": f"F-{fid[0]}", "severity": sev, "rule": rule,
+            "id": RULE_ID.get(rule, f"AL-U{fid[0]:03d}"), "severity": sev, "rule": rule,
             "skill": skill, "message": msg,
         })
 
@@ -199,6 +221,26 @@ def audit(repo: Path, triggers: dict):
         if not meta.get("updated"):
             add("P2", "missing-updated", name,
                 "缺 metadata.updated（語意＝最後修改日；別填批次操作的日期）")
+
+        # ── 版本系列（W1，v2）──────────────────────────────
+        # AL-101 version 缺或非 semver（過渡期 P2，回填完成後才升 P1）
+        import re as _re101
+        ver = str(meta.get("version", "")).strip()
+        if not ver:
+            add("P2", "version-missing", name, "缺 metadata.version（v2 應為 semver x.y.z）")
+        elif not _re101.match(r"^\d+\.\d+\.\d+$", ver):
+            add("P2", "version-missing", name, f"version='{ver}' 非 semver（應 x.y.z）")
+        # AL-104 depends_on 為字串形式（無範圍）—— P2
+        for ref in (meta.get("depends_on") or []):
+            if isinstance(ref, str):
+                add("P2", "depends-on-no-range", name,
+                    f"depends_on '{ref}' 為字串（無版本範圍）；建議 {{name, version}}（過渡期容忍 = 任意版本）")
+        # AL-107 消費端型 skill 必填 tested_against（依賴外部工具/套件；D-7）
+        CONSUMER_TYPE = {"ark-weknora-cli", "ark-agent-team-builder",
+                         "ark-agent-bot-builder", "ark-db-query", "ark-docker-deploy"}
+        if name in CONSUMER_TYPE and not meta.get("tested_against"):
+            add("P2", "tested-against-missing", name,
+                "消費端型 skill 應宣告 metadata.tested_against（針對哪版外部工具/套件寫，D-7）")
 
         outs = meta.get("outputs")
         if not outs:
