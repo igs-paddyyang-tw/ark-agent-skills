@@ -8,10 +8,12 @@ description: |
   並以 deterministic 稽核腳本 audit_skills.py 守門（P0/P1 清零才放行）。
   使用此 skill 當使用者要求「對齊 ark-agent-skills」「同步 skill 庫」「稽核 skill 庫」
   「整併 skills」「合併重複 skill」「回填 skill metadata」「檢查觸發詞衝突」
-  「執行 skills 整併計畫 / alignment directive」，或任何需要批次修改、驗證、
-  重組 ark-agent-skills repo 的場景。單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
+  「執行 skills 整併計畫 / alignment directive」，或消費端「對齊 team 的 skill 版本」
+  「升版 skill」「這個 agent 的 skill 是哪一版」，
+  或任何需要批次修改、驗證、重組 ark-agent-skills repo 的場景。
+  單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
 metadata:
-  version: "1.0.0"
+  version: "2.0.0"
   author: paddyyang
   schema_version: 1
   category: ops
@@ -21,178 +23,70 @@ metadata:
   render: none
   depends_on: [ark-md-report]
   status: active
-  updated: 2026-09-09
+  updated: 2026-09-17
 ---
 
 # ark-skills-align
 
-ark-agent-skills 庫的**庫級**維運 skill：對齊指令 → 批次執行 → 稽核守門 → drift report。
-與 ark-skill-creator 分工：creator 管**單一 skill** 的建立與優化；align 管**整個庫**的一致性。
+ark-agent-skills 庫的維運 skill，兩個模式。與 ark-skill-creator 分工:creator 管**單一 skill**，align 管**整個庫**。
 
-## 動手前：判準檢查表
+> 敘事、踩坑與判準（不進排程/三段判準/邊界宣告/多 session 協定/版本對齊判準）見
+> `references/ops-playbook.md` 與 `references/judgment-checklist.md`;通用判準在根 `AGENTS.md`。
+> 標準手順見 `references/alignment-workflow.md`;frontmatter 規格見 `references/metadata-schema.md`;
+> 消費端契約（matrix/lock schema）見 `references/consumer-contract.md`。
 
-`references/judgment-checklist.md` —— 2026-09-14~15 兩天四批工作、10 個 repo 踩出來的，
-每條後面都是真的發生過的例子。**不是逐條打勾，是動手前掃一眼有沒有哪條正在發生。**
+## 模式一:upstream（維護者/CI，在 repo 根執行）
 
-三組（**與 skill 庫有關的**）：A 加守門之前 · B 刪東西的三段判準 · C 兩份真相的形狀。
-
-> 原本的 D（共用工作樹）與 E（看結果）**已上移到根 `AGENTS.md`** ——
-> 它們與 skill 庫無關，任何 session 都用得到，放在 always-loaded 那層才吃得到。
-> 檢查表刻意**不留第二份**，只記「為什麼值得佔 always-loaded 的額度」。
-
-最常踩的一條（本庫特有的）：
-- **刪之前走完三段**：該不該刪 → 接手者是誰 → **這個 agent 該不該有接手者**
-
-> 通用的三組（反證新檢查 · 共用工作樹 · 看結果）都在根 `AGENTS.md`，
-> 檢查表只留本庫踩到的實例當佐證，**不留第二份**。
-
-## 核心原則
-
-1. **指令文件是 source of truth**：所有結構性改動（合併/移除/降級）必須對應 Alignment Directive 的 D-x 編號；文件沒有的決策不執行，先回報
-2. **Deterministic 守門**：每個 Phase 結束跑 `scripts/audit_skills.py`，P0/P1 清零才進下一 Phase
-3. **Stub 而非刪除**：被合併/移除的 skill 目錄留 README stub（遷移說明 + deprecation 日期 + 6 個月保留期），引用不斷鏈
-4. **metadata 與 description 分開改**：schema 回填只加 `metadata` 欄位（零觸發風險）；description 改動獨立 commit 且逐 skill 附 3 個觸發測試 prompt
-
-## 工作流程
-
-### 0. 取得輸入
-
-- Clone/pull repo：`git clone https://github.com/igs-paddyyang-tw/ark-agent-skills.git`（已存在則 `git pull`）
-- 找 Alignment Directive：優先讀 repo 內 `docs/alignment/` 最新一份；使用者另有提供則以提供版為準
-- 沒有 directive 時：**只跑稽核不做改動**，產出 audit 報告讓使用者決定
-
-### 1. 基線稽核
+管**庫的一致性 + 版本基底**。
 
 ```bash
-python scripts/audit_skills.py --repo <repo> --json baseline-audit.json
+# 稽核（P0/P1 清零才放行；穩定規則 ID AL-xxx）
+python ark-skills-align/scripts/audit_skills.py --repo . --json baseline.json
+# 版本回填 semver + depends_on 物件化
+python ark-skills-align/scripts/backfill_metadata.py --repo . --versions
+# 產 release manifest + index（audit 全綠才打 tag）
+python ark-skills-align/scripts/gen_manifest.py --repo . --release skills-YYYY.MM-rN
+# 移除/改名前後反向掃消費端
+python ark-skills-align/scripts/check_consumers.py --name ark-foo
 ```
 
-記下 findings 基線。腳本檢查七項：frontmatter 可解析、name=目錄名（P0）、
-category/outputs 齊全且在受控詞彙（P1）、description 重複（相似度>0.90，P1）、
-獨占觸發詞衝突（P1）、stub 格式（P2）、README 一致性（P2）。
-獨占詞矩陣內建於腳本，可用 `--config audit_config.yml` 擴充（格式見 `references/ops-playbook.md`）。
+守門規則（`AL-xxx` 穩定 ID，exit 0/1/2）:既有 AL-001~024（frontmatter/category/觸發詞/
+stub/orphan/懸空…）+ 版本系列 AL-101（version 非 semver，過渡 P2）/AL-104（depends_on 無範圍）/
+AL-107（消費端型缺 tested_against）。改動走 Alignment Directive 的 D-x，文件沒有的決策不執行。
 
-### 2. 依 Phase 執行 Directive
+## 模式二:consumer（team 的 manager 總機 `<專案>-agent`，在 team repo 根執行）
 
-讀 `references/alignment-workflow.md` 取得每類操作的標準手順：
-
-| 操作 | 手順章節 |
-|------|----------|
-| 合併 skill（D-1、D-2 類） | §merge：觸發詞移交 → 資產遷移 → stub 化 |
-| 移除/降級（D-3、D-4 類） | §demote：內容轉 reference 或 docs/ → stub 化 |
-| 收編為 preset（D-5、D-8 類） | §preset：領域內容 → 基底 skill references/<domain>-preset.md |
-| schema v1 回填 | §backfill：跑 `scripts/backfill_metadata.py`（半自動 + 人工複核 category） |
-| 觸發詞治理 | §triggers：按矩陣改 description，逐 skill 附測試 prompt |
-| README 重寫 | §readme：兩層分類表由 frontmatter 生成，不手寫 |
-
-分類歸屬**以各 skill 的 frontmatter 為唯一真相**（決策 C，2026-08-12）——
-`references/taxonomy.md` 只定義受控詞彙與 outputs 規格，不再維護歸屬名冊。
-要看全庫歸屬快照跑 `scripts/audit_skills.py`。
-frontmatter 欄位規格見 `references/metadata-schema.md`。
-
-### 2.5 移除／改名前後：反向掃消費端（強制）
+管**這個 team 手上 skill 的版本對齊**。資料在 `skills-matrix.yaml`（git）、狀態在
+`.kiro/skills.lock.json`（本機不進 git，每機一份）。
 
 ```bash
-python scripts/check_consumers.py --name ark-foo   # 動手前：誰在用？
-python scripts/check_consumers.py                  # 動手後：還有誰指著已刪的名字？
-ln -sf ../../scripts/hooks/pre-push .git/hooks/pre-push   # 裝一次：推送時自動觸發
+python .kiro/skills/ark-skills-align/scripts/align_sync.py plan --waves      # 列差異，不改檔
+python .kiro/skills/ark-skills-align/scripts/align_sync.py apply --wave 1 --yes  # 私訊 manager 確認才升（C-5）
+python .kiro/skills/ark-skills-align/scripts/align_sync.py verify             # AL-203 drift/AL-301 base tier
+python .kiro/skills/ark-skills-align/scripts/align_sync.py verify --remote    # 對上游 manifest，出 lag/breaking
+python .kiro/skills/ark-skills-align/scripts/align_sync.py heartbeat          # 送 team 頻道（同版只寫 health）
+python .kiro/skills/ark-skills-align/scripts/align_sync.py resolve <path>     # 這個複本是哪版？
 ```
 
-判準要走完**三段**，只做第①段會靜默掉能力（輸出已經把三段印出來）：
+對齊單位是 **release train**（`skills-YYYY.MM-rN`），個別 skill 只能例外 pin（附 reason）。
+tier 策略:base 全隊同版（Loop 五件套，major 不一致 P0）· role 走範圍 · domain（local_only）自由。
+升級走波次:wave 1 manager → wave 2 leaders → wave 3 workers，每波 verify P0/P1=0 才下一波。
 
-| 段 | 問什麼 | 依據 |
-|:--:|---|---|
-| ① | 該不該刪 | 上游 git 歷史有過＝殘留；沒有過＝**專案自建，不可動** |
-| ② | 接手者是誰 | `metadata.replaces` → 移除 commit 的箭頭／併入式宣告 → 推不出來就**明說不確定** |
-| ③ | **這個 agent 該不該有接手者** | 接手者是 scaffolder 而這個 agent 是職人／管家 → 是刪不是換；舊名若是套件無差別 bundle 的，補回去等於把清掉的注入量加回來 |
+## 版本感知（套件實例，排程呼叫）
 
-🔴 第②段**不猜**：批次移除的 commit 會同行並列好幾個名字，靠「同行出現」推斷會得到
-錯的接手者（實測 `ark-executive-assistant` 被推成 `ark-community-ops`，兩者只是同批被刪）。
-**猜錯的接手者比「不知道」更糟** —— 照著它補裝會裝進一個同樣不存在的東西。
-自己做的整併請回頭補 `replaces:`，那是唯一權威來源。
+套件（ark_team_agent/ark_bot_agent）預設段掛排程，每日 `verify --remote` + `heartbeat`:
+拉上游 manifest 反查本機版本 → 寫 lock → 一行 heartbeat 送 team 頻道 + `/api/health`。
+上游 `pre-push` 只在 major/契約變更時廣播 Alignment Notice（`notice_build.py`）。
+> 🔴 套件預設段/scheduler/api-health 在 paddy 開發源（交接項），本 skill 只提供 align_sync 腳本。
 
-### 為什麼不進排程
+## 收尾（強制）
 
-殘留只在一個時刻產生：**上游移除／改名 skill 的那一刻**。
-排程掃出來的東西沒有收件人，而「沒人讀的紅燈」正是那 241 處累積起來的原因。
-所以改成 `scripts/hooks/pre-push`：**只在這次推送刪掉 skill 時**才檢查，分兩級 ——
-消費端 **sync 矩陣**還列著就擋下（修法是改另一個 repo 的一行，推的人當下就能做）；
-只有**已部署複本**就警告不擋（那要逐一判第③段，不該在推送當下逼人決定）。
-
-🔴 **上游做移除，就要由上游負責掃消費端。** 消費端各自的 `sync_skills.py --check`
-本來就會擋，但它們在別的 repo、甚至別台機器上 —— 「消費端自己會檢查」在多 repo
-情境下等於沒有檢查。2026-09-14 併掉兩個 skill 後，3 個矩陣 10 處、9 份 SOUL.md、
-12 份已部署複本、1 份蒸餾設定全部靜默指著舊名（sync 印一行「跳過」、蒸餾掃出零筆）。
-
-四個掃描面：角色矩陣（`sync_skills.py` 的 MATRIX/COMMON）· 已部署複本
-（`**/.kiro/skills/`）· 人格清單（SOUL.md 條列）· 蒸餾來源（`distill-sources.yaml`）。
-專案自建 skill（`LOCAL_ONLY`）不算懸空。**消費端根目錄不存在時明說跳過，不假裝通過。**
-
-### 3. Phase 收尾（強制，不可跳過）
-
-1. `audit_skills.py` P0/P1 = 0，且 `check_consumers.py` 對本次移除的名字回 0 處
-2. 產 drift report：ark-md-report `review` 型，存 `docs/reports/review/{date}-align-phase-{X}.md`，
-   frontmatter `findings_count` 直接引用 audit JSON
-3. 獨立 commit，message 格式：`align(phase-A): D-1 D-2 merge + trigger governance [refs: alignment-directive]`
-
-### 4. 全部完成後
-
-- 對照 Directive 第 6 節成功指標逐條驗證
-- 觸發測試：衝突矩陣每組獨占詞出 3 個測試 prompt，確認只觸發 owner（配 ark-skill-creator 的 evals 機制）
-- 產最終 alignment report 給使用者（含 before/after skill 數、findings 曲線）
-
-## 邊界宣告：逐案補，不設規則（2026-09-14 定）
-
-`description` 的「不適用於 …請用 ark-X」是**路由用的**：agent 選 skill 時只讀 description。
-2026-09-14 盤點時 31/50 沒有邊界宣告，**刻意沒有做成守門規則** ——
-多數 skill 根本沒有可混淆的鄰居，強制只會產生填充文字，而填充文字會稀釋真正的邊界。
-
-判準：**指名「會被誤觸的那一個」，指不出來就不要寫。**
-
-補了 23 個，都是有具體鄰居的：
-
-| 群 | 誰會被誤觸 |
-|---|---|
-| 查資料 | db-query（結構化）／ weknora-cli（口徑問答）／ wiki-engine（本機 wiki） |
-| 指標 | kpi-calculator（怎麼算）／ anomaly-detector（算完之後的異常）／ retention-analysis（深入分析）／ marketing（策略，不是分析） |
-| 健檢 | dashboard-health（已部署端點）／ env-doctor（開發機環境） |
-| 程式碼檢查 | code-review（風格可讀性）／ security-audit（弱點）／ code-spec-validator（對不對得上 spec） |
-| 資料管線 | db-query 取數 → etl-pipeline 轉換 → chart-generator 靜態圖／html-dashboard 互動 |
-| 產 HTML | frontend-design（產品介面）／ html-report（報告頁）／ html-dashboard（儀錶板） |
-| 文件 | superpowers（Spec/ADR）／ doc-coauthoring（一來一往起草）／ game-design-doc（遊戲企劃）／ md-report（分析結論） |
-| 「計畫」三義 | project-planning（需求到交付的流程）／ spec-executor（拿到 plan 之後執行）／ planning-with-files（跨 session 不忘記） |
-
-**刻意不加的 8 個**（沒有鄰居會被誤觸，加了是雜訊）：
-`ark-cost-tracker` · `ark-docker-deploy` · `ark-translator` · `ark-uml-generator` ·
-`ark-mcp-builder` · `ark-pdf-tool` · `ark-pptx-tool`（Office 系以副檔名區分，本身就不會混）
-以及 `ark-xlsx-tool`（它其實已經有邊界，只是寫法沒用「請用 ark-」，掃描沒認出來）。
-
-⚠️ 寫的時候會撞到**觸發詞衝突矩陣**：在「不適用於」句裡寫別人的獨占詞
-（`派工`、`寫 spec`、`覆蓋率`…）一樣會被 audit 判 P1 —— 那不是誤判，
-因為 agent 路由讀的是整段文字，不會分辨那句是正面還是反面。換個說法即可。
-
-## 多 session 同時作業（2026-09-14 實測出來的協定）
-
-那天有**兩個 agent 同時在改這個 repo**，撞出四種代價，每一種都有對應做法：
-
-| 撞到什麼 | 做法 |
-|---|---|
-| `git add` 後被別人清掉 index，`commit` 變成空的 | **只用 pathspec commit**：`git commit -m ... -- <明確檔案>`（stage+commit 原子完成，不經 index）。禁用 `git add -A` |
-| `commit && push` 串接：commit 失敗但 push 照跑，**推上去的是別人的東西** | commit 與 push 分開下，**看 rc**；push 前確認 `rev-list --left-right --count HEAD...origin/main` 的 ahead 只有自己那幾個 |
-| 為了排除別人的檔案而 `git reset`，把對方在飛的工作一起清掉 | 要退只退自己的：`git reset -- <自己的檔案>` |
-| 主樹有別人的未提交變更、又落後遠端很多，無法 rebase | 用獨立 worktree cherry-pick 後推，主樹全程不動；之後 `git reset --keep origin/main` 對齊 |
-
-🔴 **別靠「機器上只有一個 peer」推論那些 commit 是誰做的** —— commit 的 author
-是同一個人類帳號，對辨識 agent 身分沒有資訊量。要認人看它留下的工作面
-（報告檔、commit 觸及的目錄），不是看還有誰在線上。當天我就據此認錯了對象。
-
-💡 分工用**檔案面**切，不要用「任務」切：
-盤點／移除／整併與消費端同步是一面，`audit_skills.py` 規則與各 skill 的測試是另一面。
-兩邊都會動 `SKILL.md`，所以**動到別人那一面的檔案時，只 commit 自己改的那幾個**。
+1. audit P0/P1=0 + check_consumers 對本次移除的名字回 0
+2. drift/verify report:ark-md-report review 型，存 `docs/reports/review/{date}-align-*.md`
+3. 獨立 commit（pathspec，不 `git add -A`），message 帶 `[refs: alignment-directive]` 或 D-x
 
 ## 邊界
 
-- **不重寫任何 skill 的核心邏輯**：只動 description、frontmatter、reference 結構、stub
-- **不動 Office 四工具**（docx/pptx/xlsx/pdf 源自官方，保持可升級性）
-- Directive 標 `Phase B 條件執行` 的項目：前置驗證不過 → 記 `status: deferred` 回報，不強行執行
-- 單一 skill 的新建與 eval → 交 ark-skill-creator
+- 不重寫任何 skill 核心邏輯;只動 description/frontmatter/reference/stub/版本
+- 不動 Office 四工具（保持官方可升級）
+- 單一 skill 建立/eval → ark-skill-creator

@@ -1,0 +1,22 @@
+{
+  "skill": "ark-skills-align",
+  "version": "2.0.0",
+  "evals": [
+    {"id": "up-1", "mode": "upstream", "prompt": "稽核 ark-agent-skills 庫",
+     "expect": "跑 audit_skills.py --repo .，回報 P0-P3 findings 計數，穩定 AL-xxx 規則 ID"},
+    {"id": "up-2", "mode": "upstream", "prompt": "回填所有 skill 的 version 為 semver",
+     "expect": "跑 backfill_metadata.py --versions，x.y→x.y.0、缺者 1.0.0，52 個全 semver"},
+    {"id": "up-3", "mode": "upstream", "prompt": "發布這班 skill 列車",
+     "expect": "audit 全綠後跑 gen_manifest.py --release skills-YYYY.MM-rN，產 manifest+index，tag"},
+    {"id": "cons-1", "mode": "consumer", "prompt": "這個 team 的 skill 落後上游多少",
+     "expect": "align_sync.py verify --remote，回報 lag/breaking/unknown，不擅自 apply"},
+    {"id": "cons-2", "mode": "consumer", "prompt": "把 team 對齊到最新列車",
+     "expect": "改 skills-matrix.yaml release → plan --waves → 逐波 apply --wave N --yes（私訊 manager 確認）→ verify P0/P1=0"},
+    {"id": "cons-3", "mode": "consumer", "prompt": "這個 skill 複本是哪一版",
+     "expect": "align_sync.py resolve <path>，tree hash 反查 index.json，查不到回 unknown"},
+    {"id": "neg-1", "mode": "negative", "prompt": "幫我優化 ark-superpowers 這個 skill 的內容",
+     "expect": "不處理:單一 skill 的優化改用 ark-skill-creator;本 skill 只管庫級對齊與版本"},
+    {"id": "neg-2", "mode": "negative", "prompt": "沒有 alignment directive，直接把重複的 skill 合併掉",
+     "expect": "拒絕自行決策:文件沒有的結構性改動不執行，先跑稽核產報告讓使用者決定"}
+  ]
+}

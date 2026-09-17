@@ -1,48 +1,55 @@
-# Ops Playbook
+# ark-skills-align — 維運手冊（ops-playbook）
 
-## 常用指令
+> SKILL.md 只留「怎麼用」的精要;這裡收「為什麼這樣設計」的敘事與踩坑（2026-09-14~17 累積）。
+> 通用判準（共用工作樹 D、看結果 E、反證新檢查 A）在根 `AGENTS.md`，本檔不重複。
 
-```bash
-# 基線稽核（唯讀，任何時候可跑）
-python scripts/audit_skills.py --repo <repo> --json audit.json
+## 為什麼變更廣播不進排程（pre-push 而非 cron）
 
-# schema v1 回填：先 dry-run 看 diff，再實跑
-python scripts/backfill_metadata.py --repo <repo> --dry-run
-python scripts/backfill_metadata.py --repo <repo>
+殘留只在一個時刻產生:**上游移除/改名/升版 skill 的那一刻**。排程掃出來的東西沒有收件人，
+而「沒人讀的紅燈」正是那 241 處累積起來的原因。所以走 `pre-push`:只在推送含移除/major bump 時
+檢查，分兩級——消費端 **sync 矩陣**還列著就擋（改另一 repo 一行即可）;只有**已部署複本**就警告不擋。
 
-# 全庫引用掃描（stub 化前必跑）
-grep -rn "<skill-name>" <repo> --include="*.md" | grep -v "<skill-name>/"
-```
+🔴 **上游做移除/升版，就由上游負責掃消費端。** 消費端各自的 `--check` 在別的 repo/別台機器，
+「消費端自己會檢查」在多 repo 情境等於沒有檢查。
 
-## audit_config.yml 格式（擴充獨占觸發詞矩陣）
+## 移除/改名的三段判準（只做第①段會靜默掉能力）
 
-```yaml
-exclusive_triggers:
-  "覆蓋率": ark-test-runner
-  "新詞": ark-owner-skill
-```
+| 段 | 問什麼 | 依據 |
+|:--:|---|---|
+| ① | 該不該刪 | 上游 git 歷史有過＝殘留;沒有過＝**專案自建，不可動** |
+| ② | 接手者是誰 | `metadata.replaces` → 移除 commit 箭頭/併入宣告 → 推不出來就**明說不確定** |
+| ③ | **這個 agent 該不該有接手者** | 接手者是 scaffolder 而這 agent 是職人/管家 → 是刪不是換 |
 
-腳本內建 Directive 第 3 節的完整矩陣；config 用於**新增**衝突對
-（audit 抓到矩陣外的衝突 → 回報使用者定 owner → 寫入 config 並 commit 進 repo 的
-`docs/alignment/audit_config.yml`，下次稽核自動生效）。
+🔴 第②段**不猜**:批次移除 commit 同行並列多個名字，靠「同行出現」推斷會得到錯的接手者。
+猜錯的接手者比「不知道」更糟。自己做的整併回頭補 `replaces:`（唯一權威）。
 
-## 稽核規則 ↔ severity 對照
+四個掃描面:角色矩陣（sync MATRIX）· 已部署複本（`**/.kiro/skills/`）· 人格清單（SOUL 條列）·
+蒸餾來源（distill-sources）。專案自建（LOCAL_ONLY）不算懸空。消費端根不存在時明說跳過，不假裝通過。
 
-| rule | severity | 說明 |
-|------|----------|------|
-| frontmatter-parse / name-mismatch | P0 | 結構性錯誤，阻斷一切 |
-| missing-category / invalid-category / missing-outputs | P1 | schema v1 未達標 |
-| duplicate-description | P1 | 相似度 > 0.90，疑似重複 skill |
-| trigger-conflict | P1 | 獨占詞出現在非 owner |
-| invalid-output-entry / missing-schema-version / stub-format / readme-missing | P2 | 品質項，Phase 收尾清 |
+## 邊界宣告:逐案補，不設規則（2026-09-14 定）
 
-## 判讀原則
+`description` 的「不適用於…請用 ark-X」是路由用的（agent 選 skill 只讀 description）。
+**刻意不做成守門規則**——多數 skill 沒有可混淆的鄰居，強制只會產生填充文字稀釋真正的邊界。
+判準:**指名「會被誤觸的那一個」，指不出來就不要寫。**
+⚠️ 在「不適用於」句裡寫別人的獨占詞（派工/寫 spec/覆蓋率）一樣會被 audit 判 P1——
+agent 路由讀整段不分正反，換個說法即可。
 
-- **腳本能自動修的只有 schema 回填**；duplicate 與 trigger-conflict 是結構決策，
-  必須對應 Directive D-x 執行，audit 只負責抓不負責修
-- backfill 後 audit 的 P1 應只剩 duplicate + trigger-conflict 類；若還有 schema 類
-  P1。（註：`UNMAPPED` 已於 2026-08-12 決策 C 移除 —— frontmatter 為唯一真相，
-  只有「category 缺失且推薦表也查不到」才回報 `NEEDS-CATEGORY`）→ 補 frontmatter 與
-  backfill 腳本的 CATEGORY_MAP 後重跑
-- 對 repo HEAD（2026-08-12）的實測基線：backfill 前 P1=123 / P2=67；
-  backfill 後 P1=7 / P2=9。與此曲線偏差過大時先懷疑腳本或 repo 狀態
+## 多 session 同時作業協定（2026-09-14 實測）
+
+| 撞到什麼 | 做法 |
+|---|---|
+| add 後被清 index，commit 變空 | 只用 pathspec commit（stage+commit 原子），禁 `git add -A` |
+| commit && push 串接:commit 失敗 push 照跑推別人的 | commit 與 push 分開看 rc;push 前確認 ahead 只有自己那幾個 |
+| reset 排除別人的檔案，清掉對方在飛的工作 | 只退自己的:`git reset -- <自己的檔案>` |
+| 主樹有別人未提交又落後遠端 | 獨立 worktree cherry-pick 後推，主樹不動 |
+
+🔴 別靠「機器上只有一個 peer」推論 commit 是誰做的——author 是同一人類帳號無資訊量;
+看它留下的工作面（報告/commit 觸及目錄）。
+
+## 版本對齊（v2）的判準
+
+- **release train 是對齊單位**:團隊對齊一個列車號比對齊 20 個 skill 範圍可操作;個別 skill 只能例外 pin（附 reason）
+- **lock 本機不進 git**:同一 repo 多機各跑一版，lock 描述「這台機器現在裝了什麼」;matrix（git）是「期望」
+- **apply 永不無人值守**:manager 總機 `<專案>-agent`（dir="."）可 plan/verify;apply 需人私訊該 manager 確認（C-5）
+- **base tier 同版強制**:Loop 五件套契約耦合，跨 agent major 不一致 = P0（AL-301）;上游給預設，部署可覆寫
+- **heartbeat 去重**:同版無變化只寫 /api/health，不發 TG——避免頻道噪音讓人對版本訊號脫敏
