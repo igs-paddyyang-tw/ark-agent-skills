@@ -104,7 +104,21 @@
 
     "skills": {
       "type": "array", "maxItems": 12,
-      "items": { "type": "string", "pattern": "^ark-[a-z0-9-]+$" }
+      "description": "字串形式（= 任意版本，永久相容）或物件形式 {name, version?, tier?}（schema 1.1，供 skills-align v2 的版本對齊與 tier 分層）",
+      "items": {
+        "oneOf": [
+          { "type": "string", "pattern": "^ark-[a-z0-9-]+$" },
+          {
+            "type": "object", "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^ark-[a-z0-9-]+$" },
+              "version": { "type": "string", "description": "semver 範圍，如 '>=2.0 <3' / '^2.0.0'" },
+              "tier": { "enum": ["base", "role", "domain"], "description": "覆寫 role-skills-map 的預設 tier" }
+            }
+          }
+        ]
+      }
     },
 
     "examples": {
