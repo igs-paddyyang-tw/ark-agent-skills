@@ -88,8 +88,19 @@ def render_agents(p: dict, hdr: str) -> str:
             f"| 可派工 | {', '.join(f'`{x}`' for x in r.get('delegates_to') or []) or '—'} |",
             f"| 會諮詢 | {', '.join(f'`{x}`' for x in r.get('consults') or []) or '—'} |",
             f"| 升報 | `{p['scope'].get('escalates_to') or '—'}` |"]
+    # skills 清單（相容 schema 1.1:字串 或 {name, version?, tier?}）
+    skill_lines = []
+    for s in (p.get("skills") or []):
+        if isinstance(s, str):
+            skill_lines.append(f"- `{s}`")
+        elif isinstance(s, dict):
+            ver = f" `{s['version']}`" if s.get("version") else ""
+            tier = f" [{s['tier']}]" if s.get("tier") else ""
+            skill_lines.append(f"- `{s['name']}`{ver}{tier}")
+    skills_block = ("\n\n## 裝的 Skills\n\n" + "\n".join(skill_lines)) if skill_lines else ""
     return (hdr + f"## {name} 協作關係\n\n| 關係 | 對象 |\n|------|------|\n" + "\n".join(rows) + "\n\n"
-            "職責：" + "、".join(p["scope"]["does"]) + "\n轉出：" + "、".join(p["scope"]["does_not"]) + "\n")
+            "職責：" + "、".join(p["scope"]["does"]) + "\n轉出：" + "、".join(p["scope"]["does_not"])
+            + skills_block + "\n")
 
 
 def render_schema(p: dict, hdr: str) -> str:

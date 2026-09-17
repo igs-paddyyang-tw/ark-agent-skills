@@ -1,37 +1,18 @@
-# 角色 Skills 對照表（v2.1 — 契約化）
+# 角色 Skills 對照表（v2.2 — 抽出為 YAML 單一來源）
 
-> **機器解析錨點**：下方 `base_skills:` / `role_skills:` YAML block 是**唯一清單來源**。
-> 各專案的 `scripts/sync_skills.py` 的 `MATRIX` 應以此為基礎（base_skills 全員裝，
-> role_skills 依角色加），不要另立一份平行清單 —— 兩套並存必漂移。
-> 領域專屬的 worker skill 由各專案在自己的 MATRIX 補（本表的 role_skills 只給通用起點）。
+> 🔴 **機器解析單一來源已抽為 `assets/role-skills-map.yaml`**（skills-align v2 ADR-003）。
+> 本 md 只留說明;`base_skills` / `role_skills` / `tiers` 清單一律讀那份 yaml，不在此重複維護
+> （兩套並存必漂移）。各專案 `scripts/sync_skills.py` 的 `MATRIX` 以 yaml 為基礎。
 
-## 安裝清單（機器解析錨點：`base_skills:` / `role_skills:`）
+## 安裝清單（權威在 `assets/role-skills-map.yaml`）
 
-```yaml
-# 全員必裝：Loop 五件套（需求→文件→執行→驗證→知識）+ 基本產出/驗證能力
-base_skills:
-  - ark-grill-me              # 需求澄清（反詰）
-  - ark-superpowers           # 規格/設計/計畫
-  - ark-spec-executor         # 依規格執行
-  - ark-code-spec-validator   # 驗 code ↔ spec
-  - ark-wiki-engine           # 知識查詢（wiki_query）
-  - ark-prompt-spec-validator # 驗 prompt/AI內文 ↔ spec
-  - ark-md-report             # Markdown 報告產出
-  - ark-html-report           # HTML 報告產出
+- **base_skills**（tier `base`）:全員必裝，Loop 五件套 + 產出/驗證能力（8 個）。契約耦合，全隊同版。
+- **role_skills**（tier `role`）:角色差異（admin/leader/ai-dev/coder/qa/devops/designer/analyst）。走範圍。
+- **domain**（`local_only`）:各專案 MATRIX 自補的領域 skill，不比對上游。
 
-role_skills:
-  admin:    [ark-planning-with-files, ark-env-doctor, ark-dashboard-health, ark-cost-tracker]
-  leader:   [ark-project-planning, ark-uml-generator, ark-doc-coauthoring]
-  ai-dev:   [ark-skill-creator, ark-mcp-builder, ark-llm-tools]
-  coder:    [ark-skill-creator, ark-code-review]
-  qa:       [ark-code-review, ark-test-runner]
-  devops:   [ark-docker-deploy, ark-env-doctor]
-  designer: [ark-frontend-design]
-  analyst:  [ark-kpi-calculator, ark-chart-generator, ark-etl-pipeline]
-```
-
-- 未列出的角色（含自訂角色）：只裝 `base_skills`，其餘由使用者/專案 MATRIX 指定
-- Skill 名稱必須存在於上游庫；安裝前以 `{name}/SKILL.md` 存在性驗證，缺失即報錯（不靜默略過）
+完整清單與 tier 對照見 `assets/role-skills-map.yaml`。
+- 未列出的角色（含自訂）:只裝 base_skills，其餘由專案 MATRIX 指定
+- Skill 名必須存在於上游庫;安裝前以 `{name}/SKILL.md` 存在性驗證，缺失即報錯（不靜默略過）
 
 ## 角色邊界原則
 

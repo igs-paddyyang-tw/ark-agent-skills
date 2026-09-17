@@ -187,6 +187,15 @@ python3 scripts/sync_skills.py --dry-run  # 只印要做什麼
 python3 scripts/sync_skills.py --check    # 驗一致（doctor/CI 用）
 ```
 
+> 🔴 **v2 版本對齊（skills-align v2）**：新專案建議直接用 `align_sync.py`（取代自建 sync_skills.py）——
+> 資料在 `skills-matrix.yaml`（team-design 已產骨架）、狀態在 `.kiro/skills.lock.json`（本機不進 git）:
+> ```bash
+> python3 .kiro/skills/ark-skills-align/scripts/align_sync.py plan --waves
+> python3 .kiro/skills/ark-skills-align/scripts/align_sync.py apply --wave 1 --yes  # 私訊 manager 確認
+> python3 .kiro/skills/ark-skills-align/scripts/align_sync.py verify               # AL-203/301 守門
+> ```
+> 對齊單位是 release train;tier 分層（base 同版/role 範圍/domain 自由）;升級走波次。詳見 `ark-skills-align` SKILL 消費端模式。
+
 **角色矩陣**（`sync_skills.py` 的 `MATRIX`）= 「哪個 agent 裝哪些 skill」。原則：
 
 | 角色 | 該裝的專業技能方向 | 例（ark-agent-skills 內） |

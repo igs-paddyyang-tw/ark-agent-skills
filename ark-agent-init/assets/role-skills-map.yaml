@@ -1,0 +1,35 @@
+# role-skills-map.yaml — 角色 → skills 機器解析單一來源（v2.2）
+# 從 role-skills-map.md 的 YAML 錨點抽出（ADR-003）。md 只留說明並指向本檔。
+# tier 語意（skills-align v2 ADR-005）:
+#   base_skills → tier base（全隊同版強制;Loop 五件套契約耦合）
+#   role_skills → tier role（走範圍，預設 ^major）
+#   各專案 MATRIX 自補的領域 skill → tier domain（local_only，不比對上游）
+schema_version: "2.2"
+
+# 全員必裝:Loop 五件套 + 基本產出/驗證能力 → tier base
+base_skills:
+  - ark-grill-me              # 需求澄清（反詰）
+  - ark-superpowers           # 規格/設計/計畫
+  - ark-spec-executor         # 依規格執行
+  - ark-code-spec-validator   # 驗 code ↔ spec
+  - ark-wiki-engine           # 知識查詢（wiki_query）
+  - ark-prompt-spec-validator # 驗 prompt/AI內文 ↔ spec
+  - ark-md-report             # Markdown 報告產出
+  - ark-html-report           # HTML 報告產出
+
+# 角色差異 → tier role
+role_skills:
+  admin:    [ark-planning-with-files, ark-env-doctor, ark-dashboard-health, ark-cost-tracker]
+  leader:   [ark-project-planning, ark-uml-generator, ark-doc-coauthoring]
+  ai-dev:   [ark-skill-creator, ark-mcp-builder, ark-llm-tools]
+  coder:    [ark-skill-creator, ark-code-review]
+  qa:       [ark-code-review, ark-test-runner]
+  devops:   [ark-docker-deploy, ark-env-doctor]
+  designer: [ark-frontend-design]
+  analyst:  [ark-kpi-calculator, ark-chart-generator, ark-etl-pipeline]
+
+# tier 對照（供 skills-matrix.yaml / align_sync 的 tier 分層）
+tiers:
+  base:   { policy: same-version }        # major 不一致 P0（AL-301）、minor P1（AL-302）
+  role:   { policy: range, default: "^major" }
+  domain: { policy: none }                # local_only，各專案 MATRIX 自補，不比對上游

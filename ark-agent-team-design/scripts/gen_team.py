@@ -31,6 +31,31 @@ def inst_name(i: str) -> str:
     return f"{i}-agent"
 
 
+def build_skills_matrix(spec: dict) -> dict:
+    """skills-matrix.yaml 骨架（skills-align v2 消費端交接檔，ADR-003）:agents role wave。
+    tier / release 由 align_sync 依 role-skills-map.yaml 填;此處只產編制骨架。"""
+    order = {"manager": 1, "admin": 1, "leader": 2, "worker": 3}
+    agents: dict = {}
+    for i in spec["instances"]:
+        agents[inst_name(i["id"])] = {"role": i["base_role"], "wave": order.get(i["tier"], 3)}
+    return {
+        "schema_version": "1.0",
+        "upstream": {
+            "repo": "https://github.com/igs-paddyyang-tw/ark-agent-skills.git",
+            "release": "skills-2026.09-r1",   # 對齊列車;實際以最新為準
+            "manifest_url": "https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/release/manifest.json",
+        },
+        "tiers": {
+            "base": {"policy": "same-version"},
+            "role": {"policy": "range", "default": "^major"},
+            "domain": {"policy": "none"},
+        },
+        "agents": agents,
+        "pins": {},
+        "local_only": [],
+    }
+
+
 def build_team_yaml(spec: dict) -> dict:
     d = spec.get("defaults") or {}
     entry = spec["entry"]
@@ -280,6 +305,8 @@ def main() -> int:
     # target 決定產哪些設定檔（team.yaml 一律產；bot/hybrid 加 agents.yaml + bot.yaml）
     if a.target in ("team", "hybrid"):
         print(write(out / "team.yaml", annotate_profiles(header + dump(build_team_yaml(spec)), spec), a.force))
+        mx_hdr = "# skills-matrix.yaml — skills-align v2 消費端交接檔（角色→skill 版本對齊的唯一資料）\n# align_sync.py plan/apply/verify 讀它;tier/清單權威在 ark-agent-init/assets/role-skills-map.yaml\n\n"
+        print(write(out / "skills-matrix.yaml", mx_hdr + dump(build_skills_matrix(spec)), a.force))
     if a.target in ("bot", "hybrid"):
         bot_hdr = f"# {spec['name']}（{spec['team_id']}）bot runtime — team_leader 空（關派工）、TG 不啟\n\n"
         print(write(out / "agents.yaml", bot_hdr + dump(build_agents_yaml(spec)), a.force))
