@@ -14,6 +14,9 @@ description: |
   ② 非套件獨立 web 應用 → ark-webapp-generator；③ steering 人格 → ark-agent-init。
 metadata:
   schema_version: 1
+  # 實測來源：SKILL.md「實測 1.8.4」（2026-09-11 實跑 market-team-agent）
+  tested_against:
+    ark_team_agent: "1.8.4"
   status: active
   category: scaffolder
   depends_on: [ark-agent-init]

@@ -18,8 +18,25 @@ metadata:
   status: active|deprecated                   # 省略視同 active
   version: "<x.y>"                            # 選填，沿用既有
   updated: <YYYY-MM-DD>                       # 選填，沿用既有
+  tested_against:                             # 消費端型 skill 必填（D-7）→ 缺 P2 AL-107
+    <外部套件/工具名>: "<版本>"                #   例：ark_team_agent: "1.8.4"
 ---
 ```
+
+### `tested_against` 的形狀（2026-09-17 提案）
+
+D-7 只定了「消費端型必填」，**沒有定值的格式**，而 audit 只檢查「有沒有值」。
+這裡先定成 **name → version 的 mapping**（一個 skill 可能同時依賴多個外部件，
+例如 `ark-db-query` 有六種 driver），要改由訂 D-7 的人決定。
+
+🔴 **只填「真的測過的」** —— 這個欄位的語意是「針對哪一版寫並驗過」。
+沒有實測來源就**留空**（維持 AL-107 的 P2），不要為了消掉計數而填一個看起來合理的版本：
+
+> 憑空的版本比空白更糟 —— 空白代表「還沒驗」，而填了代表「驗過這一版」。
+> 後者會讓下一個人跳過驗證。（同本 repo 記過的「憑空的預設值比沒有設定更糟」。）
+
+現況：`ark-agent-bot-builder`／`ark-agent-team-builder`／`ark-db-query` 有實測來源已填；
+`ark-weknora-cli`／`ark-docker-deploy` **查無來源，刻意留空**。
 
 ## deprecated stub 規格
 

@@ -13,6 +13,11 @@ description: |
   不適用於：知識庫語意問答請用 ark-weknora-cli；wiki 頁面查詢請用 ark-wiki-engine（本 skill 只查結構化資料庫）。
 metadata:
   schema_version: "1.1"
+  # 只列**測試實際跑過**的：scripts/tests 走 sqlite3（標準庫）端到端。
+  # BigQuery 路徑的 google-cloud-bigquery>=3.20 只在 requirements 宣告，
+  # 測試未涵蓋（需真實 BQ 連線）→ 不列進來，不然這個欄位就在說謊。
+  tested_against:
+    python-sqlite3: "3.12.3 stdlib"
   status: active
   category: executor        # v1 誤標 pipeline、實為 scaffolder；v2 起為可直接執行工具箱
   outputs:

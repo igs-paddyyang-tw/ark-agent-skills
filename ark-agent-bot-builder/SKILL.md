@@ -13,6 +13,9 @@ description: |
   ② 非套件的獨立 FastAPI 應用 → ark-webapp-generator；③ steering 人格 → ark-agent-init。
 metadata:
   schema_version: 1
+  # 實測來源：SKILL.md「實測 ark_bot_agent 1.0.15」（2026-09-11 建 slot-bot）
+  tested_against:
+    ark_bot_agent: "1.0.15"
   status: active
   category: scaffolder
   depends_on: [ark-agent-init]
