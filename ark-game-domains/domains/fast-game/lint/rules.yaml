@@ -1,0 +1,3 @@
+rules:
+  - {id: FAST-01, path: "fast.subtype", require: present, severity: error, message: "fast 必須有 subtype"}
+  - {id: FAST-02, path: "round.phases", require: nonempty, severity: error, message: "回合 phases 必須至少一個"}

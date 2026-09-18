@@ -1,0 +1,11 @@
+sections:
+  - {id: reel_config,  title: Reel Configuration,   source_items: [S01], insert_after: anchor_a}
+  - {id: symbol_spec,  title: Symbol Specification, source_items: [S02], insert_after: reel_config}
+  - {id: paytable,     title: Paytable,             source_items: [],    insert_after: symbol_spec}
+  - {id: wild,         title: Wild,                 source_items: [S03], insert_after: paytable}
+  - {id: scatter,      title: Scatter,              source_items: [S04], insert_after: wild}
+  - {id: win_lines,    title: Win Lines / Ways,     source_items: [S05], insert_after: scatter}
+  - {id: free_spin,    title: Free Spin,            source_items: [S06], insert_after: anchor_b, claim_prefixes: [free_spin.]}
+  - {id: bonus,        title: Bonus Feature,        source_items: [S06], insert_after: free_spin, claim_prefixes: [bonus.], entities: true}
+  - {id: multiplier,   title: Multiplier,           source_items: [S06], insert_after: bonus, claim_prefixes: [free_spin.multiplier]}
+  - {id: jackpot,      title: Jackpot,              source_items: [S06], insert_after: multiplier, claim_prefixes: [jackpot.]}

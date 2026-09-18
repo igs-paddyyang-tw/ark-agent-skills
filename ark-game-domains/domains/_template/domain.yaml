@@ -1,0 +1,15 @@
+domain: __DOMAIN__
+display_name: __DISPLAY_NAME__
+contract: "1"
+version: "0.1"
+extends: _core
+detect:
+  cues: ["TODO: 3-6 個畫面線索，供 ga_detect 判 domain"]
+  subtypes: []
+files:
+  extraction: extraction.yaml
+  analysis: analysis/
+  kb: kb/
+  spec: spec/
+  lint: lint/rules.yaml
+  eval: eval/

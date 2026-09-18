@@ -26,7 +26,7 @@ except ImportError:  # pragma: no cover
     sys.exit(3)
 
 # ---------------------------------------------------------------- vocab (same as audit_skills.py)
-CATEGORIES = {"process", "scaffolder", "pipeline", "view", "document", "domain", "ops"}
+CATEGORIES = {"process", "scaffolder", "pipeline", "view", "document", "domain", "ops", "executor"}
 OUTPUT_FORMATS = {"md", "html", "png", "pdf", "code", "data", "office"}
 AUDIENCES = {"ai", "human", "both"}
 

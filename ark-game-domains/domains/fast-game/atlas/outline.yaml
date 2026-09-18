@@ -1,0 +1,4 @@
+chapters:
+  - {id: round,   title: 回合與下注,   sections: [subtype, round_timing, bet_options], insert_after: anchor_core, figure: {type: strip, rule: full_round}}
+  - {id: result,  title: 結果與賠付,   sections: [result_mech, payout],                insert_after: round,       figure: {type: frame, prefer: [result_reveal, multiplier_tick]}}
+  - {id: actions, title: 回合內操作與公平性, sections: [actions, fairness, history],   insert_after: anchor_special, figure: {type: frame, prefer: [phase_hold, fallback]}}

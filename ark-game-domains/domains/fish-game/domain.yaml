@@ -1,0 +1,15 @@
+domain: fish-game
+display_name: 捕魚機
+contract: "1"
+version: "1.0"
+extends: _core
+detect:
+  cues: ["水底場景、魚群持續游動", "畫面下方或四周有砲台", "擊中魚後彈出分數", "換砲 / 砲注 +- 按鈕", "多人座位或多個砲台", "Boss 魚出場"]
+  subtypes: [single-player, multiplayer-room, boss-rush]
+files:
+  extraction: extraction.yaml
+  analysis: analysis/
+  kb: kb/
+  spec: spec/
+  lint: lint/rules.yaml
+  eval: eval/

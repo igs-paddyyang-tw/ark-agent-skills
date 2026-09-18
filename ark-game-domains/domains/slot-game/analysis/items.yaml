@@ -1,0 +1,64 @@
+items:
+  - id: S01
+    name: reel_layout
+    order: 110
+    prompt: prompts/S01.md
+    kb_tags: [reel]
+    claims:
+      - {key: reel.columns, type: int}
+      - {key: reel.rows, type: int}
+      - {key: reel.layout, type: string}
+      - {key: reel.variable_rows, type: bool}
+      - {key: reel.feature_reel_present, type: bool}
+  - id: S02
+    name: symbols
+    order: 120
+    prompt: prompts/S02.md
+    kb_tags: [symbol]
+    claims:
+      - {key: symbols.count_observed, type: int}
+    entity: {type: symbol, fields: [id, type, visual_description]}
+  - id: S03
+    name: wild
+    order: 130
+    prompt: prompts/S03.md
+    kb_tags: [wild, expanding-wild, sticky-wild]
+    claims:
+      - {key: wild.present, type: bool}
+      - {key: wild.behavior, type: string}
+      - {key: wild.substitutes_scatter, type: bool}
+      - {key: wild.reels_allowed, type: list}
+  - id: S04
+    name: scatter_and_trigger
+    order: 140
+    prompt: prompts/S04.md
+    kb_tags: [scatter, trigger, free-spin]
+    claims:
+      - {key: scatter.present, type: bool}
+      - {key: scatter.trigger_count, type: int}
+      - {key: scatter.trigger_target, type: string}
+      - {key: scatter.pays_anywhere, type: bool}
+  - id: S05
+    name: win_lines_ways
+    order: 150
+    prompt: prompts/S05.md
+    kb_tags: [reel, cascade]
+    claims:
+      - {key: win.mechanism, type: string}
+      - {key: win.line_count, type: int}
+      - {key: win.direction, type: string}
+      - {key: win.cascade, type: bool}
+  - id: S06
+    name: free_spin_bonus_multiplier
+    order: 160
+    prompt: prompts/S06.md
+    kb_tags: [free-spin, bonus, multiplier, respin, hold-win, pick-bonus, jackpot, buy-feature]
+    claims:
+      - {key: free_spin.present, type: bool}
+      - {key: free_spin.count_awarded, type: int}
+      - {key: free_spin.retrigger, type: bool}
+      - {key: free_spin.multiplier, type: string}
+      - {key: bonus.types_observed, type: list}
+      - {key: bonus.buy_feature, type: bool}
+      - {key: jackpot.present, type: bool}
+    entity: {type: feature, fields: [id, trigger, reward, exit]}

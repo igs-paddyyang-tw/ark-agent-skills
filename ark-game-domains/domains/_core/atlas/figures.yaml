@@ -1,0 +1,9 @@
+# figure 挑選規則（全部 deterministic，作用在 keyframes.json 上）
+hero: {prefer: [big_win, special_weapon, result_reveal, scene, fallback]}
+strips:
+  # 依 labels 順序，各取「前一張之後最早」的一張；不足兩張退回單 frame
+  full_round: {labels: [fallback, scene, fallback], max: 5}
+  feature:    {around: scene, before: 2, after: 2, max: 5}
+frame: {max_width: 1280, quality: 82, burn_caption: true}
+strip: {cell_width: 420, arrow: true}
+state_frames: {thumb_width: 320}

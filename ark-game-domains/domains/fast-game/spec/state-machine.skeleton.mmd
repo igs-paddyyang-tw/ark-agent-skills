@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> betting
+    betting --> playing : window closes {{evidence:round.betting_window_s}}
+    playing --> result : {{evidence:result.mechanic}}
+    playing --> cashed_out : cashout {{evidence:action.cashout}}
+    cashed_out --> result
+    result --> settle : {{evidence:round.result_hold_s}}
+    settle --> betting

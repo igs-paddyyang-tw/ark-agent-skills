@@ -1,0 +1,15 @@
+domain: slot-game
+display_name: 老虎機
+contract: "1"
+version: "1.0"
+extends: _core
+detect:
+  cues: ["直行×橫列的符號網格（如 5x3）", "轉輪轉動後停止", "Spin 按鈕", "賠付線或 ways 顯示", "Scatter / Wild / Free Spin 字樣"]
+  subtypes: [lines, ways, cluster, megaways, hold-and-win]
+files:
+  extraction: extraction.yaml
+  analysis: analysis/
+  kb: kb/
+  spec: spec/
+  lint: lint/rules.yaml
+  eval: eval/

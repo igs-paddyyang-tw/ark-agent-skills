@@ -1,0 +1,16 @@
+# 通用章節；pack 以 insert_after 錨點插入專屬章節
+sections:
+  - {id: overview,       title: Game Overview,        source_items: [C01]}
+  - {id: game_flow,      title: Game Flow,            source_items: [C02]}
+  - {id: core_rules,     title: Core Rules,           source_items: []}
+  - {id: anchor_a,       title: null, anchor: true}
+  - {id: anchor_b,       title: null, anchor: true}
+  - {id: win_calc,       title: Win Calculation,      source_items: []}
+  - {id: ui_ux,          title: UI / UX,              source_items: [C03]}
+  - {id: animation,      title: Animation,            source_items: [C04]}
+  - {id: sound,          title: Sound / Feedback,     source_items: []}
+  - {id: state_machine,  title: State Machine,        source_items: [C02], special: state_machine}
+  - {id: configuration,  title: Configuration,        source_items: [], special: configuration}
+  - {id: edge_cases,     title: Edge Cases,           source_items: []}
+  - {id: evidence,       title: Evidence,             special: evidence}
+  - {id: open_questions, title: Open Questions,       special: open_questions}

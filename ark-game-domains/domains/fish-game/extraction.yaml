@@ -1,0 +1,8 @@
+crop: {webcam_overlay: auto}
+detectors:
+  - {use: roi_change, roi: {name: score, auto: numeric_hud_bottom}, min_delta: 1, label: kill}
+  - {use: flash, threshold: 0.35, label: special_weapon}
+  - {use: motion_burst, threshold: 0.30, label: explosion}
+  - {use: scene_change, threshold: 0.5, label: room_or_boss}
+  - {use: periodic, every_s: 8, label: fallback}
+budget: {max_keyframes: 200, max_sheets: 24, max_llm_calls: 48}

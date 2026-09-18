@@ -1,0 +1,14 @@
+# 每支影片一份。value 填正確答案；影片看不到填 NOT_OBSERVED；不確定填 UNKNOWN。
+video_sha256: ""
+domain: slot-game
+items:
+  C01: {game.theme: "", game.type: slot}
+  C02: {flow.states: []}
+  C03: {ui.autoplay: ""}
+  C04: {fx.big_win_tiers: []}
+  S01: {reel.layout: ""}
+  S02: {symbols.count_observed: ""}
+  S03: {wild.present: "", wild.behavior: ""}
+  S04: {scatter.trigger_count: "", scatter.trigger_target: ""}
+  S05: {win.mechanism: ""}
+  S06: {free_spin.count_awarded: "", free_spin.retrigger: "", bonus.types_observed: []}

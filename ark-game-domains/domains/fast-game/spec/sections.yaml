@@ -1,0 +1,9 @@
+sections:
+  - {id: subtype,        title: Game Subtype,          source_items: [Q01], insert_after: anchor_a}
+  - {id: round_timing,   title: Round Timing,          source_items: [Q02], insert_after: subtype}
+  - {id: bet_options,    title: Bet Options,           source_items: [Q03], insert_after: round_timing}
+  - {id: result_mech,    title: Result Mechanic,       source_items: [Q04], insert_after: bet_options, claim_prefixes: [result.mechanic, result.randomizer_visible]}
+  - {id: payout,         title: Payout Structure,      source_items: [Q05], insert_after: result_mech}
+  - {id: actions,        title: In-round Actions,      source_items: [Q06], insert_after: anchor_b, claim_prefixes: [action.cashout, action.auto_cashout, action.auto_bet]}
+  - {id: fairness,       title: Fairness Display,      source_items: [Q04], insert_after: actions, claim_prefixes: [result.provably_fair_display]}
+  - {id: history,        title: History & Statistics,  source_items: [Q06], insert_after: fairness, claim_prefixes: [action.history_bar]}

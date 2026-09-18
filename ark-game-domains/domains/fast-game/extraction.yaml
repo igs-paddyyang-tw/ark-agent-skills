@@ -1,0 +1,8 @@
+crop: {webcam_overlay: auto}
+detectors:
+  - {use: still_hold, min_s: 1.5, threshold: 0.01, label: phase_hold}
+  - {use: motion_settle, high: 0.10, low: 0.015, min_spin_s: 0.4, min_settle_s: 0.3, label: result_reveal}
+  - {use: roi_change, roi: {name: multiplier, auto: numeric_hud_center}, min_delta: 0.01, label: multiplier_tick}
+  - {use: scene_change, threshold: 0.5, label: scene}
+  - {use: periodic, every_s: 3, label: fallback}
+budget: {max_keyframes: 180, max_sheets: 20, max_llm_calls: 40}

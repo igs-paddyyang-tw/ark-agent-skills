@@ -1,0 +1,4 @@
+hero: {prefer: [result_reveal, multiplier_tick, phase_hold, fallback]}
+strips:
+  full_round: {labels: [phase_hold, result_reveal, phase_hold], max: 5}
+  feature:    {around: result_reveal, before: 1, after: 2, max: 4}

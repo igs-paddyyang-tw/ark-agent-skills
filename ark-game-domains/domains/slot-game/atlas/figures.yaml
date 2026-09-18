@@ -1,0 +1,4 @@
+hero: {prefer: [big_win, feature_transition, reel_stop, fallback]}
+strips:
+  full_round: {labels: [fallback, reel_stop, win_change, reel_stop], max: 5}
+  feature:    {around: feature_transition, before: 2, after: 2, max: 5}

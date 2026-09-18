@@ -1,0 +1,4 @@
+rules:
+  - {id: SLOT-01, path: "reel.layout", require: present, severity: error, message: "slot 必須有 reel.layout（可為 UNKNOWN）"}
+  - {id: SLOT-02, path: "symbols.count_observed", require: present, severity: warn, message: "未回報符號數"}
+  - {id: SLOT-03, path: "free_spin.count_awarded", require: provenance_in, values: [OBSERVED, INFERRED, UNKNOWN, DECIDED], severity: error, message: "free spin 次數不可為 PROPOSED 直寫，需經決議"}

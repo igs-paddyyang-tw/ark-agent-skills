@@ -1,0 +1,3 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+ "properties":{"bet_option":{"type":"array","items":{"type":"object","required":["id"]}},"ui_element":{"type":"array"}},
+ "additionalProperties":true}

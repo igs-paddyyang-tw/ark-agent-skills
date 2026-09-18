@@ -1,0 +1,3 @@
+name: atlas-__DOMAIN__
+theme: dark
+tokens: {--accent: "#D4B15C"}

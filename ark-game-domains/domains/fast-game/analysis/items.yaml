@@ -1,0 +1,58 @@
+items:
+  - id: Q01
+    name: subtype
+    order: 110
+    prompt: prompts/Q01.md
+    kb_tags: [crash, dice, wheel, plinko, mines, hilo]
+    claims:
+      - {key: fast.subtype, type: string}
+      - {key: fast.single_mechanic, type: bool}
+  - id: Q02
+    name: round_timing
+    order: 120
+    prompt: prompts/Q02.md
+    kb_tags: [round-timing, game-loop]
+    claims:
+      - {key: round.phases, type: list}
+      - {key: round.betting_window_s, type: number}
+      - {key: round.play_duration_s, type: number}
+      - {key: round.result_hold_s, type: number}
+      - {key: round.rounds_observed, type: int}
+  - id: Q03
+    name: bet_options
+    order: 130
+    prompt: prompts/Q03.md
+    kb_tags: [ui]
+    claims:
+      - {key: bet.amount_steps_observed, type: list}
+      - {key: bet.targets_present, type: bool}
+      - {key: bet.multiple_bets_per_round, type: bool}
+    entity: {type: bet_option, fields: [id, kind, payout_display]}
+  - id: Q04
+    name: result_mechanic
+    order: 140
+    prompt: prompts/Q04.md
+    kb_tags: [crash, dice, wheel, plinko, mines, provably-fair]
+    claims:
+      - {key: result.mechanic, type: string}
+      - {key: result.randomizer_visible, type: string}
+      - {key: result.provably_fair_display, type: bool}
+  - id: Q05
+    name: payout_structure
+    order: 150
+    prompt: prompts/Q05.md
+    kb_tags: [multiplier, reward, math]
+    claims:
+      - {key: payout.multiplier_display, type: bool}
+      - {key: payout.max_multiplier_observed, type: number}
+      - {key: payout.results_observed, type: list}
+  - id: Q06
+    name: in_round_actions
+    order: 160
+    prompt: prompts/Q06.md
+    kb_tags: [cashout, auto-cashout, autoplay, history-display]
+    claims:
+      - {key: action.cashout, type: bool}
+      - {key: action.auto_cashout, type: bool}
+      - {key: action.auto_bet, type: bool}
+      - {key: action.history_bar, type: bool}

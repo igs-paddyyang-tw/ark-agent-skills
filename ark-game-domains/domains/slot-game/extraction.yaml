@@ -1,0 +1,8 @@
+crop: {webcam_overlay: auto}
+detectors:
+  - {use: motion_settle, high: 0.12, low: 0.02, min_spin_s: 0.5, min_settle_s: 0.3, label: reel_stop}
+  - {use: scene_change, threshold: 0.55, label: feature_transition}
+  - {use: flash, threshold: 0.35, label: big_win}
+  - {use: roi_change, roi: {name: win, auto: numeric_hud_bottom}, min_delta: 1, label: win_change}
+  - {use: periodic, every_s: 5, label: fallback}
+budget: {max_keyframes: 150, max_sheets: 20, max_llm_calls: 40}

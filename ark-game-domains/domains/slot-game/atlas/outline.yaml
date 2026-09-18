@@ -1,0 +1,4 @@
+chapters:
+  - {id: reels,     title: 轉輪與符號,     sections: [reel_config, symbol_spec, paytable], insert_after: anchor_core,    figure: {type: frame, prefer: [reel_stop]}}
+  - {id: wild_scat, title: Wild、Scatter 與中獎判定, sections: [wild, scatter, win_lines], insert_after: reels,          figure: {type: frame, prefer: [win_change, reel_stop]}}
+  - {id: features,  title: 特殊機制,       sections: [free_spin, bonus, multiplier, jackpot], insert_after: anchor_special, figure: {type: strip, rule: feature}}

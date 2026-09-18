@@ -1,0 +1,13 @@
+video_sha256: ""
+domain: fish-game
+items:
+  C01: {game.theme: "", game.type: fish}
+  C02: {flow.states: []}
+  C03: {ui.autoplay: ""}
+  C04: {fx.big_win_tiers: []}
+  F01: {room.tiers_observed: []}
+  F02: {cannon.levels_count: "", cannon.auto_fire: "", cannon.lock_target: ""}
+  F03: {fish.species_count_observed: ""}
+  F04: {special.types_observed: []}
+  F05: {boss.present: ""}
+  F06: {bonus.types_observed: [], multiplayer.seats_observed: ""}

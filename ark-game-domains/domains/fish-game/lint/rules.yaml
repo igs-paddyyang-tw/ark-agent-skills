@@ -1,0 +1,3 @@
+rules:
+  - {id: FISH-01, path: "fish.species_count_observed", require: present, severity: error, message: "fish 必須回報魚種數（可為 UNKNOWN）"}
+  - {id: FISH-02, path: "cannon.levels_count", require: present, severity: warn, message: "未回報砲台等級數"}

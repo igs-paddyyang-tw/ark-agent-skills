@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> idle
+    idle --> bet
+    bet --> spin : spin pressed
+    spin --> reel_stop : {{evidence:reel.layout}}
+    reel_stop --> evaluate_win
+    evaluate_win --> feature_trigger : scatter >= N {{evidence:scatter.trigger_count}}
+    evaluate_win --> settle
+    feature_trigger --> free_spin : {{evidence:free_spin.present}}
+    free_spin --> settle
+    settle --> idle

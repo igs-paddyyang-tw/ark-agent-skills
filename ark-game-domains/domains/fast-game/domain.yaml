@@ -1,0 +1,15 @@
+domain: fast-game
+display_name: 快速遊戲（mini-game）
+contract: "1"
+version: "1.0"
+extends: _core
+detect:
+  cues: ["單一核心機制（曲線 / 骰子 / 轉盤 / 格子）", "倒數計時或下注窗口", "歷史結果列", "倍率跳動或曲線上升", "無符號轉輪、無砲台", "回合很短（數秒到數十秒）"]
+  subtypes: [crash, dice, wheel, plinko, mines, hilo, keno, coinflip, scratch]
+files:
+  extraction: extraction.yaml
+  analysis: analysis/
+  kb: kb/
+  spec: spec/
+  lint: lint/rules.yaml
+  eval: eval/

@@ -1,0 +1,5 @@
+# 引擎內建 ADR-002 規則不在此列（不可覆寫）。此處為 core 層可宣告的資料規則。
+# 規則語言（封閉）：path（claim key glob）/ require（present|nonempty|provenance_in）/ severity（error|warn）
+rules:
+  - {id: CORE-01, path: "flow.states", require: nonempty, severity: error, message: "game flow 必須至少有一個 state"}
+  - {id: CORE-02, path: "game.type", require: present, severity: warn, message: "game.type 缺失（可為 UNKNOWN）"}

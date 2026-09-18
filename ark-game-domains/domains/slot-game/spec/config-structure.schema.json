@@ -1,0 +1,6 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+ "properties":{
+  "symbol":{"type":"array","items":{"type":"object","required":["id"],"properties":{"id":{"type":"string"},"type":{},"observed":{"type":"boolean"}}}},
+  "feature":{"type":"array","items":{"type":"object","required":["id"]}},
+  "ui_element":{"type":"array"}
+ },"additionalProperties":true}

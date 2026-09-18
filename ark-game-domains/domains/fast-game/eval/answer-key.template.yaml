@@ -1,0 +1,13 @@
+video_sha256: ""
+domain: fast-game
+items:
+  C01: {game.theme: "", game.type: fast}
+  C02: {flow.states: []}
+  C03: {ui.autoplay: ""}
+  C04: {fx.big_win_tiers: []}
+  Q01: {fast.subtype: ""}
+  Q02: {round.betting_window_s: "", round.play_duration_s: ""}
+  Q03: {bet.targets_present: ""}
+  Q04: {result.mechanic: "", result.provably_fair_display: ""}
+  Q05: {payout.max_multiplier_observed: ""}
+  Q06: {action.cashout: "", action.auto_bet: ""}

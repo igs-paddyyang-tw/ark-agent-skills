@@ -1,0 +1,9 @@
+# 合併 _core 的 C01-C04 後必須恰為 10 項 → 這裡放 6 項
+items:
+  - id: X01
+    name: TODO_item_name
+    order: 110
+    prompt: prompts/X01.md
+    kb_tags: []
+    claims:
+      - {key: todo.key, type: string}

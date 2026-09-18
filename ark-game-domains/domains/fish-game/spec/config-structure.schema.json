@@ -1,0 +1,5 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
+ "properties":{
+  "fish_species":{"type":"array","items":{"type":"object","required":["id"]}},
+  "special_item":{"type":"array"}, "boss":{"type":"array"}, "ui_element":{"type":"array"}
+ },"additionalProperties":true}

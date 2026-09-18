@@ -1,0 +1,14 @@
+# Feature Spec — {{ domain }} — run {{ run_id }}
+
+{% for item in items %}{% if item.entities %}
+## {{ item.id }} {{ item.name }}
+| id | type | provenance | evidence |
+|----|------|------------|----------|
+{% for e in item.entities %}| {{ e.id }} | {{ e.type or '' }} | {{ e.provenance }} | {{ e.evidence|join(', ') }} |
+{% endfor %}{% endif %}{% endfor %}
+
+## Claims by item
+{% for item in items %}
+### {{ item.id }} {{ item.name }}
+{% for c in item.claims %}- `{{ c.key }}` = {{ c.value }} — {{ c.provenance }}{% if c.evidence %} — {{ c.evidence|join(', ') }}{% endif %}
+{% endfor %}{% endfor %}

@@ -1,0 +1,10 @@
+# UI Spec — {{ domain }} — run {{ run_id }}
+
+| element | role | location | provenance | evidence |
+|---------|------|----------|------------|----------|
+{% for e in ui_elements %}| {{ e.id }} | {{ e.role or '' }} | {{ e.location or '' }} | {{ e.provenance }} | {{ e.evidence|join(', ') }} |
+{% endfor %}
+
+## UI claims
+{% for c in ui_claims %}- `{{ c.key }}` = {{ c.value }} — {{ c.provenance }}
+{% endfor %}

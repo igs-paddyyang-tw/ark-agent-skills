@@ -1,0 +1,47 @@
+# 每個 item：id / name / order / prompt / claims（允許的 claim key）/ entity（可選）/ kb_tags
+items:
+  - id: C01
+    name: game_theme_and_type
+    order: 10
+    prompt: prompts/C01.md
+    kb_tags: [project]
+    claims:
+      - {key: game.title, type: string}
+      - {key: game.theme, type: string}
+      - {key: game.type, type: string}
+      - {key: game.platform, type: string}
+      - {key: game.orientation, type: string}
+  - id: C02
+    name: game_flow
+    order: 20
+    prompt: prompts/C02.md
+    kb_tags: [game-loop, trigger, reward]
+    claims:
+      - {key: flow.states, type: list}
+      - {key: flow.entry_state, type: string}
+      - {key: flow.feature_trigger_present, type: bool}
+      - {key: flow.settlement_visible, type: bool}
+  - id: C03
+    name: ui_ux
+    order: 30
+    prompt: prompts/C03.md
+    kb_tags: [ui, autoplay, history-display]
+    claims:
+      - {key: ui.bet_control, type: string}
+      - {key: ui.balance_display, type: bool}
+      - {key: ui.win_display, type: bool}
+      - {key: ui.autoplay, type: bool}
+      - {key: ui.settings_menu, type: bool}
+      - {key: ui.paytable_access, type: bool}
+      - {key: ui.currency_or_unit, type: string}
+    entity: {type: ui_element, fields: [id, role, location]}
+  - id: C04
+    name: animation_and_feedback
+    order: 40
+    prompt: prompts/C04.md
+    kb_tags: [animation, reward]
+    claims:
+      - {key: fx.win_celebration, type: string}
+      - {key: fx.big_win_tiers, type: list}
+      - {key: fx.transition_style, type: string}
+      - {key: fx.sound_cues_observed, type: bool}

@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **55 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **59 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -69,7 +69,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ③ 管線元件 Pipeline
 
-> 輸出：結構化資料｜`category: pipeline`｜16 個
+> 輸出：結構化資料｜`category: pipeline`｜15 個
 
 | Skill | 定位 |
 |-------|------|
@@ -87,7 +87,6 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-telegram-sender` | 通用 Telegram 發送 Skill：文字訊息（HTML 格式）、檔案附件、圖片。 |
 | `ark-test-runner` | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
 | `ark-translator` | 產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯， 支援繁體中文、簡體中文、英文、日文互譯。 |
-| `ark-video-understanding` | > Analyze local or remote videos for ArkAgent by downloading media, extracting timestamped captions/… |
 | `ark-web-scraper` | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
 
 ## ④ 呈現層 View
@@ -139,12 +138,17 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑧ 執行器 Executor
 
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜3 個
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜8 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
+| `ark-game-analysis` | 遊戲機制分析 executor（domain-agnostic）：讀 ark-video-understanding 的唯讀 evidence，依 ark-game-domains pack 的 10… |
+| `ark-game-atlas` | 圖文遊戲規格書（atlas）編譯器：把「競品影片 → 遊戲規格」鏈的一個 run 編成一本可翻閱的書—— 文字逐條來自 `game-spec.v1.md` 帶 provenance 的主張（OBSER… |
+| `ark-game-domains` | 「競品影片 → 遊戲規格」skill 鏈的 Domain Pack 註冊庫：唯一放遊戲領域知識的地方 （偵測器組合、分析項目與提詞、受控詞彙與 KB seed、規格章節與 dev-spec 模板、li… |
+| `ark-game-spec` | 遊戲規格產出 executor（domain-agnostic）：`game-analysis.yaml` + `kb-refs.yaml` → 依 pack 章節 deterministic 渲染 … |
 | `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
+| `ark-video-understanding` | 遊戲影片理解 executor（domain-agnostic）：影片 URL / MP4 → 低解析 motion timeline → 偵測器註冊表 （periodic / scene_chang… |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
 <!-- END GENERATED CATALOGUE -->

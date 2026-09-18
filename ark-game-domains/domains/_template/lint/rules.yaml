@@ -1,0 +1,2 @@
+rules:
+  - {id: TODO-01, path: "todo.key", require: present, severity: warn, message: "TODO"}

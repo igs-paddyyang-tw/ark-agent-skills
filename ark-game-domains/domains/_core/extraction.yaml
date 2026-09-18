@@ -1,0 +1,8 @@
+# 通用偵測器預設；pack 可覆寫 threshold、新增偵測器
+crop: {webcam_overlay: none}
+detectors:
+  - {use: periodic, every_s: 5, label: fallback}
+  - {use: scene_change, threshold: 0.5, label: scene}
+budget: {max_keyframes: 150, max_sheets: 20, max_llm_calls: 40, hard_max: {max_keyframes: 400, max_sheets: 60, max_llm_calls: 120}}
+sheet: {grid: "3x3", cell_width: 480, burn_timestamp: true}
+timeline: {fps: 4, width: 160}

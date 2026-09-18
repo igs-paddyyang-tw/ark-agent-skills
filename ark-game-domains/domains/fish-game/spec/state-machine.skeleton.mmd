@@ -1,0 +1,13 @@
+stateDiagram-v2
+    [*] --> in_room
+    in_room --> aiming : select cannon {{evidence:cannon.levels_count}}
+    aiming --> firing : fire / auto-fire
+    firing --> hit_resolve
+    hit_resolve --> payout : fish killed {{evidence:fish.species_count_observed}}
+    hit_resolve --> firing : miss
+    payout --> special_effect : special item {{evidence:special.types_observed}}
+    special_effect --> payout
+    payout --> boss_phase : boss appears {{evidence:boss.present}}
+    boss_phase --> payout
+    payout --> firing
+    firing --> [*] : leave room

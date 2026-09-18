@@ -1,0 +1,4 @@
+chapters:
+  - {id: room_cannon, title: 房間、砲台與押注, sections: [room_tiers, cannon], insert_after: anchor_core, figure: {type: frame, prefer: [fallback, room_or_boss]}}
+  - {id: fish,        title: 魚種與賠付,       sections: [fish_table],         insert_after: room_cannon, figure: {type: frame, prefer: [kill]}}
+  - {id: specials,    title: 特殊武器、Boss 與 Bonus, sections: [special, boss, multiplayer, bonus_mini], insert_after: anchor_special, figure: {type: strip, rule: feature}}

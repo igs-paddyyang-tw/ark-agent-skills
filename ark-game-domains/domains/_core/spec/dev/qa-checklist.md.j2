@@ -1,0 +1,10 @@
+# QA Checklist — {{ domain }} — run {{ run_id }}
+
+每一條對應一個 OBSERVED / INFERRED / DECIDED claim；驗收時勾選並附截圖。
+
+{% for c in checkable %}- [ ] `{{ c.key }}` 應為 **{{ c.value }}**（{{ c.provenance }}{% if c.evidence %}; 競品 evidence {{ c.evidence|join(', ') }}{% endif %}）
+{% endfor %}
+
+## 待決（不可驗收）
+{% for q in open_questions %}- {{ q.id }} `{{ q.key }}` — {{ q.text }}
+{% endfor %}

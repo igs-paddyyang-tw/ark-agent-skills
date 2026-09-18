@@ -1,0 +1,2 @@
+chapters:
+  - {id: todo_chapter, title: TODO 核心機制, sections: [todo_section], insert_after: anchor_core, figure: {type: frame, prefer: [scene]}}

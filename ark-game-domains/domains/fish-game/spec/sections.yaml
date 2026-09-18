@@ -1,0 +1,8 @@
+sections:
+  - {id: room_tiers,   title: Room & Bet Tiers,      source_items: [F01], insert_after: anchor_a}
+  - {id: cannon,       title: Cannon Specification,  source_items: [F02], insert_after: room_tiers}
+  - {id: fish_table,   title: Fish Table,            source_items: [F03], insert_after: cannon}
+  - {id: special,      title: Special Weapons & Fish, source_items: [F04], insert_after: anchor_b}
+  - {id: boss,         title: Boss Fish,             source_items: [F05], insert_after: special}
+  - {id: multiplayer,  title: Multiplayer & Seats,   source_items: [F06], insert_after: boss, claim_prefixes: [multiplayer.]}
+  - {id: bonus_mini,   title: Bonus Mini-game,       source_items: [F06], insert_after: multiplayer, claim_prefixes: [bonus.]}

@@ -1,0 +1,4 @@
+hero: {prefer: [room_or_boss, special_weapon, kill, fallback]}
+strips:
+  full_round: {labels: [fallback, kill, kill, special_weapon], max: 5}
+  feature:    {around: room_or_boss, before: 2, after: 2, max: 5}

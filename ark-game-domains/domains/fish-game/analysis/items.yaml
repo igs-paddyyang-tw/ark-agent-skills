@@ -1,0 +1,57 @@
+items:
+  - id: F01
+    name: room_tiers_and_bet
+    order: 110
+    prompt: prompts/F01.md
+    kb_tags: [room-tier]
+    claims:
+      - {key: room.tiers_observed, type: list}
+      - {key: room.bet_range, type: string}
+      - {key: room.entry_requirement, type: string}
+  - id: F02
+    name: cannon_levels
+    order: 120
+    prompt: prompts/F02.md
+    kb_tags: [cannon]
+    claims:
+      - {key: cannon.levels_count, type: int}
+      - {key: cannon.bet_steps_observed, type: list}
+      - {key: cannon.switch_ui, type: string}
+      - {key: cannon.auto_fire, type: bool}
+      - {key: cannon.lock_target, type: bool}
+  - id: F03
+    name: fish_table
+    order: 130
+    prompt: prompts/F03.md
+    kb_tags: [fish-species, reward]
+    claims:
+      - {key: fish.species_count_observed, type: int}
+    entity: {type: fish_species, fields: [id, tier, visual_description, observed_payout_multiplier]}
+  - id: F04
+    name: special_weapons_and_fish
+    order: 140
+    prompt: prompts/F04.md
+    kb_tags: [special-weapon, bomb, chain-lightning, trigger]
+    claims:
+      - {key: special.types_observed, type: list}
+      - {key: special.area_effect, type: bool}
+    entity: {type: special_item, fields: [id, effect, trigger]}
+  - id: F05
+    name: boss_fish
+    order: 150
+    prompt: prompts/F05.md
+    kb_tags: [boss, jackpot]
+    claims:
+      - {key: boss.present, type: bool}
+      - {key: boss.entry_announcement, type: bool}
+      - {key: boss.reward_type, type: string}
+    entity: {type: boss, fields: [id, visual_description, reward]}
+  - id: F06
+    name: bonus_and_multiplayer
+    order: 160
+    prompt: prompts/F06.md
+    kb_tags: [bonus, wheel-bonus, multiplayer, lock-target]
+    claims:
+      - {key: bonus.types_observed, type: list}
+      - {key: multiplayer.seats_observed, type: int}
+      - {key: multiplayer.other_players_visible, type: bool}

@@ -1,0 +1,6 @@
+# 從註冊表選偵測器：periodic | scene_change | motion_settle | motion_burst | still_hold | roi_change | flash | audio_peak
+crop: {webcam_overlay: auto}
+detectors:
+  - {use: scene_change, threshold: 0.5, label: scene}
+  - {use: periodic, every_s: 5, label: fallback}
+budget: {max_keyframes: 150, max_sheets: 20, max_llm_calls: 40}

@@ -1,0 +1,11 @@
+domain: _core
+display_name: 通用基底（所有 domain 繼承）
+contract: "1"
+version: "1.0"
+extends: null
+files:
+  extraction: extraction.yaml
+  analysis: analysis/
+  kb: kb/
+  spec: spec/
+  lint: lint/rules.yaml

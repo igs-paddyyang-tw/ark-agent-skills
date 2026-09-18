@@ -1,0 +1,12 @@
+# atlas（圖文遊戲規格書）章節骨架；domain 以 insert_after 插入專屬章。sections = spec 章節 id（resolved.spec.sections）
+chapters:
+  - {id: preface,        title: 序：這是什麼遊戲,   type: preface, sections: [overview],                   figure: {type: hero}}
+  - {id: at_a_glance,    title: 一眼看懂,           sections: [game_flow, core_rules],                     figure: {type: strip, rule: full_round}}
+  - {id: screen,         title: 畫面與操作,         sections: [ui_ux],                                     figure: {type: frame, prefer: [fallback, scene]}}
+  - {id: anchor_core,    anchor: true}
+  - {id: anchor_special, anchor: true}
+  - {id: feedback,       title: 表現與回饋,         sections: [win_calc, animation, sound],                figure: {type: frame, prefer: [big_win, special_weapon, result_reveal, scene]}}
+  - {id: flow,           title: 流程與狀態,         sections: [state_machine],                             figure: {type: state_frames}}
+  - {id: numbers,        title: 數值與待決,         sections: [configuration, edge_cases, open_questions], figure: {type: none}}
+  - {id: evidence_index, title: 證據索引,           special: figure_index}
+  - {id: glossary,       title: 附錄：術語與知識庫, special: glossary,  sections: [evidence]}
