@@ -14,7 +14,6 @@
 - 所有操作明確指定 `device serial`，避免多模擬器互相操作。
 - 遊戲 / Unity 等自繪畫面，以 screenshot + coordinate 為主；不要期待 UIAutomator 提供完整遊戲元素。
 
-## 2. 與原文案的主要改版
 ## 2. 設計守則與能力總覽
 
 ### 決策守則（Skill 教 ArkAgent 的判斷力）
@@ -248,3 +247,22 @@ observe → decide → act → observe → verify
 Skill 固定自己的 CLI 介面（子命令名稱、參數、`--json` 輸出結構），不綁定任何外部工具的版本。
 唯一的外部相依是 Android Platform Tools 的 `adb`，而 adb 的介面高度穩定。
 升版時只需維護本 skill 自己的 CLI 契約與 `skill.json` / SKILL.md frontmatter 的 `metadata.version`。
+
+## 11. 已知環境注意事項（實測踩坑）
+
+以下兩點是實際在中文 Windows 環境跑出來的，已在本 skill 內處理，記錄供消費端理解：
+
+### 中文 dumpsys → cp950 解碼錯（已修）
+
+**症狀**：`foreground` / `ui-dump` / `shell dumpsys` 等讀 shell 輸出的命令，在中文 Windows 上
+`UnicodeDecodeError`。
+**根因**：`run_cmd` 的 `subprocess.run(text=True)` 未指定 `encoding`，Python 用系統預設
+（中文 Windows = cp950）去解 adb 的 UTF-8 輸出。
+**修法（已在源頭）**：`run_cmd` 固定 `encoding="utf-8", errors="replace"`。此處覆蓋所有走
+`run_cmd` 的命令，一次解決。**使用者不需要再設 `PYTHONUTF8=1` 繞過**。
+
+### Windows 的 `python` 可能是 Store stub（用 `py`）
+
+微軟商店版的 `python` 常是 **Store stub**（執行沒反應或跳商店）。Windows 上請用 Python launcher
+**`py`** 跑本 skill 的命令；macOS/Linux 用 **`python3`**。文件範例一律寫 `python`，請替換成你平台上
+真正能跑的直譯器。驗證：`py --version`（Windows）／`python3 --version`（mac/Linux）。
