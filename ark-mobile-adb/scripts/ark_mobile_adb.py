@@ -82,6 +82,8 @@ def run_cmd(args: Sequence[str], timeout: float = 30, capture=True) -> subproces
         return subprocess.run(
             list(args),
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=capture,
             timeout=timeout,
             check=False,

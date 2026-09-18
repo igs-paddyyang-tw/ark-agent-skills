@@ -11,6 +11,10 @@ Python-first ArkAgent Skill for Android / BlueStacks automation.
 
 No Node.js. No MCP.
 
+> 直譯器名稱依平台而異：Windows 用 **`py`**（商店版 `python` 常是 Store stub），
+> macOS/Linux 用 **`python3`**。下文範例一律寫 `python`，請替換成你平台能跑的那個。
+> CLI 已在 subprocess 層固定 UTF-8，中文 dumpsys 不會撞 cp950（無需設 `PYTHONUTF8`）。
+
 ## Quick start
 
 ```bash

@@ -2,58 +2,41 @@
 
 ## 1. 目標
 
-將原本「Claude → mobile-mcp → adb → Android/BlueStacks」的流程，改造成 ArkAgent 可直接掛載的：
+讓 ArkAgent 可直接掛載一條純本機的行動自動化管線：
 
 **ArkAgent → Skill → Python CLI → adb → Android 模擬器 / BlueStacks**
 
 核心原則：
 
-- 不依賴 MCP。
-- 不依賴 Node.js。
-- Python 只負責流程編排與 adb 封裝；真正的裝置控制仍由 Android Platform Tools 的 `adb` 完成。
+- 不依賴 MCP、不依賴 Node.js —— 只靠 Python 3.10+ 與 Android Platform Tools 的 `adb`。
+- Python 只負責流程編排與 adb 封裝；真正的裝置控制仍由 `adb` 完成。
 - Skill 提供「方法與決策規則」，CLI 提供「可執行工具」。
 - 所有操作明確指定 `device serial`，避免多模擬器互相操作。
 - 遊戲 / Unity 等自繪畫面，以 screenshot + coordinate 為主；不要期待 UIAutomator 提供完整遊戲元素。
 
 ## 2. 與原文案的主要改版
+## 2. 設計守則與能力總覽
 
-### 保留
+### 決策守則（Skill 教 ArkAgent 的判斷力）
 
-1. 由下往上診斷：
-   `adb → device → app/screen → automation`
+1. 由下往上診斷：`adb → device → app/screen → automation`。
 2. BlueStacks ADB 透過 `adb connect host:port`。
-3. `adb devices -l` 必須看到 `device`。
-4. 多 serial 時固定指定 serial。
-5. Unity / 遊戲畫面優先採 screenshot + 座標。
-6. 每次重要操作後重新觀察畫面。
-7. 使用測試帳號，避免將自動化用於繞過服務限制。
+3. `adb devices -l` 必須看到 `device`（不是 `offline`）。
+4. 多 serial 時固定指定 serial，不在呼叫間切換。
+5. Unity / 遊戲畫面優先採 screenshot + 座標，不死磕 UIAutomator。
+6. 每次重要操作後重新觀察畫面，不盲點。
+7. 使用測試帳號，不將自動化用於繞過服務限制。
 
-### 移除
+### CLI 能力總覽
 
-- Claude Desktop / Claude Code MCP 設定。
-- `npx` / Node.js。
-- `mobile-mcp` tool 名稱。
-- MCP scope / PowerShell `unknown option -y`。
-- MCP server restart / telemetry 等與 Ark CLI 無關內容。
-
-### 新增
-
-- `ark-mobile-adb` Python CLI。
-- `doctor` 一次診斷 adb / device / screen。
-- `devices` / `connect`。
-- `screenshot`。
-- `tap` / `swipe` / `long-press`。
-- `text` / `keyevent` / `back` / `home` / `recent`。
-- `launch` / `stop` / `clear-data`。
-- `packages` / `install`。
-- `ui-dump` / `foreground`。
-- `shell`。
-- `wait`。
-- JSON 輸出，方便 Agent 解析。
-- Windows / macOS / Linux。
-- `ANDROID_HOME`、`ANDROID_SDK_ROOT`、PATH、自動探測。
-- 專案級 `.ark-mobile.json` 裝置設定。
-- 可測試的 Python module。
+- 診斷：`doctor`（一次看 adb / device / screen）、`devices`、`connect` / `disconnect`。
+- 觀察：`screenshot`、`foreground`、`ui-dump`、`shell`（任意 adb 子指令）。
+- 輸入：`tap` / `swipe` / `long-press`、`text`、`keyevent` / `home` / `back` / `recent`。
+- App：`launch` / `stop` / `clear-data`、`packages` / `install`。
+- 流程：`wait`；所有命令加 `--json` 輸出機器可解析結果。
+- 跨平台：Windows / macOS / Linux；adb 定位走 `ANDROID_HOME` / `ANDROID_SDK_ROOT` / PATH 自動探測。
+- 設定：專案級 `.ark-mobile.json` 固定裝置；subprocess 固定 UTF-8（中文 dumpsys 不撞 cp950）。
+- 可測試的 Python module（`tests/test_cli.py`）。
 
 ## 3. 架構
 
@@ -262,6 +245,6 @@ observe → decide → act → observe → verify
 
 ## 10. 版本策略
 
-Skill 本身固定自己的 CLI 介面，不綁定 `mobile-mcp` 版本。
-
-截至 2026-09-18，`@mobilenext/mobile-mcp` npm 已是 1.0.4；1.0.3/1.0.4 已增加 batch commands、foreground app、clipboard、logs，以及 screenshot 座標提示等功能。因此原始文案中「對照 1.0.2」的描述已過時。這次 Skill 刻意不依賴 mobile-mcp，直接控制 adb，避免 MCP 版本變動影響 ArkAgent。 
+Skill 固定自己的 CLI 介面（子命令名稱、參數、`--json` 輸出結構），不綁定任何外部工具的版本。
+唯一的外部相依是 Android Platform Tools 的 `adb`，而 adb 的介面高度穩定。
+升版時只需維護本 skill 自己的 CLI 契約與 `skill.json` / SKILL.md frontmatter 的 `metadata.version`。

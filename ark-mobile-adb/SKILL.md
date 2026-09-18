@@ -6,7 +6,7 @@ description: >
   查看裝置、螢幕擷取 screencap、點擊、滑動、輸入文字、按鍵、啟動/停止 App、
   UI hierarchy、安裝 APK、排查 adb/裝置問題，或自動化 Unity/遊戲畫面時觸發。
   優先採用 observe → act → observe → verify；遊戲/Unity 優先使用 screenshot + coordinates。
-  不依賴 MCP 或 Node.js（直接控 adb）；若要走 mobile-mcp/MCP 生態的整合，那是另一條路徑。
+  純本機工具鏈：不依賴 MCP、不依賴 Node.js，只需 Python 3.10+ 與 adb。
 metadata:
   version: "1.0.0"
   schema_version: 1
@@ -30,6 +30,21 @@ ArkAgent → Python CLI → adb → Android / BlueStacks
 ```
 
 完成 Android 裝置觀察與操作。
+
+## 執行環境（先確認直譯器名稱）
+
+下面所有範例都寫成 `python scripts/...`，但**直譯器名稱依平台而異，用錯會叫到別的東西**：
+
+| 平台 | 用哪個 | 說明 |
+|---|---|---|
+| Windows | **`py scripts/...`** | 微軟商店版的 `python` 常是 **Store stub**（打了沒反應或跳商店），要用 Python launcher `py` |
+| macOS / Linux | **`python3 scripts/...`** | `python` 可能不存在或指向 Python 2 |
+
+先確認你的直譯器可用：`py --version`（Windows）或 `python3 --version`（mac/Linux）。
+下文一律寫 `python`，請自行替換成你平台上真正能跑的那個。
+
+> UTF-8：CLI 已在 `subprocess` 層固定 `encoding="utf-8"`，中文 `dumpsys`／裝置名不會再撞
+> cp950 解碼錯，**不需要**手動設 `PYTHONUTF8=1`。
 
 ## Mandatory workflow
 
@@ -226,4 +241,4 @@ Use test accounts and test environments for automation where appropriate.
 - `examples/bluestacks.json` — BlueStacks 連線設定範例（host:port）
 - `examples/.ark-mobile.json` — 專案級裝置設定範例（固定 serial，避免多裝置猜測）
 - `examples/game-loop.md` — Unity/遊戲畫面的 screenshot→tap→verify 標準 loop 範例
-- `DESIGN.md` — 設計文件（架構、與 mobile-mcp 的改版差異、驗收標準）
+- `DESIGN.md` — 設計文件（架構、設計守則、CLI 能力總覽、驗收標準）
