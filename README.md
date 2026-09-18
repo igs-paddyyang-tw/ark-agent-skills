@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **54 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **55 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -144,7 +144,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | Skill | 定位 |
 |-------|------|
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
-| `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），查 Dashboard/Panel/告警數據，支援 Prometheus/Loki/CloudWatch/InfluxDB。 |
+| `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
 <!-- END GENERATED CATALOGUE -->
