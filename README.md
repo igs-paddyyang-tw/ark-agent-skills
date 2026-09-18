@@ -6,7 +6,7 @@
 **目錄章節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生。**
 新增／移除 skill 後執行一次，不要手改表格 —— 手動維護的索引必定過期。
 
-**統計：60 active + 4 stubs = 64 skill 目錄｜稽核：P0=0 P1=0 P2=0 P3=0（2026-09-11）**
+**統計：60 active + 0 stubs = 60 skill 目錄｜稽核：P0=0 P1=0 P2=29 P3=0（2026-09-18）**
 
 > ⚠️ 這行是**手寫的**，而 `gen_readme --check` 只驗下方產生的目錄段、**抓不到它漂掉**
 > （2026-09-11 就發現它停在「60 active + 0 stubs」，實際是 59 + 4）。
@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **59 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -127,12 +127,13 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑦ 維運 Ops
 
-> 輸出：診斷 / 驗證｜`category: ops`｜4 個
+> 輸出：診斷 / 驗證｜`category: ops`｜5 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-dashboard-health` | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
 | `ark-env-doctor` | 當使用者遇到開發環境問題時使用此技能。 |
+| `ark-mobile-adb` | > 透過 Python CLI 直接使用 Android Debug Bridge (adb) 操控 BlueStacks、 Android Emulator 或 adb 可連線的 Android 裝… |
 | `ark-skills-align` | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
 | `ark-weknora-cli` | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
 
