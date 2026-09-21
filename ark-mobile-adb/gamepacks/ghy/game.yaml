@@ -1,8 +1,10 @@
 game: ghy
 display_name: GHY 金猴爺
 package: com.igs.ghy           # TODO 以 packages 指令確認
-resolution: {width: 1600, height: 900}
+resolution: {width: 720, height: 1280}   # 實測環境：BlueStacks Pie64 直版 720x1280；所有座標唯一基準 = wm size
+orientation: portrait
 calibrated: false              # TODO：在 BlueStacks 截圖後填 screens/buttons/rois；未校準 runner 只接受 --backend fake 或 --allow-uncalibrated
+connect: 127.0.0.1:5555        # 待機 offline 時 CLI 自動 adb connect 這個埠（複製到 .ark-mobile.json 的 "connect"）
 backend_default: adb
 taxonomy:                      # 來自 測試項目_金猴爺 目錄結構頁
   1.遊戲流程: [1-1 Main Game, 1-2 Free Game, 1-3 Feature Game, 1-4 buy bonus]

@@ -25,7 +25,7 @@ from typing import Iterable, Sequence
 
 
 CONTRACT = "1"
-SKILL_VERSION = "2.0.0"
+SKILL_VERSION = "2.1.0"
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8}
 
 
@@ -89,8 +89,6 @@ def run_cmd(args: Sequence[str], timeout: float = 30, capture=True) -> subproces
         return subprocess.run(
             list(args),
             text=True,
-            encoding="utf-8",
-            errors="replace",
             capture_output=capture,
             timeout=timeout,
             check=False,
@@ -109,7 +107,22 @@ def adb_path() -> str:
     return path
 
 
-def adb(args: Sequence[str], device: str | None = None, timeout: float = 30) -> subprocess.CompletedProcess:
+_RECONNECTED = {"n": 0}
+
+
+def try_reconnect(device: str | None) -> bool:
+    """BlueStacks 待機後 adbd 常 offline：對 host:port 型 serial 自動 `adb connect` 一次（R5 連線不穩）。"""
+    target = device if (device and re.match(r"^[\w.]+:\d+$", device)) else load_config().get("connect")
+    if not target or _RECONNECTED["n"] >= 3:
+        return False
+    _RECONNECTED["n"] += 1
+    run_cmd([adb_path(), "disconnect", target], timeout=10)
+    cp = run_cmd([adb_path(), "connect", target], timeout=15)
+    time.sleep(1.0)
+    return "connected" in (cp.stdout or "").lower()
+
+
+def adb(args: Sequence[str], device: str | None = None, timeout: float = 30, _retry: bool = True) -> subprocess.CompletedProcess:
     cmd = [adb_path()]
     if device:
         cmd += ["-s", device]
@@ -119,8 +132,16 @@ def adb(args: Sequence[str], device: str | None = None, timeout: float = 30) -> 
         stderr = (cp.stderr or "").strip()
         stdout = (cp.stdout or "").strip()
         detail = stderr or stdout or f"exit code {cp.returncode}"
-        raise ArkMobileError(f"adb failed: {' '.join(cmd)}\n{detail}")
+        if _retry and re.search(r"offline|not found|closed|no devices", detail, re.I) and try_reconnect(device):
+            return adb(args, device, timeout, _retry=False)
+        code = "CONN_FAILED" if re.search(r"offline|not found|closed|no devices", detail, re.I) else "QUERY_FAILED"
+        raise ArkMobileError(f"adb failed: {' '.join(cmd)}\n{detail}", code, "connect 127.0.0.1:<port> 後 doctor；或在 .ark-mobile.json 加 \"connect\" 讓 CLI 自動重連")
     return cp
+
+
+def shell_chain(device: str, commands: Sequence[str], timeout: float = 60) -> str:
+    """一次 adb shell 串多個指令（R1：5 次獨立 shell 3.39s → 1 次 0.76s）。以 '; ' 串接，回合併 stdout。"""
+    return adb(["shell", " ; ".join(commands)], device, timeout).stdout
 
 
 def parse_devices(output: str) -> list[dict]:
@@ -260,6 +281,9 @@ def cmd_screenshot(args):
 
 def cmd_tap(args):
     device = resolve_device(args.device)
+    if getattr(args, "basis", None):
+        bw, bh = (int(v) for v in args.basis.lower().split("x"))
+        args.x, args.y = to_device_xy(args.x, args.y, (bw, bh), device_size(device))
     adb(["shell", "input", "tap", str(args.x), str(args.y)], device)
     emit({"device": device, "action": "tap", "x": args.x, "y": args.y}, args.json)
     return 0
@@ -580,6 +604,139 @@ def cmd_net(args):
     return 0
 
 
+
+# ---------------------------------------------------------------- v2.1 座標基準 / 縮圖 / 像素 / 批次
+def device_size(device: str) -> tuple[int, int]:
+    m = re.search(r"(\d+)x(\d+)", adb(["shell", "wm", "size"], device).stdout)
+    if not m:
+        raise ArkMobileError("讀不到 wm size", "QUERY_FAILED")
+    return int(m.group(1)), int(m.group(2))
+
+
+def to_device_xy(x: float, y: float, basis: tuple[int, int], device_wh: tuple[int, int]) -> tuple[int, int]:
+    """任何非裝置座標（縮圖 / 設計稿）→ 裝置座標。座標唯一基準是 wm size（R3）。"""
+    sx, sy = device_wh[0] / basis[0], device_wh[1] / basis[1]
+    return int(round(x * sx)), int(round(y * sy))
+
+
+def make_thumb(src: Path, width: int, out: Path, device_wh: tuple[int, int] | None = None) -> dict:
+    """縮圖只給人 / AI 看；旁邊寫 .meta.json 記 scale，任何人拿縮圖座標去點之前必須換算。"""
+    Image = _pil()
+    with Image.open(src) as im:
+        w, h = im.size
+        th = max(1, int(h * width / w))
+        im.resize((width, th), Image.LANCZOS).save(out)
+    meta = {"source": str(src), "source_size": [w, h], "thumb_size": [width, th], "scale": round(w / width, 4),
+            "device_size": list(device_wh) if device_wh else [w, h], "warning": "thumb 座標 × scale 才是裝置座標；不要直接拿來 tap"}
+    Path(str(out) + ".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    return meta
+
+
+def pixel_at(img: Path, x: int, y: int) -> list[int]:
+    Image = _pil()
+    with Image.open(img) as im:
+        return list(im.convert("RGB").getpixel((x, y)))
+
+
+def color_close(a: Sequence[int], b: Sequence[int], tol: int) -> bool:
+    return all(abs(int(p) - int(q)) <= tol for p, q in zip(a, b))
+
+
+def wait_pixel(device: str, xy: tuple[int, int], rgb: Sequence[int], tol: int, timeout: float, interval: float, out_dir: Path) -> dict:
+    """輪詢到指定像素變成期望顏色（按鍵精靈的「找色」）。比 wait-stable 快，適合按鈕亮起 / 彈窗出現。"""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    t0 = time.time(); n = 0
+    while time.time() - t0 < timeout:
+        n += 1
+        shot = screenshot_to(device, out_dir / "_px.png")
+        got = pixel_at(shot, *xy)
+        if color_close(got, rgb, tol):
+            return {"found": True, "elapsed_s": round(time.time() - t0, 2), "polls": n, "rgb": got}
+        time.sleep(interval)
+    return {"found": False, "elapsed_s": round(time.time() - t0, 2), "polls": n, "rgb": got if n else None}
+
+
+def cmd_thumb(args):
+    device_wh = None
+    if not args.no_device:
+        try:
+            device_wh = device_size(resolve_device(args.device))
+        except ArkMobileError:
+            device_wh = None
+    emit(make_thumb(Path(args.src), args.width, Path(args.out), device_wh), args.json)
+    return 0
+
+
+def cmd_to_device(args):
+    device = resolve_device(args.device)
+    bw, bh = (int(v) for v in args.basis.lower().split("x"))
+    dx, dy = to_device_xy(args.x, args.y, (bw, bh), device_size(device))
+    emit({"device": device, "basis": [bw, bh], "input": [args.x, args.y], "device_xy": [dx, dy]}, args.json)
+    return 0
+
+
+def cmd_pixel(args):
+    x, y = (int(v) for v in args.xy.split(","))
+    if args.src:
+        rgb = pixel_at(Path(args.src), x, y); device = None
+    else:
+        device = resolve_device(args.device)
+        rgb = pixel_at(screenshot_to(device, Path("artifacts/_px.png")), x, y)
+    emit({"device": device, "xy": [x, y], "rgb": rgb, "hex": "#%02x%02x%02x" % tuple(rgb)}, args.json)
+    return 0
+
+
+def cmd_wait_pixel(args):
+    device = resolve_device(args.device)
+    xy = tuple(int(v) for v in args.xy.split(",")); rgb = [int(v) for v in args.rgb.split(",")]
+    r = wait_pixel(device, xy, rgb, args.tol, args.timeout, args.interval, Path(args.out_dir))
+    emit({"device": device, **r}, args.json)
+    return 0 if r["found"] else EXIT["TIMEOUT"]
+
+
+def cmd_batch(args):
+    """單一 Python 進程跑多行子命令（R1 冷啟稅只付一次）。每行一個子命令，# 開頭為註解；--stop-on-error 預設開。"""
+    src = sys.stdin.read() if args.file == "-" else Path(args.file).read_text(encoding="utf-8")
+    parser = build_parser()
+    results = []
+    t0 = time.time()
+    for ln, line in enumerate(src.splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        import shlex
+        argv = shlex.split(line)
+        pre = ["--json"] + (["--device", args.device] if args.device and "--device" not in argv else [])
+        sub = parser.parse_args(pre + argv)
+        import io, contextlib
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = sub.func(sub)
+            out = buf.getvalue().strip()
+            data = json.loads(out.splitlines()[-1]) if out else None
+            results.append({"line": ln, "cmd": line, "rc": rc, "data": data.get("data") if isinstance(data, dict) else data})
+            if rc not in (0, None) and not args.keep_going:
+                break
+        except ArkMobileError as e:
+            results.append({"line": ln, "cmd": line, "rc": EXIT.get(e.code, 2), "error": {"code": e.code, "message": str(e)}})
+            if not args.keep_going:
+                break
+        except (SystemExit, Exception) as e:  # noqa: BLE001  子命令的 argparse 錯誤 / IO 錯誤都收斂成一行結果
+            results.append({"line": ln, "cmd": line, "rc": 2, "error": {"code": "BAD_INPUT", "message": f"{type(e).__name__}: {e}"}})
+            if not args.keep_going:
+                break
+    ok = all(r["rc"] in (0, None) for r in results)
+    emit({"steps": len(results), "ok": ok, "elapsed_s": round(time.time() - t0, 2), "results": results}, args.json)
+    return 0 if ok else EXIT["QUERY_FAILED"]
+
+
+def cmd_shell_chain(args):
+    device = resolve_device(args.device)
+    emit({"device": device, "output": shell_chain(device, args.commands)}, args.json)
+    return 0
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="ark-mobile-adb", description="ArkAgent Python CLI for Android/BlueStacks via adb")
     p.add_argument("--device", help="ADB serial, e.g. 127.0.0.1:5555")
@@ -638,6 +795,32 @@ def build_parser():
     s.add_argument("state", choices=["disconnect", "restore"])
     s.set_defaults(func=cmd_net)
 
+    s = sub.add_parser("thumb", help="縮圖給人/AI 看（寫 .meta.json 記 scale；縮圖座標不可直接 tap）")
+    s.add_argument("--src", required=True); s.add_argument("--width", type=int, default=540); s.add_argument("--out", required=True)
+    s.add_argument("--no-device", action="store_true")
+    s.set_defaults(func=cmd_thumb)
+
+    s = sub.add_parser("to-device", help="把縮圖/設計稿座標換算成裝置座標")
+    s.add_argument("x", type=float); s.add_argument("y", type=float); s.add_argument("--basis", required=True, help="來源尺寸，如 540x960")
+    s.set_defaults(func=cmd_to_device)
+
+    s = sub.add_parser("pixel", help="讀像素顏色（找色用）")
+    s.add_argument("--xy", required=True); s.add_argument("--src")
+    s.set_defaults(func=cmd_pixel)
+
+    s = sub.add_parser("wait-pixel", help="輪詢到指定像素變成期望顏色")
+    s.add_argument("--xy", required=True); s.add_argument("--rgb", required=True); s.add_argument("--tol", type=int, default=30)
+    s.add_argument("--timeout", type=float, default=10); s.add_argument("--interval", type=float, default=0.3); s.add_argument("--out-dir", default="artifacts/stable")
+    s.set_defaults(func=cmd_wait_pixel)
+
+    s = sub.add_parser("batch", help="單進程跑多行子命令（檔案或 - 讀 stdin）")
+    s.add_argument("--file", required=True); s.add_argument("--keep-going", action="store_true")
+    s.set_defaults(func=cmd_batch)
+
+    s = sub.add_parser("shell-chain", help="一次 adb shell 串多個指令")
+    s.add_argument("commands", nargs="+")
+    s.set_defaults(func=cmd_shell_chain)
+
     s = sub.add_parser("screenshot")
     s.add_argument("--out", default="artifacts/screen.png")
     s.add_argument("--crop", help="x,y,w,h 另存 -crop 檔"); s.add_argument("--zoom", type=float, default=3.0)
@@ -646,6 +829,7 @@ def build_parser():
     s = sub.add_parser("tap")
     s.add_argument("x", type=int)
     s.add_argument("y", type=int)
+    s.add_argument("--basis", help="座標來源尺寸（如 540x960）；給了就自動換算成裝置座標")
     s.set_defaults(func=cmd_tap)
 
     s = sub.add_parser("swipe")

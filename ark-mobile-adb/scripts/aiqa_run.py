@@ -164,6 +164,26 @@ class Executor:
         self._record(a["name"], r)
         self.evidence.append({"kind": "visual", "name": a["name"], "question": a["question"], **r, "screen": str(img)})
 
+    def a_macro(self, a):
+        """執行 pack 的 macros/<name>.yaml（按鍵精靈式確定性腳本）；ocr 值併入 observations，失敗 → Blocked。"""
+        import aiqa_macro as MC
+        mp = pathlib.Path(self.pack["_dir"]) / "macros" / f"{a['name']}.yaml"
+        if self.pack.get("machine") and (pathlib.Path(self.pack["_dir"]) / "machines" / self.pack["machine"] / "macros" / f"{a['name']}.yaml").exists():
+            mp = pathlib.Path(self.pack["_dir"]) / "machines" / self.pack["machine"] / "macros" / f"{a['name']}.yaml"
+        if not mp.exists():
+            raise Blocked(f"macro {a['name']} 不存在（{mp}）")
+        m = MC.load_macro(mp)
+        m["vars"] = {**(m.get("vars") or {}), **(a.get("vars") or {})}
+        pl = MC.Player(self.dev, self.pack, self.dir / f"macro-{a['name']}", m["vars"], False)
+        try:
+            pl.run(m["steps"])
+        except MC.MacroFail as e:
+            self.evidence.append({"kind": "macro", "name": a["name"], "ok": False, "error": str(e)})
+            raise Blocked(f"macro {a['name']} 失敗：{e}")
+        for k, v in pl.values.items():
+            self._record(k, v)
+        self.evidence.append({"kind": "macro", "name": a["name"], "ok": True, "steps": len(pl.log), "shots": pl.n})
+
     def a_repeat(self, a):
         for _ in range(int(a.get("times", 1))):
             self.run_actions(a.get("actions", []))

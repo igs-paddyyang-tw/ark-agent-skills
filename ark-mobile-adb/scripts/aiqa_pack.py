@@ -21,7 +21,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aiqa_common as C  # noqa: E402
 
-ACTIONS = {"navigate", "tap", "key", "wait", "read", "capture", "ask", "repeat", "restart_app", "net", "harness", "crash_check", "loop_spin", "manual_step", "swipe"}
+ACTIONS = {"macro", "navigate", "tap", "key", "wait", "read", "capture", "ask", "repeat", "restart_app", "net", "harness", "crash_check", "loop_spin", "manual_step", "swipe"}
 
 
 def lint_pack(game: str, machine: str | None) -> list[dict]:
@@ -37,8 +37,16 @@ def lint_pack(game: str, machine: str | None) -> list[dict]:
     if "__GAME__" in str(pack.get("game")) or "TODO" in str(pack.get("display_name")):
         add("error", "PACK-PLACEHOLDER", "仍有 __GAME__ / TODO 佔位")
     res = pack.get("resolution") or {}
-    if res.get("width") != 1600 or res.get("height") != 900:
-        add("warn", "PACK-RES", f"解析度 {res} 非建議的 1600x900（pack 座標需與 BlueStacks wm size 一致）")
+    if not (res.get("width") and res.get("height")):
+        add("error", "PACK-RES", "resolution 需 width/height；所有座標以此（= BlueStacks wm size）為唯一基準")
+    for mp in sorted(pathlib.Path(pack["_dir"]).glob("macros/*.yaml")) + sorted(pathlib.Path(pack["_dir"]).glob("machines/*/macros/*.yaml")):
+        try:
+            import aiqa_macro as MC
+            for x in MC.lint(MC.load_macro(mp), pack):
+                if x["severity"] == "error":
+                    add("error", "PACK-MACRO", f"{mp.name}: {x['message']}")
+        except Exception as e:  # noqa: BLE001
+            add("error", "PACK-MACRO", f"{mp.name}: {e}")
     for h in ("trigger", "gm", "network"):
         if h not in (pack.get("harness") or {}):
             add("error", "PACK-HARNESS", f"harness 缺 {h}（沒有能力請明寫 none）")

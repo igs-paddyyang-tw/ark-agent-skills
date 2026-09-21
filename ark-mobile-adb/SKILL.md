@@ -1,24 +1,23 @@
 ---
 name: ark-mobile-adb
 description: |
-  Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）。裝置層：Python CLI 直接包 adb（不需 MCP / Node），
-  doctor / devices / connect / use（固定 serial）/ screenshot / crop / wait-stable / locate（模板比對）/ ocr / logcat /
-  tap / swipe / keyevent / launch / restart-app / net / ui-dump / shell，--json 回單一 envelope；遊戲（Unity）畫面只走 screenshot + 座標。
-  aiqa 層：`aiqa_testgen` 把公司測試表 xlsx / 規格 / ark-game-spec 的 qa-checklist 轉成可執行的 test-checklist（原子斷言 + oracle + Tier）
-  並用模板展開 Recover / 網路 / 共用按鈕 / 掛測 / 畫面完整性；`aiqa_run` 依 gamepack（UI 地圖、導航、ROI、harness）在 BlueStacks 或
-  合成 fake 裝置上逐項執行，AI 只讀數與答是非題、腳本判定；`aiqa_report` 產 test-report.md、公司格式 test-results.xlsx、Mantis 草稿、benchmark。
-  使用此 skill 當使用者或 agent 提及：BlueStacks / 模擬器 / Android 裝置操作、adb 連不上、遊戲畫面自動化、模板比對找按鈕、
-  aiqa、AI QA、遊戲測試自動化、測試項目 / 測試清單生成、test-checklist、把測試表變成 AI 能跑的、跑一輪測試、測試報告、
-  test-report、回填測試表、Mantis 草稿、gamepack 校準、trigger / GM harness、掛測。
-  不適用於：iOS / 真機測試（N/A）、音效驗證、繞過驗證 / 反作弊 / 服務限制、競品影片分析（→ ark-video-understanding 鏈）、
-  一般程式測試（→ ark-test-runner）。
+  Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro。裝置層：Python CLI 直接包 adb（不需 MCP / Node）：
+  doctor / connect / use（固定 serial）/ screenshot / thumb / crop / wait-stable / wait-pixel / locate / ocr / logcat / tap / batch（單進程）/
+  net，--json 回單一 envelope，adb offline 自動重連；Unity 畫面只走座標 + 模板 / 找色。aiqa：`aiqa_testgen` 把公司測試表 xlsx /
+  規格 / qa-checklist 轉成可執行 test-checklist（原子斷言 + oracle + Tier）並用模板展開；`aiqa_run` 依 gamepack 在 BlueStacks 或
+  fake 裝置執行，AI 只讀數與答是非題、腳本判定；`aiqa_report` 產 test-report.md / 公司格式 xlsx / Mantis 草稿；`aiqa_macro`
+  record（錄人手點擊）/ replay（零 LLM、checkpoint）/ lint / explain（SOP）。
+  使用此 skill 當提及：BlueStacks / 模擬器 / Android 裝置操作、adb 連不上、遊戲畫面自動化、aiqa、AI QA、遊戲測試自動化、
+  測試清單生成、test-checklist、跑一輪測試、test-report、回填測試表、Mantis、gamepack 校準、trigger / GM harness、掛測、
+  按鍵精靈 / 座標腳本 / 錄製重放 / macro、adb 太慢、座標點空、縮圖座標、找色。
+  不適用於：iOS / 真機（N/A）、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-video-understanding）、一般程式測試（→ ark-test-runner）。
 metadata:
   schema_version: "1.1"
   status: active
   author: paddyyang
   category: executor
-  version: "2.0.0"
-  updated: 2026-09-18
+  version: "2.1.0"
+  updated: 2026-09-21
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -36,6 +35,7 @@ metadata:
 ```
 
 三條鐵律：**AI 只看不判**（判定在 `aiqa_oracle.py`）、**沒有證據的 PASS 不存在**（每個判定附截圖 / 裁切 / trace）、**做不到就 BLOCK 不假裝**（無 harness、未綁定、未校準）。
+第四條（v2.1）：**執行期不用眼**——視覺分析搬到準備期（建表、錄製），執行期只做確定性的點座標 + 檢查點（模板 / 找色）；macro 管「走到那裡」，checklist 斷言管「對不對」。
 
 ## 前置需求
 
@@ -59,6 +59,8 @@ metadata:
 | `scripts/aiqa_testgen.py` | `import-xlsx` / `expand` / `from-qa` / `from-spec` / `lint` / `render` | 產測試清單 |
 | `scripts/aiqa_run.py` | 執行 checklist（`--backend adb|fake`、`--reader`、`--visual`、`--tiers`、`--items`、`--bugs`） | 跑測試 |
 | `scripts/aiqa_report.py` | run → test-report.md / test-results.xlsx / mantis-drafts.md / benchmark.json | 出報告 |
+| `scripts/aiqa_macro.py` | 按鍵精靈式腳本：`record` / `replay [--backend fake] [--dry-run]` / `lint` / `explain` | 建座標腳本、量加速比 |
+| `gamepacks/<g>/macros/*.yaml` | 該遊戲的確定性腳本（checklist 以 `{do: macro, name}` 呼叫） | 跑流程 |
 | `scripts/aiqa_device.py` `aiqa_oracle.py` `aiqa_llm.py` `aiqa_fake_game.py` `aiqa_common.py` | 裝置抽象、判定、LLM、合成遊戲、共用 | 不直接執行 |
 | `gamepacks/_templates/*.yaml` | 通用測試模板（recover / network / shared_buttons / long_run / visual_integrity） | 改模板 |
 | `gamepacks/demo-slot/` | 已校準的合成遊戲 pack（fake 後端可全鏈跑） | dry-run、學 pack 怎麼寫 |
@@ -69,6 +71,10 @@ metadata:
 | `references/protocol-prompt.md` | AI 執行提詞協定段（版本釘住） | 改提詞 |
 | `references/checklist-contract.md` `report-contract.md` | JSON / md 契約 | 接下游 |
 | `references/test-checklist.example.md` `test-report.example.md` | 目標格式範例 | 對齊產出 |
+| `references/macro-sop.md` | 腳本開發 SOP（探勘 → 建表 → 錄製 → lint → dry-run → 檢查點 → 量測 → 版本化）+ DSL 一頁 | 寫 macro 前必讀 |
+| `references/coordinate-basis.md` | 座標唯一基準 = wm size；縮圖 / crop / getevent 各自怎麼換算 | 座標點空時 |
+| `references/performance-tuning.md` | R1–R6 效能根因對策（單進程、零 LLM、找色、自動重連、防毒排除） | 覺得慢時 |
+| `references/v2.1-performance-upgrade.md` | v2.1 升版說明（設計根因 R1–R6 對應、新指令總表、macro DSL 摘要） | 了解 v2.1 改了什麼 |
 | `scripts/tests/` | 裝置 CLI 解析、fake 全鏈、bug 注入、import、lint 反證 | 改腳本後 |
 
 ## 決策樹
@@ -76,10 +82,19 @@ metadata:
 ```
 要做什麼？
 ├─ 只是操作 BlueStacks / 看畫面
-│   ├─ python scripts/ark_mobile_adb.py doctor → 沒裝置：connect 127.0.0.1:<埠> → doctor
+│   ├─ python scripts/ark_mobile_adb.py doctor → 沒裝置：connect 127.0.0.1:<埠> → doctor；.ark-mobile.json 加 "connect" 讓 offline 自動重連
 │   ├─ 兩個 serial → use <SERIAL>（之後全程同一台）
-│   ├─ 遊戲畫面：screenshot → crop --rect x,y,w,h --zoom 3 讀小字 → tap → wait-stable → screenshot 驗證
-│   └─ ui-dump 只有全螢幕節點 = 正常（Unity），不要重試，改截圖 + 座標
+│   ├─ 給人 / AI 看用 thumb --width 540（附 .meta.json scale）；要點用原圖座標，或 tap X Y --basis 540x960 換算
+│   ├─ 讀小字：crop --rect x,y,w,h --zoom 3 → ocr --digits；等動畫：wait-stable / wait-pixel，不要 wait 固定秒數
+│   ├─ 一連串動作：寫成多行丟 batch --file（單進程），或直接寫 macro
+│   └─ ui-dump 只有全螢幕節點 = 正常（Unity），不要重試，改座標 + 模板 / 找色
+├─ 覺得慢（每步好幾秒）→ 讀 references/performance-tuning.md；答案幾乎都是「改 macro，執行期不看圖」
+├─ 要把一段手動流程變腳本（按鍵精靈模式）
+│   ├─ 讀 references/macro-sop.md
+│   ├─ 人操作一次，同時 aiqa_macro.py record --game g --machine m --out m.yaml --duration 90 → 草稿（tap [x,y] 已是裝置座標）
+│   ├─ 草稿 [x,y] 改成 btn:<name>（座標進 pack）；sleep 改 wait_*；彈窗用 if_screen；加 checkpoint / assert_pixel / ocr expect
+│   ├─ aiqa_macro.py lint → replay --dry-run → replay --backend adb；summary.json 的 elapsed_s 就是加速比證據
+│   └─ checklist 用 {do: macro, name} 呼叫；斷言留在 checklist
 ├─ 新遊戲要接 aiqa
 │   ├─ aiqa_pack.py new --game <g> --display-name <n>
 │   ├─ 校準：BlueStacks 鎖 1600x900 → screenshot → crop 裁 screens/buttons 錨點 → 填 rois / navigation / harness

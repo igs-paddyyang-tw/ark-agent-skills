@@ -351,6 +351,8 @@ def _action_text(a: dict) -> str:
         return f"重複 {a.get('times')} 次：[" + "; ".join(_action_text(x) for x in a.get("actions", [])) + "]"
     if d == "manual_step":
         return f"（未綁定）{a.get('text')}"
+    if d == "macro":
+        return f"執行 macro {a.get('name')}（確定性腳本，不呼叫 LLM）"
     return d + " " + ", ".join(f"{k}={v}" for k, v in a.items() if k != "do")
 
 

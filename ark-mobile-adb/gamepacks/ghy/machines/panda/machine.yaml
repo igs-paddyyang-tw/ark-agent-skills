@@ -1,0 +1,14 @@
+machine: panda
+display_name: 熊貓寶寶
+spec_source: TODO 規格書
+symbols: []                       # 代號，不取名
+min_bet: 4000000                  # 實測：本台最低押注 4,000,000
+screens: {}     # TODO：lobby / machine_select / main_game / popup_* / bet_panel 的錨點模板（region 以 720x1280 為準）
+buttons:        # TODO：實機截圖後填 xy（720x1280 裝置座標，不是 540x960 縮圖座標）
+  machine_panda: {xy: null}
+  popup_close: {xy: null}
+  bet_minus: {xy: null}
+  bet_plus: {xy: null}
+  spin: {xy: null, shared: true}
+rois: {}        # TODO：bet / win / credit
+states: {reels_settled: {method: stable, timeout_s: 12}}

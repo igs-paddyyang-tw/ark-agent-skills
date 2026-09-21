@@ -32,6 +32,7 @@
 | capture | name, roi?, zoom? | 存證 |
 | ask | name, question | 視覺是非題 → observations[name] = {answer, confidence} |
 | repeat | times, actions | 巢狀 |
+| macro | name, vars? | 執行 pack `macros/<name>.yaml`（按鍵精靈式確定性腳本，見 macro-sop.md）；ocr 值併入 observations；檢查點失敗 → BLOCK |
 | restart_app / net(state) / harness(name) / crash_check / loop_spin(minutes, interval_s) / swipe | | harness 無 adapter → BLOCK |
 
 ## assertions

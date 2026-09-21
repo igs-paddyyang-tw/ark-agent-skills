@@ -1,0 +1,20 @@
+macro: enter-and-spin
+game: demo-slot
+resolution: {width: 1600, height: 900}
+vars: {spins: 3}
+steps:
+  - note: 大廳進機台、關 info、轉三手；執行期不呼叫 LLM
+  - checkpoint: {screen: lobby}
+  - tap: "btn:tile_demo"
+  - wait_screen: {screen: main_game, timeout: 8}
+  - if_screen: {screen: info_page, then: [{tap: "btn:close"}, {wait_stable: {timeout: 3}}]}
+  - ocr: {roi: "roi:bet", name: bet, digits: true, expect: 100}
+  - loop:
+      times: "{spins}"
+      steps:
+        - tap: "btn:spin"
+        - wait_stable: {timeout: 12}
+        - ocr: {roi: "roi:win", name: win, digits: true}
+  - assert_pixel: {xy: [1460, 785], rgb: [60, 180, 90], tol: 40}
+  - checkpoint: {screen: main_game}
+  - shot: end

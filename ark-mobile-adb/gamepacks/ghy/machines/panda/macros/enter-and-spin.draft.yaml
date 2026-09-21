@@ -1,0 +1,25 @@
+# 草稿：對應「熊貓寶寶進場 + 關兩個彈窗 + 降注到最低 + spin1」的實測流程。
+# 座標全部 TODO；建議用 aiqa_macro.py record 錄一次人手操作產生 [x,y]，再改成 btn:<name> 並加檢查點。
+macro: panda-enter-and-spin
+game: ghy
+machine: panda
+resolution: {width: 720, height: 1280}
+vars: {spins: 1, bet_steps: 20}
+steps:
+  - note: 進場前先確認在 SLOT 大廳；連線不穩時 CLI 會自動 reconnect
+  - checkpoint: {screen: lobby}
+  - tap: "btn:machine_panda"
+  - wait_stable: {timeout: 9}
+  - if_screen: {screen: popup_daily, then: [{tap: "btn:popup_close"}, {wait_stable: {timeout: 3}}]}
+  - if_screen: {screen: popup_event, then: [{tap: "btn:popup_close"}, {wait_stable: {timeout: 3}}]}
+  - checkpoint: {screen: main_game}
+  - loop: {times: "{bet_steps}", steps: [{tap: "btn:bet_minus"}, {sleep: 0.15}]}
+  - ocr: {roi: "roi:bet", name: bet, digits: true, expect: 4000000}
+  - loop:
+      times: "{spins}"
+      steps:
+        - tap: "btn:spin"
+        - wait_stable: {timeout: 12}
+        - ocr: {roi: "roi:win", name: win, digits: true}
+  - checkpoint: {screen: main_game}
+  - shot: end
