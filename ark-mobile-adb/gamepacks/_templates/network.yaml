@@ -1,0 +1,22 @@
+# 模板：網路（spin 中斷線 → 網路不穩提示 → 15 秒 6002 → 重連回大廳）
+template: network
+category: 3.特殊操作
+folder: 3-3 網路環境
+tier: T3
+param: network_scenarios   # pack.templates.network_scenarios: [{id, title, setup: [actions]}]（延遲/掉包場景需主機側工具 → pack.harness.network != adb 時 BLOCK）
+item:
+  title: "網路：{title} 斷線 → 6002"
+  actions:
+    - "{setup}"
+    - {do: net, state: disconnect}
+    - {do: tap, target: "btn:spin"}
+    - {do: wait, seconds: 1}
+    - {do: ask, name: net_icon, question: "盤面中間是否出現網路不穩符號？"}
+    - {do: wait, until_popup: "6002", timeout_s: 25, record: t_6002, since: net_off}
+    - {do: net, state: restore}
+    - {do: tap, target: "btn:ok"}
+    - {do: wait, screen: lobby, timeout_s: 10}
+  assertions:
+    - {id: A1, oracle: visual, obs: net_icon, expect_answer: true, expect: "出現網路不穩符號", spec_ref: "規格書!網路"}
+    - {id: A2, oracle: timing, expr: "t_6002 is not None and t_6002 >= 14.5", expect: "≥15 秒後彈 6002", spec_ref: "規格書!網路!6002"}
+    - {id: A3, oracle: state, expr: "screen == 'lobby'", expect: "重連後回大廳", spec_ref: "規格書!網路!重連"}

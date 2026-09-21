@@ -1,0 +1,5 @@
+# import 既有測試表的步驟文字 → 動作（regex）；未命中的步驟以 manual_step 保留 → 項目 NEEDS_BINDING
+bindings:
+  - {match: "進入.*(demo|主畫面|機台)", actions: [{do: navigate, to: main_game}]}
+  - {match: "開啟?.*info", actions: [{do: tap, target: "btn:info"}, {do: wait, screen: info_page}]}
+  - {match: "spin|旋轉", actions: [{do: tap, target: "btn:spin"}, {do: wait, state: reels_settled}]}

@@ -1,0 +1,20 @@
+# 模板：Recover（在指定狀態點重啟 app，驗回到原狀態 / 剩餘次數 / 無 crash）
+template: recover
+category: 3.特殊操作
+folder: 3-1 Recover
+tier: T2            # 多數狀態點需 harness 進 FG；pack.harness.trigger 為 none 時自動 BLOCK
+param: recover_points      # 來自 pack.templates.recover_points: [{id, title, setup: [actions], expect_screen, expect_expr}]
+item:
+  title: "Recover：{title} 重啟"
+  actions:
+    - "{setup}"
+    - {do: read, name: before_credit, roi: credit, oracle: ocr_number}
+    - {do: restart_app}
+    - {do: navigate, to: main_game}
+    - {do: wait, screen: "{expect_screen}", timeout_s: 20}
+    - {do: read, name: after_credit, roi: credit, oracle: ocr_number}
+    - {do: crash_check}
+  assertions:
+    - {id: A1, oracle: state, expr: "screen == '{expect_screen}'", expect: "回到 {expect_screen}", origin: template:recover}
+    - {id: A2, oracle: no_crash, expect: "無 FATAL / ANR，app 在前景", origin: template:recover}
+    - {id: A3, oracle: visual, question: "畫面是否有破圖、掉圖或錯位？", expect_answer: false, expect: "無破圖掉圖", origin: template:visual_integrity}

@@ -1,0 +1,8 @@
+# 裝置層（ark_mobile_adb.py）只需標準庫；以下為 aiqa 與視覺輔助
+Pillow>=9.0
+numpy>=1.24
+pyyaml>=6.0
+openpyxl>=3.1
+# 選配
+# opencv-python-headless>=4.8   # locate 模板比對加速（無則用 numpy 慢速比對）
+# 系統：tesseract-ocr（--reader tesseract|dual）；Android Platform Tools（adb）

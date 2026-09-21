@@ -1,0 +1,14 @@
+# 模板：每個畫面一項「無破圖 / 錯位」（信心 < 0.8 → NEEDS_HUMAN，永不單獨 PASS 高風險判定）
+template: visual_integrity
+category: 5.遊戲畫面
+folder: 5-2 SLOT遊戲場景
+tier: T1
+param: screens_for_visual  # pack.templates.screens_for_visual: [{id, title}]（id = screen 名）
+item:
+  title: "畫面完整性：{title}"
+  actions:
+    - {do: navigate, to: "{id}"}
+    - {do: capture, name: shot}
+    - {do: ask, name: glitch, question: "畫面是否有破圖、錯位或缺圖？"}
+  assertions:
+    - {id: A1, oracle: visual, obs: glitch, expect_answer: false, expect: "無破圖錯位", origin: template:visual_integrity}

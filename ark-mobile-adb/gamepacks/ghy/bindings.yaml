@@ -1,0 +1,10 @@
+bindings:
+  - {match: "進入【?阿茲特克2?】?", actions: [{do: navigate, to: main_game}]}
+  - {match: "進入(大廳|遊戲大廳|魚機大廳)", actions: [{do: navigate, to: lobby}]}
+  - {match: "(開啟|檢查)info頁", actions: [{do: tap, target: "btn:info"}, {do: wait, screen: info_page}, {do: capture, name: info}]}
+  - {match: "trigger ?1", actions: [{do: harness, name: trigger1}]}
+  - {match: "trigger ?2", actions: [{do: harness, name: trigger2}]}
+  - {match: "重啟遊戲|重新進出", actions: [{do: restart_app}, {do: navigate, to: main_game}]}
+  - {match: "請Server設定|server 設定", actions: [{do: harness, name: gm}]}
+  - {match: "^spin|點擊Spin|進行spin", actions: [{do: tap, target: "btn:spin"}, {do: wait, state: reels_settled}]}
+  - {match: "切換(多國)?語系|切換(日文|繁中|簡中|印尼)", actions: [{do: harness, name: locale}]}

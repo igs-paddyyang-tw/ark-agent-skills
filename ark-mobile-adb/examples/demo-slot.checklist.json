@@ -1,0 +1,46 @@
+{
+ "contract": "1", "game": "demo-slot", "machine": null,
+ "items": [
+  {"id": "DEMO-MG-001", "title": "遊戲計分：贏分 = 中排連線賠率 × bet/100 × 乘倍", "category": "1.遊戲流程", "folder": "1-1 Main Game",
+   "tier": "T1", "tier_reason": "可觀察", "repeat": 2, "priority": "P0", "spec_refs": ["demo-spec!賠率表"], "origin": "spec",
+   "preconditions": [], "manual_steps": [], "unbound_steps": [], "block_if": [], "na_if": [], "baseline": null,
+   "actions": [
+     {"do": "navigate", "to": "main_game"},
+     {"do": "read", "name": "credit0", "roi": "credit", "oracle": "ocr_number"},
+     {"do": "repeat", "times": 8, "actions": [
+        {"do": "read", "name": "bet", "roi": "bet", "oracle": "ocr_number"},
+        {"do": "read", "name": "mult_before", "roi": "multiplier", "oracle": "ocr_number"},
+        {"do": "tap", "target": "btn:spin"},
+        {"do": "wait", "state": "reels_settled"},
+        {"do": "read", "name": "win", "roi": "win", "oracle": "ocr_number"},
+        {"do": "read", "name": "board", "roi": "board", "oracle": "text"},
+        {"do": "read", "name": "multiplier", "roi": "multiplier", "oracle": "ocr_number"},
+        {"do": "capture", "name": "board"}
+     ]},
+     {"do": "read", "name": "credit1", "roi": "credit", "oracle": "ocr_number"}
+   ],
+   "assertions": [
+     {"id": "A1", "oracle": "ocr_number", "expr": "credit1 == credit0 - sum(bet_list) + sum(win_list)", "expect": "資產 = 起始 − Σbet + Σwin", "spec_ref": "demo-spec!資產"},
+     {"id": "A2", "oracle": "sequence", "expr": "seq_multiplier(multiplier_list, win_list)", "expect": "有贏 +1、無贏回 1", "spec_ref": "demo-spec!乘倍"},
+     {"id": "A3", "oracle": "ocr_number", "expr": "all(w % 5 == 0 for w in win_list)", "expect": "贏分皆為賠率×bet/100×乘倍（5 的倍數）", "spec_ref": "demo-spec!賠率表"},
+     {"id": "A4", "oracle": "visual", "question": "中獎連線的符號是否有亮框（highlight）？", "when": "win > 0", "expect_answer": true, "expect": "中獎時有亮框", "spec_ref": "demo-spec!表演"},
+     {"id": "A5", "oracle": "visual", "question": "盤面是否有破圖或錯位？", "expect_answer": false, "expect": "無破圖", "origin": "template:visual_integrity"}
+   ]},
+  {"id": "DEMO-MG-002", "title": "info 頁：可開可關、賠率表存在", "category": "4.UI功能", "folder": "4-1 共用按鈕",
+   "tier": "T1", "tier_reason": "可觀察", "repeat": 1, "priority": "P1", "spec_refs": ["demo-spec!info"], "origin": "spec",
+   "preconditions": [], "manual_steps": [], "unbound_steps": [], "block_if": [], "na_if": [], "baseline": null,
+   "actions": [
+     {"do": "navigate", "to": "main_game"},
+     {"do": "tap", "target": "btn:info"},
+     {"do": "wait", "screen": "info_page", "timeout_s": 8},
+     {"do": "read", "name": "paytable", "roi": "info_paytable", "oracle": "text"},
+     {"do": "capture", "name": "info", "roi": "info_paytable"},
+     {"do": "tap", "target": "btn:close"},
+     {"do": "wait", "screen": "main_game", "timeout_s": 8}
+   ],
+   "assertions": [
+     {"id": "A1", "oracle": "state", "expr": "screen == 'main_game'", "expect": "關閉後回主畫面", "spec_ref": "demo-spec!info"},
+     {"id": "A2", "oracle": "text", "expr": "nonempty(paytable)", "expect": "賠率表有內容", "spec_ref": "demo-spec!賠率表"}
+   ]}
+ ]
+}

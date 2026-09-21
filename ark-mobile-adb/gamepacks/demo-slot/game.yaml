@@ -1,0 +1,65 @@
+game: demo-slot
+display_name: Demo Slot（合成遊戲，dry-run / 測試用）
+package: com.ark.demoslot
+resolution: {width: 1600, height: 900}
+calibrated: true
+backend_default: fake
+taxonomy:
+  1.遊戲流程: [1-1 Main Game, 1-2 Free Game]
+  3.特殊操作: [3-1 Recover, 3-3 網路環境, 3-5 掛測]
+  4.UI功能: [4-1 共用按鈕]
+  5.遊戲畫面: [5-2 SLOT遊戲場景]
+locales: [zh-TW]
+credit_min: 5000
+harness:
+  trigger: none
+  gm: none
+  network: adb
+screens:
+  lobby:     {template: screens/lobby.png,     region: [40, 30, 200, 40], threshold: 0.9}
+  main_game: {template: screens/main_game.png, region: [1380, 740, 160, 90], threshold: 0.9}
+  info_page: {template: screens/info_page.png, region: [40, 30, 260, 40], threshold: 0.9}
+  error_6002: {template: screens/error_6002.png, region: [590, 410, 200, 40], threshold: 0.85, priority: 10}
+buttons:
+  tile_demo: {xy: [800, 450]}
+  spin:  {template: buttons/spin.png,  xy: [1460, 785], shared: true, opens: main_game, close: spin}
+  info:  {template: buttons/info.png,  xy: [85, 820],   shared: true, opens: info_page, close: close}
+  close: {xy: [1525, 55]}
+  ok:    {xy: [800, 590]}
+rois:
+  bet: [200, 830, 200, 50]
+  win: [700, 830, 260, 50]
+  credit: [1200, 830, 300, 50]
+  multiplier: [740, 30, 140, 50]
+  board: [300, 120, 1000, 600]
+  info_paytable: [300, 150, 1000, 500]
+  popup: [560, 380, 480, 260]
+states:
+  reels_settled: {method: stable, timeout_s: 12}
+navigation:
+  lobby->main_game: [{tap: "btn:tile_demo"}, {wait_screen: main_game}]
+  info_page->main_game: [{tap: "btn:close"}, {wait_screen: main_game}]
+  main_game->lobby: [{key: BACK}, {wait_screen: lobby}]
+  main_game->info_page: [{tap: "btn:info"}, {wait_screen: info_page}]
+  error_6002->lobby: [{tap: "btn:ok"}, {wait_screen: lobby}]
+paytable:            # 規格：中排連續同符號 ≥3 × 賠率 × bet/100 × 乘倍
+  spec_ref: demo-spec!賠率表
+  lines_cost: 100
+  symbols:
+    S01: {3: 50, 4: 100, 5: 300}
+    S02: {3: 40, 4: 80, 5: 200}
+    S03: {3: 30, 4: 60, 5: 150}
+    S04: {3: 20, 4: 40, 5: 100}
+    S05: {3: 10, 4: 20, 5: 60}
+    S06: {3: 5, 4: 10, 5: 30}
+templates:
+  recover_points:
+    - {id: mg_idle, title: 主畫面待機, setup: [{do: navigate, to: main_game}], expect_screen: main_game}
+  network_scenarios:
+    - {id: mg_spin, title: Main Game Spin 中, setup: [{do: navigate, to: main_game}]}
+  long_runs:
+    - {id: smoke_2m, title: 2 分鐘自動旋轉（smoke）, minutes: 2, interval_s: 10}
+  screens_for_visual:
+    - {id: main_game, title: 主畫面}
+    - {id: info_page, title: info 頁}
+error_codes: {"6002": 連線逾時}

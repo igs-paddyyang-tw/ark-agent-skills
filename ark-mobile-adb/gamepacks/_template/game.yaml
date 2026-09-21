@@ -1,0 +1,17 @@
+game: __GAME__
+display_name: __DISPLAY_NAME__
+package: com.example.app
+resolution: {width: 1600, height: 900}
+calibrated: false
+backend_default: adb
+taxonomy: {1.遊戲流程: [1-1 Main Game]}
+locales: [zh-TW]
+credit_min: 1000
+harness: {trigger: none, gm: none, network: adb}
+screens: {}
+buttons: {spin: {xy: null, shared: true}}
+rois: {}
+states: {reels_settled: {method: stable, timeout_s: 12}}
+navigation: {}
+templates: {recover_points: [], network_scenarios: [], long_runs: [], screens_for_visual: []}
+error_codes: {}

@@ -1,0 +1,50 @@
+game: ghy
+display_name: GHY 金猴爺
+package: com.igs.ghy           # TODO 以 packages 指令確認
+resolution: {width: 1600, height: 900}
+calibrated: false              # TODO：在 BlueStacks 截圖後填 screens/buttons/rois；未校準 runner 只接受 --backend fake 或 --allow-uncalibrated
+backend_default: adb
+taxonomy:                      # 來自 測試項目_金猴爺 目錄結構頁
+  1.遊戲流程: [1-1 Main Game, 1-2 Free Game, 1-3 Feature Game, 1-4 buy bonus]
+  2.道具卡: [2-1 紅利道具卡, 2-2 爆獎卡, 2-3 掃蕩卡]
+  3.特殊操作: [3-1 Recover, 3-2 複合情況, 3-3 網路環境, 3-4 裝置適配性, 3-5 掛測, 3-6 雙開]
+  4.UI功能: [4-1 共用按鈕, 4-2 遊戲獨立UI]
+  5.遊戲畫面: [5-1 SLOT大廳, 5-2 SLOT遊戲場景, 5-3 多國, 5-4 畫面適配性]
+  6.版本差異: [6-1 版本差異]
+  7.音樂音效: [7-1 音樂音效]
+locales: [zh-TW, zh-CN, id, ja]
+credit_min: 5000
+harness:
+  trigger: none                # TODO：問測試員「trigger 1 進 FG」怎麼下（客端 debug 面板 / server 指令）
+  gm: none                     # TODO：Server 設定廳館 / VIP / 等級 / 發卡
+  network: adb                 # 斷線可自動；延遲/掉包需主機側 clumsy → 填 clumsy 並提供路徑
+screens: {}                    # TODO 校準
+buttons:                       # 右側共用列（阿茲特克 常規測試 4-1）
+  spin: {xy: null, shared: true}
+  fast_spin: {xy: null, shared: true}
+  info: {xy: null, shared: true}
+  ads: {xy: null, shared: true}
+  win_twice: {xy: null, shared: true}
+  sweep_card: {xy: null, shared: true}
+  buy_bonus: {xy: null, shared: true}
+  bag: {xy: null, shared: true}
+rois: {}
+states: {}
+navigation: {}
+templates:
+  recover_points:              # 阿茲特克 3-1 Recover 系列（需 harness.trigger）
+    - {id: fg_before, title: 進入 Free Game 前, setup: [{do: harness, name: trigger1}, {do: wait, screen: fg_intro}], expect_screen: fg_intro}
+    - {id: fg_after,  title: 進入 Free Game 後, setup: [{do: harness, name: trigger1}, {do: wait, screen: free_game}], expect_screen: free_game}
+    - {id: fg_hand_1, title: Free Game 第 1 手, setup: [{do: harness, name: trigger1}, {do: wait, screen: free_game}, {do: tap, target: "btn:spin"}, {do: wait, state: reels_settled}], expect_screen: free_game}
+    - {id: fg_last,   title: Free Game 最後一手, setup: [{do: harness, name: trigger1}, {do: wait, screen: fg_settle}], expect_screen: main_game}
+  network_scenarios:
+    - {id: login, title: Login Game, setup: [{do: navigate, to: lobby}]}
+    - {id: mg_spin, title: Main Game Spin, setup: [{do: navigate, to: main_game}]}
+    - {id: fg_spin, title: Free Game Spin, setup: [{do: harness, name: trigger1}, {do: wait, screen: free_game}]}
+  long_runs:
+    - {id: stable_8h, title: 網路正常 8 小時, minutes: 480, interval_s: 60}
+    - {id: unstable_1h, title: 網路不穩 1 小時, minutes: 60, interval_s: 30}
+  screens_for_visual:
+    - {id: lobby, title: SLOT 大廳}
+    - {id: main_game, title: 主畫面}
+error_codes: {"6002": 連線逾時}

@@ -1,8 +1,0 @@
-{
-  "name": "ark-mobile-adb",
-  "version": "1.0.0",
-  "runtime": "python>=3.10",
-  "backend": "adb",
-  "mcp": false,
-  "node_required": false
-}

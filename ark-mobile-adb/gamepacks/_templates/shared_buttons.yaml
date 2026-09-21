@@ -1,0 +1,19 @@
+# 模板：共用按鈕（每個 shared=true 的按鈕一項：可點、開對應畫面、關閉回原畫面）
+template: shared_buttons
+category: 4.UI功能
+folder: 4-1 共用按鈕
+tier: T1
+param: shared_buttons      # 由 pack.buttons[shared=true] 自動產生 [{id, title, opens: screen, close: btn}]
+item:
+  title: "共用按鈕：{title}"
+  actions:
+    - {do: navigate, to: main_game}
+    - {do: tap, target: "btn:{id}"}
+    - {do: wait, screen: "{opens}", timeout_s: 8}
+    - {do: capture, name: opened}
+    - {do: ask, name: layout_ok, question: "開啟的介面是否有錯位、押字，或擋住 HUD？"}
+    - {do: tap, target: "btn:{close}"}
+    - {do: wait, screen: main_game, timeout_s: 8}
+  assertions:
+    - {id: A1, oracle: state, expr: "screen == 'main_game'", expect: "關閉後回主畫面", origin: template:shared_buttons}
+    - {id: A2, oracle: visual, obs: layout_ok, expect_answer: false, expect: "無錯位押字", origin: template:visual_integrity}

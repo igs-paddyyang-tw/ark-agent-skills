@@ -1,0 +1,18 @@
+# 模板：掛測（自動旋轉 N 分鐘；每 interval 截圖 + crash 掃描 + 畫面狀態抽查）
+template: long_run
+category: 3.特殊操作
+folder: 3-5 掛測
+tier: T5
+param: long_runs           # pack.templates.long_runs: [{id, title, minutes, interval_s}]
+item:
+  title: "掛測：{title}"
+  actions:
+    - {do: navigate, to: main_game}
+    - {do: read, name: credit_start, roi: credit, oracle: ocr_number}
+    - {do: loop_spin, minutes: "{minutes}", interval_s: "{interval_s}"}
+    - {do: read, name: credit_end, roi: credit, oracle: ocr_number}
+    - {do: crash_check}
+  assertions:
+    - {id: A1, oracle: no_crash, expect: "全程無 FATAL / ANR", origin: template:long_run}
+    - {id: A2, oracle: state, expr: "stuck_frames == 0", expect: "無同幀卡死 > 120 秒", origin: template:long_run}
+    - {id: A3, oracle: ocr_number, expr: "credit_end is not None and credit_start is not None", expect: "資產可讀且變化合理", origin: template:long_run}

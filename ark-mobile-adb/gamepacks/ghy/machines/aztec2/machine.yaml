@@ -1,0 +1,13 @@
+machine: aztec2
+display_name: 阿茲特克2（黃金神殿）
+spec_source: SLOT 阿茲特克-黃金神殿規格書.xlsx      # TODO 放進 specs/ 並以 aiqa_testgen from-spec 讀
+symbols: [S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, WILD, SCATTER]   # 代號，不取名
+rules:                                   # 來自測試表可反推的規則（仍需以規格書為 spec_ref）
+  lines: ALL WAYS
+  lines_cost: 100
+  scatter_trigger: {count: 4, free_spins: 10, extra_per_scatter: true}
+  multiplier: {start: 1, step_on_win: 1, reset_on_no_win: true, rainbow_after_cascades: 5}
+  taco_pack_b: 剩餘 Credit 不足當前總押注時產生
+screens: {}      # TODO：main_game / fg_intro / free_game / fg_settle / info_page / bet_recommend 的錨點模板
+rois: {}         # TODO：multiplier / fg_remaining / win / bet / credit
+states: {}
