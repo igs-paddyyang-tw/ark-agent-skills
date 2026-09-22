@@ -123,7 +123,143 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
         )
         created.extend(agent_created)
 
+    # ── B1b + B2：五類知識來源骨架 + knowledge_search_order ──
+    created.extend(_build_knowledge_sources(cfg, base, instances))
+
     return created
+
+
+# ── B1b/B2：知識來源骨架 + search_order ────────────────────────
+
+#: 五類來源信任度遞減序（weknora=L5 是外部 RAG，不進 search_order）。
+#: 對齊 knowledge-sources-map.md 與需求單 A1/B2。
+_SOURCE_TRUST_ORDER = ["private", "product", "github", "shared"]
+
+#: 單一知識櫃的五件套骨架檔（對齊 knowledge-schema-template.md）。
+_KNOWLEDGE_STEM_DIRS = ("raw", "wiki")
+
+
+def _compute_search_order(sources: list[str], product_layers: list[str]) -> list[str]:
+    """依所選來源層算 knowledge_search_order（信任度遞減，weknora 排除）。
+
+    sources：team.yaml 的 knowledge_sources（如 [private, product, github, shared]）。
+    product_layers：實際的產品櫃名（如 [hoyeah]）—— 取代抽象的 'product'。
+    private 在此展開為 team-agent 慣例的 'private' 別名（套件解析為各 instance 自己的櫃）。
+    """
+    order: list[str] = []
+    for s in _SOURCE_TRUST_ORDER:
+        if s == "product":
+            # 抽象的 product → 展開成實際產品櫃名（可能多個）
+            order.extend(pl for pl in product_layers if pl not in order)
+        elif s in sources and s not in order:
+            order.append(s)
+    return order
+
+
+def _write_knowledge_shelf(shelf_dir: Path, base: Path, shelf_name: str) -> list[str]:
+    """建單一知識櫃的五件套骨架（raw/ wiki/ schema.md index.md log.md）。冪等。"""
+    created: list[str] = []
+    for sub in _KNOWLEDGE_STEM_DIRS:
+        d = shelf_dir / sub
+        if not d.exists():
+            d.mkdir(parents=True, exist_ok=True)
+            (d / ".gitkeep").touch()
+            created.append(str((d / ".gitkeep").relative_to(base)))
+    # schema.md 由 knowledge-schema-template.md 提供（若存在）
+    schema_dst = shelf_dir / "schema.md"
+    if not schema_dst.exists():
+        tpl = SKILL_ROOT / "references" / "knowledge-schema-template.md"
+        if tpl.exists():
+            schema_dst.write_text(tpl.read_text(encoding="utf-8"), encoding="utf-8")
+            created.append(str(schema_dst.relative_to(base)))
+    for fname, header in (("index.md", f"# {shelf_name} 知識索引\n"),
+                          ("log.md", f"# {shelf_name} 知識異動 log（append-only）\n")):
+        f = shelf_dir / fname
+        if not f.exists():
+            f.write_text(header, encoding="utf-8")
+            created.append(str(f.relative_to(base)))
+    return created
+
+
+def _build_knowledge_sources(cfg: dict, base: Path, instances: dict) -> list[str]:
+    """B1b：依 team.yaml 的 knowledge_sources 建五類來源骨架。
+    B2：缺 knowledge_search_order 時依所選來源自動寫回 team.yaml（冪等，不覆蓋既有）。
+
+    knowledge_sources（team.yaml，選配）：來源層清單，可含
+      private / shared / github / weknora / <產品櫃名>（L2，如 hoyeah）。
+      未宣告 → 預設 [private, shared]（最小安全集）。
+    """
+    created: list[str] = []
+    sources = cfg.get("knowledge_sources")
+    if not sources:
+        sources = ["private", "shared"]
+
+    # 分類：標準來源 vs 產品櫃（L2，層名依產品）
+    standard = {"private", "shared", "github", "weknora"}
+    product_layers = [s for s in sources if s not in standard]
+
+    kroot = base / "knowledge"
+
+    # shared 櫃（幾乎一定有；Wiki 引擎與 start.py 讀這層）
+    if "shared" in sources:
+        created.extend(_write_knowledge_shelf(kroot / "shared", base, "shared"))
+    # L2 產品櫃（層名依產品）
+    for pl in product_layers:
+        created.extend(_write_knowledge_shelf(kroot / pl, base, pl))
+    # private：各 instance 一個櫃（dir="." 的 manager → knowledge/<name>/；子 agent → agents/<name>/knowledge/）
+    if "private" in sources:
+        for name, inst in instances.items():
+            inst = inst or {}
+            wd = inst.get("working_directory", f"agents/{name}")
+            shelf = (kroot / name) if wd == "." else (base / wd / "knowledge")
+            created.extend(_write_knowledge_shelf(shelf, base, name))
+    # L1 github：產 github-sources.yaml 骨架（宣告式，路徑走 ARK_GITHUB_ROOT）
+    if "github" in sources:
+        gs = base / "github-sources.yaml"
+        if not gs.exists():
+            gs.write_text(_github_sources_skeleton(product_layers), encoding="utf-8")
+            created.append(str(gs.relative_to(base)))
+    # L5 weknora：不建櫃、不進 search_order；只提示 checklist（見 references/weknora-checklist.md）
+
+    # B2：寫 knowledge_search_order（缺才補，冪等）
+    if not cfg.get("knowledge_search_order"):
+        order = _compute_search_order(sources, product_layers)
+        if order:
+            _append_search_order_to_team_yaml(base, order)
+            created.append(f"team.yaml:knowledge_search_order={order}")
+
+    return created
+
+
+def _github_sources_skeleton(product_layers: list[str]) -> str:
+    """github-sources.yaml 骨架（對齊 references/github-sources.md）。"""
+    prod = product_layers[0] if product_layers else "<product>"
+    return (
+        "# github-sources.yaml — L1 github 來源宣告（v1）\n"
+        "# 路徑基準：環境變數 $ARK_GITHUB_ROOT（.env 設定，禁寫死絕對路徑）\n"
+        "# 完整 schema 與流程見 ark-agent-init/references/github-sources.md\n"
+        "schema_version: 1\n"
+        "github_root_env: ARK_GITHUB_ROOT\n\n"
+        "sources: []   # 依 references/github-sources.md 補 repos[]\n\n"
+        "dimension_map:\n"
+        "  gamedev:  raw/tech/gamedev/\n"
+        "  infra:    raw/tech/infra/\n"
+        f"  product:  knowledge/{prod}/raw/\n"
+        "  market:   raw/market/\n"
+        "  strategy: raw/strategy/\n"
+    )
+
+
+def _append_search_order_to_team_yaml(base: Path, order: list[str]) -> None:
+    """把 knowledge_search_order 補進 team.yaml（缺才補；保留原格式，append 一行）。"""
+    ty = base / "team.yaml"
+    if not ty.exists():
+        return
+    text = ty.read_text(encoding="utf-8")
+    if "knowledge_search_order" in text:
+        return  # 已有，不覆蓋（冪等）
+    line = f"\nknowledge_search_order: [{', '.join(order)}]  # build_kiro 自動補（信任度遞減；B2）\n"
+    ty.write_text(text.rstrip("\n") + "\n" + line, encoding="utf-8")
 
 
 def _build_agent_kiro(
@@ -739,6 +875,50 @@ def validate_kiro(project_dir: Path) -> list[str]:
         for stem in stems:
             if not (PROMPTS_ASSETS / "work" / f"{stem}.md").exists():
                 errors.append(f"❌ role-prompts-map work['{role_id}'] 列了 '{stem}' 但 assets/prompts/work/{stem}.md 不存在")
+
+    # ── B4：五類知識來源 + knowledge_search_order 驗證 ──
+    errors.extend(_validate_knowledge_sources(cfg, project_dir))
+
+    return errors
+
+
+def _validate_knowledge_sources(cfg: dict, project_dir: Path) -> list[str]:
+    """B4：驗 team.yaml 有 knowledge_search_order、依所選來源層該有的目錄存在。
+
+    - team.yaml 有 knowledge_sources → 必須有對應的 knowledge_search_order（weknora 除外）
+    - 所選的 shared / 產品櫃 / private 目錄要實際存在
+    - github 來源 → github-sources.yaml 要存在
+    - weknora 不驗目錄（外部服務，不進 search_order）
+    """
+    errors: list[str] = []
+    sources = cfg.get("knowledge_sources")
+    if not sources:
+        return errors  # 未宣告來源層 → 用預設，不強制（build_kiro 會補 [private, shared]）
+
+    standard = {"private", "shared", "github", "weknora"}
+    product_layers = [s for s in sources if s not in standard]
+    kroot = project_dir / "knowledge"
+
+    # search_order 必須存在，且涵蓋非 weknora 的本地櫃
+    order = cfg.get("knowledge_search_order")
+    if not order:
+        errors.append("❌ team.yaml 宣告了 knowledge_sources 卻缺 knowledge_search_order（B2 應自動補；改成加 knowledge_search_order）")
+    else:
+        expected = _compute_search_order(sources, product_layers)
+        missing = [s for s in expected if s not in order]
+        if missing:
+            errors.append(f"❌ knowledge_search_order 缺 {missing}（依 knowledge_sources 信任度遞減應含 {expected}）")
+        if "weknora" in order:
+            errors.append("❌ knowledge_search_order 不該含 weknora（外部 RAG，見 references/knowledge-sources-map.md A3）")
+
+    # 目錄存在性
+    if "shared" in sources and not (kroot / "shared").is_dir():
+        errors.append("❌ knowledge_sources 含 shared 但 knowledge/shared/ 不存在")
+    for pl in product_layers:
+        if not (kroot / pl).is_dir():
+            errors.append(f"❌ knowledge_sources 含產品櫃 '{pl}' 但 knowledge/{pl}/ 不存在")
+    if "github" in sources and not (project_dir / "github-sources.yaml").is_file():
+        errors.append("❌ knowledge_sources 含 github 但 github-sources.yaml 不存在（見 references/github-sources.md）")
 
     return errors
 

@@ -1,0 +1,88 @@
+# AI/BI 分析團隊（8 人；viz-builder 為選配角色，量大時再從 report-narrator 拆出）— 對應 2026-09-21 AIBI 角色包設計
+# 拓撲沿用 aiqa hybrid root：根目錄 instance 由 aibi-manager 渲染（build_kiro --profile aibi-manager），
+# root 由 ark_bot_agent 驅動、workspace 走 ark_team_agent 佈局、root 同時註冊為 team manager。
+schema_version: 1
+team_id: aibi
+name: AI/BI 分析團隊
+goal: 讓人用自然語言問業務問題，拿到附口徑、附 SQL、附證據等級的答案與雙軌報告；語意契約外不作答，相關不寫成因果
+deliverables: [指標語意契約（metric-contract.yaml）, golden questions 評測集, 契約內查詢結果（附 SQL）, 歸因調查報告, 執行摘要與資料故事（md/html 雙軌）, 每日指標脈搏, 圖表與儀表板]
+entry: aibi-manager
+defaults:
+  bot_token_env: AIBI_TELEGRAM_BOT_TOKEN
+  health_port: 24050
+  daily_limit_usd: 25.0
+  knowledge_search_order: [aibi, shared]
+instances:
+  - id: aibi-manager
+    tier: manager
+    base_role: aibi-manager
+    emoji: 📈
+    purpose: 對話入口與口徑品管；契約內簡單查詢自答，歸因與多步調查派 bi-lead
+    persistent: true
+  - id: aibi-admin
+    tier: admin
+    base_role: admin
+    emoji: 👑
+    purpose: 管 daemon / crash / 成本 / skill 版本，排程 golden 評測與 memory 同步，不接業務
+    persistent: true
+  - id: bi-lead
+    tier: leader
+    base_role: bi-lead
+    emoji: 🧭
+    purpose: 拆解分析問題、派工附驗收條件、口徑一致性品管、彙整雙軌報告
+    persistent: true
+  - id: semantic-keeper
+    tier: worker
+    base_role: semantic-keeper
+    group: bi-lead
+    emoji: 📚
+    purpose: 維護指標語意契約、同義詞、join key 與 golden questions；契約外指標不開放查詢
+    persistent: true
+  - id: query-analyst
+    tier: worker
+    base_role: query-analyst
+    group: bi-lead
+    emoji: 🔎
+    purpose: NL→SQL，只在契約內作答，每次附 SQL 與契約版本；golden 通過率守 ≥95%
+    persistent: false
+  - id: insight-investigator
+    tier: worker
+    base_role: insight-investigator
+    group: bi-lead
+    emoji: 🕵️
+    purpose: 指標變化貢獻分解與假設檢驗，交叉 Decision Ledger / wiki / 外部環境，標證據等級
+    persistent: false
+  - id: report-narrator
+    tier: worker
+    base_role: report-narrator
+    group: bi-lead
+    emoji: ✍️
+    purpose: 執行摘要、資料故事與圖表（一圖一結論），md/html 雙軌產出並戳記，不改動任何數字
+    persistent: false
+  - id: pulse-monitor
+    tier: worker
+    base_role: pulse-monitor
+    group: bi-lead
+    emoji: 💓
+    purpose: 排程巡檢契約內指標，異常對照決策紀錄後告警並分派
+    persistent: true
+escalation:
+  - { from: semantic-keeper, to: bi-lead }
+  - { from: query-analyst, to: bi-lead }
+  - { from: insight-investigator, to: bi-lead }
+  - { from: report-narrator, to: bi-lead }
+  - { from: pulse-monitor, to: bi-lead }
+  - { from: bi-lead, to: aibi-manager }
+  - { from: aibi-manager, to: aibi-admin }
+decision_locks:
+  - { decision: 對 production 資料庫寫入或 DDL, approver: human, proposer: null, allowed: [] }
+  - { decision: 對外揭露或發布數字, approver: human, proposer: aibi-manager, allowed: [] }
+  - { decision: 新增或升版指標語意契約, approver: bi-lead, proposer: semantic-keeper, allowed: [semantic-keeper] }
+  - { decision: 將指標標為 queryable（開放 NL 查詢）, approver: bi-lead, proposer: semantic-keeper, allowed: [semantic-keeper] }
+  - { decision: 修改告警閾值或 baseline, approver: bi-lead, proposer: pulse-monitor, allowed: [semantic-keeper] }
+  - { decision: 將歸因結論標為 causal, approver: human, proposer: insight-investigator, allowed: [] }
+  - { decision: 判定異常為事故並升級, approver: aibi-manager, proposer: bi-lead, allowed: [] }
+scheduled_jobs:
+  - { id: pulse-daily, owner: pulse-monitor, cron: "0 9 * * *", prompt: pulse-check, purpose: 每日契約內指標巡檢與脈搏摘要 }
+  - { id: golden-eval-nightly, owner: aibi-admin, cron: "0 3 * * *", prompt: golden-questions, purpose: 夜間跑 golden questions 評測，通過率 <95% 鎖 queryable }
+  - { id: contract-drift-weekly, owner: semantic-keeper, cron: "0 8 * * 1", prompt: metric-contract, purpose: 週檢契約與資料表欄位漂移，產 drift 清單 }

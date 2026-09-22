@@ -256,3 +256,95 @@ def test_agent_json_points_at_its_own_steering_with_dotdot(project, name, inst):
     resolved = (kiro / "agents" / d["prompt"].removeprefix("file://")).resolve()
     assert resolved == (kiro / "steering" / "SOUL.md").resolve(), resolved
     assert resolved.is_file(), f"{name}: prompt 指到的檔案不存在 {resolved}"
+
+
+# ── B1b / B2 / B4：五類知識來源 + knowledge_search_order ──────────
+
+_SOURCES_TEAM_YAML = """\
+team: { name: aibi-demo }
+knowledge_sources: [private, hoyeah, github, shared, weknora]
+instances:
+  aibi-manager: { role: manager, base_role: aibi-manager, working_directory: . }
+  query-analyst: { role: worker, base_role: query-analyst, working_directory: agents/query-analyst }
+"""
+
+
+@pytest.fixture()
+def sources_project(tmp_path):
+    (tmp_path / "team.yaml").write_text(_SOURCES_TEAM_YAML, encoding="utf-8")
+    r = subprocess.run([sys.executable, str(BUILD), str(tmp_path / "team.yaml"),
+                        str(tmp_path)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    return tmp_path
+
+
+def test_b1b_builds_five_source_shelves(sources_project):
+    """B1b：所選來源層各建 knowledge 櫃骨架；weknora 不建櫃。"""
+    k = sources_project / "knowledge"
+    # shared / 產品(hoyeah) / private(各 instance)
+    assert (k / "shared" / "wiki").is_dir()
+    assert (k / "hoyeah" / "wiki").is_dir()
+    assert (k / "aibi-manager" / "wiki").is_dir()            # dir="." 的 manager → knowledge/<name>/
+    assert (sources_project / "agents" / "query-analyst" / "knowledge" / "wiki").is_dir()
+    # weknora 不建櫃（外部 RAG）
+    assert not (k / "weknora").exists()
+    # github → github-sources.yaml 骨架
+    assert (sources_project / "github-sources.yaml").is_file()
+
+
+def test_b2_writes_search_order_trust_descending(sources_project):
+    """B2：team.yaml 自動寫 knowledge_search_order，信任度遞減，weknora 排除。"""
+    cfg = yaml.safe_load((sources_project / "team.yaml").read_text(encoding="utf-8"))
+    order = cfg.get("knowledge_search_order")
+    assert order == ["private", "hoyeah", "github", "shared"], order
+    assert "weknora" not in order
+
+
+def test_b2_default_when_no_sources(tmp_path):
+    """B2：未宣告 knowledge_sources → 預設 [private, shared]。"""
+    (tmp_path / "team.yaml").write_text(
+        "team: { name: d }\ninstances:\n  m: { role: manager, working_directory: . }\n",
+        encoding="utf-8")
+    subprocess.run([sys.executable, str(BUILD), str(tmp_path / "team.yaml"), str(tmp_path)],
+                   capture_output=True, text=True)
+    cfg = yaml.safe_load((tmp_path / "team.yaml").read_text(encoding="utf-8"))
+    assert cfg["knowledge_search_order"] == ["private", "shared"]
+    assert not (tmp_path / "github-sources.yaml").exists()
+
+
+def test_b2_idempotent_does_not_overwrite(tmp_path):
+    """B2：已有 knowledge_search_order 不覆蓋（冪等）。"""
+    (tmp_path / "team.yaml").write_text(
+        "team: { name: d }\nknowledge_sources: [private, shared]\n"
+        "knowledge_search_order: [private, custom, shared]\n"
+        "instances:\n  m: { role: manager, working_directory: . }\n",
+        encoding="utf-8")
+    subprocess.run([sys.executable, str(BUILD), str(tmp_path / "team.yaml"), str(tmp_path)],
+                   capture_output=True, text=True)
+    cfg = yaml.safe_load((tmp_path / "team.yaml").read_text(encoding="utf-8"))
+    assert cfg["knowledge_search_order"] == ["private", "custom", "shared"]
+
+
+def test_b4_validate_passes_on_wellformed(sources_project):
+    """B4：正常產出通過 validate 的 knowledge 檢查。"""
+    sys.path.insert(0, str(SCRIPTS))
+    from build_kiro import _validate_knowledge_sources
+    cfg = yaml.safe_load((sources_project / "team.yaml").read_text(encoding="utf-8"))
+    errs = _validate_knowledge_sources(cfg, sources_project)
+    assert errs == [], errs
+
+
+def test_b4_validate_catches_missing_shelf_and_weknora_in_order(sources_project):
+    """B4 反證：缺 shared 目錄 → 報錯；weknora 進 search_order → 報錯。"""
+    sys.path.insert(0, str(SCRIPTS))
+    from build_kiro import _validate_knowledge_sources
+    import shutil
+    # 反證① 移走 shared
+    shutil.rmtree(sources_project / "knowledge" / "shared")
+    cfg = yaml.safe_load((sources_project / "team.yaml").read_text(encoding="utf-8"))
+    errs = _validate_knowledge_sources(cfg, sources_project)
+    assert any("shared" in e and "不存在" in e for e in errs), errs
+    # 反證② weknora 混進 order
+    cfg["knowledge_search_order"] = ["private", "hoyeah", "github", "shared", "weknora"]
+    errs2 = _validate_knowledge_sources(cfg, sources_project)
+    assert any("weknora" in e for e in errs2), errs2

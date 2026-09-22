@@ -22,16 +22,32 @@ role_prompts:
     leader:  [daily-report, team-check]
     worker:  [daily-report]
   work:
+    # ── 通用/跨類 ──
     architect:      [analyze-req, scaffold-api]
-    fullstack-coder: [analyze-req]
+    fullstack-coder: [analyze-req, component-spec]
     qa:             [test-plan]
     qa-manager:     [test-plan, data-query-routing]
+    data-analyst:   [data-query-routing]
+    producer:       [milestone-plan]
+    # ── game dev 包（role-templates-gamedev.md）──
     game-planner:   [gdd-draft, feature-spec]
     math-designer:  [par-sheet, balance-tuning, data-query-routing]
     liveops:        [event-spec]
     game-analyst:   [kpi-review, data-query-routing]
-    data-analyst:   [data-query-routing]
-    producer:       [milestone-plan]
+    # ── web tool 包（role-templates-webtool.md）──
+    frontend:       [component-spec]
+    backend:        [scaffold-api, db-migration]
+    ui-designer:    [ui-spec]
+    # ── AI/BI 包（role-templates-aibi.md）──
+    # bi-lead 只配 ops 層（leader: daily-report, team-check），無 work 專屬提詞。
+    # golden-questions 的 roles 含 admin（夜間排程），但排程走 team-spec scheduled_jobs.prompt，不在此表加 ops-admin 列。
+    aibi-manager:         [nl2sql]
+    semantic-keeper:      [metric-contract, golden-questions]
+    query-analyst:        [nl2sql]
+    insight-investigator: [metric-investigation]
+    report-narrator:      [exec-summary, viz-spec]
+    pulse-monitor:        [pulse-check]
+    viz-builder:          [viz-spec]
 ```
 
 > ops 提詞在 `assets/prompts/`（現階段平鋪，向後相容）；

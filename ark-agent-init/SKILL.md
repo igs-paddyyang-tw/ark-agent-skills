@@ -63,6 +63,7 @@ metadata:
 | 未指定角色 | 使用預設：全端工程師 + SA/SD（從 `references/defaults/` 載入） |
 | 指定 admin | 產出 admin 專用 SOUL.md（服務管理、不接業務） |
 | 指定已知角色 | 從 `references/role-templates.md` 查對應模板 |
+| 指定專業領域角色 | 查對應**角色包**：🎮 遊戲研發 → `role-templates-gamedev.md`；🌐 Web 工具開發 → `role-templates-webtool.md`；📈 AI/BI 分析 → `role-templates-aibi.md`（通用/跨類角色如 architect/fullstack-coder/qa 各包共用；aibi 資產一次性收在 `references/aibi/`）|
 | 指定未知角色 | 上網搜尋 → 整理 → 產出 |
 
 ### `--profile <role>`：根目錄由指定 manager 角色渲染（v2.1）
@@ -256,6 +257,29 @@ Kiro 的 steering 是**多檔 + `inclusion` 分層**，比單一 `AGENTS.md` 表
 > 另 MEMORY 歸檔落 **`memory/archive/`**（1.8.1 起 —— 記憶歸記憶，不進 knowledge；
 > 舊 `knowledge/raw/memory-archive/` 已作廢並遷出）。
 > 詳見 `references/architecture-drift-feedback.md`。
+
+### 五類知識來源（L1–L5，v2.4 補）
+
+除了 private + shared，team 可依定位納入外部/業務來源。權威定義見
+**`references/knowledge-sources-map.md`**：
+
+| 代號 | 來源 | 目錄/位置 | 進 search_order？ |
+|------|------|-----------|:----------------:|
+| private | 各 instance 私有 | `knowledge/<instance>/` 或 `agents/<name>/knowledge/` | ✅ 最前 |
+| L2 產品庫 | 專案產品知識（層名**依產品**，`hoyeah` 只是案例） | `knowledge/<product>/` | ✅ 次之 |
+| L1 github | 外部 repo 蒸餾來源 | `$ARK_GITHUB_ROOT/`（`github-sources.yaml`） | ✅ 再次 |
+| shared | 跨 agent 共用 | `knowledge/shared/` | ✅ 最後 |
+| L5 weknora | 外部 RAG（ark-weknora-cli） | 外部服務 | ❌ **不進** |
+
+- **team.yaml 宣告 `knowledge_sources`**（如 `[private, hoyeah, github, shared, weknora]`）→
+  `build_kiro.py` 依此建目錄骨架，並**自動寫 `knowledge_search_order`**（信任度遞減
+  `private → 產品 → github → shared`，weknora 排除）。未宣告 → 預設 `[private, shared]`。
+- L1 github 統一 schema 見 `references/github-sources.md`（`ARK_GITHUB_ROOT`，禁寫死路徑）。
+- L5 weknora 接入見 `references/weknora-checklist.md`（`.env` 變數；不進 search_order）。
+
+> 🔴 **品質檢查（validate 驗）**：team.yaml 宣告 knowledge_sources 時，`build_kiro.py --validate` 會查
+> ① 有 `knowledge_search_order` 且涵蓋非 weknora 的來源 ② weknora 不在 search_order 內
+> ③ shared/產品櫃目錄存在、含 github 則 `github-sources.yaml` 存在。
 
 ### memory/ 目錄（每個 agent 必有，v2.0 補）
 
@@ -772,10 +796,18 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 | 檔案 | 說明 |
 |------|------|
 | `role-templates.md` | 已知角色索引（10 種內建角色） |
+| `role-templates-gamedev.md` | 🎮 **game dev 角色包**（game-planner / math-designer / liveops / game-analyst 等，遊戲研發專業角色定位 + 交付物 + prompts 配方）|
+| `role-templates-webtool.md` | 🌐 **web tool 角色包**（frontend / backend / ui-designer 等，Web 工具／內部後台／webbot 應用開發角色定位 + 交付物 + prompts 配方）|
+| `role-templates-aibi.md` | 📈 **AI/BI 角色包**（aibi-manager / bi-lead / semantic-keeper / query-analyst / insight-investigator / report-narrator / pulse-monitor / viz-builder，AI/BI 網站分析維運團隊；語意契約先行 + 證據等級三態）|
+| `aibi/roles/*.yaml` | 📈 aibi **8 個角色 profile**（一次性收進 init 的參考資產；原設計在 ark-agent-role-profile，供其 lint/render 當 `--roles-dir`）|
+| `aibi/aibi-team-pattern.yaml` | 📈 aibi **team pattern**（一次性收進 init 的參考資產；原設計在 ark-agent-team-design，供 gen_team/team_spec_lint 使用）|
 | `role-skills-map.md` | 角色 → Skills 對應表 |
 | `role-prompts-map.md` | 🆕 角色 → Prompts 對應表（`role_prompts:` 錨點，ops/work 雙層；`_build_prompts` 讀此表非硬編）|
 | `skill-selection-map.md` | 🗺️ **Skill 選用地圖**（問題類型 → 用哪個 skill / 怎麼串鏈）—— 放進專案 AGENTS.md，教大腦調度既有武器 |
 | `knowledge-schema-template.md` | 知識庫 schema 模板 |
+| `knowledge-sources-map.md` | 🆕 **五類知識來源地圖**（L1 github / L2 產品庫 / private / shared / L5 weknora 定義 + search_order 信任度序；B1）|
+| `github-sources.md` | 🆕 **L1 github 統一 schema**（`ARK_GITHUB_ROOT` + repos[]，git pull→diff→蒸餾流程，取代寫死路徑；B3）|
+| `weknora-checklist.md` | 🆕 **L5 weknora 接入 checklist**（.env 變數 / agent-chat / 不進 search_order；B5）|
 | `prompt-schema-v1.md` | 🆕 提詞資產 frontmatter 契約（prompts/ 的 ops/work 雙層 + 範例段 + 模板變數）|
 | `defaults/README.md` | 預設角色說明 |
 | `architecture-drift-feedback.md` | 🔴 **模板 vs 演化實例的三項缺口回饋**（knowledge/shared 層、memory/ 目錄、artifacts/）—— 維護本 skill 前必讀 |

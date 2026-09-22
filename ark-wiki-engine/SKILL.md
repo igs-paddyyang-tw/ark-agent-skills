@@ -162,17 +162,17 @@ python $S/build_wiki.py   ./myproject demo --install-skill ./myproject/.kiro/ski
 ## 🔴 ingest 的授權邊界（executor 化弱化的地方）
 
 內建 `wiki_ingest` 有**可信的 role gate**（`tools_for_role` 讓 worker 看不到該工具，
-handler 另有 `_role not in ("admin","leader")` 擋一次；`_role` 來自 daemon 的
+handler 另有 `_role not in ("admin", "leader", "manager")` 擋一次；`_role` 來自 daemon 的
 `--role` 啟動參數，agent 改不了）。而 `scripts/wiki_ingest.py` 是 bash 腳本 ——
 **任何能跑 bash 的 agent 都能執行**。
 
 因此：**排他句只涵蓋查詢，不涵蓋寫入。** worker 維持「寫到 `raw/`、由排程 ingest」；
-只有 admin／leader／排程才用 `wiki_ingest.py`。
-**不要在腳本裡加 `--role` 檢查** —— 呼叫者自報的 role 不是邊界。
-完整政策表見 `references/agent-prompt-snippets.md`。
+只有 admin／leader／manager／排程才用 `wiki_ingest.py`。
+**不要在腳本裡加 `--role` 檢查** —— 呼叫者自報的 role 不是邊界。完整政策表見 `references/agent-prompt-snippets.md`。
 
-> `authority.L2: wiki_ingest` 這條**不是由 DecisionManager 執行的**（matrix 未被
-> team_mcp 讀取）—— 實際管控就是上面那個 role gate。讀 matrix 的人會誤以為有拍板流程。
+> 🔴 **manager 納入 gate 依賴套件修**：目標 `("admin","leader","manager")`；套件 `ark_team_agent` handler 一度硬編 `("admin","leader")`（manager 被擋）→ 問題單 `ark_team_agent/docs/issues/2026-09-22-wiki-ingest-role-gate-add-manager.md`。落地前 manager 只能改跑 `scripts/wiki_ingest.py`（bash，不受 gate）。
+
+> `authority.L2: wiki_ingest` **不由 DecisionManager 執行**（matrix 未被 team_mcp 讀取），實際管控就是上面 role gate。**KIRO IDE / 私訊（DM）** 場景 agent 直接跑 `scripts/wiki_ingest.py`（不經 team MCP、無 gate，信任邊界是在場真人）——範例見 snippets「IDE／私訊整理知識庫」段。
 
 ## Multi-agent 部署（取代 MCP 掛載）
 

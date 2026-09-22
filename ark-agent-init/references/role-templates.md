@@ -39,6 +39,10 @@
 | 產業 | 擴充包 | 涵蓋角色 |
 |------|--------|---------|
 | 🎮 遊戲 | `role-templates-gamedev.md` | game-planner · **math-designer**（PAR sheet/RTP/Monte Carlo）· client-eng · server-eng · tech-artist · game-qa · liveops · game-analyst · producer · narrative |
+| 🌐 Web 工具 | `role-templates-webtool.md` | architect · frontend · backend · fullstack-coder · ui-designer · qa · devops · data-analyst（Web 工具／內部後台／webbot 應用開發） |
+| 📈 AI/BI | `role-templates-aibi.md` | aibi-manager · bi-lead · **semantic-keeper**（語意契約/golden questions）· query-analyst（NL→SQL 附 SQL）· insight-investigator（Level 3 歸因）· report-narrator · pulse-monitor · viz-builder（選配） |
 
 > 遊戲產業（尤其機率型遊戲 slot/fish）建議直接採 gamedev 包 —— 它已對齊
 > AC-ID / ark-code-spec-validator 慣例、artifacts 落點、送審數學文件需求。
+> AI/BI 團隊建議直接採 aibi 包 —— 它以「語意契約先行、契約外不作答、證據等級三態」為地基，
+> 對齊 ark-data-contract / ark-md-report 契約與 Decision Ledger 資料域。

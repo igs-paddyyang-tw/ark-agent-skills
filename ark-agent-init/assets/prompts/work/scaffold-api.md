@@ -2,7 +2,7 @@
 name: scaffold-api
 description: 依需求產出 API 端點表（method/path/req/resp/錯誤碼）
 layer: work
-roles: [architect]
+roles: [architect, backend]
 tools_required: []
 inputs: [spec_path]
 outputs:
