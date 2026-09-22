@@ -13,12 +13,26 @@
 |------|------|------------|:----------------:|--------|------|
 | **private** | 各 instance 私有 | `knowledge/<instance>/`（子 agent）或 `agents/<name>/knowledge/` | ✅ 最前（信任最高） | 各 agent 自己 | 讀寫（wiki 由 ingest 產） |
 | **L2 產品庫** | 該 team 的專案產品知識庫（層名**依產品命名**） | `knowledge/<product>/`（如 `hoyeah`、`tiger`；`hoyeah` 只是案例名） | ✅ 次之 | 排程蒸餾 + 人工 | 讀為主；raw 增量 |
-| **L1 github** | 外部 repo 淺 clone 蒸餾來源 | `$ARK_GITHUB_ROOT/`（見 `github-sources.md`） | ✅ 再次 | 排程 git pull→diff→蒸餾 | 唯讀來源；蒸餾進 raw |
+| **L1 github** | 外部 repo 淺 clone 蒸餾來源 | `$ARK_GITHUB_ROOT/`（排程蒸餾）或 `knowledge/github/`（`ark-github-cli` 即時同步） | ✅ 再次 | 排程 pull→蒸餾 / `ark-github-cli` sync | 唯讀來源；蒸餾進 raw |
 | **shared** | 跨 agent 共用知識 | `knowledge/shared/` | ✅ 最後（信任基線） | 排程 digest + 人工 | 讀寫（wiki 由 ingest 產） |
 | **L5 weknora** | 外部 RAG 服務（ark-weknora-cli） | 外部服務（非本地櫃） | ❌ **不進**（見下） | 研七/自建 KB | 外部查詢；見 `weknora-checklist.md` |
 
 > 🔴 **「L1/L2/L5」是需求單的來源分類代號**，不是搜尋優先序。搜尋優先序由
 > `knowledge_search_order` 決定（見下），信任度遞減：`private → L2(產品) → github → shared`。
+
+### 🔬 private 層命名機制（套件硬編碼 vs skill 規範 —— 釐清改哪裡有效）
+
+private 私有層有**兩個名字**，責任分屬不同層：
+
+| 名稱 | 誰定義 | 出處 | 可否改 |
+|------|--------|------|:---:|
+| 櫃子別名 `private` | 🔴 **ark-team-agent 套件硬編碼** | `team_mcp.py`：`_add("agents/{instance}/knowledge","private")` + `_add("knowledge/{instance}","private")` | ❌ 改 skill/設定無效，要改套件 |
+| 實際目錄名 = instance 名 | 🔴 套件硬編碼代入 | 同上，`{instance}` 從 team.yaml 代入 | 由 instance 名決定 |
+| 「層名 = json 檔名」文字規範 | ark-agent-init | 本 skill 文件描述既成事實 | 文件，非產生機制 |
+
+- 套件**同時接受兩種私有路徑**：`agents/{name}/knowledge/`（子 agent）與 `knowledge/{name}/`（dir=. manager，歷史相容）——兩者櫃子別名都是 `private`。
+- 🔴 **目錄實體名必須 = instance 名**，否則 `knowledge/{instance}` 對不上（套件用 instance 名拼路徑，且不報錯）。
+- `knowledge_search_order` 寫 `private` 是引用這個硬編碼別名，不是寫某個目錄名。
 
 ---
 
@@ -76,7 +90,9 @@ knowledge/
 
 ## 相關檔案
 
+- `knowledge-governance-scoring.md` — 🆕 知識庫治理評分標準（100 分 9 維度 + 三層資源分工 + 紅線）
 - `knowledge-schema-template.md` — 單一櫃的 schema.md 模板（frontmatter/規則）
 - `github-sources.md` — L1 github 統一 schema（`ARK_GITHUB_ROOT` + repos[]，B3）
 - `weknora-checklist.md` — L5 weknora 接入 checklist（B5）
 - `architecture-drift-feedback.md` — 為何一定要有 shared/ 層（歷史踩坑）
+- **權威全文（跨 team 通用）**：`knowledge-management-spec.md`（nana-team `knowledge/shared/raw/local/governance/`）—— 本地圖與評分皆萃取自此

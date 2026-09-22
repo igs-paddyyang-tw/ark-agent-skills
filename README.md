@@ -6,7 +6,7 @@
 **目錄章節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生。**
 新增／移除 skill 後執行一次，不要手改表格 —— 手動維護的索引必定過期。
 
-**統計：60 active + 0 stubs = 60 skill 目錄｜稽核：P0=0 P1=0 P2=29 P3=0（2026-09-18）**
+**統計：61 active + 0 stubs = 61 skill 目錄｜稽核：P0=0 P1=0 P2=30 P3=0（2026-09-22）**
 
 > ⚠️ 這行是**手寫的**，而 `gen_readme --check` 只驗下方產生的目錄段、**抓不到它漂掉**
 > （2026-09-11 就發現它停在「60 active + 0 stubs」，實際是 59 + 4）。
@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **61 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -127,19 +127,18 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑦ 維運 Ops
 
-> 輸出：診斷 / 驗證｜`category: ops`｜5 個
+> 輸出：診斷 / 驗證｜`category: ops`｜4 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-dashboard-health` | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
 | `ark-env-doctor` | 當使用者遇到開發環境問題時使用此技能。 |
-| `ark-mobile-adb` | > 透過 Python CLI 直接使用 Android Debug Bridge (adb) 操控 BlueStacks、 Android Emulator 或 adb 可連線的 Android 裝… |
 | `ark-skills-align` | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
 | `ark-weknora-cli` | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
 
 ## ⑧ 執行器 Executor
 
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜8 個
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜10 個
 
 | Skill | 定位 |
 |-------|------|
@@ -148,7 +147,9 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-game-atlas` | 圖文遊戲規格書（atlas）編譯器：把「競品影片 → 遊戲規格」鏈的一個 run 編成一本可翻閱的書—— 文字逐條來自 `game-spec.v1.md` 帶 provenance 的主張（OBSER… |
 | `ark-game-domains` | 「競品影片 → 遊戲規格」skill 鏈的 Domain Pack 註冊庫：唯一放遊戲領域知識的地方 （偵測器組合、分析項目與提詞、受控詞彙與 KB seed、規格章節與 dev-spec 模板、li… |
 | `ark-game-spec` | 遊戲規格產出 executor（domain-agnostic）：`game-analysis.yaml` + `kb-refs.yaml` → 依 pack 章節 deterministic 渲染 … |
+| `ark-github-cli` | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
 | `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
+| `ark-mobile-adb` | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro。 |
 | `ark-video-understanding` | 遊戲影片理解 executor（domain-agnostic）：影片 URL / MP4 → 低解析 motion timeline → 偵測器註冊表 （periodic / scene_chang… |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 

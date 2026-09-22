@@ -805,7 +805,8 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 | `role-prompts-map.md` | 🆕 角色 → Prompts 對應表（`role_prompts:` 錨點，ops/work 雙層；`_build_prompts` 讀此表非硬編）|
 | `skill-selection-map.md` | 🗺️ **Skill 選用地圖**（問題類型 → 用哪個 skill / 怎麼串鏈）—— 放進專案 AGENTS.md，教大腦調度既有武器 |
 | `knowledge-schema-template.md` | 知識庫 schema 模板 |
-| `knowledge-sources-map.md` | 🆕 **五類知識來源地圖**（L1 github / L2 產品庫 / private / shared / L5 weknora 定義 + search_order 信任度序；B1）|
+| `knowledge-sources-map.md` | 🆕 **五類知識來源地圖**（L1 github / L2 產品庫 / private / shared / L5 weknora 定義 + search_order 信任度序 + private 命名機制；B1）|
+| `knowledge-governance-scoring.md` | 🆕 **知識庫治理評分標準**（100 分 9 維度 A-I + 三層資源分工 + 紅線；萃取自 knowledge-management-spec）|
 | `github-sources.md` | 🆕 **L1 github 統一 schema**（`ARK_GITHUB_ROOT` + repos[]，git pull→diff→蒸餾流程，取代寫死路徑；B3）|
 | `weknora-checklist.md` | 🆕 **L5 weknora 接入 checklist**（.env 變數 / agent-chat / 不進 search_order；B5）|
 | `prompt-schema-v1.md` | 🆕 提詞資產 frontmatter 契約（prompts/ 的 ops/work 雙層 + 範例段 + 模板變數）|

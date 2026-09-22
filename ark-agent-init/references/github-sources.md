@@ -77,6 +77,20 @@ python .kiro/skills/ark-wiki-engine/scripts/wiki_ingest.py \
     --schema knowledge/<product>/schema.md --batch --by <owner>
 ```
 
+## 兩種 github 對接機制（互補，非二選一）
+
+github 來源有兩條路徑，分工不同：
+
+| 機制 | 工具 | 落點 | 時機 | 用途 |
+|------|------|------|------|------|
+| **排程蒸餾** | `github-sources.yaml` + pull 腳本 | `$ARK_GITHUB_ROOT/`（中央區）→ 蒸餾進 `raw/` | 排程（如每日 06:50） | 宣告「哪些 repo 要定期蒸餾入庫」，diff 後蒸餾成 wiki |
+| **即時同步+檢索** | `ark-github-cli` 的 `gh_docs.py sync/search` | `knowledge/github/<repo>/`（sparse-checkout + `_meta.json`） | 即時（agent 要查平台文件時） | 拉指定 repo 文件到本地供 L2 檢索、本地優先 grep、讀 issue/PR |
+
+> 🔴 **不是重複**：`github-sources.yaml` 管「排程蒸餾哪些 repo」（產物進 wiki，走信任度檢索序）；
+> `gh_docs.py` 管「即時同步 + 檢索」（產物在 `knowledge/github/`，供 L2 平台知識查詢）。
+> 兩者共用 `$ARK_GITHUB_ROOT` 中央區慣例（省磁碟、單一真相），不各自 clone。
+> gh_docs 的落點 `knowledge/github/` 是 L2 平台知識層；蒸餾入 shared/產品 wiki 仍交 ark-wiki-engine。
+
 ## 紅線
 
 - 🔴 **禁在 scheduler prompt 或任何腳本寫死絕對路徑** —— 一律 `$ARK_GITHUB_ROOT`。
