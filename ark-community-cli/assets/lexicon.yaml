@@ -22,9 +22,13 @@ feedback_type:
     zh: [難用, 看不懂, 很卡, 延遲, 介面, 操作, 載入, 太慢, 字太小]
     en: [ui, laggy, lag, loading, slow, confusing, hard to read, clunky]
   social:
-    ja: [ギルド, フレンド, チャット, 荒らし, 晒し, 協力, マルチ]
-    zh: [公會, 好友, 聊天, 洗頻, 檢舉, 合作, 多人]
-    en: [guild, clan, friend, chat, toxic, report, coop, multiplayer]
+    # 一般社群互動
+    ja: [ギルド, フレンド, チャット, 荒らし, 晒し, 協力, マルチ,
+    # 卡片/道具交換·贈禮互動（社群交易大宗；2026-09-23 aimkt 消費端實測回饋，命中例：「送りました」「求お気持ちコイン」「被りカ譲ります」）
+         送りました, 送り返し, 送ります, お気持ちコイン, 気持ちコイン, 求, 被りカ, 空きカ,
+         トレード, 交換, 譲, ほしい, 欲しい, ください, お願いします, どなたか, いりますか, あげます]
+    zh: [公會, 好友, 聊天, 洗頻, 檢舉, 合作, 多人, 交換, 贈送, 送禮, 徵, 求卡, 重複卡]
+    en: [guild, clan, friend, chat, toxic, report, coop, multiplayer, trade, gift, looking for, anyone have]
   payment:
     ja: [決済, 購入できない, 二重請求, 返金, 領収書, 反映されない, 課金エラー]
     zh: [付款, 扣款, 買不到, 重複扣, 退款, 發票, 沒收到, 儲值失敗]
