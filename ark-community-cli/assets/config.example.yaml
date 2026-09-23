@@ -11,6 +11,7 @@ mask_patterns:                        # normalize 遮罩
 
 discord:
   token_env: DISCORD_BOT_TOKEN
+  user_agent: "DiscordBot (https://github.com/your-org/your-repo, 1.0)"   # 建議可辨識的專案 URL；缺 UA 會被 Cloudflare 擋 403/40333
   guild_id: "000000000000000000"
   include_threads: true
   backfill_days: 30

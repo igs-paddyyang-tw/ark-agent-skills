@@ -25,8 +25,8 @@ SKIP_TYPES = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 21}  # 系統訊息；�
 
 
 class Discord:
-    def __init__(self, token: str, interval_ms: int, dry: bool):
-        self.h = {"Authorization": f"Bot {token}", "User-Agent": "ark-community-cli/1.0 (read-only)"}
+    def __init__(self, token: str, interval_ms: int, dry: bool, user_agent: str = "ark-community-cli/1.0 (read-only)"):
+        self.h = {"Authorization": f"Bot {token}", "User-Agent": user_agent}
         self.interval = interval_ms / 1000
         self.dry = dry
         self.n429 = 0
@@ -124,7 +124,8 @@ def main(argv=None) -> int:
     ctx = Ctx(Path(a.config))
     dcfg = ctx.cfg.get("discord") or sys.exit("config 缺 discord 區塊")
     token = "dry" if a.dry_run else ctx.env_token("discord")
-    dc = Discord(token, dcfg.get("request_interval_ms", 60), a.dry_run)
+    dc = Discord(token, dcfg.get("request_interval_ms", 60), a.dry_run,
+                 dcfg.get("user_agent", "ark-community-cli/1.0 (read-only)"))
     channels = [c for c in dcfg["channels"] if not a.channel or c.get("name") == a.channel]
     since = parse_since(a.since) if a.since else None
 

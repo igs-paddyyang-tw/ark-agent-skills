@@ -3,6 +3,8 @@
     python community_cli.py init --out community/            # 產 config.yaml（含隨機鹽）與目錄
     python community_cli.py pull discord --config ... [args]  # → discord_pull.py
     python community_cli.py pull x --config ... [args]        # → x_pull.py
+    python community_cli.py probe   --config ... [--channel] # → discord_probe.py（頻道健檢）
+    python community_cli.py resolve --config ... [--write]   # → discord_probe.py（API 補頻道名）
     python community_cli.py normalize --config ...            # → normalize.py
     python community_cli.py classify --config ... [--week]    # → classify.py
     python community_cli.py digest --config ... --week W      # → digest.py
@@ -103,6 +105,8 @@ def main() -> int:
             print("pull discord|x ...")
             return 2
         return run("discord_pull.py" if rest[0] == "discord" else "x_pull.py", rest[1:])
+    if cmd in ("probe", "resolve"):
+        return run("discord_probe.py", [cmd] + rest)
     if cmd in ("normalize", "classify", "digest"):
         return run(f"{cmd}.py", rest)
     if cmd == "loop":

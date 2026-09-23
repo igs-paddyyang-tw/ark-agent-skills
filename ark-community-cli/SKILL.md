@@ -13,7 +13,7 @@ description: |
 metadata:
   author: paddyyang
   schema_version: 1
-  version: 1.0.0
+  version: 1.1.0
   category: pipeline
   updated: 2026-09-23
   outputs:
@@ -46,10 +46,12 @@ metadata:
 - 分析方法（分群、痛點判定、交叉來源）：`references/analysis-playbook.md`
 - 與知識庫閉環（handoff / ingest / decisions 回寫）：`references/wiki-loop.md`
 
-## 工作流程（六個子命令，順序固定）
+## 工作流程（核心六步順序固定；probe/resolve 為運維輔助）
 
 ```bash
 python scripts/community_cli.py init  --out community/                 # 產 config.yaml、state/、raw/、cases/
+python scripts/community_cli.py probe   --config community/config.yaml [--channel feedback]  # 頻道健檢：可讀性 + 最近訊息
+python scripts/community_cli.py resolve --config community/config.yaml [--write]              # 用 API 補 channels[].name
 python scripts/community_cli.py pull  discord --config community/config.yaml [--since 7d] [--dry-run]
 python scripts/community_cli.py pull  x       --config community/config.yaml --query game-ja [--max-posts 300] [--estimate]
 python scripts/community_cli.py normalize     --config community/config.yaml   # raw/ → records/ 統一 schema、假名化、去重
@@ -58,6 +60,11 @@ python scripts/community_cli.py digest        --config community/config.yaml --w
 python scripts/community_cli.py loop  compare --config community/config.yaml --decision D-2026-09-22-01  # 決策前後回饋比對
 python scripts/community_cli.py loop  handoff --config community/config.yaml --week 2026-W39   # 產 wiki ingest 清單給 leader
 ```
+
+### 0. probe / resolve（運維輔助，開跑前用）
+- **probe**：逐一探測 `config.discord.channels` 白名單，印可讀性 + 最近一則訊息摘要。開跑前先確認 token 看得到哪些頻道、有無 403/40333（缺 `discord.user_agent` 會被 Cloudflare 擋，非權限問題）。
+- **resolve**：`GET /guilds/{guild}/channels`，用 API 真實名稱回填 config 的 `channels[].name`；預設只印差異，`--write` 才回寫 config。
+- 兩者複用 pull 的同一套 client（UA/429/唯讀），只 GET、不寫 Discord、只碰白名單。
 
 ### 1. init
 產 `config.yaml`（頻道白名單、X query 清單、假名鹽、保留期、費控上限）、`state/`（增量游標）、`raw/`、`records/`、`cases/`、`reports/`。鹽值 `pseudonym_salt` 產生後**不得更換**，換了 player_key 全部斷鏈。
