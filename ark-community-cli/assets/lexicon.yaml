@@ -1,0 +1,49 @@
+# 分類與情感詞庫（ja / zh-Hant / en）。規則層，命中計數最多者為 feedback_type。
+# 修改後重跑 classify 即可；新增詞時附一則命中例句在 PR 說明。
+feedback_type:
+  bug:
+    ja: [不具合, バグ, 落ちる, 落ちた, フリーズ, 強制終了, ログインできない, 進まない, 表示されない, エラー, 直して, メンテ, お詫び]
+    zh: [閃退, 卡住, 卡死, bug, 錯誤, 登不進, 進不去, 黑畫面, 當機, 修一下, 維護]
+    en: [bug, crash, crashes, frozen, freeze, error, can't log in, cannot login, broken, fix it]
+  balance:
+    ja: [渋い, 確率, 出ない, 難しすぎ, 強すぎ, 弱すぎ, 調整, ナーフ, 理不尽, 運ゲー]
+    zh: [太難, 機率, 都不出, 太強, 太弱, 調整, 削弱, 不合理, 看臉]
+    en: [nerf, buff, too hard, too easy, rng, unfair, rigged, drop rate]
+  economy:
+    ja: [課金, 石, 天井, ガチャ, 爆死, 高い, 値上げ, 改悪, 報酬少ない, コスパ, 無課金]
+    zh: [課金, 儲值, 太貴, 漲價, 抽卡, 保底, CP值, 獎勵太少, 白嫖, 首儲]
+    en: [pay to win, p2w, expensive, price, gacha, pity, rewards, cheap, whale]
+  event:
+    ja: [イベント, 周年, コラボ, ランキング, 期間, 開催, 終了, スケジュール]
+    zh: [活動, 週年, 聯動, 排行, 期間, 開跑, 結束, 時程]
+    en: [event, anniversary, collab, ranking, schedule, ends, limited time]
+  ux:
+    ja: [使いにくい, わかりにくい, 重い, ラグ, UI, 操作, 読み込み, 遅い, 見づらい, 文字小さい]
+    zh: [難用, 看不懂, 很卡, 延遲, 介面, 操作, 載入, 太慢, 字太小]
+    en: [ui, laggy, lag, loading, slow, confusing, hard to read, clunky]
+  social:
+    ja: [ギルド, フレンド, チャット, 荒らし, 晒し, 協力, マルチ]
+    zh: [公會, 好友, 聊天, 洗頻, 檢舉, 合作, 多人]
+    en: [guild, clan, friend, chat, toxic, report, coop, multiplayer]
+  payment:
+    ja: [決済, 購入できない, 二重請求, 返金, 領収書, 反映されない, 課金エラー]
+    zh: [付款, 扣款, 買不到, 重複扣, 退款, 發票, 沒收到, 儲值失敗]
+    en: [payment, charged twice, refund, receipt, purchase failed, didn't receive]
+  praise:
+    ja: [神アプデ, 神引き, 楽しい, 最高, ありがとう, 助かる, 良かった, 面白い, 感謝]
+    zh: [好玩, 讚, 感謝, 太棒, 好評, 喜歡, 辛苦了]
+    en: [love it, great, thanks, awesome, fun, well done, good job]
+
+sentiment:
+  pos:
+    ja: [楽しい, 最高, 神, ありがとう, 助かる, 良い, 嬉しい, 面白い, 好き, 感謝]
+    zh: [好玩, 讚, 感謝, 太棒, 喜歡, 開心, 不錯]
+    en: [love, great, thanks, awesome, fun, good, happy, nice]
+  neg:
+    ja: [最悪, つまらない, 引退, 退会, 消す, 返金, 改悪, 渋い, 爆死, 理不尽, 萎える, クソ, ゴミ, 無理, できない, おかしい, 直して, 落ちる]
+    zh: [爛, 難玩, 退坑, 刪遊戲, 退款, 垃圾, 無聊, 失望, 氣死, 黑心]
+    en: [worst, boring, quit, uninstall, refund, trash, garbage, disappointed, scam, hate]
+  negators:
+    ja: [ない, ません, じゃない]
+    zh: [不, 沒, 別]
+    en: ['not', 'never', 'no']

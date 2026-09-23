@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ark-community-cli unified record",
+  "type": "object",
+  "required": ["record_id", "source", "surface", "ts", "author_key", "text", "lang", "raw_ref"],
+  "properties": {
+    "record_id": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+    "source": { "enum": ["discord", "x"] },
+    "surface": { "enum": ["discord", "x"] },
+    "ts": { "type": "string", "format": "date-time" },
+    "author_key": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+    "player_key": { "type": ["string", "null"] },
+    "text": { "type": "string" },
+    "lang": { "enum": ["ja", "zh", "en", "other"] },
+    "reply_to": { "type": ["string", "null"] },
+    "metrics": { "type": "object" },
+    "channel": { "type": ["string", "null"] },
+    "query": { "type": ["string", "null"] },
+    "duplicate_of": { "type": ["string", "null"] },
+    "raw_ref": { "type": "string" }
+  },
+  "additionalProperties": false
+}

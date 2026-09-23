@@ -1,0 +1,53 @@
+# ark-community-cli config（由 `community_cli.py init` 產生；權限 600；不進 git）
+project: hoyeah
+root: community/                      # 所有相對路徑基準
+pseudonym_salt: "REPLACE_WITH_RANDOM_32_BYTES_HEX"   # init 自動產生；永不更換
+retention_days: 90                    # raw/ 清理週期
+identity_map: null                    # data-engineer 對照表 CSV（author_id,player_key），可讀時 normalize 補 player_key；null 表示不補
+mask_patterns:                        # normalize 遮罩
+  email: '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+  phone: '(?<!\d)(?:\+?\d{1,3}[- ]?)?\d{2,4}[- ]?\d{3,4}[- ]?\d{3,4}(?!\d)'
+  serial: '\b[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b'
+
+discord:
+  token_env: DISCORD_BOT_TOKEN
+  guild_id: "000000000000000000"
+  include_threads: true
+  backfill_days: 30
+  request_interval_ms: 60
+  channels:
+    - { id: "000000000000000001", name: feedback,   feedback_hint: null }
+    - { id: "000000000000000002", name: bug-report, feedback_hint: bug }
+    - { id: "000000000000000003", name: general,    feedback_hint: null, sample_rate: 0.3 }
+  skip_bots: true
+  allow_bot_authors: []               # 例外：要收的 bot user id（客服機器人回覆）
+
+x:
+  token_env: X_BEARER_TOKEN
+  daily_budget_usd: 1.5
+  price_per_post_usd: 0.005           # 2026-07 官方公告值；變動時更新
+  default_max_posts: 200
+  queries:
+    - name: official-mentions
+      query: '(@GameOfficialJP OR #ゲーム名) lang:ja -is:retweet'
+      purpose: 自家玩家對官方的回饋
+      enabled: true
+    - name: game-ja-pain
+      query: '"ゲーム名" (不具合 OR バグ OR 落ちる OR 改悪 OR 返金 OR 引退) lang:ja -is:retweet -is:reply'
+      purpose: 負面訊號早期偵測
+      enabled: true
+    - name: gacha-buzz
+      query: '"ゲーム名" (ガチャ OR 爆死 OR 神引き) lang:ja -is:retweet min_likes:3'
+      purpose: 活動期反應
+      enabled: false
+
+classify:
+  lexicon: assets/lexicon.yaml        # 相對 skill 目錄；可覆寫為專案自訂
+  cluster_jaccard: 0.35
+  dedupe_jaccard: 0.9
+  verdict_thresholds: { act: 10, watch: 5 }   # distinct_authors 門檻（neg cluster）
+
+digest:
+  quote_max: 3
+  quote_chars: 140
+  week_start: monday
