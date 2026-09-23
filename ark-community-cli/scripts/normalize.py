@@ -30,6 +30,15 @@ def norm_text(t: str) -> str:
     return t
 
 
+def strip_discord_ids(t: str) -> str:
+    """落 records 前脫敏：Discord mention / channel / role / custom emoji 內嵌的 snowflake
+    替換為佔位符（保留語意，不留他人 ID）。這是 hard_stop，不依賴 config mask_patterns。"""
+    t = re.sub(r"<@[!&]?\d+>", "[uid]", t)   # @user / @role
+    t = re.sub(r"<#\d+>", "[ch]", t)          # #channel
+    t = re.sub(r"<a?:(\w+):\d+>", r":\1:", t) # custom emoji → 只留名字
+    return t
+
+
 def ngrams(t: str, n: int = 3) -> set[str]:
     t = re.sub(r"\s", "", t)
     return {t[i:i + n] for i in range(max(0, len(t) - n + 1))} or {t}
@@ -55,7 +64,7 @@ def load_identity_map(ctx: Ctx) -> dict[str, str]:
 
 
 def from_discord(ctx: Ctx, m: dict, ref: str, idmap: dict, patterns: dict) -> dict | None:
-    text = mask(m.get("content") or "", patterns)
+    text = mask(strip_discord_ids(m.get("content") or ""), patterns)
     if not text.strip():
         return None
     aid = str(m.get("author", {}).get("id", ""))
@@ -107,7 +116,7 @@ def main(argv=None) -> int:
     patterns = ctx.cfg.get("mask_patterns", {})
     idmap = load_identity_map(ctx)
     state_p = ctx.path("state", "normalized.json")
-    done = set() if a.force else set(json.loads(state_p.read_text()) if state_p.exists() else [])
+    done = set() if a.force else set(json.loads(state_p.read_text(encoding="utf-8")) if state_p.exists() else [])
     since_day = parse_since(a.since).strftime("%Y-%m-%d") if a.since else None
 
     new_by_day: dict[str, list] = defaultdict(list)
@@ -164,7 +173,7 @@ def main(argv=None) -> int:
         hits = pii_scan(out, [u for u in usernames if u])
         if hits:
             print(f"  🔴 PII 漏出 {out.name}: {hits[:5]} —— 檢查 mask_patterns / 假名化")
-    state_p.write_text(json.dumps(sorted(done | set(processed)), ensure_ascii=False))
+    state_p.write_text(json.dumps(sorted(done | set(processed)), ensure_ascii=False), encoding="utf-8")
     print(f"normalize: {len(processed)} raw 檔 → {total} records（dup {dup}）→ records/ ；player_key 補齊 {sum(1 for rs in new_by_day.values() for r in rs if r['player_key'])}")
     return 0
 

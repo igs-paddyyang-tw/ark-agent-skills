@@ -90,7 +90,7 @@ def pull(x: X, ctx: Ctx, q: dict, max_posts: int, price: float, budget: float) -
     cursor_p = ctx.path("state", "x", f"{qname}.cursor")
     params = {"query": q["query"], "max_results": 100, **FIELDS}
     if cursor_p.exists():
-        params["since_id"] = cursor_p.read_text().strip()
+        params["since_id"] = cursor_p.read_text(encoding="utf-8").strip()
     got, cost, newest = 0, 0.0, None
     while got < max_posts:
         if spent_today(ctx) + cost >= budget:
@@ -122,7 +122,7 @@ def pull(x: X, ctx: Ctx, q: dict, max_posts: int, price: float, budget: float) -
             break
         params["next_token"] = nt
     if newest:
-        cursor_p.write_text(str(newest))
+        cursor_p.write_text(str(newest), encoding="utf-8")
     return got, cost
 
 

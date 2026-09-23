@@ -13,7 +13,7 @@ description: |
 metadata:
   author: paddyyang
   schema_version: 1
-  version: 1.1.0
+  version: 1.1.1
   category: pipeline
   updated: 2026-09-23
   outputs:

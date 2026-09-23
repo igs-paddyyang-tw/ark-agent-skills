@@ -66,7 +66,7 @@ def pull_channel(dc: Discord, ctx: Ctx, ch: dict, since: datetime | None, thread
     cid, name = str(ch["id"]), ch.get("name", str(ch["id"]))
     cursor_p = ctx.path("state", "discord", f"{cid}.cursor")
     if cursor_p.exists():
-        after = cursor_p.read_text().strip()
+        after = cursor_p.read_text(encoding="utf-8").strip()
     else:
         start = since or parse_since(f"{ctx.cfg['discord'].get('backfill_days', 30)}d")
         after = str(snowflake_from_time(start))
@@ -74,7 +74,7 @@ def pull_channel(dc: Discord, ctx: Ctx, ch: dict, since: datetime | None, thread
     targets = [(cid, name)] + [(t["id"], f"{name}/thread-{t['id']}") for t in threads_of.get(cid, [])]
     for tid, tname in targets:
         t_cursor_p = ctx.path("state", "discord", f"{tid}.cursor")
-        t_after = t_cursor_p.read_text().strip() if t_cursor_p.exists() else after
+        t_after = t_cursor_p.read_text(encoding="utf-8").strip() if t_cursor_p.exists() else after
         while True:
             page = dc.get(f"/channels/{tid}/messages", {"limit": 100, "after": t_after})
             if not page:
@@ -97,7 +97,7 @@ def pull_channel(dc: Discord, ctx: Ctx, ch: dict, since: datetime | None, thread
             day = page[-1]["timestamp"][:10]
             total += append_jsonl(ctx.path("raw", "discord", name.replace("/", "_"), f"{day}.jsonl"), rows)
             t_after = page[-1]["id"]
-            t_cursor_p.write_text(t_after)          # 先寫檔再推游標（上一行已寫）
+            t_cursor_p.write_text(t_after, encoding="utf-8")          # 先寫檔再推游標（上一行已寫）
             if len(page) < 100:
                 break
     return total
