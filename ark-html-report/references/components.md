@@ -83,8 +83,34 @@
 .kpi-value { font-family:var(--font-display); font-size:30px; font-weight:700; line-height:1.1; }
 .kpi-delta { font-size:12.5px; margin-top:8px; font-family:var(--font-mono); }
 .kpi-delta.up { color:var(--ok); } .kpi-delta.down { color:var(--danger); }
+/* 🇹🇼 台股/財經漲跌（依方向：漲紅跌綠），與 .up/.down 的好壞維度不同 */
+.kpi-delta.tw-up { color:var(--tw-up); } .kpi-delta.tw-down { color:var(--tw-down); }
 ```
 注意：「上升」不一定是好事（如錯誤率），`up/down` class 依**好壞**選色而非依方向。
+
+### 🇹🇼 台股/財經漲跌變體（`.tw-up` / `.tw-down`）
+
+漲跌類數據（台股營收、股價、財經指標）用 `.tw-up`(紅=漲)／`.tw-down`(綠=跌)，
+**純依方向、不看好壞** —— 這是華人市場慣例，與 `.up/.down` 的好壞維度分開：
+
+```html
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">本月營收</div>
+    <div class="kpi-value">4.82 億</div>
+    <div class="kpi-delta tw-up">▲ 12.3% MoM</div>   <!-- 漲 → 紅 -->
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">毛利率</div>
+    <div class="kpi-value">31.5%</div>
+    <div class="kpi-delta tw-down">▼ 1.2pp MoM</div>  <!-- 跌 → 綠 -->
+  </div>
+</div>
+```
+
+適用時機：報告主題是台股/華人財經市場的漲跌呈現。一般 KPI 好壞（錯誤率、達成率）
+仍用 `.up/.down`。同一份報告可混用兩組——營收欄用 `.tw-*`、系統健康欄用 `.up/.down`。
+⚠️ 進度條漸層、圖表色盤等「非漲跌」元素不套 `--tw-*`，維持原色。
 
 ## 4. 章節標題
 

@@ -11,7 +11,8 @@
 | `--border` | 邊框 |
 | `--text` / `--text-2` / `--text-3` | 主文字 / 次要文字 / 弱化文字（註腳、eyebrow） |
 | `--accent` / `--accent-soft` | 主題色 / 主題色淡背景（10-15% 透明度） |
-| `--ok` / `--warn` / `--danger` / `--info` | 語意色 |
+| `--ok` / `--warn` / `--danger` / `--info` | 語意色（依**好壞**：好=`--ok` 綠、壞=`--danger` 紅） |
+| `--tw-up` / `--tw-down` | 🇹🇼 台股/財經**漲跌**色（依**方向**：漲=`--tw-up` 紅、跌=`--tw-down` 綠）。與 `--ok/--danger` 是不同維度，勿混用 |
 | `--c1` ~ `--c6` | 圖表色盤 |
 | `--font-display` / `--font-body` / `--font-mono` | 標題字 / 內文字 / 等寬字 |
 | `--radius` / `--radius-sm` | 圓角 |
@@ -19,6 +20,20 @@
 | `--maxw` | 內容最大寬度 |
 
 中文 fallback 一律：`"Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif`。
+
+### 🇹🇼 台股漲跌色（`--tw-up` / `--tw-down`）
+
+台股/華人財經市場慣例是 **漲紅跌綠**，與歐美（漲綠跌紅）相反。這是**方向維度**，
+與 `--ok/--danger` 的**好壞維度**是兩回事，不可共用同一組 class：
+
+- `--ok/--danger`（`.up/.down`）：依「好壞」選色 —— 錯誤率上升該標紅（`.down`），營收上升該標綠（`.up`）。
+- `--tw-up/--tw-down`（`.tw-up/.tw-down`）：依「漲跌方向」選色 —— **漲一律紅、跌一律綠**，不看好壞。
+
+因此漲跌類報告（台股營收、股價、財經指標）用 `.tw-up/.tw-down`；
+一般 KPI 好壞仍用 `.up/.down`。各風格的 `--tw-up` 取該風格的 `--danger`（紅）、
+`--tw-down` 取 `--ok`（綠），確保與風格既有色調協調。
+
+> ⚠️ 進度條、圖表漸層等「非漲跌」元素維持原色，不套 `--tw-*`。
 
 ---
 
@@ -33,6 +48,7 @@
   --text:#1a2332; --text-2:#4a5568; --text-3:#8b95a5;
   --accent:#1e3a5f; --accent-soft:rgba(30,58,95,.08);
   --ok:#2e7d52; --warn:#b7791f; --danger:#c53030; --info:#2b6cb0;
+  --tw-up:#c53030; --tw-down:#2e7d52;   /* 🇹🇼 漲紅跌綠 */
   --c1:#1e3a5f; --c2:#b08d57; --c3:#5a7fa6; --c4:#8ba888; --c5:#c9a86a; --c6:#7d8ca3;
   --font-display:"Noto Serif TC","Noto Sans TC","Microsoft JhengHei",serif;
   --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
@@ -55,6 +71,7 @@
   --text:#16202b; --text-2:#4d5d6e; --text-3:#93a1b0;
   --accent:#0b66c3; --accent-soft:rgba(11,102,195,.09);
   --ok:#1a8754; --warn:#b45309; --danger:#d1242f; --info:#0b66c3;
+  --tw-up:#d1242f; --tw-down:#1a8754;   /* 🇹🇼 漲紅跌綠 */
   --c1:#0b66c3; --c2:#1a8754; --c3:#7c3aed; --c4:#d97706; --c5:#0d9488; --c6:#64748b;
   --font-display:"Noto Sans TC","Microsoft JhengHei",sans-serif;
   --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
@@ -77,6 +94,7 @@
   --text:#e8edf4; --text-2:#a8b4c4; --text-3:#68758a;
   --accent:#3dd6c3; --accent-soft:rgba(61,214,195,.12);
   --ok:#4ade80; --warn:#fbbf24; --danger:#f87171; --info:#60a5fa;
+  --tw-up:#f87171; --tw-down:#4ade80;   /* 🇹🇼 漲紅跌綠（深色底用亮色調） */
   --c1:#3dd6c3; --c2:#60a5fa; --c3:#c084fc; --c4:#fbbf24; --c5:#f472b6; --c6:#94a3b8;
   --font-display:"Space Grotesk","Noto Sans TC","Microsoft JhengHei",sans-serif;
   --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
@@ -99,6 +117,7 @@
   --text:#22261f; --text-2:#565b50; --text-3:#98988c;
   --accent:#2f5233; --accent-soft:rgba(47,82,51,.09);
   --ok:#2f7d3f; --warn:#a16207; --danger:#b3362d; --info:#3a6ea5;
+  --tw-up:#b3362d; --tw-down:#2f7d3f;   /* 🇹🇼 漲紅跌綠 */
   --c1:#2f5233; --c2:#a16207; --c3:#7a5c3e; --c4:#3a6ea5; --c5:#8c4646; --c6:#6b705c;
   --font-display:"Noto Serif TC","Microsoft JhengHei",serif;
   --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
@@ -121,6 +140,7 @@
   --text:#111111; --text-2:#444444; --text-3:#888888;
   --accent:#b52b2b; --accent-soft:rgba(181,43,43,.07);
   --ok:#1f6f3f; --warn:#8a5a00; --danger:#b52b2b; --info:#2a5a8a;
+  --tw-up:#b52b2b; --tw-down:#1f6f3f;   /* 🇹🇼 漲紅跌綠 */
   --c1:#333333; --c2:#b52b2b; --c3:#777777; --c4:#aaaaaa; --c5:#555555; --c6:#cccccc;
   --font-display:"Noto Sans TC","Microsoft JhengHei",sans-serif;
   --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;

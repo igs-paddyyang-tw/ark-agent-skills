@@ -2,10 +2,10 @@
 name: ark-html-report
 description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。只要使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時，就使用此 skill。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout 等），元件與風格可任意組合。與 ark-md-report 成對：本 skill 是 View 軌（給人看的網頁），給 AI／知識庫消費的結構化 Markdown 走 ark-md-report。不適用於：互動式數據儀錶板（篩選、排序、Chart.js）請用 ark-html-dashboard。
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   schema_version: 1
   status: active
-  updated: 2026-08-13
+  updated: 2026-09-27
   category: view
   outputs:
     - format: html
@@ -94,6 +94,7 @@ metadata:
 
 - 標題句要有資訊量：「Q3 營收成長 23%，行動端貢獻過半」優於「Q3 營收報告」
 - KPI 卡片的 delta（↑↓）要標示比較基準（vs 上週 / vs 目標）
+- 🇹🇼 **漲跌配色**：一般 KPI 好壞用 `.up`(綠)/`.down`(紅)；**台股/華人財經漲跌**用 `.tw-up`(紅=漲)/`.tw-down`(綠=跌)——依方向不依好壞（見 components.md 台股變體與 styles.md 的 `--tw-up/--tw-down`）。進度條/圖表漸層等非漲跌元素維持原色
 - 表格數字右對齊、加千分位；重點欄位可用 accent 色標記
 - Callout 依語意選類型：info（補充）、success（達成）、warning（風險）、danger（阻塞）
 - 摘要寫給「只看 30 秒的人」：結論先行，3-5 個 bullet
