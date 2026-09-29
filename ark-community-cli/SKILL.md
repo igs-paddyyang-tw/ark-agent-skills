@@ -13,9 +13,9 @@ description: |
 metadata:
   author: paddyyang
   schema_version: 1
-  version: 1.1.1
+  version: 1.1.2
   category: pipeline
-  updated: 2026-09-23
+  updated: 2026-09-29
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }

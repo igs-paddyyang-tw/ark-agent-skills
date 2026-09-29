@@ -77,7 +77,9 @@ def build(ctx: Ctx, week: str) -> tuple[str, dict[str, str], str]:
     cases: dict[str, str] = {}
     for i, ms in enumerate(ranked[:5], 1):
         fid = f"F-{week}-{i}"
-        rep = next(m for m in ms if m["record_id"] == m["cluster_rep"])
+        # cluster_rep 是 classify 對全量 records 算的，可能落在本週窗外（ms 只含本週）
+        # → 找不到時回退為本週該 cluster 的第一則（ms 至少 1 筆，安全），避免 StopIteration
+        rep = next((m for m in ms if m["record_id"] == m["cluster_rep"]), ms[0])
         authors = len({m["author_key"] for m in ms})
         players = len({m["player_key"] for m in ms if m.get("player_key")})
         src_c = Counter(m["source"] for m in ms)
