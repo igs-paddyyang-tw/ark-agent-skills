@@ -1,235 +1,101 @@
 ---
 name: ark-spec-executor
 description: |
-  讀取 plan.md（含任務表+AC+依賴），自動拆解→角色切換執行→AC 驗收→產出驗收報告。
-  Spec-Driven 的 CIV 模式（Coordinator-Implementor-Verifier），
-  參考 Augment CIV + LangGraph Plan-and-Execute。
-  使用此 Skill 當使用者提及 執行計畫、run plan、自動交付、spec executor、
-  跑 plan、驗收、自動執行任務、或任何需要按 plan 逐步完成開發的場景。
-  不適用於：plan 還沒寫請先用 ark-superpowers 產；需求釐清與任務分配的流程請用 ark-project-planning（本 skill 是拿到 plan 之後才開始）。
+  讀取 ark-superpowers 產出的 plan.md（7 欄任務表 + AC-ID + 依賴），以 deterministic 腳本
+  解析契約 → DAG 排序 → 逐任務派給 runner 實作 → AC 機械驗收（留證據）→ checkpoint →
+  驗收報告 + pipeline 狀態 + 迴圈判定。CIV 模式（Coordinator-Implementor-Verifier）：腳本當
+  Coordinator/Verifier，LLM 只當 Implementor。
+  使用此 Skill 當使用者提及 執行計畫、跑 plan、run plan、自動交付、spec executor、驗收、
+  按計畫執行、把 plan 跑完、/execute，或 validator 分流回「missing_in_code 為主 → 補實作」。
+  不適用於：plan 還沒寫請先用 ark-superpowers；需求釐清請用 ark-grill-me；跑完後的 code↔docs
+  一致性請用 ark-code-spec-validator（本 skill 只驗「任務有沒有做完」，不驗「文件有沒有對齊」）。
 metadata:
-  version: "1.0.0"
+  version: "2.0.0"
   schema_version: 1
   status: active
-  updated: 2026-08-19
+  updated: 2026-09-30
   category: process
   outputs:
     - format: md
       audience: both
+  depends_on: [ark-superpowers, ark-code-spec-validator]
   author: paddyyang
 ---
 
-# ark-spec-executor
+# ark-spec-executor v2 — 讓 plan 可執行、可驗收、可中斷續跑
 
-讀取 execution plan，自動拆解任務 → 角色切換執行 → AC 驗收 → 驗收報告。
+v1 是純文件 skill：解析、排序、驗收、重試、報告全靠 LLM 即興，plan 格式還停在舊 5 欄。
+v2 把 Coordinator 與 Verifier 全部落成腳本：**LLM 只做一件事——照 prompt 寫出 `output_file`**。
+其餘（契約檢查、DAG、驗收方法解析、證據、checkpoint、越界守衛、報告、pipeline）零 LLM。
 
-## 觸發條件
+## 資產地圖
 
-- 「執行 plan」、「跑 plan」、「run plan」
-- 「自動交付」、「按計畫執行」
-- 「spec executor」、「自動開發」
-- 「把這個 plan 跑完」、「幫我執行這份計畫」
-- `/execute docs/plans/xxx-plan.md`
+| 路徑 | 職責 | 何時用 |
+|------|------|--------|
+| `scripts/plan_lint.py` | plan 契約 lint（PL-001~007）；superpowers doc_lint **SP-070 的委派端** | 拿到 plan 第一步；exit 2 = 骨架 FAIL 拒跑 |
+| `scripts/plan_parse.py` | 解析 7/4 欄表 → tasks.json；依賴（隱含序號 + `[← X.Y]`）；Kahn 拓撲（milestone 優先）；`--dry-run` 印執行順序 | 執行前預覽 |
+| `scripts/ac_verify.py` | 依 `references/verify-methods.md` 解析驗證方法並執行，留指令/exit/證據；無法驗證 = pending **不算通過** | run_plan 內建呼叫；也可單獨驗某任務 |
+| `scripts/run_plan.py` | 執行引擎：runner 派工 → 驗收 → checkpoint；重試注入證據；human 任務 blocked；依賴失敗 skipped；越界寫入守衛；task/plan timeout | 主入口 |
+| `scripts/report_gen.py` | 驗收報告 + `docs/pipeline/<feature>.yaml`（phase=execute、append acceptance_rates）+ 迴圈判定（閾值從 validator 的 loop-rules.md 解析，不硬編碼） | run 之後 |
+| `references/plan-contract.md` | **AC-ID 的唯一定義端**（superpowers id-scheme 委派）+ 任務表契約 + 任務狀態機 | 寫/改 plan 時 |
+| `references/verify-methods.md` | 驗證方法優先序（verify: 提示 > tests/ 路徑 > AC 關鍵字 > manual） | 寫 AC 時 |
+| `references/task-prompt.md` | Implementor prompt 模板（單任務、只寫 output_file、docstring 標 AC） | run_plan 自動套 |
+| `references/runners.yaml` | runner 指令模板（kiro / claude；flags 依實際 CLI 核對） | 切真 runner 前 |
+| `tests/fixtures/` | plan-valid / plan-cycle / plan-badrole | lint 回歸 |
+| `scripts/tests/test_cli_contract.py` | 五支 `--help` 零依賴、守衛先於第三方 import | 改腳本後 |
 
----
+## 工作流
 
-## 工作流鏈定位
-
-```
-ark-grill-me（拷問設計）
-    ↓ 決策摘要
-ark-superpowers（產出 Spec/Design/Plan）
-    ↓ docs/plans/{name}-plan.md
-【ark-spec-executor】（自動執行）
-    ↓ 程式碼 + docs/reports/{name}-acceptance.md
-ark-code-spec-validator（驗證一致性）
-    ↓ Drift Report
-```
-
----
-
-## 輸入
-
-| 參數 | 必要 | 說明 |
-|------|------|------|
-| plan_path | ✅ | plan.md 檔案路徑 |
-| dry_run | | 只解析不執行（預覽模式） |
-| resume | | 從 checkpoint 恢復（預設 true） |
-| milestone | | 只跑指定 milestone（如 M1） |
-
-### Plan 格式要求
-
-```markdown
-| # | 任務 | 產出檔案 | 估時 | AC |
-|---|------|----------|------|-----|
-| 1.1 | DB migration | `path/to/file.sql` | 20min | 表建立成功 |
+```bash
+# 0. 開頭：讀 docs/pipeline/<feature>.yaml 取 plan_path；loop_count ≥ 3 → 保險絲，停下問人（loop-rules.md）
+python scripts/plan_lint.py docs/plans/<name>-plan.md                 # 1. 契約：P0 拒跑、P1 建議修、P2 標 manual 列
+python scripts/plan_parse.py docs/plans/<name>-plan.md --dry-run      # 2. 看執行順序與每列的驗證方法（auto/manual）
+python scripts/run_plan.py docs/plans/<name>-plan.md --workspace . --runner dry   # 3a. 乾跑：產全部 prompt、跑驗收，不執行
+python scripts/run_plan.py docs/plans/<name>-plan.md --workspace . --runner kiro  # 3b. 真跑（或 claude / cmd --exec）
+python scripts/report_gen.py docs/plans/<name>-plan.md --workspace .  # 4. 報告 + pipeline + 迴圈判定
 ```
 
----
+步驟 3 中斷（timeout / 當機 / 人為 Ctrl-C）後**直接重跑同指令**：checkpoint 跳過已 pass，只重做 fail。
+`--milestone N` 只跑一段；`--no-resume` 從頭；`--strict-scope` 越界寫入視為 fail 並 git 還原。
 
-## 輸出
+## 任務狀態機與驗收率
 
-- 程式碼產出（依 plan 指定的 output_file）
-- `docs/reports/{plan_name}-acceptance.md`（驗收報告）
-- `data/{plan_name}-progress.json`（checkpoint）
+`pass | fail（重試 ≤ max-retries）| blocked（human，等人工）| skipped（依賴未完成）| pending（無法自動驗證）`
+acceptance_rate = pass / total × 100（total 含全部狀態）。**只有 pass 算數**——pending 與 blocked 都不是「差不多完成」。
 
----
+| 驗收結果 | 判定（閾值讀 loop-rules.md） | 動作 |
+|----------|---------------------------|------|
+| ≥ ship | `ship` | 自動觸發 ark-code-spec-validator 做 drift check |
+| retry ≤ x < ship | `retry_failed` | 報告列修復清單 → `run_plan.py` 重跑（resume 只跑失敗項） |
+| < retry | `stop` | 停，依方向分流：missing_in_code 為主 → 回本 skill；mismatch 為主 → ark-grill-me |
 
-## 核心能力
+## 穩定性設計（v2 相對 v1 的差異，全部可驗）
 
-### 1. Plan 解析
+| 風險 | v1 | v2 |
+|------|----|----|
+| plan 格式漂移 | LLM 猜欄位 | plan_lint 嚴格欄數 / 角色枚舉 / AC-ID 唯一 / 依賴存在 / 無環，P0 拒跑 |
+| 驗收靠關鍵字猜 | 「其他 → output 內容分析」 | 四層解析，猜不到 = pending 不算通過；每筆留指令+exit+證據 |
+| 中斷後重來 | 有 checkpoint 描述、無實作 | 每任務落盤（atomic replace），resume 預設開 |
+| 重試無方向 | 「更詳細 prompt」 | 上輪驗收證據與 runner log 注入下輪 prompt |
+| agent 越界改檔 | 「只能寫 output_file」（無守門） | git 變更比對 output_file，警告；--strict-scope 還原並判 fail |
+| human 任務 | 未定義 | blocked，不阻塞非依賴任務，報告列人工待辦 |
+| 閾值散落 | SKILL.md 硬寫 90/70 | 從 loop-rules.md 解析，找不到才用預設並標明 |
+| 幽靈引用 | plan-contract.md / plan_lint.py 不存在 | 兩者皆實體化，superpowers 與 validator 的委派可兌現 |
 
-- frontmatter 提取（title, related_spec, related_design）
-- Markdown 任務表格解析
-- 依賴推斷（同 milestone 內按序號前後）
-- 角色推斷（從 output_file 路徑 + title 關鍵字）
+## Runner 設定
 
-### 2. DAG 排序
+`references/runners.yaml` 的 kiro / claude 模板佔位 `{prompt_file} {cwd} {output_file} {task_id} {role}`。
+角色人格：run_plan 找 `agents/<role>-agent/.kiro/steering/SOUL.md` 注入 prompt，找不到用預設。
+**先 `--runner dry` 確認每個任務的 prompt 與驗證方法都合理，再切真 runner**——dry 跑完的 pending 列就是 plan 要補 `verify:` 的地方。
 
-- Kahn's algorithm 拓撲排序
-- 環形依賴偵測（拋出 CyclicDependencyError）
+## 與上下游的契約
 
-### 3. 角色切換執行
+- **上游 superpowers**：任務表 7 欄契約、角色枚舉、`[← X.Y]`、`related_spec/design` frontmatter；SP-070 委派 plan_lint.py（exit 0/1/2）
+- **下游 validator**：AC-ID `AC-NNN` + 測試 docstring `AC: AC-NNN`（ac_verify 對 pytest 任務檢查標記，缺則警告）；pipeline 狀態檔 schema；loop-rules 閾值與分流
+- **本 skill 不做**：不寫 spec/design（superpowers）、不驗 code↔docs 對齊（validator）、不解 rebase 衝突、不安裝依賴（缺 pytest 等環境問題導向 ark-env-doctor）
 
-| 角色 | 推斷規則 | Agent 目錄 |
-|------|----------|-----------|
-| coder | 預設 | agents/coder-agent/ |
-| ai-dev | 含 design/prompt/llm | agents/ai-dev-agent/ |
-| qa | 含 test/測試 | agents/qa-agent/ |
+## 邊界
 
-切換時：
-- `cwd` 切到 agent 目錄
-- 載入 SOUL.md 作為 context
-- kiro-cli 為主力，Gemini API 為 fallback
-
-### 4. AC 驗收（4 種方式）
-
-| AC 關鍵字 | 驗證方式 |
-|-----------|----------|
-| 檔案/建立/存在 | `file_exists` |
-| import/載入 | `python3 -c "import ..."` |
-| 測試/test/pass | `pytest {file}` |
-| 其他 | output 內容分析 |
-
-### 5. 重試
-
-- 首次失敗 → 注入 error context → 第 2 次
-- 再失敗 → 更詳細 prompt → 第 3 次
-- 最終失敗 → 標記 FAILED，繼續非依賴任務
-
-### 6. Checkpoint
-
-- `data/{plan}-progress.json`
-- 中斷後恢復，跳過已通過任務
-- 依賴失敗的任務自動 skip
-
----
-
-## 使用範例
-
-### TG 指令
-
-```
-/execute docs/plans/my-feature-plan.md
-/execute docs/plans/my-feature-plan.md --dry-run
-/execute docs/plans/my-feature-plan.md --milestone M1
-```
-
-### Skill 呼叫
-
-```python
-result = await registry.invoke("spec_executor", {
-    "plan_path": "docs/plans/my-feature-plan.md",
-    "dry_run": False,
-    "resume": True,
-})
-# result.data = {"report_path": "...", "total": 21, "passed": 19, "pass_rate": 90.5}
-```
-
----
-
-## 驗收報告格式
-
-```markdown
-# 驗收報告
-
-## 摘要
-| 指標 | 值 |
-|------|-----|
-| 總任務 | 21 |
-| 通過 | 19 |
-| 失敗 | 2 |
-| 通過率 | 90.5% |
-
-## 任務結果
-| # | 任務 | 角色 | 狀態 | AC 驗證 | 耗時 |
-|---|------|------|------|---------|------|
-| 1.1 | DB migration | coder | ✅ pass | 表建立 ✓ | 15s |
-
-## 未通過清單
-### 2.3 layer2_tfidf
-- AC：語意相近可搜到
-- 失敗原因：sklearn 未安裝
-```
-
----
-
-## 注意事項
-
-- 單任務 timeout 120 秒
-- 全 plan timeout 30 分鐘
-- LLM 呼叫成本計入 cost_tracker
-- 只能寫入 plan 指定的 output_file 路徑
-- 需要 kiro-cli 在 PATH（否則走 Gemini fallback）
-
----
-
-## 🔄 Loop Engineering — 自動迴圈
-
-> 閾值與方向分流詳見 `ark-code-spec-validator/references/loop-rules.md`。
-> 摘要：≥ 90 Ship / < 90 依偏移主因方向分流（見 loop-rules.md）
-
-ark-spec-executor 是四段工作流鏈的執行引擎，支援自動迴圈修復：
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                                                          │
-│   ark-grill-me → ark-superpowers → ark-spec-executor    │
-│        ↑                                    │           │
-│        │              ark-code-spec-validator ←┘         │
-│        │                     │                          │
-│        │      方向分流        │  score ≥ 90             │
-│        │              ↓      │      ↓                   │
-│        └──── 釐清需求 ←┘    ✅ Ship                      │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
-
-### 自動觸發規則
-
-| 上游 Skill | 產出 | 自動觸發 ark-spec-executor？ |
-|-----------|------|-------------------------------|
-| ark-superpowers | plan.md | ✅ 詢問使用者是否執行 |
-| ark-grill-me | 決策摘要 | ❌ 先走 superpowers |
-| ark-code-spec-validator | `missing_in_code` 為主 | ✅ 回到 executor 補實作 |
-
-### 下游迴圈規則
-
-| 驗收結果 | 動作 |
-|----------|------|
-| pass_rate ≥ 90% | ✅ 自動觸發 `ark-code-spec-validator` 做最終 drift check |
-| pass_rate 70-89% | ⚠️ 產出修復任務清單 → 自動重跑失敗項 |
-| pass_rate < 70% | 🛑 停止，依方向分流決定下一步（見 loop-rules.md） |
-
-### Pipeline 狀態
-
-- **開頭**：讀取 `docs/pipeline/{feature}.yaml`，取得 `plan_path`；檢查 `loop_count` 是否觸發保險絲（≥ 3 → 人工介入）
-- **結尾**：更新 `phase: execute`，append `acceptance_rates`，寫入 `acceptance_report_path`
-- Schema 詳見 `ark-code-spec-validator/references/pipeline-state-schema.md`
-
-### 搭配使用提示
-
-- 「幫我寫 spec 然後跑完」→ superpowers + spec-executor
-- 「跑完後驗證一下」→ spec-executor + code-spec-validator
-- 「全自動從頭跑」→ grill-me + superpowers + spec-executor + validator
-
+- 只寫 plan 指定的 output_file 與 `data/`、`docs/reports/`、`docs/pipeline/`
+- 單任務 timeout 預設 900s、全 plan 3600s、重試 2 次——皆可參數化
+- LLM 呼叫成本歸 runner 端記錄；本 skill 只記 duration

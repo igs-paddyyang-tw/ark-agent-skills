@@ -1,17 +1,9 @@
 [
-  {
-    "prompt": "執行 docs/plans/notification-plan.md",
-    "expected_behavior": "解析 plan 任務表，建立 DAG 排序，逐一角色切換執行，產出程式碼 + 驗收報告到 docs/reports/",
-    "tags": ["trigger"]
-  },
-  {
-    "prompt": "把這個 plan 跑完，只跑 M2",
-    "expected_behavior": "識別 milestone 參數，僅執行 M2 區段的任務，跳過 M1/M3，產出 checkpoint + 驗收報告",
-    "tags": ["trigger"]
-  },
-  {
-    "prompt": "驗收通過率 85%，validator 說 missing_in_code 為主",
-    "expected_behavior": "依 loop-rules.md 方向分流，因 missing_in_code 為主回到 spec-executor 補實作失敗項，而非轉到其他 skill",
-    "tags": ["loop-flow"]
-  }
+  {"prompt": "執行 docs/plans/notification-plan.md", "expected_behavior": "先 plan_lint（P0 拒跑）→ plan_parse --dry-run 展示順序與驗證方法 → run_plan（預設 resume）→ report_gen 產驗收報告與 pipeline 狀態，回報 acceptance_rate 與迴圈判定", "tags": ["trigger"]},
+  {"prompt": "把這個 plan 跑完，只跑 M2", "expected_behavior": "run_plan --milestone 2；M1 任務不執行；報告只含 M2；pipeline acceptance_rates append 一筆", "tags": ["trigger"]},
+  {"prompt": "剛才跑到一半當掉了，繼續", "expected_behavior": "重跑同一指令（resume 預設開），checkpoint 已 pass 的任務顯示 ↷ 跳過，只重做 fail；不從頭來", "tags": ["resume"]},
+  {"prompt": "驗收通過率 85%，validator 說 missing_in_code 為主", "expected_behavior": "依 loop-rules 分流回本 skill：以 resume 重跑失敗項補實作，不轉 superpowers / grill-me；loop_count ≥ 3 則停下問人", "tags": ["loop-flow"]},
+  {"prompt": "這個 plan 的 AC 都寫『功能正常』，能跑嗎", "expected_behavior": "plan_lint 標 PL-006（無法推斷驗證方法 → manual 不算通過），建議補 verify: 提示或改成可驗證 AC，而不是直接跑然後回報全過", "tags": ["fail-closed"]},
+  {"prompt": "plan 裡有一個 human 簽核任務", "expected_behavior": "該任務 blocked 列入人工待辦，不阻塞其他非依賴任務；acceptance_rate 不把它算成通過", "tags": ["human"]},
+  {"prompt": "agent 跑任務時順手改了別的檔", "expected_behavior": "run_plan 越界寫入守衛列出檔案並警告；若 --strict-scope 則判 fail 並 git 還原；報告標 ⚠️ 越界", "tags": ["scope"]}
 ]

@@ -1,0 +1,4 @@
+# runners.yaml — run_plan.py --runner 的指令模板（佔位：{prompt_file} {cwd} {output_file} {task_id} {role}）
+# 🔴 flags 依實際 CLI 版本核對後再用；先用 --runner dry 驗 plan 可執行性，再切真 runner。
+kiro: kiro-cli chat --no-interactive --trust-all-tools "$(cat {prompt_file})"
+claude: claude -p --dangerously-skip-permissions "$(cat {prompt_file})"

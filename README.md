@@ -52,7 +52,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-project-planning` | 標準化專案計畫流程。 |
 | `ark-prompt-spec-validator` | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
 | `ark-skill-creator` | 建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。 |
-| `ark-spec-executor` | 讀取 plan.md（含任務表+AC+依賴），自動拆解→角色切換執行→AC 驗收→產出驗收報告。 |
+| `ark-spec-executor` | 讀取 ark-superpowers 產出的 plan.md（7 欄任務表 + AC-ID + 依賴），以 deterministic 腳本 解析契約 → DAG 排序 → 逐任務派給 runner … |
 | `ark-superpowers` | 產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫）， 基於 power-engineer-skills 框架，協助資深工程師與技術領導者 將技術決… |
 
 ## ② 平台生成器 Scaffolders
