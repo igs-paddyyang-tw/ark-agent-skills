@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
-render_profile.py — role-profile.yaml → IDENTITY.md + SOUL/AGENTS/schema fragment。
+render_profile.py — role-profile.yaml → SOUL/AGENTS/schema fragment（inclusion: manual 組裝素材）。
 
 用法：
   python render_profile.py role-profile.yaml --out ./rendered [--skip-lint]
 
 渲染前預設先跑 profile_lint（P0/P1 不為零即中止）。
-每個輸出檔頭嵌 `<!-- profile-sha256: … -->`，供偵測 yaml 已改但 md 未重渲染。
+每個 fragment 檔頭嵌 `<!-- profile-sha256: … -->`，供偵測 yaml 已改但 md 未重渲染。
+fragment 標 `inclusion: manual`（組裝素材，非最終 steering 檔）——組裝流程須併入主檔
+（SOUL.fragment→SOUL.md 身分卡＋人格段 / AGENTS.fragment→root AGENTS.md 協作段 /
+schema.fragment→knowledge/schema.md）後刪除，勿留 steering/。
+identity 內嵌 SOUL 身分卡段，不另產 IDENTITY.md（避免第 7 個 steering always 檔 = 第二份真相）。
 刻意不渲染 MCP Tools / Tool Settings：那屬 AGENTS.md / TEAM.md（operating rules）。
 """
 from __future__ import annotations
@@ -37,21 +41,17 @@ def stamp(digest: str, source: str) -> str:
     return f"<!-- profile-sha256: {digest} · source: {source} · rendered by ark-agent-role-profile -->\n"
 
 
-def render_identity(p: dict, hdr: str) -> str:
-    idn = p["identity"]
-    name = idn.get("name") or p["role_id"]
-    return (hdr + "---\ninclusion: always\n---\n"
-            f"# IDENTITY — {idn['emoji']} {name}\n\n"
-            f"- **Name**：{name}\n- **Emoji**：{idn['emoji']}\n"
-            f"- **Role**：{p['role_id']}（base: {p['base_role']}）\n"
-            f"- **One-liner**：{idn['one_liner']}\n- **Language**：{idn['language']}\n")
-
-
 def render_soul(p: dict, hdr: str) -> str:
     idn = p["identity"]
     name = idn.get("name") or p["role_id"]
-    out = [hdr, f"# {idn['emoji']} {name} — {idn['one_liner']}\n",
-           f"> 所有回覆使用{'繁體中文' if idn['language'] == 'zh-TW' else idn['language']}。\n"]
+    lang = "繁體中文" if idn["language"] == "zh-TW" else idn["language"]
+    # 身分卡直接內嵌 SOUL（identity 的單一真相；不再另產 IDENTITY.md 當第 7 個 steering 檔）
+    out = [hdr,
+           "> **角色身分卡**："
+           f"`{p['role_id']}` ｜ base_role `{p['base_role']}` ｜ 代號 {name} {idn['emoji']} "
+           f"｜ 語言 {idn['language']} ｜ 人格 SSOT = `role-profile.yaml`\n",
+           f"# {idn['emoji']} {name} — {idn['one_liner']}\n",
+           f"> 所有回覆使用{lang}。\n"]
     out.append("## 📌 Your Stance（據此做決策）\n")
     out += [f"{i}. {s}" for i, s in enumerate(p["stance"], 1)]
     out.append("\n## ⚖️ Default Tradeoffs\n")
@@ -109,6 +109,13 @@ def render_schema(p: dict, hdr: str) -> str:
 
 
 def main() -> int:
+    # Windows 主控台預設 cp950/cp1252，印 ❌✅ 等非 ANSI 字元會 UnicodeEncodeError。
+    # 強制 stdout/stderr 走 UTF-8（Python 3.7+），讓渲染訊息在任何平台都印得出。
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+        except (AttributeError, ValueError):
+            pass  # 非可重設的 stream（如被重導向）——略過，不影響核心渲染
     ap = argparse.ArgumentParser()
     ap.add_argument("profile", type=Path)
     ap.add_argument("--out", type=Path, default=Path("."))
@@ -127,15 +134,20 @@ def main() -> int:
     p = yaml.safe_load(a.profile.read_text(encoding="utf-8"))
     hdr = stamp(sha(a.profile), a.profile.name)
     a.out.mkdir(parents=True, exist_ok=True)
+    # fragment 是「組裝素材」，非最終 steering 檔：
+    #   - 標 inclusion: manual → 即使誤留 steering/ 也不會被 always 載入（防重複注入）
+    #   - 組裝流程須將內容併入對應主檔（SOUL.md / root AGENTS.md / knowledge schema.md）後刪除
+    #   - identity 已內嵌 SOUL 身分卡段，不再另產 IDENTITY.md（避免第 7 個 steering 檔 = 第二份真相）
+    manual = "---\ninclusion: manual\n---\n"
     files = {
-        "IDENTITY.md": render_identity(p, hdr),
-        "SOUL.fragment.md": render_soul(p, hdr),
-        "AGENTS.fragment.md": render_agents(p, hdr),
-        "schema.fragment.md": render_schema(p, hdr),
+        "SOUL.fragment.md": manual + render_soul(p, hdr),
+        "AGENTS.fragment.md": manual + render_agents(p, hdr),
+        "schema.fragment.md": manual + render_schema(p, hdr),
     }
     for fn, body in files.items():
         (a.out / fn).write_text(body, encoding="utf-8")
         print(f"✅ {a.out / fn}  ({len(body.encode()) / 1024:.1f} KB)")
+    print("ℹ️  fragment 為組裝素材（inclusion: manual）——併入主檔後請刪除，勿留 steering/")
     return 0
 
 

@@ -429,7 +429,14 @@ def _render_profile_soul(profile: str) -> str | None:
         frag = Path(tmp) / "SOUL.fragment.md"
         if not frag.exists():
             return None
-        return frag.read_text(encoding="utf-8")
+        text = frag.read_text(encoding="utf-8")
+        # fragment 帶 `inclusion: manual`（未組裝前的保護標記）；併入 SOUL.md 時要剝除，
+        # 否則 SOUL.md 會變 manual 而不被 always 載入。SOUL.md 的 inclusion 由 init 決定（預設 always）。
+        if text.startswith("---"):
+            end = text.find("\n---", 3)
+            if end != -1:
+                text = text[end + 4:].lstrip("\n")
+        return text
 
 
 def _write_soul(

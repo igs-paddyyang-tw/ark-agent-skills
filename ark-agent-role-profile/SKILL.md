@@ -4,7 +4,7 @@ description: |
   以三檔位訪談（quick / standard / deep）引出 agent 的角色定位，產出結構化
   `role-profile.yaml`（identity / stance / scope / hard_stops / voice / relationships /
   metrics / knowledge_domains / skills），經 profile_lint.py 守門後渲染成
-  SOUL.md 人格段 + IDENTITY.md，交給 ark-agent-init 組裝 workspace。
+  SOUL.md（含身分卡＋人格段），交給 ark-agent-init 組裝 workspace。
   內建角色庫（assets/roles/*.yaml）含工程與非工程角色（遊戲企劃、社群營運、行銷、
   主管助理、數據分析），每個角色有立場句、反模式、絕不做清單，而非形容詞。
   使用此 Skill 當使用者提及 角色定位、角色訪談、role profile、人格設定、agent 人格、
@@ -25,13 +25,13 @@ metadata:
   render: none
   depends_on: [ark-grill-me]
   author: paddyyang
-  version: "1.2.0"
-  updated: 2026-09-15
+  version: "1.3.0"
+  updated: 2026-09-30
 ---
 
 # ark-agent-role-profile
 
-引出角色定位 → `role-profile.yaml` → lint → 渲染 SOUL 人格段 / IDENTITY.md。
+引出角色定位 → `role-profile.yaml` → lint → 渲染 SOUL fragment（身分卡＋人格段）。
 
 > **與 ark-agent-init 的分工**：本 skill 負責「這個 agent 是誰、站哪邊、絕不做什麼」，
 > 產出的是**資料契約**（yaml）與**人格片段**（md）；ark-agent-init 負責把片段組進
@@ -69,7 +69,7 @@ metadata:
 2. 訪談   → 依 references/role-interview.md 逐題問，一次一題，附 2-4 選項 + ⭐推薦
 3. 落 yaml → 寫 role-profile.yaml（草稿）
 4. lint   → python scripts/profile_lint.py role-profile.yaml（P0/P1 清零才續）
-5. 預覽   → 只印 IDENTITY 卡 + stance + hard_stops，編號選項確認
+5. 預覽   → 只印身分卡 + stance + hard_stops，編號選項確認
 6. 渲染   → python scripts/render_profile.py role-profile.yaml --out ./
 7. 交接   → 回報產出路徑 + 建議下一步（ark-agent-init 組裝）
 ```
@@ -111,7 +111,7 @@ schema_version: 1
 role_id: community-ops            # kebab-case，對應 agents/{name}-agent
 base_role: community-ops          # 來源角色庫 id；純自訂填 custom
 identity:
-  name: 小社                       # 對外稱呼（IDENTITY.md）
+  name: 小社                       # 對外稱呼（SOUL 身分卡）
   emoji: 📣
   one_liner: 玩家聲音的守門人，把社群情緒翻成可行動的訊號
   language: zh-TW
@@ -203,20 +203,25 @@ ark-agent-init 現有 `role-templates.md`（只有技術棧）最大的差異。
 
 ## 渲染規則（render_profile.py）
 
-輸入 `role-profile.yaml`，輸出：
+輸入 `role-profile.yaml`，輸出 3 個 **`inclusion: manual` 的組裝素材**（非最終 steering 檔）：
 
-| 檔案 | 內容 | 給誰用 |
+| 檔案 | 內容 | 併入目標（併入後刪除，勿留 steering/） |
 |------|------|--------|
-| `IDENTITY.md` | name / emoji / one_liner / language，≤ 10 行 | ark-agent-init 放 steering/（inclusion: always） |
-| `SOUL.fragment.md` | 立場、取捨、反模式、絕不做、溝通風格、成功指標、範例對話 | ark-agent-init 併入 SOUL.md，**取代**原「Identity & Memory」段的形容詞 |
-| `AGENTS.fragment.md` | scope / relationships 導出的職責與升報表 | 併入 TEAM.md 或 AGENTS.md 的協作段 |
-| `schema.fragment.md` | `knowledge_domains` → 「適合存放的知識」段 | 併入 knowledge/schema.md |
+| `SOUL.fragment.md` | 身分卡 + 立場、取捨、反模式、絕不做、溝通風格、成功指標、範例對話 | 併入 `.kiro/steering/SOUL.md`（人格檔，inclusion: always）；**取代**原形容詞式人格 |
+| `AGENTS.fragment.md` | scope / relationships 導出的職責與升報表 | 併入 **root `AGENTS.md`** 的協作段（AGENTS 是 repo root 單一 SSOT，steering/ 不另產 AGENTS.md） |
+| `schema.fragment.md` | `knowledge_domains` → 「適合存放的知識」段 | 併入 `knowledge/<agent>/schema.md` |
+
+> 🔴 **steering/ 只有 6 個大分類標準檔**：`SOUL` / `AGENTS`（root SSOT）/ `CODE` / `MEMORY` / `USER` / `TEAM`。
+> fragment 是**組裝素材不是 steering 檔** —— 標 `inclusion: manual` 讓它即使誤留也不被 always 載入，
+> 但正解是**併入主檔後刪除**，不讓 `*.fragment.md` 出現在 steering/。
+> 🔴 **不另產 `IDENTITY.md`** —— identity（name/emoji/one_liner/language）已內嵌 SOUL.md 開頭的
+> 「角色身分卡」段。獨立 IDENTITY.md 會是第 7 個 steering always 檔 = identity 的第二份真相。
 
 刻意**不**渲染：MCP Tools 表、Tool Settings。這兩段屬 AGENTS.md / TEAM.md（operating
 rules），放進 SOUL 就是第二份真相——ark-agent-init 現有 SOUL-worker.md 的 `output/`
 與 SKILL.md 的 `artifacts/` 已經漂移過一次。
 
-渲染後 HTML 註記 `<!-- profile-sha256: ... -->` 嵌進每個 fragment 檔頭，讓後續工具能
+渲染後 `<!-- profile-sha256: ... -->` 嵌進每個 fragment 檔頭，讓後續工具能
 偵測「yaml 改了但 SOUL 沒重渲染」。
 
 ---
@@ -250,7 +255,6 @@ P0/P1 清零才進預覽——與 ark-skills-align 的 audit 門檻同型。
 
 📁 產出：
 - role-profile.yaml
-- IDENTITY.md
 - SOUL.fragment.md / AGENTS.fragment.md / schema.fragment.md
 
 🔍 lint：P0 0 · P1 0 · P2 {n}
@@ -282,5 +286,5 @@ P0/P1 清零才進預覽——與 ark-skills-align 的 audit 門檻同型。
 | `references/example-instance-profiles.md` | 實例 profile 範例（aiqa）+ 「Bot 全能／Team 分工」原則 + agent.json 範例 |
 | `assets/roles/*.yaml` | 角色庫（19 個），可直接 lint 通過 |
 | `scripts/profile_lint.py` | 守門 + 角色列表導出 |
-| `scripts/render_profile.py` | yaml → IDENTITY.md + 三個 fragment |
+| `scripts/render_profile.py` | yaml → 3 個 fragment（SOUL/AGENTS/schema，inclusion: manual） |
 | `evals/evals.json` | ark-skill-creator 測試提示詞 |

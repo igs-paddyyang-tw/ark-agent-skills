@@ -368,5 +368,25 @@
     "skill": "ark-wiki-engine",
     "version": "3.0.0",
     "release": "skills-2026.09-r2"
+  },
+  "sha256:b5890eebcd9917beb514d108b69ec6b2b3fae867226ee0c919cc4c9abeac98be": {
+    "skill": "ark-agent-init",
+    "version": "2.1.1",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:74f771469910e32790540ee17d624da92b0b80008af37196da47c9474745fdbe": {
+    "skill": "ark-agent-role-profile",
+    "version": "1.3.0",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:74e67d83094b7db4fea50978a5b397d9b66d10040d2af7fddc48f65b817ff3dc": {
+    "skill": "ark-agent-team-design",
+    "version": "1.1.0",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:f3c1a3d2bdfe65f3d3241fdaf6c937edb227a947607d31d978c824f598d1d029": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.09-r2"
   }
 }
