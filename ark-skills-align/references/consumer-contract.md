@@ -9,7 +9,7 @@
 schema_version: "1.0"
 upstream:
   repo: https://github.com/igs-paddyyang-tw/ark-agent-skills.git
-  release: skills-2026.09-r1              # 對齊單位（C-2）；個別 skill 只能例外 pin
+  release: skills-2026.09-r2              # 對齊單位（C-2）；個別 skill 只能例外 pin
   manifest_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/release/manifest.json
   index_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/release/index.json
 tiers:
@@ -29,7 +29,7 @@ local_only: [ark-fish-daily-report]       # 專案自建，三段判準第①段
 
 ```json
 {
-  "release": "skills-2026.09-r1",
+  "release": "skills-2026.09-r2",
   "synced_at": "2026-09-17T14:20:00+08:00",
   "agents": {
     "<專案>-agent": {

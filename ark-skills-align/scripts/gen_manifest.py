@@ -9,7 +9,7 @@ contract_hash：只對 contract_files（預設 scripts/** schemas/** references/
                references/*schema*.md assets/hooks/**）算 —— 契約變了才算破壞性。
 
 CI 守門（W1 接入）：只在 audit P0/P1=0 且 AL-105=0 時允許打 tag。
-用法：python gen_manifest.py --repo . --release skills-2026.09-r1 [--out release/]
+用法：python gen_manifest.py --repo . --release skills-2026.09-r2 [--out release/]
 """
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ def parse_meta(skill_md: Path) -> dict:
     return fm.get("metadata") or {}
 
 
-def build(repo: Path, release: str) -> tuple[dict, dict]:
+def build(repo: Path, release: str, out_dir: Path | None = None) -> tuple[dict, dict]:
     skills = {}
     for d in sorted(repo.iterdir()):
         sk = d / "SKILL.md"
@@ -102,8 +102,10 @@ def build(repo: Path, release: str) -> tuple[dict, dict]:
         "skills": skills,
     }
     # index：tree_hash → {skill, version, release}（累積）
+    # 🔴 讀舊 index 必須用「實際輸出路徑」（--out），不能寫死 repo/release
+    #    否則 --out 指向別處時讀不到舊 index → 歷史 tree_hash 反查全失（累積失效）
     index = {}
-    idx_path = repo / "release" / "index.json"
+    idx_path = (out_dir or (repo / "release")) / "index.json"
     if idx_path.exists():
         index = json.loads(idx_path.read_text(encoding="utf-8"))
     for name, s in skills.items():
@@ -118,8 +120,8 @@ def main() -> int:
     ap.add_argument("--out", default="release")
     args = ap.parse_args()
     repo = Path(args.repo)
-    manifest, index = build(repo, args.release)
     out = repo / args.out
+    manifest, index = build(repo, args.release, out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
