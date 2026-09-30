@@ -388,5 +388,35 @@
     "skill": "ark-skills-align",
     "version": "2.0.0",
     "release": "skills-2026.09-r2"
+  },
+  "sha256:712d96d24f0077e3325c5de99b41ec05f6f03d43a32e1e25db777671fb7fc7b6": {
+    "skill": "ark-agent-init",
+    "version": "2.1.2",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:e7ba1f47ae5035ae479a0a2bbff7e92ae1c6df55c5a2e49b6f8105879dbce08a": {
+    "skill": "ark-game-analysis",
+    "version": "1.0.1",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:8eb7b7319882c07eadaa548c4996346844db469194ee5ff90c59d97a6e13bcb8": {
+    "skill": "ark-game-atlas",
+    "version": "1.0.1",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:629a568c54707ac4445ee27fe88cde72ffd5bfc91e4fb13d3b9aeef5c78f04d5": {
+    "skill": "ark-game-spec",
+    "version": "1.0.1",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:7175414c91c87dce02b82c2f1f7e240e9bd3d7a97c3722879c14b54e5c21ea17": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.09-r2"
+  },
+  "sha256:094df29ecaa71349c257c3fa0f38cbdda427c0a8b5455ffecc7615eb8e633340": {
+    "skill": "ark-video-understanding",
+    "version": "1.0.1",
+    "release": "skills-2026.09-r2"
   }
 }

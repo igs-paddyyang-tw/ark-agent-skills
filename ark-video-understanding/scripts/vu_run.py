@@ -23,10 +23,16 @@ HERE = pathlib.Path(__file__).resolve().parent
 
 def step(script: str, *args) -> dict:
     r = subprocess.run([sys.executable, str(HERE / script), *args], capture_output=True, text=True, encoding="utf-8")
+    out = (r.stdout or "").strip()
+    if not out:
+        # F-6：Windows PowerShell 管線常吞子腳本 stdout（exit 0 但空）→ 給明確診斷，非泛化 QUERY_FAILED
+        C.fail("QUERY_FAILED", f"{script} 無 stdout 輸出（exit={r.returncode}）",
+               f"子腳本應走 emit() 輸出 JSON；Windows 下若 stdout 被吞可改逐步跑。stderr: {r.stderr[-300:]}")
     try:
-        j = json.loads(r.stdout.strip().splitlines()[-1])
+        j = json.loads(out.splitlines()[-1])
     except Exception:  # noqa: BLE001
-        C.fail("QUERY_FAILED", f"{script} 無 JSON 輸出: {r.stderr[-300:]}", "")
+        C.fail("QUERY_FAILED", f"{script} stdout 末行非 JSON（exit={r.returncode}）",
+               f"末行: {out.splitlines()[-1][:200]} | stderr: {r.stderr[-300:]}")
     if not j.get("success"):
         print(json.dumps(j, ensure_ascii=False))
         sys.exit(r.returncode or 1)

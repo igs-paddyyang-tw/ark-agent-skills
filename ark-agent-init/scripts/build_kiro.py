@@ -126,6 +126,20 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
     # ── B1b + B2：五類知識來源骨架 + knowledge_search_order ──
     created.extend(_build_knowledge_sources(cfg, base, instances))
 
+    # profile 給定時：knowledge schema.md 已建（上一步），此時把 schema.fragment 併入
+    # 根目錄 manager 的 knowledge/<name>/schema.md「適合存放的知識」段（見 _build_steering 註解）。
+    if profile:
+        for name, inst in instances.items():
+            inst = inst or {}
+            if inst.get("working_directory", f"agents/{name}") != ".":
+                continue  # profile 只作用於根目錄 manager
+            frags = _render_profile_fragments(profile)
+            if frags and frags.get("schema"):
+                agent_kb = base / "knowledge" / name / "schema.md"
+                if agent_kb.exists() and _merge_profile_section(
+                        agent_kb, frags["schema"], "## 適合存放的知識"):
+                    created.append(str(agent_kb))
+
     return created
 
 
@@ -355,6 +369,21 @@ def _build_steering(
         _write_soul(soul, name, role, description, team_name, len(all_instances), profile)
         created.append(str(soul.relative_to(base)))
 
+    # profile 給定時：SOUL 已由 render 產（見上），另把 AGENTS fragment 併入主檔。
+    # fragment 是組裝素材（inclusion: manual）——併入後不落 steering/，由此處直接寫進主檔。
+    # 🔴 schema.fragment 的併入移到主流程 knowledge 建立「之後」（見 build_kiro）——
+    #    此處 knowledge/<agent>/schema.md 尚未產生，在這併會被跳過。
+    if profile:
+        frags = _render_profile_fragments(profile)
+        if frags and frags.get("agents"):
+            # 專案根 = steering_dir 上兩層（out/.kiro/steering → out）。
+            # 🔴 不用 `base`：既有 base=steering_dir.parent^3 偏了一層（僅供 relative_to 顯示，非落點）。
+            project_root = steering_dir.parent.parent
+            # AGENTS.fragment → 專案根 AGENTS.md 協作段（root SSOT；子 agent 併自己 steering/AGENTS.md 複本）
+            agents_target = (project_root / "AGENTS.md") if is_root else (steering_dir / "AGENTS.md")
+            if _merge_profile_section(agents_target, frags["agents"], "## ", always_fm=not is_root):
+                created.append(str(agents_target))
+
     # AGENTS.md（從 assets 複製）
     # 🔴 根目錄（is_root）不在 steering/ 產 AGENTS.md —— 根目錄的 .kiro/steering/AGENTS.md
     #    與專案根 AGENTS.md 會「兩份都被 Kiro 載入」造成漂移。根目錄用專案根那份（SSOT）。
@@ -401,18 +430,55 @@ def _build_steering(
     return created
 
 
-def _render_profile_soul(profile: str) -> str | None:
-    """呼叫 ark-agent-role-profile 的 render_profile 渲染指定角色的 SOUL。
+def _merge_profile_section(target: Path, fragment: str, anchor: str, always_fm: bool = False) -> bool:
+    """把 render 的 fragment 內容併入 target 主檔（冪等）。回傳是否有寫入。
+
+    - fragment 帶 `<!-- profile-sha256: X -->` 戳記；target 已含同一 sha → 跳過（冪等）。
+    - target 已有舊 profile 段（含 profile-sha256 註解）→ 取代該段；否則 append。
+    - always_fm=True 時，target 不存在則補 `inclusion: always` frontmatter（子 agent AGENTS.md 複本）。
+    fragment 已剝除自身 manual frontmatter（由 _render_profile_fragments 處理）。
+    """
+    import re
+    sha_m = re.search(r"profile-sha256:\s*(\w+)", fragment)
+    sha = sha_m.group(1) if sha_m else None
+    existing = target.read_text(encoding="utf-8") if target.exists() else ""
+    if sha and f"profile-sha256: {sha}" in existing:
+        return False  # 已是最新，冪等跳過
+    block = "\n\n<!-- ==== profile-rendered section (由 role-profile 產，勿手改) ==== -->\n" + fragment.rstrip() + "\n"
+    # 移除舊的 profile-rendered 區塊（若有）
+    old = re.search(r"\n*<!-- ==== profile-rendered section.*?-->\n.*?(?=\n<!-- ==== |\Z)", existing, re.S)
+    if old:
+        existing = existing[:old.start()] + existing[old.end():]
+    if not existing and always_fm:
+        existing = "---\ninclusion: always\n---\n"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(existing.rstrip() + "\n" + block, encoding="utf-8")
+    return True
+
+
+def _strip_manual_fm(text: str) -> str:
+    """剝除 fragment 的 `---\ninclusion: manual\n---` 前綴。
+
+    fragment 帶 manual 是「未組裝前不被 always 載入」的保護標記；併入主檔時要剝掉，
+    否則主檔（SOUL.md 等）會變 manual。主檔 inclusion 由 init 決定。
+    """
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        if end != -1:
+            return text[end + 4:].lstrip("\n")
+    return text
+
+
+def _render_profile_fragments(profile: str) -> dict[str, str] | None:
+    """呼叫 render_profile 產出三個 fragment，回傳 {soul, agents, schema}（已剝 manual frontmatter）。
 
     profile 可以是角色 id（如 qa-manager）或 role-profile.yaml 路徑。
-    成功回傳渲染後的 SOUL 內容（含 profile-sha256 戳記），
-    失敗（角色不存在、render 腳本缺、非零退出）回傳 None。
+    失敗（角色不存在、render 腳本缺、非零退出、SOUL fragment 缺）回傳 None。
     """
     rp_root = SKILL_ROOT.parent / "ark-agent-role-profile"
     render = rp_root / "scripts" / "render_profile.py"
     if not render.exists():
         return None
-    # profile 是路徑就直接用，否則當角色 id 到角色庫找
     prof_path = Path(profile)
     if not prof_path.exists():
         prof_path = rp_root / "assets" / "roles" / f"{profile}.yaml"
@@ -426,17 +492,21 @@ def _render_profile_soul(profile: str) -> str | None:
             )
         except (subprocess.CalledProcessError, OSError):
             return None
-        frag = Path(tmp) / "SOUL.fragment.md"
-        if not frag.exists():
-            return None
-        text = frag.read_text(encoding="utf-8")
-        # fragment 帶 `inclusion: manual`（未組裝前的保護標記）；併入 SOUL.md 時要剝除，
-        # 否則 SOUL.md 會變 manual 而不被 always 載入。SOUL.md 的 inclusion 由 init 決定（預設 always）。
-        if text.startswith("---"):
-            end = text.find("\n---", 3)
-            if end != -1:
-                text = text[end + 4:].lstrip("\n")
-        return text
+        tmp_p = Path(tmp)
+        soul_f = tmp_p / "SOUL.fragment.md"
+        if not soul_f.exists():
+            return None  # SOUL 是必要產物
+        out = {"soul": _strip_manual_fm(soul_f.read_text(encoding="utf-8"))}
+        for key, fn in (("agents", "AGENTS.fragment.md"), ("schema", "schema.fragment.md")):
+            f = tmp_p / fn
+            out[key] = _strip_manual_fm(f.read_text(encoding="utf-8")) if f.exists() else ""
+        return out
+
+
+def _render_profile_soul(profile: str) -> str | None:
+    """渲染指定角色的 SOUL（含 profile-sha256 戳記，已剝 manual frontmatter）。相容既有呼叫點。"""
+    frags = _render_profile_fragments(profile)
+    return frags["soul"] if frags else None
 
 
 def _write_soul(
@@ -854,6 +924,16 @@ def validate_kiro(project_dir: Path) -> list[str]:
         for fname in required_steering:
             if not (kiro_dir / "steering" / fname).exists():
                 errors.append(f"❌ {prefix}/steering/{fname} 缺少")
+
+        # 🔴 steering/ 不得殘留組裝素材 —— 只放 6 大分類標準檔（SOUL/AGENTS/CODE/MEMORY/USER/TEAM）。
+        #    render 的 *.fragment.md 是 inclusion:manual 組裝素材，併入主檔後必須刪；
+        #    IDENTITY.md 已併入 SOUL 身分卡，不該獨立存在（否則第 7 個 always 檔 = 第二份真相）。
+        steering_dir_v = kiro_dir / "steering"
+        if steering_dir_v.exists():
+            for residue in steering_dir_v.glob("*.fragment.md"):
+                errors.append(f"❌ {prefix}/steering/{residue.name}：fragment 組裝素材殘留（併入主檔後應刪）")
+            if (steering_dir_v / "IDENTITY.md").exists():
+                errors.append(f"❌ {prefix}/steering/IDENTITY.md：identity 應併入 SOUL 身分卡段，不留獨立檔")
 
         # prompts 至少 1 個（含 work/ 子目錄）
         pdir = kiro_dir / "prompts"

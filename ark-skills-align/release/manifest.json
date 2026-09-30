@@ -1,7 +1,7 @@
 {
   "release": "skills-2026.09-r2",
-  "commit": "23fd7ca",
-  "generated_at": "2026-09-30T15:21:08+08:00",
+  "commit": "ae555f6",
+  "generated_at": "2026-09-30T15:45:21+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.1.0",
@@ -28,9 +28,9 @@
       "updated": "2026-09-09"
     },
     "ark-agent-init": {
-      "version": "2.1.1",
-      "tree_hash": "sha256:b5890eebcd9917beb514d108b69ec6b2b3fae867226ee0c919cc4c9abeac98be",
-      "contract_hash": "sha256:1756d9f34433e0dcadd4d10c9d89a92a20f0359eabc000777ee7ef7a2668a160",
+      "version": "2.1.2",
+      "tree_hash": "sha256:712d96d24f0077e3325c5de99b41ec05f6f03d43a32e1e25db777671fb7fc7b6",
+      "contract_hash": "sha256:a3381366dc130d48fad35f5eccc0282f240600f1ef82d31944aad2a74c66c062",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [],
@@ -274,9 +274,9 @@
       "updated": "2026-08-19"
     },
     "ark-game-analysis": {
-      "version": "1.0.0",
-      "tree_hash": "sha256:5491f2bca9039c1791f9f4e9dbe2c4aa7dd08f63fce6c87dc5e268dea0342b31",
-      "contract_hash": "sha256:a3ce5fdfa5ab422bfa5db053c94f41ce25c78e48da0a134afd3a3b6d9b79096c",
+      "version": "1.0.1",
+      "tree_hash": "sha256:e7ba1f47ae5035ae479a0a2bbff7e92ae1c6df55c5a2e49b6f8105879dbce08a",
+      "contract_hash": "sha256:fc02d0ed2577049ecb2002d375b1f7545bcad69124a439f3fbce7b964c536326",
       "status": "active",
       "category": "executor",
       "depends_on": [
@@ -286,12 +286,12 @@
         "ark-llm-tools"
       ],
       "replaces": [],
-      "updated": "2026-09-18"
+      "updated": "2026-09-30"
     },
     "ark-game-atlas": {
-      "version": "1.0.0",
-      "tree_hash": "sha256:a7750a337d49bc761feab4dd690731fdf8cbed71c7407e9ffb475650714d932e",
-      "contract_hash": "sha256:df29b4980408cd5c99891b969bbf53645b5c906013f69c4a8d5434a88e4c2d06",
+      "version": "1.0.1",
+      "tree_hash": "sha256:8eb7b7319882c07eadaa548c4996346844db469194ee5ff90c59d97a6e13bcb8",
+      "contract_hash": "sha256:2bf031f30039929b75aff9ce6a99bafdabbf771bb439b9d0698def1b0c2f46cc",
       "status": "active",
       "category": "executor",
       "depends_on": [
@@ -300,7 +300,7 @@
         "ark-video-understanding"
       ],
       "replaces": [],
-      "updated": "2026-09-18"
+      "updated": "2026-09-30"
     },
     "ark-game-design-doc": {
       "version": "1.0.0",
@@ -323,9 +323,9 @@
       "updated": "2026-09-18"
     },
     "ark-game-spec": {
-      "version": "1.0.0",
-      "tree_hash": "sha256:a444f554776f3248cf0fdc912e78cda02f737ecc8a7fbf2e2c09c04b5dc7d656",
-      "contract_hash": "sha256:7e07f9775491885b968e4c335aa57785edd39482204601541ef5a26a4cb7a949",
+      "version": "1.0.1",
+      "tree_hash": "sha256:629a568c54707ac4445ee27fe88cde72ffd5bfc91e4fb13d3b9aeef5c78f04d5",
+      "contract_hash": "sha256:779ff894a9bcbce3d382b94614213cb836cc14df2f00379b9fc7998413c1b5da",
       "status": "active",
       "category": "executor",
       "depends_on": [
@@ -334,7 +334,7 @@
         "ark-grill-me"
       ],
       "replaces": [],
-      "updated": "2026-09-18"
+      "updated": "2026-09-30"
     },
     "ark-github-cli": {
       "version": "0.2.0",
@@ -546,7 +546,7 @@
     },
     "ark-skills-align": {
       "version": "2.0.0",
-      "tree_hash": "sha256:f3c1a3d2bdfe65f3d3241fdaf6c937edb227a947607d31d978c824f598d1d029",
+      "tree_hash": "sha256:7175414c91c87dce02b82c2f1f7e240e9bd3d7a97c3722879c14b54e5c21ea17",
       "contract_hash": "sha256:cf484e723f646bfb2ae0624f1740800155f1c145a4068bbcd90674e87f344631",
       "status": "active",
       "category": "ops",
@@ -620,16 +620,16 @@
       "updated": "2026-08-19"
     },
     "ark-video-understanding": {
-      "version": "1.0.0",
-      "tree_hash": "sha256:1b7eef30ed548fed91cfdeeb4ec1ca2f413a1594a5172749330d8304c08f656b",
-      "contract_hash": "sha256:20d252c61d29c0bb719bad08d5296249d1737bc140943695677ae8a0951a4897",
+      "version": "1.0.1",
+      "tree_hash": "sha256:094df29ecaa71349c257c3fa0f38cbdda427c0a8b5455ffecc7615eb8e633340",
+      "contract_hash": "sha256:c5ff06413a445507e05da5bb203283b8e1198d80392b2db078dc1e0bc89e60bd",
       "status": "active",
       "category": "executor",
       "depends_on": [
         "ark-game-domains"
       ],
       "replaces": [],
-      "updated": "2026-09-18"
+      "updated": "2026-09-30"
     },
     "ark-web-scraper": {
       "version": "1.0.0",
