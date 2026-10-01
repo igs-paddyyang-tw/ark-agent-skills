@@ -36,7 +36,7 @@ metrics:
   - { name: 數值變更附影響評估, target: "100%" }
   - { name: 工程對規格的追問, target: "≤ 2 次/份" }
 knowledge_domains: [機制設計筆記, 數值模型, 競品分析, 玩家行為觀察, 術語表]
-skills: [ark-game-design-doc, ark-uml-generator, ark-chart-generator, ark-web-scraper]
+skills: [ark-game-gdd, ark-uml-generator, ark-chart-generator, ark-web-scraper]
 examples:
   - kind: typical
     situation: Leader 要「設計一個每日簽到系統」

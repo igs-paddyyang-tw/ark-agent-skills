@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ g.title }}</title>
+<style>
+:root{
+{%- for k, v in style.tokens.items() %}
+  {{ k }}:{{ v }};
+{%- endfor %}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 var(--font-body)}
+a{color:var(--gold2)}
+header{padding:28px 20px 18px;background:linear-gradient(180deg,#3a1a12,var(--bg));border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:26px;color:var(--gold2);letter-spacing:1px}
+header .sub{color:var(--muted);margin-top:4px}
+.spec{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.spec span{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 10px;font-size:13px}
+.spec b{color:var(--gold)}
+.badge-status{margin-left:auto;font-size:12px;color:var(--muted)}
+nav{position:sticky;top:0;z-index:20;background:rgba(20,16,13,.96);border-bottom:1px solid var(--line);padding:8px 20px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+nav a{color:var(--text);text-decoration:none;padding:5px 12px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:13px}
+nav a:hover{border-color:var(--gold);color:var(--gold2)}
+nav input{margin-left:auto;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:5px 14px;min-width:200px;font:inherit}
+main{max-width:1400px;margin:0 auto;padding:0 20px 60px}
+h2{margin:40px 0 6px;font-size:22px;color:var(--gold2);border-left:4px solid var(--gold);padding-left:10px}
+h3{margin:26px 0 10px;font-size:16px;color:var(--gold)}
+.note{color:var(--muted);font-size:13px;margin:0 0 10px}
+.warn{background:#3a2a12;border:1px solid #6b4d1c;border-radius:8px;padding:10px 14px;color:#f3d9a4;font-size:13px;margin:12px 0}
+.sym-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.sym{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:zoom-in;transition:border-color .15s,transform .15s}
+.sym:hover{border-color:var(--gold);transform:translateY(-2px)}
+.sym .pic{aspect-ratio:1;background:radial-gradient(circle,#3a2c20 0,#18120e 75%);display:flex;align-items:center;justify-content:center;position:relative}
+.sym .pic img{width:78%;height:78%;object-fit:contain}
+.sym .code{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.65);border:1px solid var(--gold);color:var(--gold2);font-weight:700;border-radius:6px;padding:0 8px;font-size:13px}
+.sym .sid{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.65);color:var(--muted);border-radius:6px;padding:0 7px;font-size:12px}
+.sym .body{padding:10px 12px 12px}
+.sym .name{font-weight:700;font-size:15px}
+.sym .file{font-family:var(--font-mono);font-size:12px;color:var(--muted);word-break:break-all}
+.sym .file.soft{color:#8fe3a0;font-size:12.5px}
+.nosoft{color:#ff9b8a;font-family:inherit}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;margin-left:4px;vertical-align:2px}
+.tag.upd{background:#1e4620;color:#9be8a8}
+.tag.guess{background:#5a3b10;color:#ffcf7a}
+.tag.lang{background:#23364d;color:#9cc8ff}
+.tag.todo{background:#5a2a2a;color:#ffb3a8}
+.sym .desc{font-size:13px;margin-top:6px;color:#dcd0c3}
+.odds{display:flex;gap:4px;margin-top:6px}
+.odds span{flex:1;text-align:center;background:var(--panel2);border-radius:4px;font-size:12px;padding:1px 0}
+.odds span i{font-style:normal;color:var(--muted);margin-right:3px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:0}
+.flow{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.scr{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:zoom-in;display:flex;flex-direction:column}
+.scr:hover{border-color:var(--gold)}
+.scr.todo{border-style:dashed;border-color:#6b5c4e;cursor:default}
+.scr .ph{height:100%;display:flex;align-items:center;justify-content:center;color:#8a7868;font-size:15px;background:repeating-linear-gradient(45deg,#1a1410,#1a1410 10px,#211a14 10px,#211a14 20px)}
+.scr .thumb{aspect-ratio:9/16;background:#000;overflow:hidden;position:relative}
+.scr .thumb img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.scr .step{position:absolute;top:8px;left:8px;background:var(--gold);color:#2a1a00;font-weight:700;border-radius:6px;padding:0 8px;font-size:12px}
+.scr .body{padding:10px 12px 12px;flex:1}
+.scr .title{font-weight:700}
+.scr .desc{font-size:13px;color:#dcd0c3;margin-top:4px}
+.scr .file{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:6px;word-break:break-all}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;font-size:13px}
+th{background:var(--panel2);color:var(--gold);position:sticky;top:0}
+tr:hover td{background:#221a14}
+td img{width:44px;height:44px;object-fit:contain;display:block}
+td.comp{white-space:nowrap}
+td.comp img{display:inline-block;width:38px;height:38px;background:#0d0a08;border:1px solid var(--line);border-radius:4px;margin-right:3px;vertical-align:middle}
+td code,p code{font-family:var(--font-mono);font-size:12px;color:#e4d6c4}
+.copy{cursor:pointer;border-bottom:1px dashed var(--muted)}
+.copy:hover{color:var(--gold2)}
+ul.rules{margin:6px 0 0;padding-left:20px}
+ul.rules li{margin:4px 0}
+table.kv th{width:110px;color:var(--gold);background:var(--panel2);position:static}
+table.kv td{color:#dcd0c3}
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:flex;align-items:center;justify-content:center;gap:20px;padding:20px}
+#lb[hidden]{display:none}
+#lb .imgbox{height:100%;max-width:62vw;display:flex;align-items:center;justify-content:center}
+#lb img{max-height:100%;max-width:100%;object-fit:contain}
+#lb .imgbox.symbol{background:radial-gradient(circle,#3a2c20 0,#0d0a08 70%);border-radius:14px;width:min(62vw,80vh);height:min(62vw,80vh)}
+#lb .imgbox.symbol img{width:80%;height:80%}
+#lb .info{width:320px;max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+#lb .info h4{margin:0 0 6px;color:var(--gold2);font-size:18px}
+#lb .info .row{margin:6px 0;font-size:13px}
+#lb .info .k{color:var(--muted)}
+#lb .btn{position:fixed;background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--text);font-size:22px;width:44px;height:44px;border-radius:50%;cursor:pointer}
+#lb .btn:hover{border-color:var(--gold)}
+#lb .close{top:14px;right:14px}#lb .prev{left:14px;top:50%}#lb .next{right:14px;top:50%}
+@media (max-width:800px){ #lb{flex-direction:column}#lb .imgbox{max-width:100%;height:60vh}#lb .info{width:100%}nav input{margin-left:0;min-width:0;width:100%}}
+.langbar{margin:10px 0}
+.lang-btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:4px 14px;margin-right:6px;cursor:pointer;font:inherit}
+.lang-btn.on{border-color:var(--gold);color:var(--gold2);background:#3a2a12}
+.infobox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;max-width:760px}
+.infobox[hidden]{display:none}
+.infobox h4{margin:18px 0 6px;color:var(--gold2);font-size:17px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.infobox h4:first-child{margin-top:0}
+.infobox h5{margin:14px 0 4px;color:var(--gold);font-size:15px}
+.infobox p{margin:4px 0;color:#dcd0c3}
+.infobox .inl{width:26px;height:26px;object-fit:contain;vertical-align:-7px;margin:0 2px}
+.slots{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 14px}
+.slot{margin:0;width:160px}
+.slot img{width:100%;border:1px solid var(--line);border-radius:6px;background:#000;cursor:zoom-in;display:block}
+.slot figcaption{font-size:12px;color:var(--muted);margin-top:4px;text-align:center}
+.slot.empty .ph{height:214px;border:1px dashed #6b5c4e;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#8a7868;font-size:14px}
+.odds-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 14px}
+.odds-cell{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px}
+.odds-cell img{width:54px;height:54px;object-fit:contain;flex:none}
+.oline{font-family:var(--font-mono);font-size:13px;line-height:1.35;color:#e4d6c4}
+.oline i{font-style:normal;color:var(--muted);margin-right:6px}
+@media (max-width:620px){.odds-grid{grid-template-columns:repeat(2,1fr)}}
+#t-lang td{vertical-align:top;min-width:150px}
+#t-lang td:first-child{min-width:0;color:var(--muted)}
+.mut{color:#6b5c4e}
+footer{max-width:1400px;margin:0 auto;padding:20px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);font-family:var(--font-mono)}
+</style>
+</head>
+<body>
+<header>
+  <h1>{{ g.title }}</h1>
+  {% if g.subtitle %}<div class="sub">{{ g.subtitle }}</div>{% endif %}
+  <div class="spec">
+    {%- for s in g.spec if s.short %}<span>{{ s.short_k or s.k }} <b>{{ s.short }}</b></span>{% endfor %}
+    <span class="badge-status">{{ g.status }} · {{ g.distribution }}</span>
+  </div>
+</header>
+<nav>
+  <a href="#rule">遊戲規格</a>
+  <a href="#sym">圖騰</a>
+  {%- for f in g.features %}<a href="#scr-{{ f.id }}">{{ f.title }}</a>{% endfor %}
+  <a href="#map">名稱對照表</a>
+  <a href="#info">INFO 頁</a>
+  <a href="#lang">多國語系</a>
+  <input id="q" type="search" placeholder="搜尋：代號、檔名、角色、GRAND…">
+</nav>
+<main>
+{% set n = namespace(i=0) %}
+{%- macro zh(n) %}{{ ['零','一','二','三','四','五','六','七','八','九','十','十一','十二','十三','十四','十五'][n] }}{% endmacro %}
+
+{% set n.i = n.i + 1 %}
+<h2 id="rule">{{ zh(n.i) }}、遊戲規格</h2>
+{% if g.spec_note %}<p class="note">{{ g.spec_note }}</p>{% endif %}
+<div class="tbl-wrap"><table class="kv">
+{%- for row in g.spec | batch(2) %}
+<tr>{% for s in row %}<th>{{ s.k }}</th><td>{{ s.v }}</td>{% endfor %}</tr>
+{%- endfor %}
+</table></div>
+
+{% set n.i = n.i + 1 %}
+<h2 id="sym">{{ zh(n.i) }}、圖騰（最終版）</h2>
+{% if g.symbols_note %}<p class="note">{{ g.symbols_note | safe }}</p>{% endif %}
+{%- if g.symbols_internal_notes %}
+<!-- 內部備註（不顯示）：
+{%- for t in g.symbols_internal_notes %}
+  - {{ t }}
+{%- endfor %}
+-->
+{%- endif %}
+{%- for grp in g.symbol_groups %}
+<h3>{{ grp.title }}</h3>
+{% if grp.note %}<p class="note">{{ grp.note }}</p>{% endif %}
+<div class="sym-grid" id="g-{{ grp.id }}">
+{%- for s in symbols if s.group == grp.id %}
+  <div class="sym" data-i="{{ s._gi }}" data-q="{{ s._q }}">
+    <div class="pic">{% if s._url %}<img loading="lazy" src="{{ s._url }}" alt="{{ s.name }}">{% else %}<div class="ph" style="width:78%;height:78%;display:flex;align-items:center;justify-content:center;color:#8a7868;border:1px dashed #6b5c4e;border-radius:8px">待美術</div>{% endif %}<span class="code">{{ s.code }}</span>{% if s.sym_id is not none %}<span class="sid">ID {{ s.sym_id }}</span>{% endif %}</div>
+    <div class="body">
+      <div class="name">{% if s.color %}<span class="dot" style="background:var(--{{ s.color }})"></span>{% endif %}{{ s.name }}{% if s.flag %}<span class="tag guess">{{ s.flag }}</span>{% endif %}</div>
+      <div class="file soft">{% if s.soft %}{{ s.file }}{% elif s.role == 'performance' %}<span class="nosoft">無（表演示意）</span>{% else %}<span class="nosoft">工程命名待補</span>{% endif %}{% if s.updated %}<span class="tag upd">較新版</span>{% endif %}</div>
+      {% if s.odds %}<div class="odds"><span><i>5</i>{{ s.odds[0] }}</span><span><i>4</i>{{ s.odds[1] }}</span><span><i>3</i>{{ s.odds[2] }}</span></div>{% endif %}
+      {% if s.desc %}<div class="desc">{{ s.desc }}</div>{% endif %}
+    </div>
+  </div>
+{%- endfor %}
+</div>
+{%- endfor %}
+
+{%- for f in g.features %}
+{% set n.i = n.i + 1 %}
+<h2 id="scr-{{ f.id }}">{{ zh(n.i) }}、{{ f.title }}</h2>
+{%- if f.id in rules_html %}
+{{ rules_html[f.id] | safe }}
+{%- endif %}
+{%- if f.screens_title %}<h3>{{ f.screens_title }}</h3>{% endif %}
+{% if f.screens_note %}<p class="note">{{ f.screens_note | safe }}</p>{% endif %}
+<div class="flow" id="f-{{ f.id }}">
+{%- for s in screens if s.feature == f.id %}
+{%- if s.file is none %}
+  <div class="scr todo" data-q="{{ s._q }}">
+    <div class="thumb"><div class="ph">待補</div><span class="step">{{ s.step }}</span></div>
+    <div class="body"><div class="title">{{ s.title }}<span class="tag todo">缺示意圖</span></div><div class="desc">{{ s.desc }}</div><div class="file">{{ s['from'] }}</div></div>
+  </div>
+{%- else %}
+  <div class="scr" data-i="{{ s._gi }}" data-q="{{ s._q }}">
+    <div class="thumb"><img loading="lazy" src="{{ s._url }}" alt="{{ s.title }}"><span class="step">{{ s.step }}</span></div>
+    <div class="body"><div class="title">{{ s.title }}{% if s.lang %}<span class="tag lang">{{ s.lang }}</span>{% endif %}{% if s.issue %}<span class="tag guess">{{ s.issue }}</span>{% endif %}</div><div class="desc">{{ s.desc }}</div><div class="file">{{ s.file }}</div></div>
+  </div>
+{%- endif %}
+{%- endfor %}
+</div>
+{%- endfor %}
+
+{% set n.i = n.i + 1 %}
+<h2 id="map">{{ zh(n.i) }}、名稱對照表</h2>
+{% if g.map_note %}<p class="note">{{ g.map_note }}</p>{% endif %}
+<div class="tbl-wrap"><table id="t-map">
+<thead><tr><th>SymID</th><th>代號</th><th>圖</th><th>最終圖騰</th><th>軟體命名（工程對接）</th><th>美術原檔名</th><th>規格書原圖（競品/參考）</th><th>5 / 4 / 3 連線</th><th>使用場景</th></tr></thead>
+<tbody>
+{%- for s in symbols %}
+<tr data-q="{{ s._q }}"><td>{{ s.sym_id if s.sym_id is not none else '—' }}</td><td><b>{{ s.code }}</b></td>
+<td>{% if s._url %}<img loading="lazy" src="{{ s._url }}" alt="">{% else %}—{% endif %}</td>
+<td>{{ s.name }}{% if s.flag %}<span class="tag guess">{{ s.flag }}</span>{% endif %}</td>
+<td>{% if s.soft %}<code class="copy" title="點擊複製">{{ s.file }}</code>{% elif s.role == 'performance' %}<span class="nosoft">無（表演示意）</span>{% else %}<span class="nosoft">工程命名待補</span>{% endif %}</td>
+<td><code>{{ s.art_name or '—' }}</code></td>
+<td class="comp">{% for rf in s.ref_files %}<img loading="lazy" src="{{ ref_url(rf) }}" alt="{{ rf }}" title="{{ rf }}">{% else %}—{% endfor %}</td>
+<td>{{ s.odds | join(' / ') if s.odds else '—' }}</td><td>{{ s.scene or '主遊戲' }}</td></tr>
+{%- endfor %}
+</tbody></table></div>
+
+{% set n.i = n.i + 1 %}
+<h2 id="info">{{ zh(n.i) }}、INFO 頁面（遊戲內說明）</h2>
+{% if g.info_note %}<p class="note">{{ g.info_note }}</p>{% endif %}
+<div class="langbar">語言：{% for l in info.langs %}<button class="lang-btn{% if l.id == info.default_lang %} on{% endif %}" data-l="{{ l.id }}">{{ l.label }}</button>{% endfor %}</div>
+{%- for l in info.langs %}
+<div class="infobox" id="infobox-{{ l.id }}"{% if l.id != info.default_lang %} hidden{% endif %}>
+{{ info_html[l.id] | safe }}
+</div>
+{%- endfor %}
+
+{% set n.i = n.i + 1 %}
+<h2 id="lang">{{ zh(n.i) }}、多國語系表</h2>
+{% if g.i18n_note %}<p class="note">{{ g.i18n_note }}</p>{% endif %}
+<div class="tbl-wrap"><table id="t-lang">
+<thead><tr><th>#</th>{% for c in g.i18n_columns %}<th>{{ c.label }}</th>{% endfor %}</tr></thead>
+<tbody>
+{%- for r in i18n_rows %}
+<tr data-q="{{ r | join(' ') }}"><td>{{ loop.index }}</td>{% for c in r %}<td>{% if c %}{{ c }}{% else %}<span class="mut">—</span>{% endif %}</td>{% endfor %}</tr>
+{%- endfor %}
+</tbody></table></div>
+</main>
+<footer>gdd-pack {{ g.slug }} · {{ g.status }} · distribution: {{ g.distribution }} · 由 ark-game-gdd build 產生，請改 yaml/md 重編，勿手改本檔</footer>
+
+<div id="lb" hidden>
+  <button class="btn close" title="關閉 (Esc)">✕</button>
+  <button class="btn prev" title="上一張 (←)">‹</button>
+  <div class="imgbox"><img alt=""></div>
+  <div class="info"></div>
+  <button class="btn next" title="下一張 (→)">›</button>
+</div>
+<script>
+const GALLERY = {{ gallery_json | safe }};
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('q').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('[data-q]').forEach(el => { el.hidden = q && !el.dataset.q.toLowerCase().includes(q); });
+});
+document.querySelectorAll('.copy').forEach(el => el.addEventListener('click', ev => {
+  ev.stopPropagation();
+  navigator.clipboard?.writeText(el.textContent).then(() => { const t = el.textContent; el.textContent = '已複製 ✓'; setTimeout(() => el.textContent = t, 900); });
+}));
+const lb = document.getElementById('lb'), lbImg = lb.querySelector('img'), lbBox = lb.querySelector('.imgbox'), lbInfo = lb.querySelector('.info');
+let cur = -1;
+const visible = () => [...document.querySelectorAll('[data-i]')].filter(el => !el.hidden).map(el => +el.dataset.i);
+function show(i){
+  cur = i; const d = GALLERY[i];
+  lbBox.className = 'imgbox' + (d.type === 'sym' ? ' symbol' : '');
+  lbImg.src = d.src;
+  lbInfo.innerHTML = `<h4>${esc(d.title)}</h4>` + d.rows.map(([k, v]) => v ? `<div class="row"><span class="k">${esc(k)}：</span>${esc(v)}</div>` : '').join('');
+  lb.hidden = false;
+}
+function step(n){ const v = visible(); const k = v.indexOf(cur); if (v.length) show(v[(k + n + v.length) % v.length]); }
+document.addEventListener('click', e => {
+  const fig = e.target.closest('.slot[data-gi]');
+  if (fig){ show(+fig.dataset.gi); return; }
+  const card = e.target.closest('[data-i]');
+  if (card && !e.target.closest('.copy')) show(+card.dataset.i);
+});
+lb.querySelector('.close').onclick = () => lb.hidden = true;
+lb.querySelector('.prev').onclick = () => step(-1);
+lb.querySelector('.next').onclick = () => step(1);
+lb.addEventListener('click', e => { if (e.target === lb) lb.hidden = true; });
+document.addEventListener('keydown', e => {
+  if (lb.hidden) return;
+  if (e.key === 'Escape') lb.hidden = true;
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+document.querySelectorAll('.lang-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.lang-btn').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.infobox').forEach(x => x.hidden = x.id !== 'infobox-' + b.dataset.l);
+}));
+</script>
+{{ stamp | safe }}
+</body>
+</html>

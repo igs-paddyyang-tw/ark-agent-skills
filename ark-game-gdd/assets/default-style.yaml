@@ -1,0 +1,19 @@
+# ark-game-gdd 預設風格：沿用企劃「素材總覽」樣板的暗棕金配色（企劃樣板優先於圖書館一致性）。
+# 只改 token 不改元件 CSS；要套 atlas 暗金風或 ark-html-report 風格，換這份檔即可。
+name: planner-brown-gold
+theme: dark
+tokens:
+  --bg: "#14100d"
+  --panel: "#1f1813"
+  --panel2: "#2a2019"
+  --line: "#3d2f24"
+  --gold: "#e9b949"
+  --gold2: "#ffdf8a"
+  --red: "#d6453a"
+  --blue: "#3f8fe0"
+  --green: "#3fbf5f"
+  --purple: "#9b6ce0"
+  --text: "#f2e8dc"
+  --muted: "#a8998a"
+  --font-body: '"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif'
+  --font-mono: "Consolas,monospace"

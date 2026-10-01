@@ -40,7 +40,7 @@ FALLBACK_CATEGORY_MAP = {
     "view": ["ark-html-dashboard", "ark-data-dashboard", "ark-news-daily",
                 "ark-frontend-design",
                 "ark-theme-factory", "ark-html-report"],
-    "document": ["ark-report-template", "ark-markdown-formatter", "ark-game-design-doc",
+    "document": ["ark-report-template", "ark-markdown-formatter",
             "ark-uml-generator", "ark-docx-tool",
             "ark-pptx-tool", "ark-xlsx-tool", "ark-pdf-tool", "ark-md-report"],
     "domain": ["ark-marketing", "ark-retention-analysis"],
