@@ -73,7 +73,7 @@ v3 把它變成真實可執行的 `scripts/wiki_query.py`，索引落在 `knowle
 ├─ 查知識 / 找口徑 / 有沒有 XXX？ → wiki_query.py（先 --top_k 3，不夠再 --full）
 ├─ 要把 wiki 內容帶進回答或提詞？ → wiki_context.py --budget_chars
 ├─ meta.index_fresh = false？      → 答案照用，另提醒維護者跑 wiki_index.py build
-├─ 匯入 raw / 報告蒸餾入庫？       → wiki_ingest.py（guard/taxonomy 內建，勿 --no-guard）
+├─ 匯入 raw / 報告入庫（產骨架非蒸餾）？ → wiki_ingest.py（guard/taxonomy 內建，勿 --no-guard）
 ├─ 新概念沒有合法 tag？            → wiki_taxonomy.py propose（不自創）
 ├─ 健檢 / CI？                     → wiki_lint.py --json（以 exit code 為準）
 ├─ 圖譜 / 孤兒頁？                 → wiki_graph.py
@@ -96,7 +96,7 @@ python $S/wiki_graph.py   --wiki_dir knowledge/shared/wiki --json
 python $S/build_wiki.py   ./myproject demo --install-skill ./myproject/.kiro/skills
 ```
 
-完整參數、exit code 見 `references/scripts-reference.md`。
+完整參數、exit code 見 `references/scripts-reference.md`。**wiki_ingest = guard-first 骨架產生器非蒸餾器**：產待填骨架、預設 `trust: llm-distilled`／`approved: false`／`seedling`（raw frontmatter 會沿用）；**exit（F-3）** 0=成功 1=blocked 3=partial（落盤成功索引失敗，payload 帶 `status`+`index_error`，不再靜默 ok）；`--tokenizer` 鎖定分詞（F-5）。
 
 ## JSON 契約
 
@@ -109,7 +109,7 @@ python $S/build_wiki.py   ./myproject demo --install-skill ./myproject/.kiro/ski
  "meta": {"total": 7, "top_k": 5, "truncated": false, "out_file": null, "domains": [],
    "index_used": true, "index_fresh": true, "layers_used": ["L0","L1","L3"],
    "layers_skipped": {"L2": "no_embeddings"}, "tokenizer": "bigram",
-   "bm25_backend": "purepy", "warnings": [], "elapsed_ms": 5}}
+   "bm25_backend": "purepy", "warnings": [], "hints": [], "elapsed_ms": 5}}
 ```
 
 錯誤：`{"ok": false, "error": {"code": "...", "msg": "..."}}`，exit 2。
@@ -121,7 +121,7 @@ python $S/build_wiki.py   ./myproject demo --install-skill ./myproject/.kiro/ski
 | `BAD_ARGUMENTS` | 參數互斥或缺必要組合（如多 domain 未給 `--domains`） |
 | `SCHEMA_NOT_FOUND` | `--schema` 指向的檔案不存在 |
 | `INDEX_MISSING` / `INDEX_STALE` | 索引不存在／過期（**warning，仍回答**） |
-| `TOKENIZER_MISMATCH` | 索引與本機分詞不同（warning，改記憶體重算） |
+| `TOKENIZER_MISMATCH` | 索引與本機分詞不同（warning，改記憶體重算；`meta.hints` 給重建指令） |
 | `GUARD_BLOCKED` | ingest 來源含注入等違規，已隔離且不落盤 |
 | `TAG_NOT_IN_WHITELIST` | tags 不在 schema 白名單，不落盤 |
 | `BUILD_LOCKED` | 另一個 index build 進行中 |

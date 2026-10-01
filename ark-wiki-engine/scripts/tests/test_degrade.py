@@ -90,6 +90,10 @@ def test_tokenizer_mismatch_warns_and_recomputes():
         assert ErrorCode.TOKENIZER_MISMATCH in out["meta"]["warnings"]
         assert out["meta"]["index_used"] is False       # 不可拿別的分詞建的索引來查
         assert out["meta"]["tokenizer"] == "bigram"
+        # F-5：訊息要可行動 —— mismatch 時 hints 須給具體重建指令
+        hints = out["meta"].get("hints", [])
+        assert hints, "mismatch 時應提供可行動 hint，不能只報 code"
+        assert any("--tokenizer" in h for h in hints), f"hint 應含重建指令；hints={hints}"
         assert out["results"], "分詞不符時仍必須回答"
         assert out["results"][0]["slug"] == "retention-definition"
     finally:

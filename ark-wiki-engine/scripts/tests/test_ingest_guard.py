@@ -185,7 +185,12 @@ def test_unknown_tag_blocked_before_write(kb):
 
 
 def test_clean_source_ingests_with_trust_and_index(kb):
-    """AC: AC-017 — 乾淨來源：落盤帶 trust/approved、log 有 by、索引重建"""
+    """AC: AC-017 — 乾淨來源：落盤帶 trust/approved、log 有 by、索引重建
+
+    🔴 契約演進（2026-09-23，aibi-agent 回報 P0）：raw 未宣告 trust 時，ingest 產出的骨架
+    是「待填的 LLM 蒸餾素材」→ 預設 `trust: llm-distilled` + `approved: false`（對齊 BRAIN.md），
+    不再是舊的 `deterministic` + `true`（那讓未審核 agent 內容被標成最高信任，污染信任模型）。
+    """
     (kb / "log.md").write_text("# Wiki 操作日誌\n\n", encoding="utf-8")
     (kb / "index.md").write_text("# 索引\n\n", encoding="utf-8")
     proc = run("wiki_ingest.py", "--source", str(kb / "raw" / "clean.md"),
@@ -195,9 +200,9 @@ def test_clean_source_ingests_with_trust_and_index(kb):
     assert payload["index_built"] is True
     page = Path(payload["results"][0]["page"])
     text = page.read_text(encoding="utf-8")
-    assert "trust: deterministic" in text and "approved: true" in text
+    assert "trust: llm-distilled" in text and "approved: false" in text
     log = (kb / "log.md").read_text(encoding="utf-8")
-    assert "deterministic" in log and "qa-agent" in log
+    assert "llm-distilled" in log and "qa-agent" in log
     assert (kb / "wiki" / ".index" / "manifest.json").exists()
 
 

@@ -253,6 +253,7 @@ def run_query(wiki_dir: Path, query: str, args, domain: str = "") -> tuple[list[
     idx = _read_index(wiki_dir)
     mf = idx["manifest"] or {}
     warnings: list[str] = []
+    hints: list[str] = []
     skipped: dict[str, str] = {}
 
     metadata = idx["metadata"]
@@ -275,6 +276,11 @@ def run_query(wiki_dir: Path, query: str, args, domain: str = "") -> tuple[list[
         postings = None                      # 索引用別的分詞建的，不能拿來查
         if pages is None:
             pages = _scan_pages(wiki_dir)
+        # 🔴 F-5（aidev-agent 回報）：訊息要可行動 —— 只報 code 等於要使用者自己猜怎麼修。
+        hints.append(
+            f"索引用 '{want}' 分詞建立，本機查詢用 '{have}' → 已改記憶體重算（較慢）。"
+            f"請用 `wiki_index.py build --wiki_dir <dir> --tokenizer {have}` 重建索引，"
+            f"或 ingest 時加 `--tokenizer {want}` 鎖定一致。")
 
     # freshness（D-5：只警告）
     index_fresh = True
@@ -359,6 +365,7 @@ def run_query(wiki_dir: Path, query: str, args, domain: str = "") -> tuple[list[
         "layers_used": [l for l in lr], "layers_skipped": skipped,
         "tokenizer": tokenizer, "bm25_backend": mf.get("bm25_backend", "purepy"),
         "warnings": warnings,
+        "hints": hints,
     }
     return results, meta
 

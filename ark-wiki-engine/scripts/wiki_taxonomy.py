@@ -118,10 +118,28 @@ def cmd_propose(schema: Path, tag: str, reason: str, by: str) -> int:
     return 0
 
 
-def cmd_approve(schema: Path, tag: str) -> int:
+def _append_approve_log(schema: Path, tag: str, by: str) -> None:
+    """approve 後 append 一行到 schema 同層的 log.md（治理稽核軌跡）。
+
+    🔴 F-6（aidev-agent 回報）：approve 是治理關鍵動作卻無稽核軌跡 ——
+    出了問題要能回答「這個 tag 是誰、何時核准進白名單的」。
+    log 位置 = schema 同層的 log.md（knowledge/{proj}/log.md），
+    格式與 wiki_ingest 的 log 平行：`date | op | tag | by | note`。
+    """
+    log_path = schema.parent / "log.md"
+    entry = (f"- **{date.today().isoformat()}** | approve | tag `{tag}` | {by} | "
+             f"核准入白名單\n")
+    if log_path.exists():
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(entry)
+    else:
+        log_path.write_text(f"# Wiki 操作日誌\n\n{entry}", encoding="utf-8")
+
+
+def cmd_approve(schema: Path, tag: str, by: str = "unknown") -> int:
     text = _read(schema)
     if tag in load_whitelist(schema):
-        print(f"ℹ '{tag}' 已在白名單")
+        print(f"ℹ '{tag}' 已在白名單", file=sys.stderr)
         return 0
     if WHITELIST_HEADER not in text:
         text = f"{WHITELIST_HEADER}\n\n- {tag}\n\n" + text
@@ -130,7 +148,9 @@ def cmd_approve(schema: Path, tag: str) -> int:
     # 從提案佇列移除
     text = re.sub(rf"\|\s*{re.escape(tag)}\s*\|.*\n", "", text)
     schema.write_text(text, encoding="utf-8")
-    print(f"✅ '{tag}' 已入白名單")
+    # 寫入白名單成功才記 log（已存在的 tag 在上面提前 return，不會重複寫）
+    _append_approve_log(schema, tag, by)
+    print(f"✅ '{tag}' 已入白名單（by {by}，已記 log.md）", file=sys.stderr)
     return 0
 
 
@@ -176,9 +196,10 @@ def main() -> int:
             sp.add_argument("pages", nargs="+")
         if name in ("propose", "approve"):
             sp.add_argument("tag")
+        if name in ("propose", "approve"):
+            sp.add_argument("--by", default="unknown")
         if name == "propose":
             sp.add_argument("--reason", default="")
-            sp.add_argument("--by", default="unknown")
         if name == "migrate":
             sp.add_argument("--wiki_dir", required=True)
 
@@ -208,7 +229,7 @@ def main() -> int:
             emit_json({"ok": rc == 0, "action": "propose", "tag": args.tag}, rc)
         return rc
     if args.cmd == "approve":
-        rc = cmd_approve(schema, args.tag)
+        rc = cmd_approve(schema, args.tag, args.by)
         if args.json:
             emit_json({"ok": rc == 0, "action": "approve", "tag": args.tag}, rc)
         return rc

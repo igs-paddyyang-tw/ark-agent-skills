@@ -39,7 +39,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _wikilib import ErrorCode, emit_json, parse_frontmatter  # noqa: E402
+from _wikilib import ErrorCode, emit_json, parse_frontmatter, strip_frontmatter  # noqa: E402
 import wiki_guard  # noqa: E402
 import wiki_taxonomy  # noqa: E402
 
@@ -51,7 +51,7 @@ import wiki_taxonomy  # noqa: E402
 # ── v3 硬規則管線（順序寫死在 ingest_file，任何參數都不能調換）──────
 #
 #   guard scan ──違規→ quarantine + GUARD_BLOCKED（不落盤）
-#      → 骨架產出（trust=deterministic / approved=true）
+#      → 骨架產出（trust 依 raw frontmatter，預設 llm-distilled / approved=false / seedling）
 #      → taxonomy check（--schema 給時；未知 tag → TAG_NOT_IN_WHITELIST，不落盤）
 #      → 落盤 wiki/{category}/{page}.md
 #      → index.md + log.md（`date | op | page | trust | by | note`）
@@ -184,29 +184,82 @@ def relative_source(source_path: Path, domain_root: Path) -> str:
     return rel
 
 
+def _extract_fallback_tags(content: str, limit: int = 3) -> list[str]:
+    """raw 無 frontmatter tags 時的 fallback：從 CATEGORY_KEYWORDS 詞邊界比對抽候選。
+
+    🔴 F-2（aidev-agent 回報）：舊版 `kw.lower() in content.lower()` 是**子字串命中**，
+    會把檔名引用（`-sop.md` 的 "sop"）、說明文字（"摘要"）誤抽成 tag →
+    撞白名單讓 ingest 被擋。改法：
+
+    1. **只掃正文**（strip frontmatter 後的 body），不掃檔名 → 消檔名污染。
+    2. **英文/數字詞用 `\\b` 詞邊界** → 'api' 不再命中 'rapid'/'apiary'。
+    3. **CJK 詞需出現在標題行**（`#` 開頭或首行）才算 —— CJK 無詞邊界概念，
+       限定在標題（主題性最強）可擋掉說明語境裡的 "摘要"/"踩坑" 誤抽。
+
+    取捨：寧可少抽也別誤抽（回報明確：誤抽直接撞白名單擋 ingest，比漏抽更糟）。
+    漏抽時 raw 可自帶 frontmatter tags（F-1 路徑）或人工 propose 補。
+    """
+    body = strip_frontmatter(content)
+    body_lower = body.lower()
+    # 標題行集合（# 開頭 或 第一行）供 CJK 關鍵字判定主題性
+    title_lines = "\n".join(
+        ln for ln in body.splitlines()
+        if ln.lstrip().startswith("#")
+    ) or (body.splitlines()[0] if body.splitlines() else "")
+
+    tags: list[str] = []
+    for cat, keywords in CATEGORY_KEYWORDS.items():
+        for kw in keywords:
+            if kw in tags:
+                continue
+            kw_lower = kw.lower()
+            is_ascii = kw.isascii()
+            if is_ascii:
+                # 英文/數字：詞邊界比對（kw 可能含空白如 "system design"，用 re.escape）
+                if re.search(rf"\b{re.escape(kw_lower)}\b", body_lower):
+                    tags.append(kw)
+            else:
+                # CJK：需在標題行出現才算（擋說明語境誤抽）
+                if kw in title_lines:
+                    tags.append(kw)
+            if len(tags) >= limit:
+                return tags
+    return tags
+
+
 def build_wiki_page(source_path: Path, page_name: str, category: str, content: str,
                     domain_root: Path) -> str:
     """產出含 frontmatter 的 wiki 頁面骨架。"""
     today = date.today().isoformat()
     title = extract_title_from_content(content, page_name)
-    page_type = detect_type(content)
     rel_source = relative_source(source_path, domain_root)
     _bucket_warn = warn_if_not_bucketed(rel_source)
     if _bucket_warn:
         print(_bucket_warn, file=sys.stderr)
 
-    # 從內容提取 tags（取前 5 個出現的 category keywords）
-    tags = []
-    for cat, keywords in CATEGORY_KEYWORDS.items():
-        for kw in keywords:
-            if kw.lower() in content.lower() and kw not in tags:
-                tags.append(kw)
-                if len(tags) >= 3:
-                    break
-        if len(tags) >= 3:
-            break
+    # 🔴 先讀 raw 自己的 frontmatter —— raw 有宣告就沿用，不自行推測改寫（aibi-agent 回報 P1）。
+    raw_fm = parse_frontmatter(content) or {}
+
+    # type：raw 有就沿用，無才用 detect_type 推測
+    page_type = raw_fm.get("type") or detect_type(content)
+
+    # tags：raw 有就沿用（含 CJK，不截斷）；無才用 CATEGORY_KEYWORDS fallback（詞邊界比對）
+    raw_tags = raw_fm.get("tags")
+    if isinstance(raw_tags, str):
+        raw_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+    if raw_tags:
+        tags = list(raw_tags)
+    else:
+        tags = _extract_fallback_tags(content)
 
     tags_str = ", ".join(tags) if tags else page_type
+
+    # 🔴 trust/approved/status：ingest 產出是「骨架待填」的 LLM 蒸餾素材，
+    # 一律 llm-distilled / approved false / seedling（對齊 BRAIN.md；aibi-agent 回報 P0）。
+    # raw 若自帶更高信任（deterministic）也沿用其宣告，但預設保守。
+    trust = raw_fm.get("trust") or "llm-distilled"
+    approved = str(raw_fm.get("approved", "false")).lower()
+    status = raw_fm.get("status") or "seedling"
 
     return f"""---
 title: "{title}"
@@ -216,9 +269,9 @@ sources: [{rel_source}]
 related: [overview]
 created: {today}
 updated: {today}
-status: seedling
-trust: deterministic
-approved: true
+status: {status}
+trust: {trust}
+approved: {approved}
 ---
 
 # {title}
@@ -351,15 +404,35 @@ def ingest_file(source_path: Path, wiki_dir: Path, category: str, page_name: str
 
     # ── 步驟 5：index.md + log.md
     title = extract_title_from_content(content, page_name)
+    # trust 對齊頁面實際值（build_wiki_page 依 raw frontmatter 決定；預設 llm-distilled）
+    page_trust = parse_frontmatter(wiki_content).get("trust", "llm-distilled")
     update_index(wiki_dir, category, page_name, title)
-    update_log(wiki_dir, page_name, source_path, trust="deterministic", by=by,
+    update_log(wiki_dir, page_name, source_path, trust=page_trust, by=by,
                note=guard_note)
     if guard_note:
         print(f"  ⚠️  --no-guard：{source_path} 有 {len(findings)} 項 guard 違規仍被寫入"
               f"（已在 log.md 記 no-guard 以供稽核）", file=sys.stderr)
     return {"file": str(source_path), "status": "ok", "page": str(out_path),
-            "category": category, "trust": "deterministic", "by": by,
+            "category": category, "trust": page_trust, "by": by,
             "guard_bypassed": bool(guard_note)}
+
+
+def run_index_build(wiki_dir: Path, tokenizer: str | None = None) -> tuple[bool, str | None]:
+    """跑 wiki_index.py build 子進程。回傳 (成功, 失敗原因)。
+
+    🔴 F-3（aidev-agent 回報）：舊版只記 `index_built = returncode==0`，
+    失敗時原因被 `capture_output` 吞掉、payload 仍 ok:true、exit 0 → 索引靜默沒建，
+    下游無從判斷。改：失敗時接住 stderr 當 index_error，交 main 決定 partial 狀態。
+    """
+    cmd = [sys.executable, str(Path(__file__).parent / "wiki_index.py"),
+           "build", "--wiki_dir", str(wiki_dir)]
+    if tokenizer:
+        cmd += ["--tokenizer", tokenizer]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode == 0:
+        return True, None
+    err = (proc.stderr or proc.stdout or "").strip()
+    return False, err[-500:] or f"wiki_index build 失敗（exit={proc.returncode}）"
 
 
 def main() -> None:
@@ -372,6 +445,8 @@ def main() -> None:
     p.add_argument("--dry_run", action="store_true", help="預覽，不寫入")
     p.add_argument("--schema", default="", help="schema.md 路徑（給了才做 tags 白名單守門）")
     p.add_argument("--by", default="unknown", help="寫入 log.md 的執行者")
+    p.add_argument("--tokenizer", default="", choices=["", "auto", "jieba", "bigram"],
+                   help="索引分詞器（鎖定給 wiki_index build，確保 build/query 一致；空=用 build 預設 auto）")
     p.add_argument("--no-guard", dest="no_guard", action="store_true",
                    help="繞過 guard（會在 stderr 警告並在 log.md 記 no-guard）")
     p.add_argument("--no-index", dest="no_index", action="store_true",
@@ -410,25 +485,41 @@ def main() -> None:
 
     # ── 步驟 6：索引（有實際落盤才重建）
     index_built = False
+    index_error = None
     if created and not args.no_index and not args.dry_run:
-        proc = subprocess.run([sys.executable, str(Path(__file__).parent / "wiki_index.py"),
-                               "build", "--wiki_dir", str(wiki_dir)],
-                              capture_output=True, text=True)
-        index_built = proc.returncode == 0
+        index_built, index_error = run_index_build(wiki_dir, tokenizer=args.tokenizer or None)
 
-    payload = {"ok": not blocked, "action": "ingest", "created": len(created),
-               "blocked": len(blocked), "index_built": index_built, "results": results}
+    # ── 狀態判定（F-3：index_built 與 ok/exit code 不再解耦）
+    #   blocked（guard/taxonomy 擋下）        → ok:false, exit 1
+    #   partial（落盤成功但索引 build 失敗）    → ok:false, exit 3, 帶 index_error
+    #   全成功                                → ok:true,  exit 0
+    index_failed = bool(created) and not args.no_index and not args.dry_run and not index_built
+    if blocked:
+        status, exit_code = "blocked", 1
+    elif index_failed:
+        status, exit_code = "partial", 3
+    else:
+        status, exit_code = "ok", 0
+
+    payload = {"ok": status == "ok", "action": "ingest", "status": status,
+               "created": len(created), "blocked": len(blocked),
+               "index_built": index_built, "results": results}
+    if index_error:
+        payload["index_error"] = index_error
     if args.json:
-        emit_json(payload, 1 if blocked else 0)
+        emit_json(payload, exit_code)
 
     for r in results:
         mark = {"ok": "[OK]", "blocked": "🚧", "skip": "[SKIP]", "dry_run": "[DRY]"}[r["status"]]
         extra = r.get("code") or r.get("reason") or r.get("page", "")
         print(f"  {mark} {r['file']} {extra}")
-    print(f"\n{'✅' if not blocked else '⚠️'} 建立 {len(created)}｜擋下 {len(blocked)}"
-          f"｜索引{'已重建' if index_built else '未重建'}")
-    if blocked:
-        sys.exit(1)
+    idx_msg = "已重建" if index_built else ("建置失敗" if index_failed else "未重建")
+    print(f"\n{'✅' if status == 'ok' else '⚠️'} 建立 {len(created)}｜擋下 {len(blocked)}"
+          f"｜索引{idx_msg}")
+    if index_error:
+        print(f"  ❌ 索引錯誤：{index_error}", file=sys.stderr)
+    if exit_code:
+        sys.exit(exit_code)
 
 
 if __name__ == "__main__":
