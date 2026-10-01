@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **62 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **63 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -138,7 +138,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑧ 執行器 Executor
 
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜11 個
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜12 個
 
 | Skill | 定位 |
 |-------|------|
@@ -147,6 +147,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-game-atlas` | 圖文遊戲規格書（atlas）編譯器：把「競品影片 → 遊戲規格」鏈的一個 run 編成一本可翻閱的書—— 文字逐條來自 `game-spec.v1.md` 帶 provenance 的主張（OBSER… |
 | `ark-game-domains` | 「競品影片 → 遊戲規格」skill 鏈的 Domain Pack 註冊庫：唯一放遊戲領域知識的地方 （偵測器組合、分析項目與提詞、受控詞彙與 KB seed、規格章節與 dev-spec 模板、li… |
 | `ark-game-gdd` | 遊戲企劃文件（GDD）的兩段式工具：**從構想產文件** + **從資料層產素材總覽**。 |
+| `ark-game-quicktest` | C 段「機率規格書 + Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/dev-sample/機率工作流/快測範本）為 runtime， deterministic 做三件事——① q… |
 | `ark-game-spec` | 遊戲規格產出 executor（domain-agnostic）：`game-analysis.yaml` + `kb-refs.yaml` → 依 pack 章節 deterministic 渲染 … |
 | `ark-github-cli` | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
 | `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |

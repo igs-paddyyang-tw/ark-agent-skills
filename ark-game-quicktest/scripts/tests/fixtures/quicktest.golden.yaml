@@ -1,0 +1,8 @@
+# qt_report 目標檔範例（golden：機率基礎範本 report_1.0.0.txt）
+game: 機率基礎範本
+slug: prob-base-template
+target_rtp: 0.60          # 範本模擬 59.4492% → 差 −0.55% > 容許 0.5% → rtp FAIL（示範）
+rtp_tolerance: 0.005
+feel:
+  - game: SpecialGameTotal   # 報告 BASE INFO 的列名
+    preset: 標準節奏          # P-005：1/150 ~ 1/80；報告 Freq 101.76 → PASS

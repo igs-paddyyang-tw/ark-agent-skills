@@ -1,0 +1,910 @@
+{
+ "contract": "1",
+ "version": "1.0.0",
+ "generated_at": "2026-07-17 15:44:55.1778",
+ "spins": 100000000,
+ "total_win": 297245968,
+ "total_bet": 500000000,
+ "games": {
+  "MainGame": {
+   "rtp": 0.33549799999999996,
+   "hitrate": 0.1566,
+   "freq": null,
+   "multi": 2.14,
+   "playtimes": null,
+   "retrirate": null,
+   "maxmulti": 12.0
+  },
+  "SpecialGameTotal": {
+   "rtp": 0.258994,
+   "hitrate": null,
+   "freq": 101.76,
+   "multi": 26.36,
+   "playtimes": 10.06,
+   "retrirate": 0.0,
+   "maxmulti": 164.8
+  },
+  "Ultra": {
+   "rtp": 0.258994,
+   "hitrate": null,
+   "freq": 101.76,
+   "multi": 26.36,
+   "playtimes": 10.06,
+   "retrirate": 0.0,
+   "maxmulti": 164.8
+  },
+  "Total": {
+   "rtp": 0.594492,
+   "maxmulti": 166.8
+  }
+ },
+ "detail": {
+  "sd": 3.55,
+  "confidence": {
+   "90": [
+    0.5939,
+    0.5951
+   ],
+   "95": [
+    0.5938,
+    0.5952000000000001
+   ],
+   "99": [
+    0.5936,
+    0.5954
+   ]
+  },
+  "pi": 1.7458,
+  "pay_out_rate": 0.273643,
+  "avg_cashout_players": 13.52,
+  "high_avg_rate": 0.4354,
+  "mid_avg": 0.9,
+  "maxwin_note": "maxwin統計: +Inf 手出現一次"
+ },
+ "symbol_hit_rate": {
+  "1": {
+   "x2": 0.0,
+   "x3": 0.0018,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0018
+  },
+  "2": {
+   "x2": 0.0098,
+   "x3": 0.0,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0098
+  },
+  "11": {
+   "x2": 0.0,
+   "x3": 0.0128,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0128
+  },
+  "12": {
+   "x2": 0.0,
+   "x3": 0.0128,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0128
+  },
+  "13": {
+   "x2": 0.0,
+   "x3": 0.0127,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0127
+  },
+  "14": {
+   "x2": 0.0,
+   "x3": 0.0128,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0128
+  },
+  "15": {
+   "x2": 0.0,
+   "x3": 0.0128,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0128
+  },
+  "16": {
+   "x2": 0.0,
+   "x3": 0.0127,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0127
+  },
+  "21": {
+   "x2": 0.0,
+   "x3": 0.0127,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0127
+  },
+  "22": {
+   "x2": 0.0,
+   "x3": 0.0128,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0128
+  },
+  "23": {
+   "x2": 0.0,
+   "x3": 0.0473,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0473
+  },
+  "24": {
+   "x2": 0.0,
+   "x3": 0.0127,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0127
+  },
+  "25": {
+   "x2": 0.0,
+   "x3": 0.0127,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0127
+  },
+  "TOTAL": {
+   "x2": 0.0098,
+   "x3": 0.17670000000000002,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.1865
+  }
+ },
+ "symbol_hit_rtp": {
+  "1": {
+   "x2": 0.0,
+   "x3": 0.0109,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0109
+  },
+  "2": {
+   "x2": 0.0197,
+   "x3": 0.0,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0197
+  },
+  "11": {
+   "x2": 0.0,
+   "x3": 0.051,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.051
+  },
+  "12": {
+   "x2": 0.0,
+   "x3": 0.045899999999999996,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.045899999999999996
+  },
+  "13": {
+   "x2": 0.0,
+   "x3": 0.0382,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0382
+  },
+  "14": {
+   "x2": 0.0,
+   "x3": 0.030600000000000002,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.030600000000000002
+  },
+  "15": {
+   "x2": 0.0,
+   "x3": 0.023,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.023
+  },
+  "16": {
+   "x2": 0.0,
+   "x3": 0.0229,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0229
+  },
+  "21": {
+   "x2": 0.0,
+   "x3": 0.0178,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0178
+  },
+  "22": {
+   "x2": 0.0,
+   "x3": 0.0179,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0179
+  },
+  "23": {
+   "x2": 0.0,
+   "x3": 0.0473,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0473
+  },
+  "24": {
+   "x2": 0.0,
+   "x3": 0.0051,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0051
+  },
+  "25": {
+   "x2": 0.0,
+   "x3": 0.0051,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.0051
+  },
+  "TOTAL": {
+   "x2": 0.0197,
+   "x3": 0.31579999999999997,
+   "x4": 0.0,
+   "x5": 0.0,
+   "total": 0.33549999999999996
+  }
+ },
+ "reel_set_rtp": {
+  "0": 0.594492,
+  "1": null,
+  "2": null,
+  "3": null,
+  "4": null,
+  "5": null,
+  "6": null,
+  "7": null,
+  "8": null,
+  "9": null,
+  "10": null
+ },
+ "asset_100": [
+  {
+   "range": "x <= 50",
+   "pct": 0.4926
+  },
+  {
+   "range": "50 < x <= 100",
+   "pct": 0.37670000000000003
+  },
+  {
+   "range": "100 < x <= 200",
+   "pct": 0.1277
+  },
+  {
+   "range": "200 < x",
+   "pct": 0.003
+  }
+ ],
+ "multiple": [
+  {
+   "range": "0 < x < 1",
+   "spins_per_hit": 85.8,
+   "ge": "0",
+   "spins_per_hit_ge": 6.9
+  },
+  {
+   "range": "1 <= x < 5",
+   "spins_per_hit": 7.6,
+   "ge": "1",
+   "spins_per_hit_ge": 6.9
+  },
+  {
+   "range": "5 <= x < 10",
+   "spins_per_hit": 266.85,
+   "ge": "5",
+   "spins_per_hit_ge": 74.76
+  },
+  {
+   "range": "10 <= x < 25",
+   "spins_per_hit": 259.64,
+   "ge": "10",
+   "spins_per_hit_ge": 103.85
+  },
+  {
+   "range": "25 <= x < 50",
+   "spins_per_hit": 222.5,
+   "ge": "25",
+   "spins_per_hit_ge": 173.09
+  },
+  {
+   "range": "50 <= x < 75",
+   "spins_per_hit": 880.13,
+   "ge": "50",
+   "spins_per_hit_ge": 779.37
+  },
+  {
+   "range": "75 <= x < 100",
+   "spins_per_hit": 7358.35,
+   "ge": "75",
+   "spins_per_hit_ge": 6807.82
+  },
+  {
+   "range": "100 <= x < 150",
+   "spins_per_hit": 91324.2,
+   "ge": "100",
+   "spins_per_hit_ge": 90991.81
+  },
+  {
+   "range": "150 <= x < 200",
+   "spins_per_hit": 25000000.0,
+   "ge": "150",
+   "spins_per_hit_ge": 25000000.0
+  },
+  {
+   "range": "200 <= x < 300",
+   "spins_per_hit": null,
+   "ge": "200",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "300 <= x < 500",
+   "spins_per_hit": null,
+   "ge": "300",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "500 <= x < 800",
+   "spins_per_hit": null,
+   "ge": "500",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "800 <= x < 1000",
+   "spins_per_hit": null,
+   "ge": "800",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "1000 <= x < 2000",
+   "spins_per_hit": null,
+   "ge": "1000",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "2000 <= x < 5000",
+   "spins_per_hit": null,
+   "ge": "2000",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "5000 <= x < 10000",
+   "spins_per_hit": null,
+   "ge": "5000",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "10000 <= x < 20000",
+   "spins_per_hit": null,
+   "ge": "10000",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "20000 <= x < 50000",
+   "spins_per_hit": null,
+   "ge": "20000",
+   "spins_per_hit_ge": null
+  },
+  {
+   "range": "50000 <= x < -1",
+   "spins_per_hit": null,
+   "ge": "50000",
+   "spins_per_hit_ge": null
+  }
+ ],
+ "special_range": [
+  {
+   "range": "x = 0",
+   "appear": {
+    "total": 0.8434,
+    "main": 0.8434,
+    "free": 0.0025
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": 10.0
+  },
+  {
+   "range": "0 < x < 1",
+   "appear": {
+    "total": 0.011699999999999999,
+    "main": 0.011699999999999999,
+    "free": 0.0011
+   },
+   "rtp": {
+    "total": 0.0055000000000000005,
+    "main": 0.0055000000000000005,
+    "free": 0.0
+   },
+   "fg_avg_spin": 10.0
+  },
+  {
+   "range": "1 <= x < 5",
+   "appear": {
+    "total": 0.1316,
+    "main": 0.1366,
+    "free": 0.0382
+   },
+   "rtp": {
+    "total": 0.2582,
+    "main": 0.2688,
+    "free": 0.0012
+   },
+   "fg_avg_spin": 10.0
+  },
+  {
+   "range": "5 <= x < 10",
+   "appear": {
+    "total": 0.0037,
+    "main": 0.0069,
+    "free": 0.0989
+   },
+   "rtp": {
+    "total": 0.0255,
+    "main": 0.045599999999999995,
+    "free": 0.0074
+   },
+   "fg_avg_spin": 10.0
+  },
+  {
+   "range": "10 <= x < 25",
+   "appear": {
+    "total": 0.0039000000000000003,
+    "main": 0.0015,
+    "free": 0.3914
+   },
+   "rtp": {
+    "total": 0.0665,
+    "main": 0.015600000000000001,
+    "free": 0.0667
+   },
+   "fg_avg_spin": 10.01
+  },
+  {
+   "range": "25 <= x < 50",
+   "appear": {
+    "total": 0.0045000000000000005,
+    "main": 0.0,
+    "free": 0.3797
+   },
+   "rtp": {
+    "total": 0.15960000000000002,
+    "main": 0.0,
+    "free": 0.1308
+   },
+   "fg_avg_spin": 10.07
+  },
+  {
+   "range": "50 <= x < 75",
+   "appear": {
+    "total": 0.0011,
+    "main": 0.0,
+    "free": 0.07919999999999999
+   },
+   "rtp": {
+    "total": 0.0667,
+    "main": 0.0,
+    "free": 0.0455
+   },
+   "fg_avg_spin": 10.28
+  },
+  {
+   "range": "75 <= x < 100",
+   "appear": {
+    "total": 0.0001,
+    "main": 0.0,
+    "free": 0.0083
+   },
+   "rtp": {
+    "total": 0.011200000000000002,
+    "main": 0.0,
+    "free": 0.0067
+   },
+   "fg_avg_spin": 10.99
+  },
+  {
+   "range": "100 <= x < 150",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0006
+   },
+   "rtp": {
+    "total": 0.0012,
+    "main": 0.0,
+    "free": 0.0007000000000000001
+   },
+   "fg_avg_spin": 13.19
+  },
+  {
+   "range": "150 <= x < 200",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": 20.0
+  },
+  {
+   "range": "200 <= x < 300",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "300 <= x < 500",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "500 <= x < 800",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "800 <= x < 1000",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "1000 <= x < 2000",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "2000 <= x < 5000",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "5000 <= x < 10000",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "10000 <= x < 20000",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "20000 <= x < 50000",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  },
+  {
+   "range": "50000 <= x < -1",
+   "appear": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "rtp": {
+    "total": 0.0,
+    "main": 0.0,
+    "free": 0.0
+   },
+   "fg_avg_spin": null
+  }
+ ],
+ "decile": {
+  "D1": {
+   "total": 0.0,
+   "main": 1.0,
+   "free": 8.2,
+   "fspin": 10.0
+  },
+  "D2": {
+   "total": 0.0,
+   "main": 1.0,
+   "free": 12.2,
+   "fspin": 10.0
+  },
+  "D3": {
+   "total": 0.0,
+   "main": 1.0,
+   "free": 16.0,
+   "fspin": 10.0
+  },
+  "D4": {
+   "total": 0.0,
+   "main": 1.4,
+   "free": 19.6,
+   "fspin": 10.0
+  },
+  "D5": {
+   "total": 0.0,
+   "main": 1.8,
+   "free": 23.6,
+   "fspin": 10.0
+  },
+  "D6": {
+   "total": 0.0,
+   "main": 1.8,
+   "free": 27.8,
+   "fspin": 10.0
+  },
+  "D7": {
+   "total": 0.0,
+   "main": 2.4,
+   "free": 32.8,
+   "fspin": 10.0
+  },
+  "D8": {
+   "total": 0.0,
+   "main": 3.0,
+   "free": 39.0,
+   "fspin": 10.0
+  },
+  "D9": {
+   "total": 1.4,
+   "main": 4.0,
+   "free": 48.4,
+   "fspin": 10.0
+  },
+  "Maximum": {
+   "total": 166.8,
+   "main": 12.0,
+   "free": 164.8,
+   "fspin": 30.0
+  },
+  "Mean": {
+   "total": 0.6,
+   "main": 2.1,
+   "free": 26.4,
+   "fspin": 10.1
+  },
+  "S.D.": {
+   "total": 3.6,
+   "main": null,
+   "free": 16.1
+  }
+ },
+ "raw_sections": [
+  "BASE INFO",
+  "Game Detail Information",
+  "Main Symbol Hit Rate",
+  "Main Symbol Hit RTP",
+  "Reel Set RTP",
+  "100手資產轉100手後結果分布",
+  "道具卡/PlayBonus Free Game 倍數區間統計",
+  "Multiple Information",
+  "SpecialGame Range",
+  "Decile Table"
+ ],
+ "rtp_total": 0.594492,
+ "rtp_main": 0.33549799999999996,
+ "rtp_special": 0.258994,
+ "special_trigger_rate": 0.009827044025157232,
+ "award_range": [
+  {
+   "range": "0<x<1",
+   "spins_per_hit": 85.8,
+   "rtp": 0.0055000000000000005
+  },
+  {
+   "range": "1<=x<5",
+   "spins_per_hit": 7.6,
+   "rtp": 0.2582
+  },
+  {
+   "range": "5<=x<10",
+   "spins_per_hit": 266.85,
+   "rtp": 0.0255
+  },
+  {
+   "range": "10<=x<25",
+   "spins_per_hit": 259.64,
+   "rtp": 0.0665
+  },
+  {
+   "range": "25<=x<50",
+   "spins_per_hit": 222.5,
+   "rtp": 0.15960000000000002
+  },
+  {
+   "range": "50<=x<75",
+   "spins_per_hit": 880.13,
+   "rtp": 0.0667
+  },
+  {
+   "range": "75<=x<100",
+   "spins_per_hit": 7358.35,
+   "rtp": 0.011200000000000002
+  },
+  {
+   "range": "100<=x<150",
+   "spins_per_hit": 91324.2,
+   "rtp": 0.0012
+  },
+  {
+   "range": "150<=x<200",
+   "spins_per_hit": 25000000.0,
+   "rtp": 0.0
+  },
+  {
+   "range": "200<=x<300",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "300<=x<500",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "500<=x<800",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "800<=x<1000",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "1000<=x<2000",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "2000<=x<5000",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "5000<=x<10000",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "10000<=x<20000",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "20000<=x<50000",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  },
+  {
+   "range": "50000<=x<-1",
+   "spins_per_hit": null,
+   "rtp": 0.0
+  }
+ ],
+ "gate": {
+  "checks": [
+   {
+    "id": "rtp",
+    "status": "FAIL",
+    "sim": 0.594492,
+    "target": 0.6,
+    "diff": -0.005507999999999957,
+    "tol": 0.005,
+    "msg": "模擬 59.4492% vs 目標 60.00%（差 -0.5508%，容許 ±0.5%）"
+   },
+   {
+    "id": "feel:SpecialGameTotal",
+    "status": "PASS",
+    "rate": 0.009827044025157232,
+    "freq": 101.76,
+    "band": [
+     0.006666666666666667,
+     0.0125
+    ],
+    "preset": "標準節奏",
+    "msg": "SpecialGameTotal 觸發 1/101.8（0.98%）落在標準節奏區間 1/80~1/150"
+   },
+   {
+    "id": "null",
+    "status": "SKIP",
+    "msg": "未提供 config-spec.yaml"
+   }
+  ],
+  "verdict": "rejected"
+ }
+}

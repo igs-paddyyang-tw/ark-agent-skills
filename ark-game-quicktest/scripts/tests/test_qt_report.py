@@ -1,0 +1,58 @@
+"""qt_report 守門測試：golden 報告解析、三向守門、md-report lint、deterministic。"""
+from __future__ import annotations
+import json, pathlib, subprocess, sys
+import pytest
+
+yaml = pytest.importorskip("yaml")
+SCRIPTS = pathlib.Path(__file__).resolve().parent.parent
+FIX = SCRIPTS / "tests" / "fixtures"
+sys.path.insert(0, str(SCRIPTS))
+import qt_report as Q  # noqa: E402
+
+GOLDEN = FIX / "report_1.0.0.txt"
+pytestmark = pytest.mark.skipif(not GOLDEN.exists(), reason="golden report fixture 未就位")
+
+
+def run_cli(*args) -> dict:
+    r = subprocess.run([sys.executable, str(SCRIPTS / "qt_report.py"), *args], capture_output=True, text=True, encoding="utf-8")
+    return json.loads(r.stdout.strip().splitlines()[-1]) | {"rc": r.returncode}
+
+
+def test_parse_golden():
+    rep = Q.parse_report(GOLDEN.read_text(encoding="utf-8"))
+    assert rep["version"] == "1.0.0" and rep["spins"] == 100_000_000 and rep["total_bet"] == 500_000_000
+    assert abs(rep["rtp_total"] - 0.594492) < 1e-9 and abs(rep["rtp_main"] - 0.335498) < 1e-9
+    assert rep["games"]["SpecialGameTotal"]["freq"] == 101.76 and rep["games"]["Total"]["maxmulti"] == 166.8
+    assert rep["detail"]["confidence"]["95"] == [0.5938, pytest.approx(0.5952)] and rep["detail"]["pi"] == 1.7458
+    assert rep["symbol_hit_rtp"]["11"]["x3"] == pytest.approx(0.051) and rep["reel_set_rtp"][0] == pytest.approx(0.594492) and rep["reel_set_rtp"][1] is None
+    assert len(rep["multiple"]) == 19 and rep["multiple"][0]["spins_per_hit"] == 85.8 and rep["multiple"][9]["spins_per_hit"] is None  # +Inf → None
+    assert len(rep["special_range"]) == 20 and rep["special_range"][4]["appear"]["free"] == pytest.approx(0.3914)
+    assert rep["decile"]["D9"]["free"] == 48.4 and rep["decile"]["Maximum"]["total"] == 166.8
+    assert abs(rep["special_trigger_rate"] - 1 / 101.76) < 1e-12
+
+
+def test_gate_three_way():
+    rep = Q.parse_report(GOLDEN.read_text(encoding="utf-8"))
+    g = Q.gate(rep, {"target_rtp": 0.60, "feel": [{"game": "SpecialGameTotal", "preset": "標準節奏"}]}, None)
+    st = {c["id"]: c["status"] for c in g["checks"]}
+    assert st == {"rtp": "FAIL", "feel:SpecialGameTotal": "PASS", "null": "SKIP"} and g["verdict"] == "rejected"
+    g2 = Q.gate(rep, {"target_rtp": 0.595, "feel": [{"game": "SpecialGameTotal", "band": [1 / 150, 1 / 80]}]},
+                {"parameters": [{"name": "target_rtp", "value": None}]})
+    assert g2["verdict"] == "confirmed"
+    g3 = Q.gate(rep, {"target_rtp": 0.595}, {"parameters": [{"name": "fg_rate", "value": 0.01}]})
+    assert g3["verdict"] == "rejected" and "fg_rate" in [c for c in g3["checks"] if c["id"] == "null"][0]["params"]
+    assert Q.gate(rep, {}, None)["verdict"] == "inconclusive"
+
+
+def test_cli_md_lint_and_deterministic(tmp_path):
+    out = tmp_path / "qt"
+    a = run_cli("--report", str(GOLDEN), "--targets", str(FIX / "quicktest.golden.yaml"), "--out", str(out))
+    assert a["success"] and a["data"]["lint"] == "PASS" and a["data"]["verdict"] == "rejected", a
+    md = pathlib.Path(a["data"]["md"]); h = md.read_bytes()
+    assert md.name == "2026-07-17-quicktest-prob-base-template.md"        # 日期取報告產生時間
+    txt = h.decode("utf-8")
+    assert "## 驗證報告 (Verification Report)" in txt and "🔴 [FAIL]" in txt and "🟢 [PASS]" in txt and "| 11 |" in txt
+    run_cli("--report", str(GOLDEN), "--targets", str(FIX / "quicktest.golden.yaml"), "--out", str(out))
+    assert md.read_bytes() == h
+    j = json.loads((out / "rtp-report.json").read_text(encoding="utf-8"))
+    assert j["gate"]["verdict"] == "rejected" and len(j["award_range"]) == 19

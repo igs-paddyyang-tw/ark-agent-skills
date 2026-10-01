@@ -1,0 +1,40 @@
+contract: "1"
+game: 機率基礎範本
+version: "1.0.0"
+structure:
+  reels: 3
+  rows: 3
+  wild_id: 1
+  scatter_id: 2
+  symbols:
+    - {code: WILD, sym_id: 1}
+    - {code: SC, sym_id: 2}
+    - {code: M1, sym_id: 11}
+    - {code: M2, sym_id: 12}
+    - {code: M3, sym_id: 13}
+    - {code: M4, sym_id: 14}
+    - {code: M5, sym_id: 15}
+    - {code: M6, sym_id: 16}
+    - {code: A, sym_id: 21}
+    - {code: K, sym_id: 22}
+    - {code: Q, sym_id: 23}
+    - {code: J, sym_id: 24}
+    - {code: "10", sym_id: 25}
+provenance:   # 範本自帶數值：來源一律標 template（示範用，非真實決議）
+  structure.reels: template:odds_1.0.0.json
+  structure.rows: template:odds_1.0.0.json
+  extra_odds.odds: template:odds_1.0.0.json
+  extra_odds.extra_rate: template:odds_1.0.0.json
+  extra_odds.enter_free_game_gate: template:odds_1.0.0.json
+  extra_odds.free_game_retrigger_gate: template:odds_1.0.0.json
+  extra_odds.free_game_retrigger_spin_num: template:odds_1.0.0.json
+  extra_odds.free_game_num: template:odds_1.0.0.json
+  extra_odds.is_item_card: template:odds_1.0.0.json
+  extra_odds.max_win: template:odds_1.0.0.json
+  extra_odds.jackpot_multiple: template:odds_1.0.0.json
+  extra_odds.jackpot_acc_rate: template:odds_1.0.0.json
+  extra_odds.main_game_reel_index_set: template:odds_1.0.0.json
+  extra_odds.main_game_reel_set_weight: template:odds_1.0.0.json
+  extra_odds.free_game_type_weight: template:odds_1.0.0.json
+  extra_odds.free_game_reel_index_set: template:odds_1.0.0.json
+  extra_odds.free_game_reel_set_weight: template:odds_1.0.0.json
