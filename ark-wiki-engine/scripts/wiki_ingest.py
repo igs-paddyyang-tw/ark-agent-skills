@@ -304,31 +304,45 @@ def update_index(wiki_dir: Path, category: str, page_name: str, title: str) -> N
 
     content = index_path.read_text(encoding="utf-8")
     link = f"- [[{page_name}]]"
-    if page_name not in content:
-        if category:
-            section = f"### {category}"
-            if section in content:
-                content = content.replace(section, f"{section}\n{link} — {title}")
-            else:
-                content = content.rstrip() + f"\n\n{section}\n{link} — {title}\n"
+    # 🔴 缺陷2（slot-bot 回報）：用「連結整體」判是否已索引，不用頁名子字串
+    #    —— 否則頁名在內文別處出現過（如「參見 demo2」）就靜默漏索引。
+    if link in content:
+        return
+    if category:
+        # 🔴 標題用「整行」比對，不用子字串 —— 否則 `### server` 命中人工維護的
+        #    `### server（3 頁）`／`### server-side`，replace 會把標題切成兩半。
+        m = re.search(rf"^### {re.escape(category)}\s*$", content, re.M)
+        if m:
+            # 在該標題行之後插入一行（限該處，不用無限次 replace）
+            insert_at = m.end()
+            content = content[:insert_at] + f"\n{link} — {title}" + content[insert_at:]
         else:
-            content = content.rstrip() + f"\n{link} — {title}\n"
-        index_path.write_text(content, encoding="utf-8")
-        print(f"  [index] 更新 {index_path}", file=sys.stderr)
+            # 沒有整行相符的標題 → 另開新段，不插進看起來像的段落
+            content = content.rstrip() + f"\n\n### {category}\n{link} — {title}\n"
+    else:
+        content = content.rstrip() + f"\n{link} — {title}\n"
+    index_path.write_text(content, encoding="utf-8")
+    print(f"  [index] 更新 {index_path}", file=sys.stderr)
 
 
 def update_log(wiki_dir: Path, page_name: str, source_path: Path,
-               trust: str = "deterministic", by: str = "unknown", note: str = "") -> None:
+               trust: str = "deterministic", by: str = "unknown", note: str = "",
+               page_rel: str | None = None) -> None:
     """append log.md（append-only）。
 
     欄位固定為 `date | op | page | trust | by | note` —— `trust` 與 `by` 是 v3 新增：
     出了問題要能回答「這頁是誰、用什麼信任等級寫進來的」。
+
+    🔴 缺陷1（slot-bot 回報）：`page_rel` 由呼叫端傳**實際落點**（out_path 相對 knowledge root），
+    不在這裡重組 `wiki/{page}.md` —— 否則 --category 時 log 記成 `wiki/demo.md`（漏子目錄），
+    稽核軌跡指向不存在的路徑。組路徑的真相只能有一處（out_path），不讓 log 再算一次。
     """
     log_path = wiki_dir.parent / "log.md"
     if not log_path.exists():
         log_path = (wiki_dir / ".." / "log.md").resolve()
     today = date.today().isoformat()
-    entry = (f"- **{today}** | ingest | `wiki/{page_name}.md` | {trust} | {by} | "
+    page_ref = page_rel or f"wiki/{page_name}.md"
+    entry = (f"- **{today}** | ingest | `{page_ref}` | {trust} | {by} | "
              f"{note or f'source={source_path}'}\n")
 
     if log_path.exists():
@@ -408,7 +422,7 @@ def ingest_file(source_path: Path, wiki_dir: Path, category: str, page_name: str
     page_trust = parse_frontmatter(wiki_content).get("trust", "llm-distilled")
     update_index(wiki_dir, category, page_name, title)
     update_log(wiki_dir, page_name, source_path, trust=page_trust, by=by,
-               note=guard_note)
+               note=guard_note, page_rel=out_path.relative_to(wiki_dir.parent).as_posix())
     if guard_note:
         print(f"  ⚠️  --no-guard：{source_path} 有 {len(findings)} 項 guard 違規仍被寫入"
               f"（已在 log.md 記 no-guard 以供稽核）", file=sys.stderr)
