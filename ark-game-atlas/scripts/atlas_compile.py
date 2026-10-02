@@ -82,6 +82,8 @@ def main() -> None:
         # sources（唯讀複本）
         for f in (spec_name, "evidence.jsonl", "game-analysis.yaml", "kb-refs.yaml", "decisions.yaml", "entities.json"):
             if (run / f).exists():
+                if (book / "sources" / f).exists():
+                    os.chmod(book / "sources" / f, 0o644); (book / "sources" / f).unlink()  # 唯讀複本重編（Linux 0444 擋寫）
                 shutil.copy2(run / f, book / "sources" / f)
                 os.chmod(book / "sources" / f, 0o444)
         C.atomic_write(book / "sources" / "run-manifest.json", json.dumps(

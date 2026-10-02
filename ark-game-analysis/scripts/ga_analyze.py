@@ -27,7 +27,8 @@ from llm_adapter import Adapter, LLMError  # noqa: E402
 
 SYSTEM = ("你是遊戲機制分析員。依據 evidence 清單（每筆有 id、時間碼、觀察）回答指定的分析項目。"
           "規則：(1) 只能引用清單中的 evidence id；(2) 影片直接看到 → OBSERVED；需推論 → INFERRED 並寫 reasoning；"
-          "看不到 → UNKNOWN 且 value 為 null；(3) transcript 類 evidence 是實況口白，不可作為 OBSERVED 的依據；"
+          "看不到 → UNKNOWN 且 value 為 null；(3) transcript 類 evidence 是實況口白、web 類是官方文件節錄，"
+          "兩者皆非畫面，不可作為 OBSERVED 的依據；但 web(documented) 可支撐 INFERRED（官方文件佐證，比口白可信）；"
           "(4) 不要為符號/魚種/選項取名，用 prompt 指定的 id 規則；(5) 不要編造數字。"
           "只輸出 JSON：{\"claims\":[{\"key\":..,\"value\":..,\"provenance\":\"OBSERVED|INFERRED|UNKNOWN\",\"evidence\":[\"E001\"],"
           "\"confidence\":\"high|medium|low|unknown\",\"reasoning\":\"...\"}],\"entities\":[{\"id\":..,\"type\":..,...,"
@@ -38,7 +39,7 @@ ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 def digest(evs: list[dict], limit_chars: int = 12000) -> str:
     lines = []
     for e in evs:
-        kind = "VISUAL" if e["type"] == "visual" else "TRANSCRIPT(untrusted)"
+        kind = {"visual": "VISUAL", "web": "WEB(documented)"}.get(e["type"], "TRANSCRIPT(untrusted)")
         obs = "; ".join(e.get("observation") or [])[:300]
         nums = ", ".join(f"{n.get('label')}={n.get('value')}" for n in e.get("numbers") or [])
         lines.append(f"{e['evidence_id']} [{kind}] {e['t_start']} {e.get('extractor', '')}: {obs}" + (f" | numbers: {nums}" if nums else ""))

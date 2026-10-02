@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""ga_run — observe → analyze → validate → kb_match 一鍵。
+"""ga_run — observe → analyze → validate → kb_match → report 一鍵。
 
-用法: python ga_run.py --run artifacts/cva/<run_id> [--force]
+用法: python ga_run.py --run artifacts/cva/<run_id> [--force] [--no-report] [--report-html] [--wiki-schema <schema.md>]
 """
 from __future__ import annotations
 
@@ -40,6 +40,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--no-report", action="store_true", help="不產 ark-md-report 契約報告")
+    ap.add_argument("--report-html", action="store_true", help="報告同時產 View 軌 HTML（雙軌戳記）")
+    ap.add_argument("--wiki-schema", help="report_lint 加驗 tags 白名單")
     a = ap.parse_args()
     run = str(C.run_dir(a.run))
     o = step("ga_observe.py", "--run", run, *(["--force"] if a.force else []))

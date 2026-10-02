@@ -1,4 +1,4 @@
-# atlas 契約 v1
+# atlas 契約 v1（v1.1 增補見文末）
 
 ## atlas.yaml
 ```yaml
@@ -49,3 +49,32 @@ figure 語法：
 
 ## library/atlas/catalog.json
 見 SKILL.md「圖書館契約」；`shelves` 受控，不在清單 → 登錄但 WARN。
+
+---
+
+## v1.1 增補：gdd-pack 入口（atlas_from_gdd）
+
+`atlas.yaml` 差異：`contract: "1.1"`；`game.spec_source: gdd-pack`、`game.run_id: gdd:<pack-dir-name>`、`game.video_sha256: null`、
+`game.spec_sha256` = sha256（依序 `name.encode() + file bytes`，順序：gdd.yaml, symbols.yaml, screens.yaml, info.yaml, i18n.csv, 再 `rules/*.md` 檔名排序；缺檔跳過）、
+`game.evidence_sha256` = screens.yaml 的 sha；`game.open_questions` 來自 gdd.yaml；`tags: [<domain>, gdd]`；style 預設 planner-brown-gold（accent `#e9b949`）。
+
+章節：`00-preface`（序四段）→ `01-at-a-glance`（spec kv 表）→ `02-symbols`（圖騰牆 symbol_table figure + 表，含 `code` 反引號）→ 每個 `gdd.yaml.features[]` 一章（slug = feature id，五段）→ `NN-evidence-index` → `NN-glossary`（符號命名 + 多國語系）。
+
+規則段來源 `rules/<feature>.md`（mini-markdown）：`- ` 清單 → `- **SPEC** …`；`> ` 引言 → SPEC bullet；純文字段 → SPEC bullet（第一段無數字者兼作「一句話」候選）；`###` 與表格原樣；已帶 provenance 的 bullet 不重複前置。
+
+provenance 新增 **SPEC**：來源是規格書 / 企劃樣板，不是影片觀察；lint `TAG_RE` 接受，色票與 OBSERVED 同級。
+
+figures.json 新 type：
+```json
+{"figure_id":"F003","type":"asset|symbol_table|hero","chapter":"fg","evidence":[],"t":[],"ts":[],"labels":["2"],
+ "source":{"kind":"screens|symbols","file":"fg_02_進場.png","sha256":"…","feature":"fg"},
+ "src_frames_sha256":["…"],"file":"assets/figures/F003.jpg","caption":"進場 · fg_02_進場.png","w":1280,"h":720,
+ "ops":{"max_width":1280,"burn_caption":true},"sha256":"…"}
+```
+`asset`：示意圖，等比縮至 1280w、左下燒 `<title> · <file>`；`symbol_table`：PIL 拼牆（180px 格、6 欄、格下 code + odds；無檔者「待美術」），`source.kind: symbols`、`source.file` 為組 id；`hero` = 主玩法（features[0]）第一張示意圖。每章最多 `--max-figs`（預設 6）張，其餘只進證據索引。
+
+sources 佈局：`sources/gdd/{gdd.yaml,symbols.yaml,screens.yaml,info.yaml,i18n.csv,rules/*.md}`（0444）+ `names.json {names:[…]}`（圖騰 code、sym_id、feature id、slug）。
+
+lint gdd 模式（`game.spec_source == gdd-pack`）：ATL-STALE 以上述 sha 規則重算；ATL-NUM 允許集 = 來源全文（含檔名）∪ open_questions ∪ 圖數；ATL-NAME 允許集 = names.json ∪ 來源反引號詞 ∪ 章節 slug；`asset` / `symbol_table` figure 必有 `source`；evidence id 集為空（E 編號不適用）。
+
+路徑：書在 `data/atlas/<slug>/`，圖書館在 `data/library/atlas/`（v1.1 起 atlas_run 預設值）。

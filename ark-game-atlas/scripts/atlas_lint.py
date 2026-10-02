@@ -12,7 +12,7 @@
   ATL-FIGURE    「畫面」段 ≥1 figure 或固定句「影片未拍到本章對應畫面。」；figure id 在 figures.json、檔案存在、evidence 在 sources/evidence.jsonl
   ATL-NUM       全書數字必須能在 sources 的 spec bullet 中找到（E/Q/D/GKB/F id、時間碼、章號、frontmatter、表格欄位例外）
   ATL-NAME      反引號名稱 ⊆ spec claim key / entity id / GKB / E / Q / D / F / section id
-  ATL-PROV      「規則」段每條 bullet 以 **OBSERVED|INFERRED|DECIDED|FROM_KB|PROPOSED|UNKNOWN** 開頭
+  ATL-PROV      「規則」段每條 bullet 以 **OBSERVED|INFERRED|DECIDED|FROM_KB|PROPOSED|UNKNOWN|SPEC** 開頭（v1.1 SPEC = 規格書來源）
   ATL-STALE     atlas.yaml.game.spec_sha256 / evidence_sha256 與 sources/ 現況一致
   ATL-INJECT    章節不得含指令覆寫句型 / 隱形字元
 """
@@ -27,7 +27,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import atlas_common as C  # noqa: E402
 
-TAG_RE = re.compile(r"^- \*\*(OBSERVED|INFERRED|DECIDED|FROM_KB|PROPOSED|UNKNOWN)\*\* ")
+TAG_RE = re.compile(r"^- \*\*(OBSERVED|INFERRED|DECIDED|FROM_KB|PROPOSED|UNKNOWN|SPEC)\*\* ")  # v1.1: SPEC = 來自規格書
 NUM_RE = re.compile(r"\d+(?:\.\d+)?")
 ID_TOKEN_RE = re.compile(r"\b(?:E|Q|D|F)\d{3,}\b|GKB-[A-Z0-9]+-[A-Z0-9]+-\d{3,}|\d\d:\d\d:\d\d\.\d{3}|\bv\d+(?:\.\d+)?\b|sha256|[0-9a-f]{12,}…?|\d{8}-[\w-]+")
 INJECTION = re.compile(r"(忽略(以上|之前|所有)|ignore (all |the )?(previous|above)|改寫規則|disregard (your|the) (instructions|rules))", re.I)
@@ -51,38 +51,67 @@ def lint(book) -> dict:
         add("ATL-YAML", "atlas.yaml", "競品畫面：distribution 必須為 internal", "error")
     game = cy.get("game") or {}
     src = book / "sources"
-    spec_p = src / game.get("spec_source", "game-spec.v1.md")
-    if not spec_p.exists():
-        add("ATL-STALE", "sources", f"缺 {spec_p.name}")
-        return {"summary": {"errors": len(V)}, "violations": V}
-    spec_md = spec_p.read_text(encoding="utf-8")
-    if C.sha_text(spec_md) != game.get("spec_sha256"):
-        add("ATL-STALE", "sources", "spec sha 與 atlas.yaml 不一致（run 更新後未重編）")
-    if (src / "evidence.jsonl").exists() and C.sha_file(src / "evidence.jsonl") != game.get("evidence_sha256"):
-        add("ATL-STALE", "sources", "evidence sha 不一致")
-    spec = C.parse_spec(spec_md)
-    ev_ids = {json.loads(l)["evidence_id"] for l in (src / "evidence.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()} if (src / "evidence.jsonl").exists() else set()
     figs = json.loads((book / "figures.json").read_text(encoding="utf-8"))["figures"] if (book / "figures.json").exists() else []
     fig_by_id = {f["figure_id"]: f for f in figs}
-    # 允許的數字：spec bullet 的原文 + configuration/evidence 表 + atlas.yaml 統計
     allowed_nums: set[str] = set()
-    for s in spec["sections"]:
-        for bl in s["blocks"].values():
-            for b in bl:
-                allowed_nums |= numbers_in(b["raw"])
-        for _ln, l, _t in s["lines"]:
-            allowed_nums |= numbers_in(l)
-    allowed_nums |= numbers_in(json.dumps({k: v for k, v in game.items() if k in ("decisions", "open_questions", "claims")}))
-    allowed_nums |= numbers_in(str(len(ev_ids)))
-    allowed_nums |= numbers_in(C.fmt_ts(0))
-    # 名稱字典
-    entities = json.loads((src / "entities.json").read_text(encoding="utf-8")).get("all_ids", []) if (src / "entities.json").exists() else []
-    claim_keys = {b["key"] for s in spec["sections"] for bl in s["blocks"].values() for b in bl if b["key"]}
-    sec_ids = {s["id"] for s in spec["sections"]}
-    allowed_names = claim_keys | set(entities) | sec_ids | {"configuration"}
-    kb_ids = {t for s in spec["sections"] for b in s["blocks"]["FROM_KB"] for t in b["ticks"]}
-    if (src / "kb-refs.yaml").exists():
-        kb_ids |= {r["id"] for it in C.yaml_load(src / "kb-refs.yaml").get("items", []) for r in it.get("refs", [])}
+    gdd_mode = game.get("spec_source") == "gdd-pack"
+    if gdd_mode:
+        # ── v1.1 gdd 模式：來源 = sources/gdd/*（gdd.yaml / symbols / screens / info / i18n / rules/*.md）──
+        gsrc = src / "gdd"
+        if not (gsrc / "gdd.yaml").exists():
+            add("ATL-STALE", "sources", "缺 sources/gdd/gdd.yaml")
+            return {"summary": {"errors": len(V)}, "violations": V}
+        import hashlib
+        h = hashlib.sha256()
+        base_files = ["gdd.yaml", "symbols.yaml", "screens.yaml", "info.yaml", "i18n.csv"]
+        names_order = base_files + ([f"rules/{p.name}" for p in sorted((gsrc / "rules").glob("*.md"))] if (gsrc / "rules").exists() else [])
+        src_text = ""
+        for name in names_order:
+            fp = gsrc / name
+            if fp.exists():
+                h.update(name.encode()); h.update(fp.read_bytes())
+                src_text += name + "\n" + fp.read_text(encoding="utf-8", errors="replace") + "\n"  # 檔名（i18n）也算來源字
+        if h.hexdigest() != game.get("spec_sha256"):
+            add("ATL-STALE", "sources", "gdd 來源 sha 與 atlas.yaml 不一致（pack 更新後未重編）")
+        if (gsrc / "screens.yaml").exists() and C.sha_file(gsrc / "screens.yaml") != game.get("evidence_sha256"):
+            add("ATL-STALE", "sources", "screens.yaml sha 不一致")
+        ev_ids: set[str] = set()
+        allowed_nums |= numbers_in(src_text)
+        allowed_nums |= numbers_in(json.dumps({k: v for k, v in game.items() if k in ("decisions", "open_questions", "claims")}))
+        allowed_nums |= numbers_in(str(len(figs))) | numbers_in(str(len([f for f in figs if f["type"] == "symbol_table"])))
+        names_doc = json.loads((gsrc / "names.json").read_text(encoding="utf-8")) if (gsrc / "names.json").exists() else {"names": []}
+        allowed_names = set(names_doc.get("names", [])) | set(re.findall(r"`([^`]+)`", src_text))
+        kb_ids: set[str] = set()
+    else:
+        spec_p = src / game.get("spec_source", "game-spec.v1.md")
+        if not spec_p.exists():
+            add("ATL-STALE", "sources", f"缺 {spec_p.name}")
+            return {"summary": {"errors": len(V)}, "violations": V}
+        spec_md = spec_p.read_text(encoding="utf-8")
+        if C.sha_text(spec_md) != game.get("spec_sha256"):
+            add("ATL-STALE", "sources", "spec sha 與 atlas.yaml 不一致（run 更新後未重編）")
+        if (src / "evidence.jsonl").exists() and C.sha_file(src / "evidence.jsonl") != game.get("evidence_sha256"):
+            add("ATL-STALE", "sources", "evidence sha 不一致")
+        spec = C.parse_spec(spec_md)
+        ev_ids = {json.loads(l)["evidence_id"] for l in (src / "evidence.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()} if (src / "evidence.jsonl").exists() else set()
+        # 允許的數字：spec bullet 的原文 + configuration/evidence 表 + atlas.yaml 統計
+        for s in spec["sections"]:
+            for bl in s["blocks"].values():
+                for b in bl:
+                    allowed_nums |= numbers_in(b["raw"])
+            for _ln, l, _t in s["lines"]:
+                allowed_nums |= numbers_in(l)
+        allowed_nums |= numbers_in(json.dumps({k: v for k, v in game.items() if k in ("decisions", "open_questions", "claims")}))
+        allowed_nums |= numbers_in(str(len(ev_ids)))
+        allowed_nums |= numbers_in(C.fmt_ts(0))
+        # 名稱字典
+        entities = json.loads((src / "entities.json").read_text(encoding="utf-8")).get("all_ids", []) if (src / "entities.json").exists() else []
+        claim_keys = {b["key"] for s in spec["sections"] for bl in s["blocks"].values() for b in bl if b["key"]}
+        sec_ids = {s["id"] for s in spec["sections"]}
+        allowed_names = claim_keys | set(entities) | sec_ids | {"configuration"}
+        kb_ids = {t for s in spec["sections"] for b in s["blocks"]["FROM_KB"] for t in b["ticks"]}
+        if (src / "kb-refs.yaml").exists():
+            kb_ids |= {r["id"] for it in C.yaml_load(src / "kb-refs.yaml").get("items", []) for r in it.get("refs", [])}
 
     files = C.chapter_files(book)
     listed = [c["file"] for c in cy.get("chapters", [])]
@@ -119,6 +148,8 @@ def lint(book) -> dict:
                 for e in [x.strip() for x in evs.split(",") if x.strip()]:
                     if e not in ev_ids:
                         add("ATL-FIGURE", f.name, f"{fid} 引用不存在的 evidence {e}")
+                if fid in fig_by_id and fig_by_id[fid].get("type") in ("asset", "symbol_table") and not fig_by_id[fid].get("source"):
+                    add("ATL-FIGURE", f.name, f"{fid} 為 {fig_by_id[fid]['type']} 但 figures.json 無 source")
             for l in ch["sections"].get("規則", []):
                 if l.startswith("- ") and not TAG_RE.match(l) and not l.startswith("- 本節無") and not l.startswith("- 無"):
                     add("ATL-PROV", f.name, f"規則 bullet 缺 provenance 標記: {l[:60]}")
@@ -137,7 +168,7 @@ def lint(book) -> dict:
         for tick in re.findall(r"`([^`]+)`", body_no_fence):
             if tick in allowed_names or tick in kb_ids or re.match(r"^(E|Q|D|F)\d{3,}$", tick) or re.match(r"^GKB-", tick):
                 continue
-            if tick.startswith("sources/") or tick == fm.get("slug") or re.match(r"^[0-9a-f]{8,}…?$", tick) or tick == game.get("run_id") or tick == game.get("domain") or tick.startswith("distribution"):
+            if tick.startswith("sources/") or tick == fm.get("slug") or re.match(r"^[0-9a-f]{8,}…?$", tick) or tick == game.get("run_id") or tick == game.get("domain") or tick.startswith("distribution") or tick == cy.get("slug"):
                 continue
             add("ATL-NAME", f.name, f"未宣告的名稱 `{tick}`")
     errors = [v for v in V if v["severity"] == "error"]
