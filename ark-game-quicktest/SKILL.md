@@ -1,7 +1,7 @@
 ---
 name: ark-game-quicktest
 description: |
-  C 段「機率規格書 + Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/dev-sample/機率工作流/快測範本）為 runtime，
+  C 段「機率規格書 + Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime，
   deterministic 做三件事——① qt_config：config-spec.yaml（P-002，value 一律 null）+ gdd-pack 符號賠率 + decisions → 範本契約的
   odds_<ver>.json 骨架（結構定案、機率參數留 null，非 null 欄位必附來源）；② qt_lint：有 null 不准跑、無來源不准填、符號/輪帶/權重自洽；
   ③ qt_run / qt_report：實例化範本、patch 常數、go run、把 report_<ver>.txt 解析成 rtp-report.json 並編成 ark-md-report（type: data），
@@ -19,7 +19,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.1.0"
+  version: "1.2.0"
   updated: 2026-10-01
   outputs:
     - { format: data, audience: ai }
@@ -38,7 +38,7 @@ metadata:
 | 依賴 | 誰需要 | 缺了會怎樣 |
 |------|--------|-----------|
 | `pyyaml` | 全部 | exit 8 |
-| 快測範本目錄（`--template`，預設 `data/dev-sample/機率工作流/快測範本`） | qt_run | exit 2 |
+| 快測範本目錄（`--template`，預設 `data/references/prob-workflow/quicktest-template`） | qt_run | exit 2 |
 | Go ≥ 1.20（`go` 在 PATH，或 `--go` / `$GO_BIN`） | qt_run 實跑 | exit 8，engine/ 已實例化可拿去別台跑 |
 | ark-md-report（同層） | qt_report 的 report_lint / register | 略過 lint（結果標 PASS 但未驗） |
 
@@ -46,10 +46,10 @@ metadata:
 
 | 路徑 | 用途 | 何時載入 |
 |------|------|---------|
-| `scripts/qt_config.py` | config-spec + gdd symbols + decisions → `odds/odds_<ver>.json` + `qt-config.yaml`（結構、符號表、provenance）。**符號分類（ISSUE-QT-001）**：只有線賠符號（group==normal，或無 group 但有 odds）進 `extra_odds.odds`；WILD/trigger/collectible/jackpot 不進 odds 表、改記 `symbols[].role`，不被當線賠要值 | 規格決議完、要開快測 |
-| `scripts/qt_lint.py` | QT-NULL / QT-PROV / QT-SYM / QT-REEL / QT-RANGE → `lint-report.json`；error exit 3 | 任何人手填 odds.json 後必跑 |
-| `scripts/qt_run.py` | lint → 複製範本到 `engine/` → patch main.go / game_process.go 常數 → `go run .` → qt_report | 跑快測 |
-| `scripts/qt_report.py` | `report_<ver>.txt` → `rtp-report.json` → md-report（三向 verdict）；`--publish docs/reports` | 已有報告檔、只要驗證 |
+| `scripts/qt_config.py` | config-spec + gdd symbols + decisions → `odds/odds_<ver>.json` + `qt-config.yaml`（結構、符號表、provenance）；v1.2 另寫 `structure.pay_mode / lines / bet_cost`（gdd「對獎方式 / 收費」或 `--pay-mode --lines --bet-cost`）。**符號分類（ISSUE-QT-001）**：只有線賠符號（group==normal 或無 group 但有 odds）進 `extra_odds.odds`；WILD/trigger/collectible/jackpot 不進 odds 表、改記 `symbols[].role`，不被當線賠要值 | 規格決議完、要開快測 |
+| `scripts/qt_lint.py` | QT-NULL / QT-PROV / QT-SYM / QT-REEL / QT-RANGE；v1.2 加 **QT-ENGINE**（結構超出範本 3×3 線型 5 線收費 5 → error，`engine.customized: true` 降警告）/ **QT-CAP**（sym_id ≥ 32、主遊戲組合 > 11、FG 型 > 4 → error）/ QT-SYMID（警告）→ `lint-report.json`；error exit 3 | 任何人手填 odds.json 後必跑 |
+| `scripts/qt_run.py` | lint → 複製範本到 `engine/` → patch main.go（含 v1.2 的 odds 載入路徑跟版本、固定 seed `--seed`）/ game_process.go 常數 → `go run .` → qt_report | 跑快測 |
+| `scripts/qt_report.py` | `report_<ver>.txt` → `rtp-report.json` → md-report（三向 verdict）；v1.2 加 `template_caveats`（偵測範本已知偏差 F-1/F-2/F-5/F-6/F-7，md「範本已知偏差」節）；`--publish docs/reports/data` | 已有報告檔、只要驗證 |
 | `scripts/qt_probspec.py` | **v1.1** quicktest 目錄（+ gdd-pack + run）→ `data/prob/<slug>/prob-spec.md` + `.html` + `.meta.json`（來源 sha、派生數字表）；`--qt` 必填，gdd / run 預設從 qt-config.sources 推 | 參數有決議或快測跑完後出規格書；人工區可直接改 |
 | `scripts/qt_probtable.py` | **v1.1** `prob-spec.meta.json` 的來源 → `prob-spec.xlsx`（公版分頁：製作方針 / 規格簡述 / 數據資料 / 流程圖 / 參數表 / Main·Free Strip / 轉置 / 隱性規則 / _meta）；值從 odds.json dump、總顆數與權重合計為 COUNTIF / SUM 活公式、null 黃底待決議、每值旁來源欄 | 要給機率同仁的 Excel 版 |
 | `scripts/ps_lint.py` | PS-SECTIONS / PS-NUM / PS-PROV / PS-STALE（來源 sha + html / xlsx 戳記）/ PS-HUMAN / PS-INJECT → `lint-report.json`；error exit 3 | 任何人手改 prob-spec.md 後必跑 |
@@ -66,6 +66,8 @@ metadata:
 ├─ 輪帶、權重、門檻 → prob-architect 依 K 卡設計後填進 odds.json，每個值在 qt-config.yaml.provenance 記決議 D-id
 ├─ python scripts/qt_lint.py --dir data/quicktest/<slug>
 │     ├─ QT-NULL → 還有未定參數，回決議；QT-PROV → 有值沒來源，補 D-id 或改回 null
+│     ├─ QT-ENGINE → 盤面 / 對獎 / 線數 / 收費 / Wild·Scatter ID 超出範本；工程師改 engine/ 後在 qt-config.yaml 加 `engine: {customized: true, note: …}`
+│     ├─ QT-CAP → 範本 Recorder 陣列會越界 panic；sym_id 改到 ≤ 30 或請工程師擴陣列
 │     └─ PASS → 可跑
 ├─ 玩法不是範本的 3×3 線型 → 工程師改 engine/game/game_process.go（P-004 K 卡→Go 映射），本工具不碰邏輯
 ├─ python scripts/qt_run.py --dir data/quicktest/<slug> --rounds 10000000 --targets quicktest.yaml --config-spec <config-spec.yaml>
@@ -111,7 +113,9 @@ verdict：任一 FAIL → rejected；全 PASS → confirmed；有 SKIP（缺目�
 ## 邊界
 
 - **不決定數值**：qt_config 只搬結構與有決議的值；輪帶、權重、門檻由 prob-architect 填，沒來源的值 lint 擋。
-- **不改玩法**：範本 `game_process.go` 是 3×3 線型；新機制靠人改。patch 只動常數（軸數、列數、Wild / Scatter ID、回合數、版本）。
+- **不改玩法**：範本 `game_process.go` 是 3×3 線型；新機制靠人改。patch 只動 engine 副本的常數（軸數、列數、Wild / Scatter ID、回合數、版本、odds 載入路徑、seed），`data/references` 範本本身不改。
+- **範本已知偏差**：見 `docs/reports/review/2026-10-01-quicktest-template-review.md`（F-1～F-11）與設計文件 `docs/designs/2026-10-01-quicktest-template-design.md`；qt_lint 擋會讓結果錯或 panic 的（F-3、F-4），qt_report 對只影響解讀的加註（F-1、F-2、F-5、F-6、F-7）。
+- **可重現**：`--seed` 固定時，同設定 + 同 CPU 數結果相同（worker 數 = NumCPU）；`--seed 0` 回到範本的時間 seed。
 - **報告只回報**：verdict 是守門結果，不是設計結論；Volatility / Percentiles 定義待 math-reviewer（Stage 1a Accumulator 日後當外掛接上）。
 - **Jackpot / 道具卡**：範本未啟用，報告段為「尚無資料」，解析保留原樣。
 - **prob-spec 只組不寫**：規格簡述、設計目的、競品評語是人（或日後 LLM）在人工區寫；腳本只搬來源、算派生值（1/Freq、百分比、顆數），派生值連同公式記在 meta.derived。

@@ -56,3 +56,13 @@ def test_cli_md_lint_and_deterministic(tmp_path):
     assert md.read_bytes() == h
     j = json.loads((out / "rtp-report.json").read_text(encoding="utf-8"))
     assert j["gate"]["verdict"] == "rejected" and len(j["award_range"]) == 19
+
+
+def test_template_caveats_on_golden():
+    rep = Q.parse_report(GOLDEN.read_text(encoding="utf-8"))
+    ids = {c["finding"] for c in Q.template_caveats(rep)}
+    assert ids == {"F-1", "F-5", "F-6", "F-7"}            # golden 1 億手：maxwin +Inf → 無 F-2
+    rep["detail"]["maxwin_note"] = "maxwin統計: 48 手出現一次"
+    assert "F-2" in {c["finding"] for c in Q.template_caveats(rep)}
+    rep["games"]["Ultra"]["freq"] = 300.0                 # 分型統計正常時不誤報
+    assert "F-1" not in {c["finding"] for c in Q.template_caveats(rep)}

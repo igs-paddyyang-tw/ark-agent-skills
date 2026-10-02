@@ -906,5 +906,31 @@
    }
   ],
   "verdict": "rejected"
- }
+ },
+ "template_caveats": [
+  {
+   "id": "fg-type",
+   "finding": "F-1",
+   "row": "Ultra",
+   "msg": "Ultra 列與 SpecialGameTotal 完全相同：範本把所有 FG 記在入口型別 0（Ultra），分型統計未啟用，Ultra 列不代表該型實際表現"
+  },
+  {
+   "id": "retrigger",
+   "finding": "F-5",
+   "row": "SpecialGameTotal",
+   "msg": "RetriRate 0.00% 為範本未記錄 retrigger 次數所致，不代表沒有 retrigger；改看 PlayTimes 是否大於初始手數"
+  },
+  {
+   "id": "scatter-column",
+   "finding": "F-6",
+   "row": "SYMBOL 2",
+   "msg": "符號命中表的 Scatter（2）記在 n−1 欄：x2 欄實為 3 顆、x3 欄實為 4 顆，需往右讀一格"
+  },
+  {
+   "id": "multiple-cumulative",
+   "finding": "F-7",
+   "row": "0 < x < 1",
+   "msg": "Multiple Information 第一列「0倍以上」累計漏算 0<x<1 區間，數值等同「1倍以上」，實際應更小"
+  }
+ ]
 }

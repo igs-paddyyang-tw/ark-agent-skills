@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """qt_run — 把快測範本實例化到 <dir>/engine/、套 odds.json、patch 常數、go run、再交 qt_report。
 
-流程：qt_lint（有 null 不跑）→ 複製範本（--template，預設 data/dev-sample/機率工作流/快測範本）→
-     patch main.go（GameName / OddsVersion / TotalRound / TuningMode）與 game/game_process.go（ReelAmount / ReelLength / SymbolWild / SymbolScatter）→
+流程：qt_lint（有 null 不跑）→ 複製範本（--template，預設 data/references/prob-workflow/quicktest-template）→
+     patch main.go（GameName / OddsVersion / TotalRound / odds 載入路徑 / worker seed）與 game/game_process.go（ReelAmount / ReelLength / SymbolWild / SymbolScatter）→
      複製 odds/odds_<ver>.json → `go run .`（go 不在 PATH 時用 --go 或 $GO_BIN）→ report_<ver>.txt → qt_report。
 🔴 game_process.go 的玩法邏輯不會自動改：範本是 3×3 線型遊戲；新機制（收集 / hold&spin / 分流）由 prob-architect / 工程師改，
    本工具只保證 config 與報告兩頭對得回規格。
 
 用法: python qt_run.py --dir data/quicktest/<slug> [--version 1.0.0] [--rounds 10000000] [--template <範本目錄>] [--go <go 可執行檔>]
-                       [--targets quicktest.yaml] [--config-spec …] [--no-run]
+                       [--targets quicktest.yaml] [--config-spec …] [--seed 20261001｜0] [--no-run]
+注意：同一份設定 + 同一 seed + 同 CPU 數才可重現（worker 數 = NumCPU，回合切分隨之改變）。
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import qt_common as C  # noqa: E402
 
 HERE = pathlib.Path(__file__).resolve().parent
-DEFAULT_TEMPLATE = HERE.parents[3] / "data" / "dev-sample" / "機率工作流" / "快測範本"
+DEFAULT_TEMPLATE = HERE.parents[3] / "data" / "references" / "prob-workflow" / "quicktest-template"   # 2026-10-01 references 英文化後的位置
 
 
 def step(script: str, *args) -> dict:
@@ -61,6 +62,7 @@ def main() -> None:
     ap.add_argument("--config-spec")
     ap.add_argument("--no-run", action="store_true", help="只實例化與 patch，不執行 go")
     ap.add_argument("--timeout", type=int, default=3600)
+    ap.add_argument("--seed", type=int, default=20261001, help="固定 worker seed（seed + i×1000003）；0 = 保留範本的時間 seed")
     ap.add_argument("--probspec", action="store_true", help="跑完 qt_report 後順手產 data/prob/<slug>/prob-spec.md（qt_probspec + ps_lint）")
     ap.add_argument("--prob-out", default="data/prob")
     a = ap.parse_args()
@@ -79,8 +81,17 @@ def main() -> None:
         (r'GameName\s*=\s*".*?"', f'GameName = "{qc.get("game", d.name)}"'),
         (r'OddsVersion\s*=\s*".*?"', f'OddsVersion = "{a.version}"'),
         (r"TotalRound\s*=\s*\d+", f"TotalRound = {a.rounds}"),
-    ])
+        # 範本載入路徑寫死 odds_1.0.0.json（審查報告 F-3）：改成跟 OddsVersion 走
+        (r'odds\.LoadProbSetting\("odds/odds_[^"]*\.json"\)', f'odds.LoadProbSetting("odds/odds_{a.version}.json")'),
+    ] + ([
+        # 範本 seed 取時間（F-9）：固定 seed 讓同設定可重現；--seed 0 = 保留範本行為
+        (r"seed := [^\n]*?\+ int64\(i\)\*1000003", f"seed := int64({a.seed}) + int64(i)*1000003"),
+    ] if a.seed else []))
     main_go.write_text(txt, encoding="utf-8")
+    need = {"OddsVersion", "TotalRound", "LoadProbSetting"} | ({"seed"} if a.seed else set())
+    missing = [k for k in need if not any(k in x for x in done)]
+    if missing:
+        C.fail("QUERY_FAILED", f"main.go patch 未命中：{missing}", "範本 main.go 結構與 qt_run 預期不同，請對照 docs/designs/2026-10-01-quicktest-template-design.md §4.2")
     gp = eng / "game" / "game_process.go"
     gdone: list[str] = []
     if gp.exists():
@@ -96,7 +107,7 @@ def main() -> None:
         t2, gdone = patch(gp.read_text(encoding="utf-8"), pairs)
         gp.write_text(t2, encoding="utf-8")
     shutil.copy2(d / "odds" / f"odds_{a.version}.json", eng / "odds" / f"odds_{a.version}.json")
-    result = {"engine": str(eng), "patched_main": done, "patched_game": gdone, "lint": lint["status"], "rounds": a.rounds,
+    result = {"engine": str(eng), "patched_main": done, "patched_game": gdone, "lint": lint["status"], "rounds": a.rounds, "seed": a.seed or "time",
               "warning": "game_process.go 玩法邏輯未自動改（範本為 3×3 線型）；新機制需人工改程式" if (st.get("reels") or 3) != 3 or (st.get("rows") or 3) != 3 else None}
     if a.no_run:
         C.emit(result, {"stage": "qt_run", "ran": False})

@@ -15,7 +15,8 @@ feel:                     # 第②向；game = 報告 BASE INFO 列名（Special
 ## qt-config.yaml（qt_config 產；人可補 provenance）
 
 ```yaml
-structure: {reels, rows, symbols: [{code, sym_id, name, group, odds}], wild_id, scatter_id}
+structure: {reels, rows, pay_mode: line|ways|null, lines, bet_cost, symbols: [{code, sym_id, name, group, odds}], wild_id, scatter_id}
+engine: {customized: true, note: "…"}   # 選配：工程師已改 engine/ 支援非範本結構時宣告，QT-ENGINE 降為警告
 sources: {config_spec, gdd, decisions}
 provenance:               # 每個非 null 欄位一行；值 = 決議 D-id / gdd.symbols[…].odds / competitor_reference(E…) / template:…
   extra_odds.free_game_num: D007
@@ -99,3 +100,30 @@ html：單檔、planner 暗金 token、mermaid CDN、人工區虛線框、待決
 
 分頁與公版對照：`機率規格書製作方針`（固定文字）/ `規格簡述`（gdd spec + rules 逐行，來源欄）/ `數據資料`（公版座標：G2 表頭 RTP·Hit%·觸發率·平均觸發局數·倍率·最大倍率·平均局數，F3 起各階段；觸發率 = 1/freq；未快測整列 `--`）/ `機率流程圖`（mermaid 原文，drawio 待）/ `參數表`（基本資訊 C2:D、Odds 表 C8 起 Description·Symbol·sym_id·1..N·來源、表P-1 觸發與上限參數、表M-1 主遊戲 index_set × Weight + SUM、表F-1 四型權重 + SUM、表F-2 免費 index_set × 四型 Weight）/ `Main Game Strip`·`Free Game Strip`（每組一塊：Reels_g、R1..Rn 符號 code、右側「總顆數」COUNTIF 活公式 + Total SUM）/ `轉置 Strip`（Symbol / 轉換用Code = sym_id / 名稱 / 組）/ `隱性規則`（編號 / 情況 / 說明 / 設計目的 / 來源）/ `_meta`（隱藏：content-src md sha16、odds sha16、產生者）。
 null → 「待決議」黃底；ps_lint 以 `_meta` 戳記驗 xlsx ↔ md ↔ odds 一致。
+
+## v1.2 範本相容性守門
+
+### qt_lint 新規則
+
+| 規則 | 條件 | 嚴重度 | 依據 |
+|---|---|---|---|
+| QT-ENGINE | `structure.{reels, rows, pay_mode, lines, bet_cost, wild_id, scatter_id}` ≠ 範本 `{3, 3, line, 5, 5, 1, 2}` | error（`engine.customized: true` 時 warning）；欄位為 null → warning | 審查報告 F-3；設計文件 §4.2 |
+| QT-CAP | sym_id ≥ 32；`main_game_reel_index_set` > 11 組合；`free_game_type_weight` > 4 型 | error；sym_id = 31 → warning | F-4；設計文件 §7.3 |
+| QT-SYMID | sym_id 不在公版區段（1 Wild、2 Scatter、3～10 特殊、11～20 高倍、21～30 低倍；group=normal 應在 11～30） | warning | 設計文件 §4.1 |
+
+`first_errors` 排序：非 QT-NULL 的 error 在前（結構性問題比缺值優先處理）。
+
+### qt_run patch（engine 副本）
+
+| 檔案 | patch | 依據 |
+|---|---|---|
+| main.go | `GameName`、`OddsVersion`、`TotalRound` | v1.0 |
+| main.go | `odds.LoadProbSetting("odds/odds_<ver>.json")`（範本寫死 1.0.0） | F-3 |
+| main.go | `seed := int64(<--seed>) + int64(i)*1000003`（預設 20261001；`--seed 0` 不 patch） | F-9 |
+| game/game_process.go | `ReelAmount / FreeReelAmount / ReelLength / FreeReelLength / SymbolWild / SymbolScatter` | v1.0（只在 engine.customized 時有意義） |
+
+範本預設位置 `data/references/prob-workflow/quicktest-template`（2026-10-01 起；舊 `data/dev-sample/機率工作流/快測範本` 已移除）。main.go 任一必要 patch 未命中 → `QUERY_FAILED`。
+
+### rtp-report.json `template_caveats[]`
+
+`[{id, finding, row, msg}]`；`id`：`fg-type`（F-1，某 FG 型列與 SpecialGameTotal 逐欄相同）/ `retrigger`（F-5，RetriRate = 0）/ `scatter-column`（F-6，Scatter 在 x2 欄有值）/ `multiple-cumulative`（F-7，第一列「倍以上」= 第二列）/ `maxwin-count`（F-2，maxwin 有次數）。只加註，不改 verdict；md 報告與 prob-spec §2 會列出。

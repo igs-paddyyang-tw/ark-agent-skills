@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """qt_report — 快測範本 report_<ver>.txt → rtp-report.json → ark-md-report（type: data）+ P-003 三向守門。
 
-輸入：快測範本（data/dev-sample/機率工作流/快測範本）跑出的 report_<ver>.txt（+ 同目錄 AwardRangeData_<ver>.csv 選配）。
+輸入：快測範本（data/references/prob-workflow/quicktest-template）跑出的 report_<ver>.txt（+ 同目錄 AwardRangeData_<ver>.csv 選配）。
 守門（P-003）：① |RTP−target| ≤ tolerance（預設 0.005）② 各特殊遊戲觸發率落在體感區間（P-005）③ config-spec 無效值阻斷。
 目標與區間來自 quicktest.yaml（沒有目標 → 該向 skip，verdict 最多 inconclusive；回報數值不下結論）。
 
@@ -197,6 +197,40 @@ def gate(rep: dict, targets: dict, config_spec: dict | None) -> dict:
 
 # ── Markdown（ark-md-report type: data）────────────────────────────────────
 
+FG_TYPES = ("Ultra", "Strong", "Normal", "Weak")
+
+
+def template_caveats(rep: dict, scatter_id: str = "2") -> list[dict]:
+    """偵測快測範本已知偏差（docs/reports/review/2026-10-01-quicktest-template-review.md）在本報告是否出現。
+    只加註解讀方式，不改數值、不影響三向 verdict（守門只用 SpecialGameTotal / Total）。"""
+    out = []
+    games = rep.get("games") or {}
+    sg = games.get("SpecialGameTotal") or {}
+    keys = ("rtp", "freq", "multi", "playtimes", "maxmulti")
+    for t in FG_TYPES:
+        r = games.get(t)
+        if r and sg and all(r.get(k) == sg.get(k) for k in keys):
+            out.append({"id": "fg-type", "finding": "F-1", "row": t,
+                        "msg": f"{t} 列與 SpecialGameTotal 完全相同：範本把所有 FG 記在入口型別 0（{FG_TYPES[0]}），分型統計未啟用，{t} 列不代表該型實際表現"})
+            break
+    if sg and sg.get("retrirate") == 0:
+        out.append({"id": "retrigger", "finding": "F-5", "row": "SpecialGameTotal",
+                    "msg": "RetriRate 0.00% 為範本未記錄 retrigger 次數所致，不代表沒有 retrigger；改看 PlayTimes 是否大於初始手數"})
+    sc = (rep.get("symbol_hit_rate") or {}).get(str(scatter_id)) or {}
+    if (sc.get("x2") or 0) > 0:
+        out.append({"id": "scatter-column", "finding": "F-6", "row": f"SYMBOL {scatter_id}",
+                    "msg": f"符號命中表的 Scatter（{scatter_id}）記在 n−1 欄：x2 欄實為 3 顆、x3 欄實為 4 顆，需往右讀一格"})
+    mul = rep.get("multiple") or []
+    if len(mul) >= 2 and mul[0].get("spins_per_hit_ge") is not None and mul[0].get("spins_per_hit_ge") == mul[1].get("spins_per_hit_ge"):
+        out.append({"id": "multiple-cumulative", "finding": "F-7", "row": mul[0].get("range"),
+                    "msg": "Multiple Information 第一列「0倍以上」累計漏算 0<x<1 區間，數值等同「1倍以上」，實際應更小"})
+    note = (rep.get("detail") or {}).get("maxwin_note") or ""
+    if note and "+Inf" not in note:
+        out.append({"id": "maxwin-count", "finding": "F-2", "row": "maxwin統計",
+                    "msg": "maxwin 頻率被高估：範本在同一場 FG 截頂後每手都計次，且主遊戲不封頂；請以 FG 觸發頻率為上限解讀"})
+    return out
+
+
 def _pct(v) -> str:
     return "—" if v is None else f"{v:.2%}"
 
@@ -276,6 +310,9 @@ def render_md(rep: dict, g: dict, targets: dict, src: pathlib.Path, date: str, m
     L += ["", "## 十分位", "", "| | Total | Main | Free | FSpin |", "|---|---|---|---|---|"]
     for k, r in rep["decile"].items():
         L.append(f"| {k} | {r.get('total')} | {r.get('main')} | {r.get('free')} | {r.get('fspin')} |")
+    cav = rep.get("template_caveats") or []
+    L += ["", "## 範本已知偏差", "", "> 依 `docs/reports/review/2026-10-01-quicktest-template-review.md` 偵測；只影響解讀，不影響三向 verdict。", ""]
+    L += [f"- 範本審查 {c['finding']}（{c['row']}）：{c['msg']}" for c in cav] or ["- 本報告未偵測到範本已知偏差。"]
     L += ["", "## 邊界聲明", "",
           f"- 本報告基於 `{src.name}`（版本 {rep.get('version')}，{rep.get('generated_at')}）單次模擬；重跑快測後需重產。",
           "- 只回報數值與是否落在目標區間；不提出數值定案，不改寫規格（P-002）。",
@@ -315,6 +352,7 @@ def main() -> None:
     cfg = C.yaml_load(pathlib.Path(a.config_spec)) if a.config_spec else None
     g = gate(rep, targets, cfg)
     rep["gate"] = g
+    rep["template_caveats"] = template_caveats(rep, str(targets.get("scatter_id") or 2))
     out = pathlib.Path(a.out) if a.out else src.parent / "qt-report"
     out.mkdir(parents=True, exist_ok=True)
     C.atomic_write(out / "rtp-report.json", json.dumps(rep, ensure_ascii=False, indent=1))

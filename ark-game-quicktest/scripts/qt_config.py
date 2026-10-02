@@ -75,6 +75,9 @@ def main() -> None:
     ap.add_argument("--reels", type=int)
     ap.add_argument("--rows", type=int)
     ap.add_argument("--game")
+    ap.add_argument("--pay-mode", choices=["line", "ways"])
+    ap.add_argument("--lines", type=int)
+    ap.add_argument("--bet-cost", type=int)
     a = ap.parse_args()
     if not (a.config_spec or a.gdd):
         C.fail("BAD_INPUT", "至少要 --config-spec 或 --gdd")
@@ -115,6 +118,31 @@ def main() -> None:
                 prov.setdefault("structure.reels", "gdd.spec.盤面"); prov.setdefault("structure.rows", "gdd.spec.盤面")
     if reels is None or rows is None:
         notes.append("盤面（reels/rows）未定：用 --reels/--rows 或決議 reel.columns/reel.rows")
+
+    # 結構：對獎方式 / 線數 / 收費（給 qt_lint QT-ENGINE 判斷範本能不能跑；gdd 沒寫就留 null）
+    pay_mode, lines, bet_cost = a.pay_mode, a.lines, a.bet_cost
+    for s in gdd.get("spec", []) if gdd else []:
+        k, v = str(s.get("k", "")), str(s.get("v", ""))
+        if "對獎" in k:
+            if pay_mode is None:
+                if re.search(r"ways|路", v, re.I):
+                    pay_mode = "ways"
+                elif re.search(r"lines?|線", v, re.I):
+                    pay_mode = "line"
+                if pay_mode:
+                    prov.setdefault("structure.pay_mode", f"gdd.spec.{k}")
+            m = re.search(r"(\d+)\s*(?:lines?|線)", v, re.I)
+            if lines is None and m:
+                lines = int(m.group(1)); prov.setdefault("structure.lines", f"gdd.spec.{k}")
+        if bet_cost is None and any(t in k for t in ("收費", "成本")):
+            m = re.search(r"(\d+)", v)
+            if m:
+                bet_cost = int(m.group(1)); prov.setdefault("structure.bet_cost", f"gdd.spec.{k}")
+    for name, val in (("pay_mode", a.pay_mode), ("lines", a.lines), ("bet_cost", a.bet_cost)):
+        if val is not None:
+            prov[f"structure.{name}"] = "cli"
+    if pay_mode is None or bet_cost is None:
+        notes.append("對獎方式 / 收費未定：qt_lint 無法確認範本（3×3、5 線、收費 5）是否適用")
 
     # 符號表與賠率（gdd symbols）
     symbols = []
@@ -167,7 +195,7 @@ def main() -> None:
          "extra_odds": extra}
     C.atomic_write(out / "odds" / f"odds_{a.version}.json", json.dumps(j, ensure_ascii=False, indent=2))
     qc = {"contract": C.CONTRACT, "game": a.game or gdd.get("short_title") or (cfg.get("run_id") or "game"), "version": a.version,
-          "structure": {"reels": reels, "rows": rows, "symbols": symbols,
+          "structure": {"reels": reels, "rows": rows, "pay_mode": pay_mode, "lines": lines, "bet_cost": bet_cost, "symbols": symbols,
                         "wild_id": next((s["sym_id"] for s in symbols if s["code"].upper().startswith("W")), None),
                         "scatter_id": next((s["sym_id"] for s in symbols if s["code"].upper().startswith("SC")), None)},
           "sources": {"config_spec": a.config_spec, "gdd": a.gdd, "decisions": a.decisions},

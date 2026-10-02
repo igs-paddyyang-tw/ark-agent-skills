@@ -318,6 +318,8 @@ def main() -> None:
             L.append(f"| {name} | {rtp} | {hit} | {trig} | " + " | ".join(dv(fmt_num(r.get(k)), f"games.{name}.{k}") for k in ("freq", "multi", "maxmulti", "playtimes")) + " |")
         g = rep.get("gate") or {}
         L += [""] + [f"- {c['id']}：{c['msg']} [{c['status']}]" for c in g.get("checks", [])]
+        for c in rep.get("template_caveats") or []:
+            L.append(f"- ⚠ 範本審查 {c['finding']}（{c['row']}）：{c['msg']}")
         d = rep.get("detail") or {}
         if d:
             L.append(f"- SD {dv(fmt_num(d.get('sd')), 'detail.sd')}；P.I. {dv(fmt_num(d.get('pi')), 'detail.pi')}；Pay Out Rate {dv(fmt_pct(d.get('pay_out_rate')), 'detail.pay_out_rate') if d.get('pay_out_rate') is not None else '—'}")

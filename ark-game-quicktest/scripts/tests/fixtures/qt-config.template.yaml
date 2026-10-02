@@ -4,6 +4,9 @@ version: "1.0.0"
 structure:
   reels: 3
   rows: 3
+  pay_mode: line
+  lines: 5
+  bet_cost: 5
   wild_id: 1
   scatter_id: 2
   symbols:
@@ -23,6 +26,9 @@ structure:
 provenance:   # 範本自帶數值：來源一律標 template（示範用，非真實決議）
   structure.reels: template:odds_1.0.0.json
   structure.rows: template:odds_1.0.0.json
+  structure.pay_mode: template:odds_1.0.0.go
+  structure.lines: template:odds_1.0.0.go
+  structure.bet_cost: template:odds_1.0.0.go
   extra_odds.odds: template:odds_1.0.0.json
   extra_odds.extra_rate: template:odds_1.0.0.json
   extra_odds.enter_free_game_gate: template:odds_1.0.0.json
