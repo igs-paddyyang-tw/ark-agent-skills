@@ -113,6 +113,12 @@ trust: deterministic | llm-distilled
 ## tags 白名單
 
 - overview
+- concept
+- reference
+- note
+- howto
+- tool
+- methodology
 
 > ⚠️ **`- ` 清單必須緊接在本標題之後**（中間不可插入 `>` 說明或表格）——
 > `wiki_taxonomy.load_whitelist` 只抓「標題後緊接的連續 `- ` 行」。
