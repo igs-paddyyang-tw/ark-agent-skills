@@ -1,0 +1,57 @@
+# config-map.fasttest.yaml — 公版機率表（參數表分頁）⇄ FastTest 家族「參數外部化」設定檔（ProbSetting JSON）的對照規則
+# 用於 ps_diff.py。每條規則：xlsx 選擇器（對 prob-data.known）→ config 鍵路徑；transform 可串接（|）。
+# 這份 map 以彌勒佛 a-standard.json 的 ProbSetting 鍵名為準（逸修 FastTest 外部化版）；
+# 其他遊戲：複製本檔改 config 鍵名與表編號（表編號跟著該遊戲的參數表走）。
+contract: "1"
+engine: fasttest-probsetting-json
+rules:
+  # ---- 基本資訊
+  - { id: bet_cost,    xlsx: "board.基本收費",      config: Bet_Cost }
+  - { id: bet_line,    xlsx: "board.線數",          config: Bet_Line, transform: ways_to_lines, note: "All Ways → 243" }
+  # ---- 表M-1 輪帶組權重（K-022 旋鈕）
+  - { id: reelset_weight, xlsx: "reelsets.weight",  config: MainGameReelSetWeight }
+  # ---- 表M-2 假轉 SC/SS
+  - { id: fake_sc_scores,  xlsx: "dual[M-2].0.values",  config: FakeSCScores }
+  - { id: fake_sc_weights, xlsx: "dual[M-2].0.weights", config: FakeSCWeights }
+  - { id: fake_ss_scores,  xlsx: "dual[M-2].1.values",  config: FakeSSScores, transform: star_to_neg, note: "*2/*3/*4 乘倍在設定檔以負值表示" }
+  - { id: fake_ss_weights, xlsx: "dual[M-2].1.weights", config: FakeSSWeights }
+  # ---- 表M-5 進 FG 時 SC/SS
+  - { id: fg_sc_scores,    xlsx: "dual[M-5].0.values",  config: FGEnterSCScores }
+  - { id: fg_sc_weights,   xlsx: "dual[M-5].0.weights", config: FGEnterSCWeights }
+  - { id: fg_ss_scores,    xlsx: "dual[M-5].1.values",  config: FGEnterSSScores, transform: star_to_neg }
+  - { id: fg_ss_weights,   xlsx: "dual[M-5].1.weights", config: FGEnterSSWeights }
+  # ---- 表M-3 / M-4 演出層
+  - { id: fish_announce,   xlsx: "yesno[M-3-1]",        config: FishAnnouncementWeights }
+  - { id: fish_all_888,    xlsx: "yesno[M-3-2]",        config: FishAllMaxSCWeights }
+  - { id: rainbow_listen,  xlsx: "weights[M-4].weight", config: RainbowListenWeights }
+  # ---- 表F-1 強中弱（K-024）
+  - { id: fg_type_weight,  xlsx: "weights[F-1].weight", config: FreeGameTypeWeight }
+  # ---- 表F-2 四福袋（K-007 / KX-008）
+  - { id: coin_times,      xlsx: "matrix[F-2].金幣・出現次數", config: CoinTimesWeights }
+  - { id: coin_scores,     xlsx: "matrix_head[F-2].金幣・分數", config: CoinScores }
+  - { id: coin_score_w,    xlsx: "matrix[F-2].金幣・分數",     config: CoinScoreWeights }
+  - { id: fish_times,      xlsx: "matrix[F-2].鯉魚・出現次數", config: FishTimesWeights }
+  - { id: fish_scores,     xlsx: "matrix_head[F-2].鯉魚・分數", config: FishScores }
+  - { id: fish_score_w,    xlsx: "matrix[F-2].鯉魚・分數",     config: FishScoreWeights }
+  - { id: gold_times,      xlsx: "matrix[F-2].金龍・出現次數", config: GoldDragonTimesWeights }
+  - { id: color_times,     xlsx: "matrix[F-2].彩龍・出現次數", config: ColorDragonTimesWeights }
+  # ---- 表F-3-1 出場順序
+  - { id: bag_order_first2, xlsx: "series[F-3-1].前兩次抽取", config: BagOrderFirst2Weights, transform: drop_last, note: "xlsx 末欄 Total 不比對" }
+  - { id: bag_order_after2, xlsx: "series[F-3-1].第三次以後", config: BagOrderAfter2Weights, transform: drop_last }
+  # ---- 表F-4 復活（K-021，表演層）
+  - { id: revive_threshold, xlsx: "scalars[F-4-1]",          config: ReviveThreshold, note: "彌勒佛 v3：xlsx 300 vs config 200 → 待確認" }
+  - { id: revive_weights,   xlsx: "weights[F-4-2].weight",   config: ReviveWeights }
+  - { id: revive_gold_keep, xlsx: "series[F-4-3].保留金龍.權重", config: ReviveGoldDragonKeepWeights, transform: drop_zero_tail, config_transform: drop_zero_tail, note: "xlsx 以保留條數為索引（自 0 起）；設定檔索引起點待確認" }
+  - { id: revive_color_keep, xlsx: "series[F-4-3].保留彩龍.權重", config: ReviveColorDragonKeepWeights, transform: drop_zero_tail, config_transform: drop_zero_tail }
+  # ---- 輪帶長度（Main Game Strip ⇄ MainGameReelData[0]）
+  - { id: reel_lens_set0,  xlsx: "strips[main_strip].Reels_0.lens", config: MainGameReelData.0, config_transform: lens }
+  - { id: reel_lens_set5,  xlsx: "strips[main_strip].Reels_1.lens", config: MainGameReelData.5, config_transform: lens, note: "組 5 = R5 換無 SS 帶" }
+  # ---- Pay table（符號 code → sym_id 依公版區段：M1..M5 = 11..15、FA/FK/FQ = 21..23）
+  - { id: odds_M1, xlsx: "paytable.M1", config: Odds.11, config_transform: drop_lead2 }
+  - { id: odds_M2, xlsx: "paytable.M2", config: Odds.12, config_transform: drop_lead2 }
+  - { id: odds_M3, xlsx: "paytable.M3", config: Odds.13, config_transform: drop_lead2 }
+  - { id: odds_M4, xlsx: "paytable.M4", config: Odds.14, config_transform: drop_lead2 }
+  - { id: odds_M5, xlsx: "paytable.M5", config: Odds.15, config_transform: drop_lead2 }
+  - { id: odds_FA, xlsx: "paytable.FA", config: Odds.21, config_transform: drop_lead2 }
+  - { id: odds_FK, xlsx: "paytable.FK", config: Odds.22, config_transform: drop_lead2 }
+  - { id: odds_FQ, xlsx: "paytable.FQ", config: Odds.23, config_transform: drop_lead2 }

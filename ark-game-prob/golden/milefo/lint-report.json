@@ -1,0 +1,23 @@
+{
+ "summary": {
+  "errors": 0,
+  "warnings": 2,
+  "pending_marks": 0,
+  "sections": 6,
+  "sources": 2
+ },
+ "violations": [
+  {
+   "rule": "PS-HUMAN",
+   "severity": "warning",
+   "where": "human:summary",
+   "message": "人工區含數字，不受 PS-NUM 保護，請在文中標來源"
+  },
+  {
+   "rule": "PS-HUMAN",
+   "severity": "warning",
+   "where": "human:competitor",
+   "message": "人工區含數字，不受 PS-NUM 保護，請在文中標來源"
+  }
+ ]
+}

@@ -1,0 +1,179 @@
+{
+ "contract": "1",
+ "kind": "prob-spec",
+ "mode": "xlsx",
+ "slug": "milefo",
+ "game": "彌勒佛",
+ "sections": [
+  "1. 規格簡述",
+  "2. 數據資料",
+  "3. 機率流程圖",
+  "4. 參數表",
+  "5. 競品資料／手法對應",
+  "6. 隱性規則"
+ ],
+ "pending_params": 0,
+ "verdict": "confirmed",
+ "sources": {
+  "xlsx": {
+   "path": "<機率表來源>/彌勒佛機率表_v3_1001A版.xlsx",
+   "sha256_16": "408fa27462d5b3a1"
+  },
+  "prob-data": {
+   "path": "golden/milefo/prob-data.json",
+   "sha256_16": "a7d47e9cef12bc8d"
+  }
+ },
+ "derived": [
+  {
+   "value": "39.0500",
+   "from": "數據資料 BASE INFO Main"
+  },
+  {
+   "value": "2.52",
+   "from": "數據資料 BASE INFO Main"
+  },
+  {
+   "value": "39.6931",
+   "from": "數據資料 BASE INFO Main"
+  },
+  {
+   "value": "0.98",
+   "from": "數據資料 BASE INFO Main"
+  },
+  {
+   "value": "368.18",
+   "from": "數據資料 BASE INFO Main"
+  },
+  {
+   "value": "60.8895",
+   "from": "數據資料 BASE INFO Free"
+  },
+  {
+   "value": "223.47",
+   "from": "數據資料 BASE INFO Free"
+  },
+  {
+   "value": "0.4475",
+   "from": "數據資料 BASE INFO Free"
+  },
+  {
+   "value": "136.07",
+   "from": "數據資料 BASE INFO Free"
+  },
+  {
+   "value": "1.00",
+   "from": "數據資料 BASE INFO Free"
+  },
+  {
+   "value": "0.00",
+   "from": "數據資料 BASE INFO Free"
+  },
+  {
+   "value": "31120.36",
+   "from": "數據資料 BASE INFO Free"
+  },
+  {
+   "value": "0.0000",
+   "from": "數據資料 BASE INFO Feature"
+  },
+  {
+   "value": "0.0000",
+   "from": "數據資料 BASE INFO Feature"
+  },
+  {
+   "value": "0.00",
+   "from": "數據資料 BASE INFO Feature"
+  },
+  {
+   "value": "0.0000",
+   "from": "數據資料 BASE INFO GRAND"
+  },
+  {
+   "value": "0.0000",
+   "from": "數據資料 BASE INFO GRAND"
+  },
+  {
+   "value": "0.00",
+   "from": "數據資料 BASE INFO GRAND"
+  },
+  {
+   "value": "99.9395",
+   "from": "數據資料 BASE INFO Total"
+  },
+  {
+   "value": "1000000000",
+   "from": "數據資料 Total"
+  },
+  {
+   "value": "252.87",
+   "from": "數據資料 Done in"
+  },
+  {
+   "value": "100.03",
+   "from": "reelsets.totals.TOTAL RTP × 100"
+  },
+  {
+   "value": "99.9395",
+   "from": "數據資料 總計"
+  },
+  {
+   "value": "-0.088",
+   "from": "rtp_total − golden"
+  },
+  {
+   "value": "0.2",
+   "from": "容許誤差常數 pp"
+  },
+  {
+   "value": "45052",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "1.01",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "9.24",
+   "from": "數據資料 各組別RTP貢獻"
+  },
+  {
+   "value": "850270",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "19.00",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "25.36",
+   "from": "數據資料 各組別RTP貢獻"
+  },
+  {
+   "value": "3132594",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "70.00",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "60.16",
+   "from": "數據資料 各組別RTP貢獻"
+  },
+  {
+   "value": "446978",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "9.99",
+   "from": "數據資料 FG內部"
+  },
+  {
+   "value": "5.24",
+   "from": "數據資料 各組別RTP貢獻"
+  }
+ ],
+ "md_sha256_16": "91f7cd9480c42ed3",
+ "generated": "2026-10-06T17:19:42"
+}
