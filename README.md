@@ -148,7 +148,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-game-domains` | 「競品影片 → 遊戲規格」skill 鏈的 Domain Pack 註冊庫：唯一放遊戲領域知識的地方 （偵測器組合、分析項目與提詞、受控詞彙與 KB seed、規格章節與 dev-spec 模板、li… |
 | `ark-game-gdd` | 遊戲企劃文件（GDD）的兩段式工具：**從構想產文件** + **從資料層產素材總覽**。 |
 | `ark-game-prob` | 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、 ark-game-quicktest（Go 快測）… |
-| `ark-game-quicktest` | C 段「機率規格書 + Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， d… |
+| `ark-game-quicktest` | C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， determin… |
 | `ark-game-spec` | 遊戲規格產出 executor（domain-agnostic）：`game-analysis.yaml` + `kb-refs.yaml` → 依 pack 章節 deterministic 渲染 … |
 | `ark-github-cli` | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
 | `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |

@@ -49,7 +49,17 @@ def main() -> None:
     an = step("ga_analyze.py", "--run", run)
     v = step("ga_validate.py", "--run", run)
     k = step("kb_match.py", "--run", run)
+    # ── report（預設產報告，--no-report 略過）── D-3 fix: ga_run 原本漏呼叫 ga_report
+    rpt: dict = {}
+    if not a.no_report:
+        rpt_args = ["--run", run]
+        if a.report_html:
+            rpt_args.append("--html")
+        if a.wiki_schema:
+            rpt_args += ["--wiki-schema", a.wiki_schema]
+        rpt = step("ga_report.py", *rpt_args)
     C.emit({"observe": o["data"], "analyze": an["data"], "validate": v["data"], "kb": k["data"],
+            "report": rpt.get("data") if rpt else "skipped",
             "next": f"python ark-game-spec/scripts/gs_draft.py --run {run}"}, {"stage": "ga_run"})
 
 

@@ -16,7 +16,7 @@ description: |
   圖騰對照表、軟體命名對接、示意圖待補清單、INFO 頁文案、多國語系表、把規格書做成企劃看的版本、規格書樣板。
   不適用於：工程規格書與 ADR（→ ark-superpowers，本 skill 出的是遊戲企劃不是技術規格）、
   影片競品分析與 atlas 圖鑑（→ ark-game-analysis / ark-game-atlas）、規格主張與決議（→ ark-game-spec / ark-grill-me）、
-  機率規格與快測（→ prob-architect / quicktest-runner）、xlsx 規格書抽取（本版尚未提供，見「邊界」）。
+  機率規格與快測（→ ark-game-prob / ark-game-quicktest）。
 metadata:
   schema_version: "1.1"
   status: active
@@ -69,7 +69,7 @@ metadata:
 |------|--------|-----------|
 | `pyyaml`、`jinja2` | 全部 | exit 8 |
 | 三個資產夾（`assets.root` 下的 圖騰 / 全示意圖 / 規格書競品圖） | lint / build | exit 3（GDD-YAML） |
-| ark-game-spec 的 `game-spec.v1.md` | 選配，`gdd_from_spec`（下一版） | 目前以手寫 yaml 為入口 |
+| ark-game-spec 的 `game-spec.v1.md` | 選配，`gdd_from_spec`（spec → gdd-pack 草稿） | 目前以手寫 yaml 為入口 |
 
 ## 資產地圖
 
@@ -113,7 +113,7 @@ metadata:
 │     └─ PASS → 素材總覽.html + todo.md（warn 全在這裡：待補、待修、檔名衛生、INFO 插圖）
 ├─ 企劃改了 yaml 沒重編 → gdd_build --check 回 STALE；重跑 gdd_run
 ├─ 要換配色 → 複製 assets/default-style.yaml 改 token，--style 指過去
-└─ 要進圖書館做跨遊戲比較 → 下一版 atlas --from gdd（見邊界）
+└─ 要進圖書館做跨遊戲比較 → `atlas_run.py --gdd data/gdd/<slug>`（ark-game-atlas v1.1 已支援）
 ```
 
 ## gdd-pack 目錄
@@ -152,4 +152,4 @@ data/gdd/<slug>/
 - **不 inline 圖**：示意圖動輒數十 MB，一律 linked；要單檔可寄的版本走 atlas。
 - **競品參考圖只准內部**：distribution 鎖 internal，頁尾標示；lint 擋參考圖進 final。
 - **from_spec 是草稿不是規格**：rules 只搬 spec 的 provenance bullet（含 UNKNOWN / PROPOSED），不補字、不改寫；spec kv 只換算有 claim 的欄位（盤面 / 對獎 / Free / Feature / JP / 機種名 / 版型），其餘留給企劃；符號不取名（沿用 symbol_a）。
-- **與 atlas 的分工**：本 skill 產企劃/美術/工程對接的工作文件；atlas 產主管翻、圖書館比較的參考書。同資料層、兩個 view；atlas `--from gdd` 與 `SPEC` provenance 為下一版。
+- **與 atlas 的分工**：本 skill 產企劃/美術/工程對接的工作文件；atlas 產主管翻、圖書館比較的參考書。同資料層、兩個 view；atlas `--from gdd`（`--gdd` 入口）v1.1 已支援。`SPEC` provenance 標註為後續項。

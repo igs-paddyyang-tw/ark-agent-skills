@@ -63,7 +63,7 @@ def main() -> None:
     ap.add_argument("--no-run", action="store_true", help="只實例化與 patch，不執行 go")
     ap.add_argument("--timeout", type=int, default=3600)
     ap.add_argument("--seed", type=int, default=20261001, help="固定 worker seed（seed + i×1000003）；0 = 保留範本的時間 seed")
-    ap.add_argument("--probspec", action="store_true", help="跑完 qt_report 後順手產 data/prob/<slug>/prob-spec.md（qt_probspec + ps_lint）")
+    ap.add_argument("--probspec", action="store_true", help="跑完 qt_report 後轉呼叫同層 ark-game-prob 產 data/prob/<slug>/prob-spec.md（需安裝 ark-game-prob）")
     ap.add_argument("--prob-out", default="data/prob")
     a = ap.parse_args()
     d = pathlib.Path(a.dir).resolve()
@@ -126,10 +126,17 @@ def main() -> None:
     rargs = ["--report", str(rep), "--out", str(d / "qt-report")] + (["--targets", a.targets] if a.targets else []) + (["--config-spec", a.config_spec] if a.config_spec else [])
     result["qt_report"] = step("qt_report.py", *rargs)["data"]
     if a.probspec:
-        ps = step("qt_probspec.py", "--qt", a.dir, "--out", a.prob_out)["data"]
-        ps["xlsx"] = step("qt_probtable.py", "--dir", str(pathlib.Path(ps["md"]).parent))["data"]["xlsx"]
-        ps["lint"] = step("ps_lint.py", "--dir", str(pathlib.Path(ps["md"]).parent))["data"]["status"]
-        result["prob_spec"] = ps
+        # D-2: 機率規格書職責已移至 ark-game-prob；若同層存在，轉呼叫 ps_run.py --qt
+        prob_skill = pathlib.Path(__file__).resolve().parent.parent.parent / "ark-game-prob" / "scripts" / "ps_run.py"
+        if not prob_skill.exists():
+            C.fail("MISSING_DEP", "ark-game-prob skill 不在同層",
+                   f"機率規格書已移至 ark-game-prob（v2.0 拆分）。\n安裝：複製 ark-game-prob/ 到 .kiro/skills/\n找到後預期位置：{prob_skill}")
+        ps_args = [sys.executable, str(prob_skill), "--qt", str(d), "--out", a.prob_out]
+        ps_r = subprocess.run(ps_args, capture_output=True, text=True, encoding="utf-8")
+        if ps_r.returncode != 0:
+            C.fail("QUERY_FAILED", f"ark-game-prob ps_run 失敗（exit={ps_r.returncode}）", ps_r.stderr[-500:])
+        import json as _json
+        result["prob_spec"] = _json.loads(ps_r.stdout.strip().splitlines()[-1]) if ps_r.stdout.strip() else {"status": "delegated"}
     C.emit(result, {"stage": "qt_run", "ran": True})
 
 

@@ -71,35 +71,11 @@ rtp_total / rtp_main / rtp_special / special_trigger_rate (= 1/SpecialGameTotal.
 | SKIP（缺目標） | P3 | 補 quicktest.yaml / config-spec |
 | 樣本 < 1e7 | P2 | TotalRound ≥ 1e7 |
 
-## prob-spec（機率規格書 Content 軌，v1.1）
+## prob-spec（機率規格書 Content 軌）
 
-落點 `data/prob/<slug>/`。`qt_probspec.py --qt data/quicktest/<slug> [--gdd] [--run] [--out data/prob] [--slug] [--version]`；gdd / run 預設由 `qt-config.yaml.sources`（gdd、config_spec 的上兩層）推；decisions 取 `sources.decisions` 或 `<run>/decisions.yaml`。
-
-frontmatter：`title, contract: "1", kind: prob-spec, slug, game, odds_version, status: draft|review（有 rtp-report → review）, distribution: internal, date, author, source_skill, verdict: <三向 verdict|未快測>, pending_params, sources{key: 相對專案根路徑}`。
-
-六段（順序固定，對應公版「製作方針」）：
-
-| 段 | 內容 | 來源 | 標記 |
-|---|---|---|---|
-| 1. 規格簡述 | 基本規格表（gdd.yaml.spec，kv:false 除外）；每個 feature 一節，rules/*.md 逐條；「機率人員簡述」人工區 | gdd-pack | **SPEC** |
-| 2. 數據資料 | 公版表：階段 / RTP / Hit% / 觸發率(=1/freq) / 平均觸發局數 / 平均倍率 / 最大倍率 / 平均局數；三向 checks；目標 RTP（quicktest.yaml） | rtp-report.json | 無報告 → 整表「—」+「未快測」 |
-| 3. 機率流程圖 | dev-spec/state-machine.md 的 mermaid 原樣；「流程補充」人工區 | run | 無 → UNKNOWN |
-| 4. 參數表 | 基本資訊（盤面、對獎、收費）/ Odds 表（x1..xReels）/ 觸發與上限參數 / 輪帶組 index_set × weight / 四型權重 / 輪帶符號顆數；每列「來源」= qt-config.provenance | odds.json + qt-config | null → **待決議**（不帶來源） |
-| 5. 競品資料／手法對應 | kb-refs.yaml 每個 item：知識庫命中 → **FROM_KB**；無 → **PROPOSED** 新設計；「競品」人工區 | run | — |
-| 6. 隱性規則 | decisions 中非 defer 且 value 非 null：編號 / topic / 值 / reason（設計目的）/ decided_by；defer 計數；「hidden-rules」人工區 | decisions.yaml | **DECIDED** |
-
-人工區：`<!-- human:<id> -->…<!-- /human -->`（id：summary / flow-notes / param-notes / competitor / hidden-rules）；重產時以 id 對應保留原文。
-
-`prob-spec.meta.json`：`{contract, slug, game, odds_version, sections[6], pending_params, verdict, sources{key:{path, sha256_16}}, derived[{value, from}], md_sha256_16, generated}`。`derived` 是腳本算出的每個數字（百分比、1/freq、顆數、長度、defer 數）及其公式來源，供 ps_lint 當允許集。
-
-ps_lint：PS-SECTIONS（六段順序）/ PS-NUM（人工區外每個數字 ∈ 來源檔全文 ∪ derived；id 類 D001 / E001 / R1 / x3 / K-022 不算數字）/ PS-PROV（§4 有值必有來源；待決議不得帶來源→warn）/ PS-STALE（來源 sha、html 戳記；來源路徑相對專案根，lint 從任何 cwd 都能找）/ PS-HUMAN（人工區含數字 warn）/ PS-INJECT。
-
-html：單檔、planner 暗金 token、mermaid CDN、人工區虛線框、待決議紅字；頁首 `<!-- content-src: prob-spec.md sha256:<16> -->` 與 ark-md-report report_pair 同格式。
-
-### prob-spec.xlsx（View 軌公版，qt_probtable）
-
-分頁與公版對照：`機率規格書製作方針`（固定文字）/ `規格簡述`（gdd spec + rules 逐行，來源欄）/ `數據資料`（公版座標：G2 表頭 RTP·Hit%·觸發率·平均觸發局數·倍率·最大倍率·平均局數，F3 起各階段；觸發率 = 1/freq；未快測整列 `--`）/ `機率流程圖`（mermaid 原文，drawio 待）/ `參數表`（基本資訊 C2:D、Odds 表 C8 起 Description·Symbol·sym_id·1..N·來源、表P-1 觸發與上限參數、表M-1 主遊戲 index_set × Weight + SUM、表F-1 四型權重 + SUM、表F-2 免費 index_set × 四型 Weight）/ `Main Game Strip`·`Free Game Strip`（每組一塊：Reels_g、R1..Rn 符號 code、右側「總顆數」COUNTIF 活公式 + Total SUM）/ `轉置 Strip`（Symbol / 轉換用Code = sym_id / 名稱 / 組）/ `隱性規則`（編號 / 情況 / 說明 / 設計目的 / 來源）/ `_meta`（隱藏：content-src md sha16、odds sha16、產生者）。
-null → 「待決議」黃底；ps_lint 以 `_meta` 戳記驗 xlsx ↔ md ↔ odds 一致。
+> **已移至 ark-game-prob（v2.0 拆分）**。機率規格書的六段契約、frontmatter、meta.json、ps_lint 規則、
+> prob-spec.xlsx 公版、人工區規則等，見 `ark-game-prob/references/prob-spec-contract.md`。
+> 本 skill 的 `qt_run --probspec` 會轉呼叫同層 ark-game-prob 的 `ps_run.py --qt`。
 
 ## v1.2 範本相容性守門
 
