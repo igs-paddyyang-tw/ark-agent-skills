@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **64 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **59 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -138,23 +138,30 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑧ 執行器 Executor
 
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜13 個
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜8 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
-| `ark-game-analysis` | 遊戲機制分析 executor（domain-agnostic）：讀 ark-video-understanding 的唯讀 evidence，依 ark-game-domains pack 的 10… |
-| `ark-game-atlas` | 圖文遊戲規格書（atlas）編譯器：把「競品影片 → 遊戲規格」鏈的一個 run 編成一本可翻閱的書—— 文字逐條來自 `game-spec.v1.md` 帶 provenance 的主張（OBSER… |
-| `ark-game-domains` | 「競品影片 → 遊戲規格」skill 鏈的 Domain Pack 註冊庫：唯一放遊戲領域知識的地方 （偵測器組合、分析項目與提詞、受控詞彙與 KB seed、規格章節與 dev-spec 模板、li… |
-| `ark-game-gdd` | 遊戲企劃文件（GDD）的兩段式工具：**從構想產文件** + **從資料層產素材總覽**。 |
 | `ark-game-prob` | 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、 ark-game-quicktest（Go 快測）… |
 | `ark-game-quicktest` | C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， determin… |
-| `ark-game-spec` | 遊戲規格產出 executor（domain-agnostic）：`game-analysis.yaml` + `kb-refs.yaml` → 依 pack 章節 deterministic 渲染 … |
+| `ark-game-spec` | 遊戲規格書 executor（2.0 合體版）：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill， 與 ark-game-prob（機率規格書）、ark-game-qui… |
 | `ark-github-cli` | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
 | `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
 | `ark-mobile-adb` | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro。 |
-| `ark-video-understanding` | 遊戲影片理解 executor（domain-agnostic）：影片 URL / MP4 → 低解析 motion timeline → 偵測器註冊表 （periodic / scene_chang… |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
+
+## 🗑️ 已移除（保留供遷移）
+
+> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
+
+| Skill | 遷移到 |
+|-------|--------|
+| `ark-game-analysis` | — |
+| `ark-game-atlas` | — |
+| `ark-game-domains` | — |
+| `ark-game-gdd` | — |
+| `ark-video-understanding` | — |
 
 <!-- END GENERATED CATALOGUE -->
 

@@ -10,7 +10,7 @@ description: |
   使用此 skill 當提及：BlueStacks / 模擬器 / Android 裝置操作、adb 連不上、遊戲畫面自動化、aiqa、AI QA、遊戲測試自動化、
   測試清單生成、test-checklist、跑一輪測試、test-report、回填測試表、Mantis、gamepack 校準、trigger / GM harness、掛測、
   按鍵精靈 / 座標腳本 / 錄製重放 / macro、adb 太慢、座標點空、縮圖座標、找色。
-  不適用於：iOS / 真機（N/A）、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-video-understanding）、一般程式測試（→ ark-test-runner）。
+  不適用於：iOS / 真機（N/A）、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-game-spec）、一般程式測試（→ ark-test-runner）。
 metadata:
   schema_version: "1.1"
   status: active

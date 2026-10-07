@@ -45,7 +45,7 @@
 | Office 檔(.docx/.xlsx/.pptx/.pdf) | `ark-docx-tool` / `ark-xlsx-tool` / `ark-pptx-tool` / `ark-pdf-tool` | 按需 |
 | git log → changelog / 版本說明 | `ark-release-notes` | 按需 |
 
-> 領域專屬 skill（如遊戲 `ark-game-gdd`、`ark-kpi-calculator`）由各專案在
+> 領域專屬 skill（如遊戲 `ark-game-spec`、`ark-kpi-calculator`）由各專案在
 > `sync_skills.py` 的 MATRIX 依角色補，見 `role-templates-gamedev.md`。
 
 ## 串鏈原則

@@ -12,7 +12,7 @@ inputs:
   - 測試項目_金猴爺_260910_v4_6_8撲克大亨新館_Boss測試項目_A0.xlsx（撲克大亨 249 項 / 撲克猴爺 181 項）
   - SKILL.md（mobile-mcp-bluestacks：Claude → mobile-mcp → adb → BlueStacks 操作鏈與遊戲畫面限制）
 target_skills: [ark-aiqa-testgen, ark-aiqa-runner, ark-aiqa-report, ark-aiqa-gamepacks]
-related: [ark-game-spec（dev-spec/qa-checklist.md 為上游）, ark-game-domains, mobile-mcp-bluestacks]
+related: [ark-game-spec（dev-spec/qa-checklist.md 為上游）, mobile-mcp-bluestacks]
 ---
 
 # aiqa 設計文件

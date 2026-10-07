@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
-"""gs_run — 分段一鍵：
-  --stage draft   gs_draft（含 lint）→ gs_review → decisions.template.yaml
-  --stage decide  gs_decide → spec_lint(v1)
-  --stage dev     gs_dev → gs_metrics
-用法: python gs_run.py --run artifacts/cva/<run_id> --stage draft|decide|dev [--answer-key f] [--llm]
+"""gs_run — ark-game-spec 2.0 總編排（薄派發器）：一個入口、八個 stage，各 stage runner 原封保留在 scripts/<stage>/，flag 全部透傳。
+
+  python scripts/gs_run.py --stage video   --source <url|mp4> [--domain auto|slot-game|…] [--out artifacts/cva] [vu_run 其他 flag]
+  python scripts/gs_run.py --stage detect  --run <run>                      # auto 模式：ga_detect 判 domain 並續跑 vu_run 剩餘 stage
+  python scripts/gs_run.py --stage analyze --run <run> [--force] [--no-report] [--report-html] [--wiki-schema …]
+  python scripts/gs_run.py --stage draft|decide|dev --run <run> [--answer-key …] [--llm] [--allow-deferred]
+  python scripts/gs_run.py --stage gdd     --pack <gdd-pack> [--out] [--style]            # lint → build（素材總覽.html + todo.md）
+  python scripts/gs_run.py --stage gdd     --from xlsx --xlsx <規格書.xlsx> --out <pack>  # gdd_extract → lint → build
+  python scripts/gs_run.py --stage gdd     --from spec --run <run> --out <pack>           # gdd_from_spec → lint → build
+  python scripts/gs_run.py --stage atlas   --run <run> --slug <slug> | --gdd <pack> [--out data/atlas] [--library …]
+  python scripts/gs_run.py --stage pack    [--domain <d> | --all]                          # pack_lint
+  python scripts/gs_run.py --stage all     --source <url|mp4> [--domain …] [--decisions decisions.yaml] [--slug <slug>]
+        all = video →（auto 時 detect）→ analyze → draft；有 --decisions 則續 decide → dev → atlas。中間人工決議是刻意的斷點（ark-grill-me）。
+
+每個 stage 以 subprocess 執行 runner（F-6：stdout 一律 UTF-8）；失敗即停並回傳該 runner 的 envelope。
+`--stage analyze` 另在 ga_run 之後呼叫 ga_report（D-3：ga_run 1.x 未呼叫 report 的補救放在派發器，不動 ga_run 本身），`--no-report` 可關。
 """
 from __future__ import annotations
 
@@ -14,52 +25,140 @@ import pathlib
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import gs_common as C  # noqa: E402
-
 HERE = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+from _lib import run_common as C  # noqa: E402
+
+STAGES = {
+    "video": HERE / "video" / "vu_run.py",
+    "detect": HERE / "analysis" / "ga_detect.py",
+    "analyze": HERE / "analysis" / "ga_run.py",
+    "report": HERE / "analysis" / "ga_report.py",
+    "draft": HERE / "spec" / "gs_run.py",
+    "decide": HERE / "spec" / "gs_run.py",
+    "dev": HERE / "spec" / "gs_run.py",
+    "gdd": HERE / "gdd" / "gdd_run.py",
+    "atlas": HERE / "atlas" / "atlas_run.py",
+    "pack": HERE / "pack" / "pack_lint.py",
+}
 
 
-def step(script, *args):
-    r = subprocess.run([sys.executable, str(HERE / script), *args], capture_output=True, text=True, encoding="utf-8")
-    out = (r.stdout or "").strip()
-    if not out:
-        # F-6：Windows PowerShell 管線常吞子腳本 stdout（exit 0 但空）→ 給明確診斷，非泛化 QUERY_FAILED
-        C.fail("QUERY_FAILED", f"{script} 無 stdout 輸出（exit={r.returncode}）",
-               f"子腳本應走 emit() 輸出 JSON；Windows 下若 stdout 被吞可改逐步跑。stderr: {r.stderr[-300:]}")
+def step(script: pathlib.Path, args: list[str], *, tolerate_rc: tuple[int, ...] = ()) -> dict:
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+    p = subprocess.run([sys.executable, "-X", "utf8", str(script), *args], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+    lines = (p.stdout or "").strip().splitlines()
+    line = next((ln for ln in reversed(lines) if ln.startswith("{")), "")
     try:
-        j = json.loads(out.splitlines()[-1])
-    except Exception:  # noqa: BLE001
-        C.fail("QUERY_FAILED", f"{script} stdout 末行非 JSON（exit={r.returncode}）",
-               f"末行: {out.splitlines()[-1][:200]} | stderr: {r.stderr[-300:]}")
-    if not j.get("success"):
-        print(json.dumps(j, ensure_ascii=False))
-        sys.exit(r.returncode or 1)
-    return j
+        envl = json.loads(line) if line else {}
+    except json.JSONDecodeError:
+        envl = {}
+    if p.returncode != 0 and p.returncode not in tolerate_rc:
+        err = envl.get("error") or {}
+        C.fail(err.get("code", "QUERY_FAILED"), f"{script.parent.name}/{script.name} 失敗（rc={p.returncode}）：{err.get('message', '')}",
+               err.get("hint") or (p.stderr or "")[-600:], {"stage": script.stem, "envelope": envl})
+    return {"rc": p.returncode, "env": envl, "data": envl.get("data") or {}}
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--run", required=True)
-    ap.add_argument("--stage", required=True, choices=["draft", "decide", "dev"])
-    ap.add_argument("--answer-key")
-    ap.add_argument("--llm", action="store_true")
-    ap.add_argument("--allow-deferred", action="store_true")
-    a = ap.parse_args()
-    run = str(C.run_dir(a.run))
-    if a.stage == "draft":
-        d = step("gs_draft.py", "--run", run)
-        r = step("gs_review.py", "--run", run, *(["--llm"] if a.llm else []))
-        t = step("gs_decide.py", "--run", run, "--template")
-        C.emit({"draft": d["data"], "review": r["data"], "template": t["data"],
-                "next": "人員決議 → decisions.yaml → gs_run.py --stage decide"}, {"stage": "draft"})
-    if a.stage == "decide":
-        d = step("gs_decide.py", "--run", run)
-        l = step("spec_lint.py", "--run", run, "--spec", "game-spec.v1.md")
-        C.emit({"decide": d["data"], "lint_v1": l["data"]["summary"], "next": "gs_run.py --stage dev"}, {"stage": "decide"})
-    d = step("gs_dev.py", "--run", run, *(["--allow-deferred"] if a.allow_deferred else []))
-    mt = step("gs_metrics.py", "--run", run, *(["--answer-key", a.answer_key] if a.answer_key else []))
-    C.emit({"dev": d["data"], "metrics": mt["data"]}, {"stage": "dev"})
+    ap = argparse.ArgumentParser(description="ark-game-spec 2.0 總編排（薄派發器）")
+    ap.add_argument("--stage", required=True, choices=list(STAGES) + ["all"])
+    ap.add_argument("--run")
+    ap.add_argument("--source")
+    ap.add_argument("--domain")
+    ap.add_argument("--out")
+    ap.add_argument("--pack")
+    ap.add_argument("--gdd")
+    ap.add_argument("--xlsx")
+    ap.add_argument("--from", dest="src", help="gdd：xlsx|spec（預設讀既有 pack）；atlas：v1|draft")
+    ap.add_argument("--slug")
+    ap.add_argument("--decisions", help="all：有則續跑 decide → dev → atlas")
+    ap.add_argument("--no-report", action="store_true")
+    ap.add_argument("--report-html", action="store_true")
+    a, rest = ap.parse_known_args()
+    results: dict[str, dict] = {}
+
+    def opt(*pairs):
+        out = []
+        for flag, val in pairs:
+            if val not in (None, False):
+                out += [flag] if val is True else [flag, str(val)]
+        return out
+
+    st = a.stage
+    if st == "video":
+        r = step(STAGES["video"], opt(("--source", a.source), ("--run", a.run), ("--domain", a.domain), ("--out", a.out)) + rest)
+        results["video"] = r["data"]
+        run = r["data"].get("run")
+        if r["data"].get("domain") is None and run:  # auto 模式：判 domain 後續跑
+            d = step(STAGES["detect"], ["--run", run] + rest)
+            results["detect"] = d["data"]
+            dom = d["data"].get("domain")
+            if dom and dom != "unknown":
+                results["video_full"] = step(STAGES["video"], ["--run", run, "--domain", dom])["data"]
+        C.emit({**results, "run": run, "next": f"python scripts/gs_run.py --stage analyze --run {run}"}, {"stage": "video"})
+    if st == "detect":
+        r = step(STAGES["detect"], opt(("--run", a.run)) + rest)
+        dom = r["data"].get("domain")
+        results["detect"] = r["data"]
+        if dom and dom != "unknown":
+            results["video_full"] = step(STAGES["video"], ["--run", a.run, "--domain", dom])["data"]
+        C.emit(results, {"stage": "detect"})
+    if st == "analyze":
+        r = step(STAGES["analyze"], opt(("--run", a.run)) + [x for x in rest if x not in ("--report-html",)])
+        results["analyze"] = r["data"]
+        if not a.no_report:
+            results["report"] = step(STAGES["report"], ["--run", a.run] + (["--html"] if a.report_html else []))["data"]
+        C.emit({**results, "next": f"python scripts/gs_run.py --stage draft --run {a.run}"}, {"stage": "analyze"})
+    if st in ("draft", "decide", "dev"):
+        r = step(STAGES[st], ["--run", a.run, "--stage", st] + rest)
+        C.emit(r["data"], {"stage": st})
+    if st == "report":
+        C.emit(step(STAGES["report"], opt(("--run", a.run), ("--out", a.out)) + rest)["data"], {"stage": "report"})
+    if st == "gdd":
+        pack = a.pack
+        if a.src == "xlsx":
+            if not a.xlsx or not a.out:
+                C.fail("BAD_INPUT", "--from xlsx 需要 --xlsx 與 --out")
+            results["extract"] = step(HERE / "gdd" / "gdd_extract.py", ["--xlsx", a.xlsx, "--out", a.out] + rest)["data"]
+            pack = a.out
+        elif a.src == "spec":
+            if not a.run or not a.out:
+                C.fail("BAD_INPUT", "--from spec 需要 --run 與 --out")
+            results["from_spec"] = step(HERE / "gdd" / "gdd_from_spec.py", ["--run", a.run, "--out", a.out] + opt(("--slug", a.slug)) + rest)["data"]
+            pack = a.out
+        if not pack:
+            C.fail("BAD_INPUT", "需要 --pack，或 --from xlsx/--from spec 加 --out")
+        results["gdd"] = step(STAGES["gdd"], ["--pack", pack] + rest)["data"]
+        C.emit(results, {"stage": "gdd"})
+    if st == "atlas":
+        args = opt(("--run", a.run), ("--gdd", a.gdd), ("--slug", a.slug), ("--out", a.out), ("--from", a.src)) + rest
+        C.emit(step(STAGES["atlas"], args)["data"], {"stage": "atlas"})
+    if st == "pack":
+        C.emit(step(STAGES["pack"], opt(("--domain", a.domain)) + rest)["data"], {"stage": "pack"})
+    if st == "all":
+        if not a.source:
+            C.fail("BAD_INPUT", "--stage all 需要 --source")
+        v = step(STAGES["video"], opt(("--source", a.source), ("--domain", a.domain), ("--out", a.out)))
+        run = v["data"].get("run"); results["video"] = v["data"]
+        if v["data"].get("domain") is None:
+            d = step(STAGES["detect"], ["--run", run]); results["detect"] = d["data"]
+            dom = d["data"].get("domain")
+            if not dom or dom == "unknown":
+                C.fail("GATE_BLOCKED", "ga_detect 判不出 domain", f"python scripts/gs_run.py --stage video --run {run} --domain <d>", results)
+            step(STAGES["video"], ["--run", run, "--domain", dom])
+        results["analyze"] = step(STAGES["analyze"], ["--run", run])["data"]
+        if not a.no_report:
+            results["report"] = step(STAGES["report"], ["--run", run] + (["--html"] if a.report_html else []))["data"]
+        results["draft"] = step(STAGES["draft"], ["--run", run, "--stage", "draft"], tolerate_rc=(3,))["data"]
+        if not a.decisions:
+            C.emit({**results, "run": run, "next": f"人員以 ark-grill-me 決議 → {run}/decisions.yaml → python scripts/gs_run.py --stage all … --decisions（或 --stage decide --run {run}）"}, {"stage": "all", "stopped_at": "draft"})
+        import shutil
+        shutil.copy2(a.decisions, pathlib.Path(run) / "decisions.yaml")
+        results["decide"] = step(STAGES["decide"], ["--run", run, "--stage", "decide"])["data"]
+        results["dev"] = step(STAGES["dev"], ["--run", run, "--stage", "dev"])["data"]
+        slug = a.slug or pathlib.Path(run).name
+        results["atlas"] = step(STAGES["atlas"], ["--run", run, "--slug", slug])["data"]
+        C.emit({**results, "run": run}, {"stage": "all"})
 
 
 if __name__ == "__main__":

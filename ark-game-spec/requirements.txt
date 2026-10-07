@@ -1,0 +1,6 @@
+# ark-game-spec 2.0 核心依賴（analysis / spec / gdd / atlas / pack）
+pyyaml>=6.0
+jinja2>=3.1
+openpyxl>=3.1
+Pillow>=10.0
+# 影片入口（video stage）另裝：pip install -r requirements-video.txt ＋ 系統 ffmpeg / ffprobe
