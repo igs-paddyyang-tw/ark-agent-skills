@@ -151,18 +151,6 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-mobile-adb` | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro。 |
 | `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
-## 🗑️ 已移除（保留供遷移）
-
-> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
-
-| Skill | 遷移到 |
-|-------|--------|
-| `ark-game-analysis` | — |
-| `ark-game-atlas` | — |
-| `ark-game-domains` | — |
-| `ark-game-gdd` | — |
-| `ark-video-understanding` | — |
-
 <!-- END GENERATED CATALOGUE -->
 
 ---
