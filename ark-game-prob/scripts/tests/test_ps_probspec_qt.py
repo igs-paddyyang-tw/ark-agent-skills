@@ -94,6 +94,25 @@ def test_lint_counterexamples(tmp_path):
     assert any(v["rule"] == "PS-STALE" for v in ps_lint.lint(md.parent)["violations"])
 
 
+def test_html_empty_shell_blocked(tmp_path):
+    """PS-HTML-EMPTY：過戳記的 html 若只有佔位、未渲染六段 → 應被擋；完整 html 不誤報。"""
+    d = qt_dir(tmp_path)
+    md = gen(tmp_path, d)
+    html_p = md.parent / "prob-spec.html"
+    # 正例：ps_probspec 產出的完整 html 不應觸發 PS-HTML-EMPTY
+    rep = ps_lint.lint(md.parent)
+    assert not any(v["rule"] == "PS-HTML-EMPTY" for v in rep["violations"]), "完整 html 不應被判空殼"
+    # 反例：過戳記但內容是空殼（只有正確 content-src 戳記 + 一句話）→ 應 PS-HTML-EMPTY error
+    sha = ps_lint.C.sha16(md)
+    html_p.write_text(
+        f'<!DOCTYPE html><!-- content-src: prob-spec.md sha256:{sha} -->'
+        '<html><body><h1>標題</h1><p>內容請見 md 檔案</p></body></html>',
+        encoding="utf-8")
+    viols = ps_lint.lint(md.parent)["violations"]
+    empties = [v for v in viols if v["rule"] == "PS-HTML-EMPTY" and v["severity"] == "error"]
+    assert empties, "空殼 html 應被 PS-HTML-EMPTY 擋（error）"
+
+
 def test_probtable_xlsx(tmp_path):
     openpyxl = pytest.importorskip("openpyxl")
     d = qt_dir(tmp_path)

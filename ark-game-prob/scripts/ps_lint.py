@@ -6,6 +6,7 @@
   PS-NUM       全文每個數字（人工區除外）必須能回溯：來源檔全文（meta.sources）∪ 派生值（meta.derived，含公式來源）
   PS-PROV      §4 參數表每個非「待決議」的值都要有來源（provenance）；來源為 — / UNKNOWN → error
   PS-STALE     meta.sources 的 sha 與現況不一致 → error（來源更新後未重產）；html / xlsx(_meta) 戳記 ≠ md sha → error
+  PS-HTML-EMPTY html 疑似空殼：去標籤純文字命中六段標題 < 4 → error；< 6 → warn（過戳記 ≠ 內容完整）
   PS-HUMAN     人工區含數字 → warn（未受 PS-NUM 保護，請自行標來源）
   PS-INJECT    指令覆寫句型 / 零寬字元 → error
 用法: python ps_lint.py --dir data/prob/<slug>   → lint-report.json；error exit 3
@@ -131,11 +132,24 @@ def lint(d: pathlib.Path) -> dict:
         except Exception:  # noqa: BLE001
             pass
     if html_p.exists():
-        m = re.search(r"<!-- content-src: prob-spec\.md sha256:([0-9a-f]{16}) -->", html_p.read_text(encoding="utf-8", errors="replace"))
+        html_text = html_p.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r"<!-- content-src: prob-spec\.md sha256:([0-9a-f]{16}) -->", html_text)
         if not m:
             add("PS-STALE", "prob-spec.html", "缺 content-src 戳記")
         elif m.group(1) != C.sha16(md_p):
             add("PS-STALE", "prob-spec.html", "html 戳記與 md 不符（md 改了未重渲染）")
+        # PS-HTML-EMPTY：防空殼——html 須實際渲染六段內容，不能只有戳記 + 一句佔位。
+        # 去標籤 / script / style 後的純文字，應命中六段標題中的多數；否則判為空殼。
+        _stripped = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html_text)
+        _plain = re.sub(r"(?s)<[^>]+>", " ", _stripped)
+        _hit = sum(1 for s in SECTIONS if s.split(". ", 1)[-1] in _plain)
+        if _hit < 4:
+            add("PS-HTML-EMPTY", "prob-spec.html",
+                f"html 疑似空殼：純文字只命中 {_hit}/6 段標題（過戳記 ≠ 內容完整）。"
+                "build_html 須實際渲染六段內容（表格/清單/流程圖），非只放佔位句。")
+        elif _hit < 6:
+            add("PS-HTML-EMPTY", "prob-spec.html",
+                f"html 內容不完整：純文字只命中 {_hit}/6 段標題，請確認六段都有渲染。", "warning")
     else:
         add("PS-STALE", "prob-spec.html", "缺 View 軌 html", "warning")
     xlsx_p = d / "prob-spec.xlsx"

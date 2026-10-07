@@ -6,7 +6,7 @@ description: |
   轉成 prob-data.json（每個數字附 分頁!儲存格 來源）；② ps_probspec 組公版六段 Content 軌 prob-spec.md + meta
   （規格簡述／數據資料／流程圖／參數表／手法對應／隱性規則；xlsx 模式＝已上線還原、qt 模式＝quicktest 的 odds + rtp-report；人工區重產保留）；
   ③ ps_html 產 View 軌單檔 prob-spec.html（總覽 KPI、RTP 對 golden、驗收守門、符號命中熱度、輪帶組理論 vs 實測、FG 詳細、參數表色階、流程圖、輪帶）；
-  ④ ps_lint 六規則守門（數字不可回溯就擋）；⑤ ps_diff 規格 xlsx ⇄ 快測設定檔 JSON 逐鍵對照（跑快測前抓「規格 300、設定檔 200」的漂移）。
+  ④ ps_lint 七規則守門（數字不可回溯就擋）；⑤ ps_diff 規格 xlsx ⇄ 快測設定檔 JSON 逐鍵對照（跑快測前抓「規格 300、設定檔 200」的漂移）。
   使用此 skill 當提及：機率規格書、prob-spec、機率表 xlsx 轉網頁／轉 md、參數表、隱性規則、設計目的、規格書公版六段、
   數據資料分頁、快測結果回填規格書、RTP 對 golden、規格和設定檔對不對得上、ps_lint、config-diff、K 卡對應表、強中弱權重。
   不適用於：跑 Go 快測／odds.json 骨架／三向 verdict（→ ark-game-quicktest）、遊戲規格書／gdd-pack／競品影片分析（→ ark-game-spec）、
@@ -54,7 +54,7 @@ metadata:
 | `scripts/ps_extract.py` | 公版機率表 xlsx → `prob-data.json`：參數表以「表 X-n」標籤為錨 generic 切表 + recognizer（表M-1 輪帶組 / F-1 權重表 / SC·SS 雙欄 / 是否表 / 組別×欄矩陣 / 橫向序列 / 單值）；數據資料 FastTest 報表逐段解析；Strip 區塊 | 拿到機率表 xlsx |
 | `scripts/ps_probspec.py` | Content 軌：`--data`（xlsx 模式，轉呼叫 `ps_probspec_xlsx.py`）或 `--qt`（qt 模式）→ `prob-spec.md` + `prob-spec.meta.json`；人工區 `<!-- human:id -->` 重產保留 | 要規格書 |
 | `scripts/ps_html.py` | View 軌：`prob-data.json` + `prob-spec.md` → `prob-spec.html`（戳記 content-src）；`--body-only` 給會自己包骨架的發佈端 | 要給人看 |
-| `scripts/ps_lint.py` | PS-SECTIONS / PS-NUM / PS-PROV / PS-STALE / PS-HUMAN / PS-INJECT → `lint-report.json`；error exit 3 | 任何人手改 md 後必跑 |
+| `scripts/ps_lint.py` | PS-SECTIONS / PS-NUM / PS-PROV / PS-STALE / **PS-HTML-EMPTY**（去標籤純文字命中六段標題 < 4 判空殼 error、< 6 warn，防「過戳記但未渲染內容」）/ PS-HUMAN / PS-INJECT → `lint-report.json`；error exit 3 | 任何人手改 md 後必跑 |
 | `scripts/ps_diff.py` | `prob-data.json` ⇄ 設定檔 JSON 逐鍵對照（map：`references/config-map.fasttest.yaml`）→ `config-diff.md/.json`；不一致 exit 3（`--warn-only` 降 0）| 跑快測前、或規格 / 設定檔任一改了 |
 | `scripts/ps_probtable.py` | qt 模式來源 → 公版 `prob-spec.xlsx`（COUNTIF 活公式、`_meta` 戳記）| 要給機率同仁 Excel 版（xlsx 模式本身就是公版表，免跑）|
 | `scripts/ps_common.py` | envelope / sha16 / yaml / atomic_write | 被所有腳本 import |
