@@ -151,3 +151,61 @@ def test_check_input_blank_and_threshold():
     assert ws["C1"].value == 0.03, "warn 門檻值應在 C1 可調格"
     assert str(ws["E4"].value).startswith("="), "檢核應為活公式"
     spec.unlink()
+
+
+# ── 真值驗證：用 formulas 純 python 引擎實際重算公式（裝了才跑）──
+# openpyxl 不算公式，前面的測試只驗公式「字串格式」；這裡驗公式「真的算得出、無 #REF!/#DIV」。
+def _recalc_errors(xlsx_path):
+    """用 formulas 重算，回傳含 Excel 錯誤 token 的 cell 清單。"""
+    import logging
+    import warnings
+    warnings.filterwarnings("ignore")
+    logging.disable(logging.CRITICAL)
+    import formulas
+    xl = formulas.ExcelModel().loads(str(xlsx_path)).finish()
+    sol = xl.calculate()
+    tokens = ("#REF!", "#VALUE!", "#DIV/0!", "#NAME?", "#NULL!", "#NUM!")
+    bad = []
+    for k, v in sol.items():
+        try:
+            val = v.value[0, 0] if hasattr(v, "value") else v
+        except Exception:
+            val = str(v)
+        if any(t in str(val) for t in tokens):
+            bad.append((k, str(val)))
+    return sol, bad
+
+
+def test_qtreport_formulas_recalc_no_error():
+    """qtreport 偏差/判定公式在真引擎上 0 錯誤，且偏差隨 golden 連動算出正確值。"""
+    pytest.importorskip("formulas")
+    rpt = _tmp(".json")
+    # 實測 rtp=0.90、golden=1.0 → 偏差應為 -0.10（B/golden-1）
+    rpt.write_text(json.dumps({"games": {"Total": {"rtp": 0.90, "hitrate": None,
+                   "freq": None, "multi": None, "maxmulti": None}}}), encoding="utf-8")
+    out = pathlib.Path(tempfile.mkdtemp())
+    d = PX.build_qtreport(rpt, out, 1.0)
+    sol, bad = _recalc_errors(d["xlsx"])
+    assert not bad, f"qtreport 公式重算出錯: {bad[:5]}"
+    # 偏差 cell G4 應算出 -0.10（0.90/1.0 - 1）
+    g4 = next((v for k, v in sol.items() if str(k).upper().endswith("!G4")), None)
+    assert g4 is not None, "找不到偏差 cell G4"
+    val = g4.value[0, 0] if hasattr(g4, "value") else g4
+    assert abs(float(val) - (-0.10)) < 1e-6, f"偏差應 -0.10，實得 {val}"
+    rpt.unlink()
+
+
+def test_check_formulas_recalc_no_error():
+    """檢核表 IF 判定鏈在真引擎上 0 錯誤（空輸入格 → 未填，不炸 #VALUE!）。"""
+    pytest.importorskip("formulas")
+    spec = _tmp(".yaml")
+    spec.write_text(
+        'contract: "1"\nname: t\ntitle: T\nthresholds: {warn: 0.03, error: 0.1}\n'
+        'columns: [層級, 輸入, 參考, 偏差, 檢核]\n'
+        'rows:\n  - [C, null, 100, "=IF(B4=\\"\\",\\"\\",B4/C4-1)", "=IF(B4=\\"\\",\\"未填\\",\\"OK\\")"]\n',
+        encoding="utf-8")
+    out = pathlib.Path(tempfile.mkdtemp())
+    d = PX.build_check(spec, out)
+    _, bad = _recalc_errors(d["xlsx"])
+    assert not bad, f"檢核表公式重算出錯: {bad[:5]}"
+    spec.unlink()

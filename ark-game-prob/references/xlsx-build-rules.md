@@ -44,6 +44,10 @@ rows:
 
 ## 驗證
 
-- **公式真的算得出**：有 LibreOffice 時 `soffice --headless --convert-to xlsx` 重算 → openpyxl `data_only=True` 讀，0 個 `#REF!/#VALUE!`。無 soffice 時改邏輯單元驗證（test_ps_xlsx 驗公式字串格式、null 行為、門檻格位址、_meta）。
+公式真的算得出（三選一，由寬到嚴）：
+- **邏輯單元驗證**（最低標，恆可做）：openpyxl 讀回驗公式字串格式、null 行為、門檻格位址、_meta 戳記。openpyxl 不算公式 → 只驗字串不驗值。
+- **formulas 純 Python 重算**（免 soffice、免 sudo，`uv pip install formulas`）：`formulas.ExcelModel().loads(x).finish().calculate()` 真算每格，掃 0 個 `#REF!/#VALUE!/#DIV/0!/#NAME?`，並抽驗關鍵公式算出值（如偏差 `rtp/golden-1` 應等於預期）。test_ps_xlsx 的 `*_formulas_recalc_*` 走這條（importorskip，裝了才跑）。
+- **LibreOffice 重算**（最接近使用者環境）：`soffice --headless --convert-to xlsx` → openpyxl `data_only=True` 讀，0 錯誤。
+
+> 💡 formulas 已足以抓出 `#REF!`/`#DIV/0!`/門檻引錯格 等真錯誤；soffice 僅在要驗「機率同仁實際 Excel 環境的相容性」時才需要。
 - **PS-XLSX**（ps_lint）：參數表 0 個字串型 `%`（應 dump 數值或活公式）；xlsx `_meta` sha 對來源（PS-STALE）。
-- openpyxl 不算公式 → 驗證不看 openpyxl 讀回值，看公式字串或 LibreOffice 重算。
