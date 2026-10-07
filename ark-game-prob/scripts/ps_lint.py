@@ -166,6 +166,16 @@ def lint(d: pathlib.Path) -> dict:
                 odds_src = (meta.get("sources") or {}).get("odds") or {}
                 if odds_src and rows.get("odds", ("", ""))[1] != odds_src.get("sha256_16"):
                     add("PS-STALE", "prob-spec.xlsx", "xlsx 的 odds sha 與 meta 不符")
+                # PS-XLSX：參數表分頁不得有字串型百分比（%應是數值或活公式，非 '12.3%' 字串）
+                # 只掃參數表（數據資料頁的 % 來自 rtp-report 展示值，屬既有格式不在此限）
+                for sn in wb.sheetnames:
+                    if sn != "參數表":
+                        continue
+                    for row in wb[sn].iter_rows(values_only=True):
+                        for v in row:
+                            if isinstance(v, str) and v.rstrip().endswith("%") and not v.startswith("="):
+                                add("PS-XLSX", f"prob-spec.xlsx!{sn}", f"參數表字串型百分比 '{v}'（應 dump 數值或用活公式）")
+                                break
         except ImportError:
             add("PS-STALE", "prob-spec.xlsx", "無 openpyxl，略過 xlsx 戳記檢查", "warning")
     allowed |= {norm(str(x.get("value"))) for x in meta.get("derived") or []}

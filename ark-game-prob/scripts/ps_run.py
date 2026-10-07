@@ -46,7 +46,11 @@ def main() -> None:
     ap.add_argument("--game")
     ap.add_argument("--config", help="選配：快測設定檔 JSON → 跑 ps_diff")
     ap.add_argument("--map", help="ps_diff 對照規則 yaml")
-    ap.add_argument("--xlsx-view", action="store_true", help="qt 模式：另產公版 prob-spec.xlsx")
+    ap.add_argument("--xlsx-view", action="store_true", help="qt 模式：另產公版 prob-spec.xlsx（= --excel probtable）")
+    ap.add_argument("--excel", nargs="*", help="產 Excel View 軌：kinds 空=all；可指定 probtable/diff/lint/qtreport/review")
+    ap.add_argument("--versions", nargs="+", help="--excel versions 用的多版本設定檔")
+    ap.add_argument("--report", help="--excel qtreport 用的 rtp-report.json")
+    ap.add_argument("--golden", type=float, help="--excel qtreport 的 golden RTP")
     ap.add_argument("--diff-warn-only", action="store_true")
     a = ap.parse_args()
     if not a.xlsx and not a.qt:
@@ -83,6 +87,30 @@ def main() -> None:
         C.fail("GATE_BLOCKED", "ps_lint 未通過", deliver, result)
     if a.config and not a.diff_warn_only and (steps["diff"]["env"].get("data") or {}).get("mismatch"):
         C.fail("GATE_BLOCKED", "規格 ⇄ 設定檔不一致（見 config-diff.md）", deliver, result)
+    # ── Excel View 軌（--excel 或 --xlsx-view）──
+    kinds = None
+    if a.excel is not None:
+        kinds = a.excel or ["all"]
+    elif a.xlsx_view:
+        kinds = ["probtable"]
+    if kinds:
+        excel_made = {}
+        diff_json = out_dir / "config-diff.json"
+        for k in kinds:
+            xa = ["--kind", k, "--out", a.out, "--slug", slug] + (["--game", a.game] if a.game else []) + (["--map", a.map] if a.map else [])
+            if k in ("probtable", "all") and a.config:
+                xa += ["--config", a.config]
+            if k in ("diff", "review", "all") and diff_json.exists():
+                xa += ["--diff", str(diff_json)]
+            if k in ("lint", "review", "all"):
+                xa += ["--lint", str(out_dir / "lint-report.json")]
+            if k in ("qtreport", "review", "all") and a.report:
+                xa += ["--report", a.report] + (["--golden", str(a.golden)] if a.golden else [])
+            if k == "versions" and a.versions:
+                xa += ["--versions"] + a.versions
+            xr = step("ps_xlsx.py", xa)["env"]
+            excel_made[k] = xr.get("data") or xr.get("error")
+        result["excel"] = excel_made
     C.emit(result, {"stage": "ps_run"})
 
 

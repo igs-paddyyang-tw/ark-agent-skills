@@ -1,15 +1,20 @@
 # config-map.fasttest.yaml — 公版機率表（參數表分頁）⇄ FastTest 家族「參數外部化」設定檔（ProbSetting JSON）的對照規則
-# 用於 ps_diff.py。每條規則：xlsx 選擇器（對 prob-data.known）→ config 鍵路徑；transform 可串接（|）。
+# 用於 ps_diff.py（規格⇄設定檔對照）與 ps_xlsx.py / ps_config_load.py（Excel 參數表分頁）—— 一份 map 兩用。
+# 每條規則：xlsx 選擇器（對 prob-data.known）→ config 鍵路徑；transform 可串接（|）。
+# 選用增強欄（ps_xlsx 用；缺則 ps_config_load 自動推）：
+#   label      人類可讀標籤（缺 → 用 note / id）
+#   phase      製程階段 Main/Free/Jackpot/ItemCard/General（缺 → 由選擇器表號前綴 M/F/J/A/G 推）
+#   tier_axis  分層軸（供 xlsx 依 tier 分組著色）
 # 這份 map 以彌勒佛 a-standard.json 的 ProbSetting 鍵名為準（逸修 FastTest 外部化版）；
 # 其他遊戲：複製本檔改 config 鍵名與表編號（表編號跟著該遊戲的參數表走）。
 contract: "1"
 engine: fasttest-probsetting-json
 rules:
   # ---- 基本資訊
-  - { id: bet_cost,    xlsx: "board.基本收費",      config: Bet_Cost }
-  - { id: bet_line,    xlsx: "board.線數",          config: Bet_Line, transform: ways_to_lines, note: "All Ways → 243" }
+  - { id: bet_cost,    xlsx: "board.基本收費",      config: Bet_Cost, label: 基本收費, phase: General }
+  - { id: bet_line,    xlsx: "board.線數",          config: Bet_Line, transform: ways_to_lines, label: 線數, phase: General, note: "All Ways → 243" }
   # ---- 表M-1 輪帶組權重（K-022 旋鈕）
-  - { id: reelset_weight, xlsx: "reelsets.weight",  config: MainGameReelSetWeight }
+  - { id: reelset_weight, xlsx: "reelsets.weight",  config: MainGameReelSetWeight, label: 輪帶組權重, phase: Main, tier_axis: reelset }
   # ---- 表M-2 假轉 SC/SS
   - { id: fake_sc_scores,  xlsx: "dual[M-2].0.values",  config: FakeSCScores }
   - { id: fake_sc_weights, xlsx: "dual[M-2].0.weights", config: FakeSCWeights }

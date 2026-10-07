@@ -6,9 +6,11 @@ description: |
   轉成 prob-data.json（每個數字附 分頁!儲存格 來源）；② ps_probspec 組公版六段 Content 軌 prob-spec.md + meta
   （規格簡述／數據資料／流程圖／參數表／手法對應／隱性規則；xlsx 模式＝已上線還原、qt 模式＝quicktest 的 odds + rtp-report；人工區重產保留）；
   ③ ps_html 產 View 軌單檔 prob-spec.html（總覽 KPI、RTP 對 golden、驗收守門、符號命中熱度、輪帶組理論 vs 實測、FG 詳細、參數表色階、流程圖、輪帶）；
-  ④ ps_lint 七規則守門（數字不可回溯就擋）；⑤ ps_diff 規格 xlsx ⇄ 快測設定檔 JSON 逐鍵對照（跑快測前抓「規格 300、設定檔 200」的漂移）。
-  使用此 skill 當提及：機率規格書、prob-spec、機率表 xlsx 轉網頁／轉 md、參數表、隱性規則、設計目的、規格書公版六段、
-  數據資料分頁、快測結果回填規格書、RTP 對 golden、規格和設定檔對不對得上、ps_lint、config-diff、K 卡對應表、強中弱權重。
+  ④ ps_lint 守門（數字不可回溯就擋，含 PS-HTML-EMPTY 空殼守門與 PS-XLSX 參數表字串%）；⑤ ps_diff 規格 xlsx ⇄ 快測設定檔 JSON 逐鍵對照（抓「規格 300、設定檔 200」漂移）；
+  ⑥ ps_xlsx 第三 View 軌 Excel（機率表／審核簿／檢核表）：讀 canonical JSON、派生用活公式、每頁總閘 OK/!/X、_meta 驗 STALE。
+  使用此 skill 當提及：機率規格書、prob-spec、機率表 xlsx 轉網頁／md、參數表、隱性規則、規格書公版六段、
+  快測結果回填規格書、RTP 對 golden、規格和設定檔對不對、ps_lint、config-diff、K 卡對應表、
+  機率表 Excel、審核簿、版本對照表、偏差檢核表、檢核表。
   不適用於：跑 Go 快測／odds.json 骨架／三向 verdict（→ ark-game-quicktest）、遊戲規格書／gdd-pack／競品影片分析（→ ark-game-spec）、
   機率架構設計與 K 卡取捨本身（人／agent 的判斷，本 skill 只組不寫）、一般 HTML 報告（→ ark-html-report）、決議 Open Questions（→ ark-grill-me）。
 metadata:
@@ -16,8 +18,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.0.0"
-  updated: 2026-10-06
+  version: "1.1.0"
+  updated: 2026-10-07
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
