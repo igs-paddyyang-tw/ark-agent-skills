@@ -1,0 +1,34 @@
+{
+  "Bet_Cost": 50,
+  "Bet_Line": 243,
+  "MainGameReelSetWeight": [30, 40, 30],
+  "FakeSCScores": [1,2,3], "FakeSCWeights": [10,20,30],
+  "FakeSSScores": [-2,-3,-4], "FakeSSWeights": [5,5,5],
+  "FGEnterSCScores": [1,2], "FGEnterSCWeights": [50,50],
+  "FGEnterSSScores": [-2,-3], "FGEnterSSWeights": [40,60],
+  "FishAnnouncementWeights": [90,10],
+  "FishAllMaxSCWeights": [99,1],
+  "RainbowListenWeights": [70,30],
+  "FreeGameTypeWeight": [50,30,20],
+  "CoinTimesWeights": [[10,20,30],[15,25,35]],
+  "CoinScores": [10,20,50],
+  "CoinScoreWeights": [[1,2,3],[4,5,6]],
+  "FishTimesWeights": [[1,1,1]], "FishScores": [5,10], "FishScoreWeights": [[2,2]],
+  "GoldDragonTimesWeights": [[1,2]], "ColorDragonTimesWeights": [[3,4]],
+  "BagOrderFirst2Weights": [25,25,25,25,100],
+  "BagOrderAfter2Weights": [20,20,20,20,20,100],
+  "ReviveThreshold": 200,
+  "ReviveWeights": [60,40],
+  "ReviveGoldDragonKeepWeights": [10,5,0,0],
+  "ReviveColorDragonKeepWeights": [8,4,0],
+  "MainGameReelData": [
+    {"Reels_0":[1,2,3],"lens":[30,30,30]},
+    0,0,0,0,
+    {"Reels_0":[1,2],"lens":[28,28,28]}
+  ],
+  "Odds": {
+    "11":[0,0,5,10,50], "12":[0,0,4,8,40], "13":[0,0,3,6,30],
+    "14":[0,0,2,4,20], "15":[0,0,1,2,10],
+    "21":[0,0,100,200,500], "22":[0,0,80,160,400], "23":[0,0,60,120,300]
+  }
+}

@@ -49,8 +49,8 @@ rules:
   - { id: revive_gold_keep, xlsx: "series[F-4-3].保留金龍.權重", config: ReviveGoldDragonKeepWeights, transform: drop_zero_tail, config_transform: drop_zero_tail, note: "xlsx 以保留條數為索引（自 0 起）；設定檔索引起點待確認" }
   - { id: revive_color_keep, xlsx: "series[F-4-3].保留彩龍.權重", config: ReviveColorDragonKeepWeights, transform: drop_zero_tail, config_transform: drop_zero_tail }
   # ---- 輪帶長度（Main Game Strip ⇄ MainGameReelData[0]）
-  - { id: reel_lens_set0,  xlsx: "strips[main_strip].Reels_0.lens", config: MainGameReelData.0, config_transform: lens }
-  - { id: reel_lens_set5,  xlsx: "strips[main_strip].Reels_1.lens", config: MainGameReelData.5, config_transform: lens, note: "組 5 = R5 換無 SS 帶" }
+  - { id: reel_lens_set0,  xlsx: "strips[main_strip].Reels_0.lens", config: MainGameReelData.0, config_transform: lens, phase: Main, label: 輪帶長度組0 }
+  - { id: reel_lens_set5,  xlsx: "strips[main_strip].Reels_1.lens", config: MainGameReelData.5, config_transform: lens, phase: Main, label: 輪帶長度組5, note: "組 5 = R5 換無 SS 帶" }
   # ---- Pay table（符號 code → sym_id 依公版區段：M1..M5 = 11..15、FA/FK/FQ = 21..23）
   - { id: odds_M1, xlsx: "paytable.M1", config: Odds.11, config_transform: drop_lead2 }
   - { id: odds_M2, xlsx: "paytable.M2", config: Odds.12, config_transform: drop_lead2 }

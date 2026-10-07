@@ -209,3 +209,38 @@ def test_check_formulas_recalc_no_error():
     _, bad = _recalc_errors(d["xlsx"])
     assert not bad, f"檢核表公式重算出錯: {bad[:5]}"
     spec.unlink()
+
+
+# ── config 分類：用覆蓋全 39 鍵的合成 ProbSetting JSON（真 a-standard.json 在 aidev）──
+FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
+
+
+def test_config_load_all_rules_resolved():
+    """合成 ProbSetting 覆蓋 config-map 全部 rule → resolved=total、missing=0、shape 全分類。"""
+    synth = FIXTURES / "probsetting.synth.json"
+    r = CL.load_config(synth)
+    assert r["missing"] == [], f"應全部取到值，缺: {r['missing']}"
+    assert len(r["missing"]) == 0 and r["total_rules"] == 39, f"應 39 鍵全取到: total={r['total_rules']} missing={r['missing']}"
+    items = [it for v in r["phases"].values() for it in v]
+    shapes = {it["shape"] for it in items}
+    # 八種 shape 都要出現（證明分類器對各結構有效）
+    assert shapes == {"scalar", "weights", "dual", "matrix", "series", "reel", "yesno", "paytable"}, shapes
+
+
+def test_config_load_reel_lens_phase_main():
+    """reel_lens 選擇器用 [main_strip] 不帶 M- 前綴 → 需靠 map 的 phase:Main 明寫（曾誤分 General）。"""
+    synth = FIXTURES / "probsetting.synth.json"
+    r = CL.load_config(synth)
+    main_ids = {it["id"] for it in r["phases"].get("Main", [])}
+    assert "reel_lens_set0" in main_ids and "reel_lens_set5" in main_ids, "輪帶長度應分到 Main 頁"
+
+
+def test_probtable_config_full_coverage():
+    """probtable --config 用合成 39 鍵 → 覆蓋率 total/total、missing=0、產 4 分頁。"""
+    synth = FIXTURES / "probsetting.synth.json"
+    out = pathlib.Path(tempfile.mkdtemp())
+    d = PX.build_probtable(synth, out, "synth", "")
+    assert d["missing"] == 0, f"不應有 missing: {d}"
+    cov_n, cov_d = d["coverage"].split("/")
+    assert cov_n == cov_d, f"覆蓋率應滿: {d['coverage']}"
+    assert "參數表" in d["sheets"] and "_meta" in d["sheets"]
