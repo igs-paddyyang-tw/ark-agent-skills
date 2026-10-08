@@ -553,5 +553,15 @@
     "skill": "ark-skills-align",
     "version": "2.0.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:02846d579c59f89b37be95e51379cd252c27a740c6e611e5dd27f72b70006cb0": {
+    "skill": "ark-agent-init",
+    "version": "2.2.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:7a1dd5e964895be9845248f189754aec065fd8dc8c05696175523e23afe79bff": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
   }
 }

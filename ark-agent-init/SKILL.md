@@ -21,8 +21,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.1.2"
-  updated: 2026-09-30
+  version: "2.2.0"
+  updated: 2026-10-08
 ---
 
 # ark-agent-init
@@ -233,7 +233,7 @@ Kiro 的 steering 是**多檔 + `inclusion` 分層**，比單一 `AGENTS.md` 表
 | `AGENTS.md` | always | → 併入 root `AGENTS.md` / `CLAUDE.md` 的「通用規範」段 |
 | `SOUL.md` | always | → 併入「角色人格」段 |
 | `TEAM.md` | **manual** | → **不併入** always 入口檔（團隊派工規範，只在團隊場景載入） |
-| `MEMORY.md` | always | → 專案敘事記憶（可獨立，不一定塞進 CLAUDE.md） |
+| `MEMORY.md` | always | → **記憶導覽 + 判準級里程碑**（可獨立，不一定塞進 CLAUDE.md；事件流水不放這裡） |
 
 > 💡 產出多 CLI 入口時，**只把 always 層併進 `CLAUDE.md`/`AGENTS.md`**；
 > `inclusion: manual` 的 `TEAM.md` 不要併 —— 否則非團隊的 CLI session 會吃到
@@ -281,21 +281,24 @@ Kiro 的 steering 是**多檔 + `inclusion` 分層**，比單一 `AGENTS.md` 表
 > ① 有 `knowledge_search_order` 且涵蓋非 weknora 的來源 ② weknora 不在 search_order 內
 > ③ shared/產品櫃目錄存在、含 github 則 `github-sources.yaml` 存在。
 
-### memory/ 目錄（每個 agent 必有，v2.0 補）
+### memory/ 目錄與四層記憶分工（每個 agent 必有；2.2.0 起 build_kiro 自動建）
 
-記憶落點**不只是 `steering/MEMORY.md`**。套件層（ark_bot_agent / ark_team_agent）
-用 `memory/` 目錄存執行期記憶：
+> 🔴 **權威參考：`references/memory-architecture.md`**（ark_team_agent ≥ 1.11.0 為記憶規範定版）。
+> 新建照 §2 直接產；既有部署照 §4 遷移（順序不可逆：先接蒸餾、再瘦身）。
 
-```
-memory/
-├── daily/YYYY-MM-DD.md   # 每日 log（自動累積）
-├── recent.md
-└── memory.md
-```
+| 層 | 落點 | 誰寫 | 進 context |
+|---|---|---|---|
+| 判準 | `steering/BRAIN.md` | ✋ 人 | ✅ |
+| 導覽 + 判準級里程碑 | `steering/MEMORY.md`（保持瘦身） | ✋ 人 | ✅ |
+| 持久事實 | `memory/memory.md`（四分節、≤ 2000 tokens） | 🤖 `memory-distill` 排程蒸餾 | 🔸 |
+| 事件流水 | `memory/daily/YYYY-MM-DD.md` | 🤖 bot 自動／✋ team 收尾手寫 | ❌ |
+| 舊事件 | `memory/archive/YYYY-MM.md` | 🤖 `_builtin:memory-consolidate` | ❌ |
 
-- `dir="."` 的 manager → 記憶落**根層 `memory/`**；子 agent → 各自 `agents/<name>/memory/`
-- `steering/MEMORY.md` 仍保留（人類可讀的專案敘事記憶 + 自動歸檔）
-- 分工寫進 `AGENTS.md`：`memory/` = 套件寫入的執行期記憶；`MEMORY.md` = 專案敘事
+- `dir="."` 的 manager → 根層 `memory/`；子 agent → 各自 `agents/<name>/memory/`
+- build_kiro 產 `memory/daily/`、`memory/archive/`（`.gitkeep`）+ `memory/memory.md` 四分節骨架（`assets/memory/memory.md`），冪等不覆寫
+- 規則只寫在根 `AGENTS.md`「記憶怎麼用」（**單一權威**），BRAIN／MEMORY／SOUL 只引用
+- 🔴 **不再使用「每完成一個段落更新 MEMORY.md」** —— 那句讓 always-on 的 MEMORY.md 變成事件流水（實測 73 KB）
+- `--validate` 會對 MEMORY.md > 20 KB、日期事件分節 > 5、缺 memory/ 骨架、舊規範殘留給 ⚠️
 
 ### artifacts/ 產出目錄（取代舊 output/，v2.0 更新）
 
@@ -375,7 +378,7 @@ agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不
 ```markdown
 # {TeamName} 共用規範
 
-> 所有回覆使用**繁體中文**。每完成一個段落更新 `MEMORY.md`。
+> 所有回覆使用**繁體中文**。事件寫 `memory/daily/`，判準級里程碑才進 `MEMORY.md`（見下方「記憶怎麼用」）。
 > All tools are trusted.
 
 ## ⚠️ 最重要規則
@@ -418,7 +421,15 @@ agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不
 2. web_search × 2-3 次（不同角度）
 3. web_fetch 深讀 1-2 篇
 4. 整理 → knowledge/wiki/*.md（含 frontmatter）
-5. 更新 MEMORY.md
+5. 過程記進 `memory/daily/`；只有判準級結論才在 MEMORY.md 加一行里程碑
+
+## 記憶怎麼用（🔴 單一權威 —— BRAIN／MEMORY／SOUL 都引用這裡）
+| 落點 | 角色 | 誰寫 |
+|---|---|---|
+| `.kiro/steering/MEMORY.md` | 導覽 + 判準級里程碑（每次注入，保持瘦身） | ✋ |
+| `memory/memory.md` | 持久事實四分節，≤ 2000 tokens | 🤖 `memory-distill`（不要手寫） |
+| `memory/daily/YYYY-MM-DD.md` | 事件流水 | 🤖 bot 自動／✋ team 收尾手寫 |
+| `memory/archive/YYYY-MM.md` | 舊事件歸檔，按需查 | 🤖 `memory-consolidate` |
 
 ## 知識庫規則（Schema v3.0）
 - `raw/` 唯讀，不可修改
@@ -444,22 +455,24 @@ agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不
 直接 @worker 時，worker 也直接 reply 使用者。
 ```
 
-### 3. steering/MEMORY.md（專案記憶）
+### 3. steering/MEMORY.md（記憶導覽）
 
-定義「目前在哪」— Kiro 每次對話自動載入，跨對話保持上下文。
+定義「記憶住在哪 + 目前在哪」—— 每次對話自動載入，所以**只放指路與判準級精華，不放事件流水**。
+骨架即 `assets/steering/MEMORY-template.md`（build_kiro 直接用它產生）：
 
 ```markdown
-# 🧠 {Project} 專案記憶
+# 🧭 {Project} — 記憶導覽
+> 記憶導覽，不是事件流水；規則見 AGENTS.md「記憶怎麼用」。
 
-> Kiro 每次對話自動載入。每完成一個段落必須更新。
-> 歸檔規則：> 2 週的段落移到 knowledge/ 目錄。
-
-## 專案快照
-- **版本：** 0.1.0
-- **狀態：** 初始化
-- **技術棧：** （引用 tech.md）
-
+## 🧭 記憶住在哪          ← BRAIN / MEMORY / memory.md / daily / archive 五列表
+## 📌 專案快照            ← 常青段（狀態／定版結構／技術決策）
+## 📌 近期里程碑          ← 一行索引：- **YYYY-MM-DD** {判準級結論} → memory/archive/YYYY-MM.md
 ## 待辦
+```
+
+> 🔴 舊範本的「每完成一個段落必須更新」「> 2 週移到 knowledge/」都已作廢：
+> 事件 → `memory/daily/`；歸檔 → `memory/archive/`（套件 `_builtin:memory-consolidate` 自動搬）。
+
 ### 高優先
 - [ ] （使用者填入）
 
@@ -710,7 +723,8 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 - [ ] `agents/{role}.json` 有 model（建議 "auto"）+ welcomeMessage
 - [ ] `steering/AGENTS.md` 有「⚠️ reply 必用」+ MCP 工具表 + 編號選項 + 終端回饋 + SDD 流程
 - [ ] `steering/CODE.md` 有程式碼規範（Python 專案時）
-- [ ] `steering/MEMORY.md` 有專案快照 + 待辦 + 近期進度結構
+- [ ] `steering/MEMORY.md` 是導覽骨架（記憶住在哪 + 快照 + 里程碑索引），**無「每完成一個段落」**
+- [ ] 每個 agent 有 `memory/daily/`、`memory/archive/`、`memory/memory.md` 四分節（`--validate` 無記憶 ⚠️）
 - [ ] `SOUL.md` 包含八段式全部 8 個段落
 - [ ] `USER.md` 有個人特徵 + 溝通風格 + 目標 + 習慣四段
 - [ ] `TEAM.md` 有團隊成員 + 通訊規則 + 成員管理規範
@@ -778,14 +792,16 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 | 檔案 | 說明 |
 |------|------|
-| `BRAIN.md` | 記憶與資源使用準則（三層資源分工，inclusion: always） |
+| `BRAIN.md` | 記憶與資源使用準則（三層資源分工 + 四層記憶摘要，標 AGENTS.md 為單一權威；inclusion: always） |
 | `CODE.md` | Kiro CLI 行為指南（程式碼規範，fileMatch: *.py） |
-| `MEMORY-template.md` | 專案記憶骨架（快照 + 待辦 + 進度） |
+| `MEMORY-template.md` | 記憶**導覽**骨架（記憶住在哪 + 快照 + 里程碑索引 + 待辦；build_kiro 產 MEMORY.md 用它） |
 | `SOUL-root.md` | 根目錄／預設角色：通用 AI 助手 |
 | `SOUL-admin.md` | admin 角色（服務管理，不接業務） |
 | `SOUL-leader.md` | leader 角色（需求拆解、派工、收斂） |
 | `SOUL-worker.md` | worker 角色（執行、回報） |
 | `TEAM.md` · `TEAM-template.md` | 團隊運作規範（inclusion: manual，不併進 always 入口檔） |
+
+> `assets/memory/memory.md`：`memory/memory.md` 四分節骨架（環境慣例／工具怪癖／人與偏好／進行中長期事項），build_kiro 複製到每個 agent。
 
 > ⚠️ **尚缺 `AGENTS.md` 與 `USER.md` 的預設 asset**（待辦，見
 > `docs/plans/ark-agent-skills-bot-builder-optimization-plan.md` 的 P1-3）——
@@ -811,6 +827,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 | `weknora-checklist.md` | 🆕 **L5 weknora 接入 checklist**（.env 變數 / agent-chat / 不進 search_order；B5）|
 | `prompt-schema-v1.md` | 🆕 提詞資產 frontmatter 契約（prompts/ 的 ops/work 雙層 + 範例段 + 模板變數）|
 | `defaults/README.md` | 預設角色說明 |
+| `memory-architecture.md` | 🧠 **記憶架構四層分工**（ark_team_agent ≥ 1.11.0 定版）：新建規範 + 既有部署遷移 SOP（先接 memory-distill 再瘦身 MEMORY.md）+ 驗證 + 風險 —— 改記憶相關範本前必讀 |
 | `architecture-drift-feedback.md` | 🔴 **模板 vs 演化實例的三項缺口回饋**（knowledge/shared 層、memory/ 目錄、artifacts/）—— 維護本 skill 前必讀 |
 
 

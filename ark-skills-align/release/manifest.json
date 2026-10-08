@@ -1,7 +1,7 @@
 {
   "release": "skills-2026.10-r1",
-  "commit": "8d2d962",
-  "generated_at": "2026-10-08T17:07:12+08:00",
+  "commit": "727dea7",
+  "generated_at": "2026-10-08T18:27:24+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.1.0",
@@ -28,14 +28,14 @@
       "updated": "2026-09-09"
     },
     "ark-agent-init": {
-      "version": "2.1.2",
-      "tree_hash": "sha256:5ea09ad934aedee746204e069fc9780f29d87ff3fca6a3bf4d701379f60b92f1",
-      "contract_hash": "sha256:a3381366dc130d48fad35f5eccc0282f240600f1ef82d31944aad2a74c66c062",
+      "version": "2.2.0",
+      "tree_hash": "sha256:02846d579c59f89b37be95e51379cd252c27a740c6e611e5dd27f72b70006cb0",
+      "contract_hash": "sha256:f1eb4c564148d0cd5d78377c7d78a8cc08fce52722f4a612c9aa718898f97a4c",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [],
       "replaces": [],
-      "updated": "2026-09-30"
+      "updated": "2026-10-08"
     },
     "ark-agent-role-profile": {
       "version": "1.3.0",
@@ -527,7 +527,7 @@
     },
     "ark-skills-align": {
       "version": "2.0.0",
-      "tree_hash": "sha256:cbece66fe90589c01490b6f27e67894c86a7320de0506ca9eff64e65275c68d8",
+      "tree_hash": "sha256:7a1dd5e964895be9845248f189754aec065fd8dc8c05696175523e23afe79bff",
       "contract_hash": "sha256:4a3efb684ab2b1279b01211423caf504e35317b6cc633a7133ee842c60f7b456",
       "status": "active",
       "category": "ops",

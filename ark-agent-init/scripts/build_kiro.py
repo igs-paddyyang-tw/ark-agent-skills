@@ -39,6 +39,7 @@ v1.0 — 對齊 game-analytics-team 參考實作
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -342,6 +343,9 @@ def _build_agent_kiro(
     prompts_created = _build_prompts(kiro_dir / "prompts", role, is_admin, base,
                                      role_id=role_id, agent_name=name, all_instances=all_instances)
     created.extend(prompts_created)
+
+    # 5. memory/ 骨架（2.2.0：四層記憶分工的落點；agent 工作目錄 = .kiro 的上一層）
+    created.extend(_write_memory_skeleton(kiro_dir.parent, base))
 
     return created
 
@@ -791,16 +795,64 @@ def _role_emoji(role: str, description: str) -> str:
 
 
 def _default_memory_md(name: str, team_name: str) -> str:
-    return (
-        f"# 🧠 {name} 專案記憶\n\n"
-        f"> 每完成一個段落必須更新。\n\n---\n\n"
-        f"## 專案快照\n\n"
-        f"- **團隊：** {team_name}\n"
-        f"- **建立日期：** {TODAY}\n"
-        f"- **狀態：** 初始化\n\n"
-        "## 待辦\n\n- [ ] 確認任務\n\n"
-        "## 近期進度\n\n（待填充）\n"
-    )
+    """MEMORY.md 導覽骨架（2.2.0：四層分工，不含「每完成一個段落更新」—— 那句是 MEMORY 膨脹的源頭）。"""
+    tpl = STEERING_ASSETS / "MEMORY-template.md"
+    if tpl.exists():
+        text = tpl.read_text(encoding="utf-8")
+    else:                                   # asset 缺失時的最小導覽骨架
+        text = ("# 🧭 {PROJECT} — 記憶導覽\n\n> 記憶導覽，不是事件流水；規則見 AGENTS.md「記憶怎麼用」。\n\n"
+                "## 📌 專案快照\n\n- **建立日期：** {DATE}\n")
+    return (text.replace("{PROJECT}", f"{name}（{team_name}）" if team_name and team_name != name else name)
+                .replace("{DATE}", TODAY))
+
+
+MEMORY_SKELETON_DIRS = ("daily", "archive")
+# --validate 記憶守門門檻（references/memory-architecture.md §6）
+MEMORY_MD_MAX_BYTES = 20 * 1024
+MEMORY_MD_MAX_DATED = 5
+_DATED_SECTION_RE = re.compile(r"(?m)^## (?:✅ |🧭 )?\d{4}-\d{2}-\d{2}")
+_LEGACY_MEMORY_RULE = "每完成一個段落"
+
+
+def _write_memory_skeleton(agent_dir: Path, base: Path) -> list[str]:
+    """agent 工作目錄的 memory/ 骨架：daily/、archive/（.gitkeep）+ memory.md 四分節。冪等，不覆寫既有檔。"""
+    created: list[str] = []
+    mem = agent_dir / "memory"
+    for sub in MEMORY_SKELETON_DIRS:
+        d = mem / sub
+        if not d.exists():
+            d.mkdir(parents=True, exist_ok=True)
+            (d / ".gitkeep").touch()
+            created.append(str((d / ".gitkeep").relative_to(base)))
+    mm = mem / "memory.md"
+    src = ASSETS_DIR / "memory" / "memory.md"
+    if not mm.exists() and src.exists():
+        shutil.copy2(src, mm)
+        created.append(str(mm.relative_to(base)))
+    return created
+
+
+def _validate_memory(agent_dir: Path, kiro_dir: Path, prefix: str) -> list[str]:
+    """記憶架構守門（皆 ⚠️）：memory/ 骨架、MEMORY.md 體積／事件流水、舊「每完成一個段落」規範殘留。"""
+    warns: list[str] = []
+    mem = agent_dir / "memory"
+    if not (mem / "daily").is_dir() or not (mem / "memory.md").is_file():
+        warns.append(f"⚠️ {prefix}：缺 memory/ 骨架（daily/ 或 memory.md）—— 見 references/memory-architecture.md §4②")
+    mm = kiro_dir / "steering" / "MEMORY.md"
+    if mm.is_file():
+        text = mm.read_text(encoding="utf-8", errors="replace")
+        size = len(text.encode("utf-8"))
+        if size > MEMORY_MD_MAX_BYTES:
+            warns.append(f"⚠️ {prefix}/steering/MEMORY.md：{size // 1024} KB > {MEMORY_MD_MAX_BYTES // 1024} KB（always-on 注入）—— 照 §4③ 瘦身")
+        dated = len(_DATED_SECTION_RE.findall(text))
+        if dated > MEMORY_MD_MAX_DATED:
+            warns.append(f"⚠️ {prefix}/steering/MEMORY.md：{dated} 個日期事件分節 > {MEMORY_MD_MAX_DATED}（事件流水該在 memory/daily、archive）")
+    steering = kiro_dir / "steering"
+    if steering.is_dir():
+        for f in sorted(steering.glob("*.md")):
+            if _LEGACY_MEMORY_RULE in f.read_text(encoding="utf-8", errors="replace"):
+                warns.append(f"⚠️ {prefix}/steering/{f.name}：殘留舊規範「{_LEGACY_MEMORY_RULE}更新 MEMORY.md」—— 照 §4④ 改寫")
+    return warns
 
 
 def _default_user_md() -> str:
@@ -934,6 +986,9 @@ def validate_kiro(project_dir: Path) -> list[str]:
                 errors.append(f"❌ {prefix}/steering/{residue.name}：fragment 組裝素材殘留（併入主檔後應刪）")
             if (steering_dir_v / "IDENTITY.md").exists():
                 errors.append(f"❌ {prefix}/steering/IDENTITY.md：identity 應併入 SOUL 身分卡段，不留獨立檔")
+
+        # 記憶架構守門（2.2.0，⚠️ 不擋）
+        errors.extend(_validate_memory(kiro_dir.parent, kiro_dir, prefix))
 
         # prompts 至少 1 個（含 work/ 子目錄）
         pdir = kiro_dir / "prompts"

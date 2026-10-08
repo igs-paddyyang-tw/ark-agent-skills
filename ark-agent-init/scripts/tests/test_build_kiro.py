@@ -348,3 +348,62 @@ def test_b4_validate_catches_missing_shelf_and_weknora_in_order(sources_project)
     cfg["knowledge_search_order"] = ["private", "hoyeah", "github", "shared", "weknora"]
     errs2 = _validate_knowledge_sources(cfg, sources_project)
     assert any("weknora" in e for e in errs2), errs2
+
+
+# ── 2.2.0 記憶架構（四層分工，references/memory-architecture.md）────────────
+
+def _validate(project_dir: Path) -> str:
+    r = subprocess.run([sys.executable, str(BUILD), "--validate", str(project_dir)],
+                       capture_output=True, text=True)
+    return r.stdout + r.stderr
+
+
+AGENT_DIRS = (".", "agents/admin-agent", "agents/leader-agent", "agents/worker-agent")
+
+
+def test_memory_skeleton_for_every_agent(project):
+    """每個 agent 工作目錄都有 memory/daily、memory/archive 與四分節 memory.md。"""
+    for d in AGENT_DIRS:
+        mem = project / d / "memory"
+        assert (mem / "daily" / ".gitkeep").exists() and (mem / "archive" / ".gitkeep").exists(), d
+        body = (mem / "memory.md").read_text(encoding="utf-8")
+        for sec in ("環境慣例", "工具怪癖", "人與偏好", "進行中的長期事項"):
+            assert sec in body, (d, sec)
+
+
+def test_memory_md_is_navigation_without_legacy_rule(project):
+    """反證源頭：產出的 steering 一律不含「每完成一個段落」（那句讓 MEMORY.md 變事件流水）。"""
+    for d in AGENT_DIRS:
+        steering = project / d / ".kiro" / "steering"
+        for f in steering.glob("*.md"):
+            assert "每完成一個段落" not in f.read_text(encoding="utf-8"), f
+        mm = (steering / "MEMORY.md").read_text(encoding="utf-8")
+        assert "記憶導覽" in mm and "memory/daily" in mm and "{PROJECT}" not in mm and "{DATE}" not in mm
+
+
+def test_memory_skeleton_idempotent_keeps_user_content(project, tmp_path):
+    mm = project / "agents" / "admin-agent" / "memory" / "memory.md"
+    mm.write_text("環境慣例\n- 已蒸餾的事實\n", encoding="utf-8")
+    r = subprocess.run([sys.executable, str(BUILD), str(project / "team.yaml"), str(project)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert mm.read_text(encoding="utf-8") == "環境慣例\n- 已蒸餾的事實\n"
+
+
+def test_validate_fresh_project_has_no_memory_warnings(project):
+    out = _validate(project)
+    assert "memory/ 骨架" not in out and "MEMORY.md：" not in out and "殘留舊規範" not in out, out
+
+
+def test_validate_flags_legacy_memory(project):
+    """反證：模擬舊部署 —— 舊規範句、堆滿日期分節、過大、缺 memory/ → 四種 ⚠️ 都要出現。"""
+    import shutil
+    mm = project / "agents" / "leader-agent" / ".kiro" / "steering" / "MEMORY.md"
+    dated = "".join(f"## 2026-09-{i:02d} — 事件\n- 流水\n\n" for i in range(1, 8))
+    mm.write_text("> 每完成一個段落必須更新。\n\n" + dated + "x" * (21 * 1024), encoding="utf-8")
+    shutil.rmtree(project / "agents" / "worker-agent" / "memory")
+    out = _validate(project)
+    assert "leader-agent/.kiro/steering/MEMORY.md：殘留舊規範" in out
+    assert "7 個日期事件分節" in out
+    assert "KB > 20 KB" in out
+    assert "worker-agent/.kiro：缺 memory/ 骨架" in out

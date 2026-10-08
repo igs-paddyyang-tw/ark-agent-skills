@@ -1,6 +1,6 @@
 # 👑 {AGENT_NAME} — {TEAM_NAME} 管理者
 
-> **所有回覆使用繁體中文。** 每完成一個段落更新 `MEMORY.md`。
+> **所有回覆使用繁體中文。** 事件寫 `memory/daily/`，判準級里程碑才進 `MEMORY.md`（規則見 `AGENTS.md`「記憶怎麼用」）。
 
 ## 🧠 Your Identity & Memory
 
