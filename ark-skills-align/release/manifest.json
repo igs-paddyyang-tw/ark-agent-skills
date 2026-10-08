@@ -1,7 +1,7 @@
 {
   "release": "skills-2026.10-r1",
-  "commit": "88c8566",
-  "generated_at": "2026-10-08T15:53:14+08:00",
+  "commit": "c0a720c",
+  "generated_at": "2026-10-08T16:35:25+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.1.0",
@@ -424,9 +424,9 @@
       "updated": "2026-09-11"
     },
     "ark-mobile-adb": {
-      "version": "2.2.0",
-      "tree_hash": "sha256:2ab8522f8fc7b868451065de8b66d45adf39560f0dc64a4fef6a695c586fef1c",
-      "contract_hash": "sha256:180f4991402ac8ac16dfdb2c0ad23c14fabd035e96c6d21d06e0211232a0c616",
+      "version": "2.2.1",
+      "tree_hash": "sha256:6a1675e38854d6c1963a7e13ba86546205e2bde7c289f9da1927229065986049",
+      "contract_hash": "sha256:023b7a9ec5bd3d85f0eccc4c8d58a80c640d3139be1207f551de290a833181ea",
       "status": "active",
       "category": "executor",
       "depends_on": [],
@@ -527,7 +527,7 @@
     },
     "ark-skills-align": {
       "version": "2.0.0",
-      "tree_hash": "sha256:920ffb41884db42be90859d01b4329c0ba1d0e6ba44cd2c579f89eb34b974285",
+      "tree_hash": "sha256:360ba1caade7ec3e29894c86524307fe522b2ddb5a4edfd79ad9c6432dd6d303",
       "contract_hash": "sha256:4a3efb684ab2b1279b01211423caf504e35317b6cc633a7133ee842c60f7b456",
       "status": "active",
       "category": "ops",

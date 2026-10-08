@@ -4,5 +4,5 @@ numpy>=1.24
 pyyaml>=6.0
 openpyxl>=3.1
 # 選配
-# opencv-python-headless>=4.8   # locate 模板比對加速（無則用 numpy 慢速比對）
+# opencv-python-headless>=4.8   # locate 模板比對加速（無則用 numpy FFT 比對，約 0.3s／次）
 # 系統：tesseract-ocr（--reader tesseract|dual）；Android Platform Tools（adb）

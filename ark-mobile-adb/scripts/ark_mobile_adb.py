@@ -481,8 +481,53 @@ def wait_stable(device: str, out_dir: Path, timeout: float = 12.0, interval: flo
     return {"stable": False, "elapsed_s": round(time.time() - t0, 2), "frames": n, "last": str(last) if last else None}
 
 
+def _fast_len(n: int) -> int:
+    """≥ n 的最小 2^a·3^b·5^c（pocketfft 對這類長度最快；奇數大質因數長度可慢 5 倍以上）。"""
+    best = 1 << (n - 1).bit_length()
+    p5 = 1
+    while p5 < best:
+        p35 = p5
+        while p35 < best:
+            q = p35
+            while q < n:
+                q *= 2
+            best = min(best, q)
+            p35 *= 3
+        p5 *= 5
+    return best
+
+
+def ncc_map(S, T):
+    """無 opencv 時的正規化相關（等價 cv2.TM_CCOEFF_NORMED）：分子用 FFT 互相關、視窗均值/變異用積分圖。
+
+    回 (H-th+1, W-tw+1) 的分數圖；平坦視窗（變異≈0）記 0。舊版純 Python 雙迴圈 1600x900 一次 ~33s，這版 < 1s。
+    """
+    np = _np()
+    S = S.astype(np.float64); T = T.astype(np.float64)
+    H, W = S.shape; th, tw = T.shape
+    if th > H or tw > W:
+        return np.zeros((0, 0))
+    n = th * tw
+    Tz = T - T.mean()
+    t_norm = float(np.sqrt((Tz * Tz).sum()))
+    fs = (_fast_len(H + th - 1), _fast_len(W + tw - 1))
+    num = np.fft.irfft2(np.fft.rfft2(S, fs) * np.fft.rfft2(Tz[::-1, ::-1], fs), fs)[th - 1:H, tw - 1:W]
+
+    def win_sum(A):
+        ii = np.zeros((H + 1, W + 1)); ii[1:, 1:] = A.cumsum(0).cumsum(1)
+        return ii[th:, tw:] - ii[:-th, tw:] - ii[th:, :-tw] + ii[:-th, :-tw]
+
+    s1 = win_sum(S); s2 = win_sum(S * S)
+    var = np.maximum(s2 - s1 * s1 / n, 0.0)
+    den = np.sqrt(var) * t_norm
+    ok = (var > 1e-3 * n) & (t_norm > 1e-6)
+    res = np.zeros_like(num)
+    res[ok] = num[ok] / den[ok]
+    return np.clip(res, -1.0, 1.0)
+
+
 def locate_template(screen: Path, template: Path, threshold: float = 0.85) -> dict:
-    """模板比對：優先 opencv；否則 numpy 正規化相關（較慢，限縮小圖）。回 {found, x, y, w, h, score, center}。"""
+    """模板比對：優先 opencv；否則 ncc_map（numpy FFT + 積分圖，等價 TM_CCOEFF_NORMED）。回 {found, x, y, w, h, score, center}。"""
     Image = _pil(); np = _np()
     with Image.open(screen) as a, Image.open(template) as b:
         S = np.asarray(a.convert("L"), dtype=np.float32); T = np.asarray(b.convert("L"), dtype=np.float32)
@@ -493,17 +538,12 @@ def locate_template(screen: Path, template: Path, threshold: float = 0.85) -> di
         _, score, _, loc = cv2.minMaxLoc(res)
         x, y = int(loc[0]), int(loc[1])
     except ImportError:
-        # numpy 滑窗 NCC（步長 2，適合 ≤ 1600x900）
-        step = 2
-        Tn = (T - T.mean()) / (T.std() + 1e-6)
-        best = (-1.0, 0, 0)
-        for yy in range(0, S.shape[0] - th + 1, step):
-            for xx in range(0, S.shape[1] - tw + 1, step):
-                W = S[yy:yy + th, xx:xx + tw]
-                sc = float((((W - W.mean()) / (W.std() + 1e-6)) * Tn).mean())
-                if sc > best[0]:
-                    best = (sc, xx, yy)
-        score, x, y = best
+        res = ncc_map(S, T)
+        if res.size == 0:
+            score, x, y = -1.0, 0, 0
+        else:
+            y, x = (int(v) for v in np.unravel_index(int(np.argmax(res)), res.shape))
+            score = float(res[y, x])
     found = float(score) >= threshold
     return {"found": found, "score": round(float(score), 4), "x": x, "y": y, "w": int(tw), "h": int(th),
             "center": [x + tw // 2, y + th // 2] if found else None, "threshold": threshold}

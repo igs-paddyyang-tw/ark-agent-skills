@@ -166,5 +166,5 @@ class FakeGame:
                 d.ellipse([760, 380, 840, 460], outline=(255, 80, 80), width=6); d.text((770, 470), "NETWORK", fill=(255, 80, 80))
             if self.popup == "6002":
                 x, y, w, h = LAYOUT["roi_popup"]; d.rectangle([x, y, x + w, y + h], fill=(240, 240, 240)); d.text((x + 40, y + 40), "ERROR 6002", fill=(200, 0, 0)); box("ok", (80, 160, 80), "OK")
-        im.save(path)
+        im.save(path, compress_level=1)  # 假遊戲畫面：低壓縮換速度（每輪上百張），不影響真機截圖
         return path

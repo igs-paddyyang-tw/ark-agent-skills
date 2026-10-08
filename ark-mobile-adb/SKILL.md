@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.2.0"
+  version: "2.2.1"
   updated: 2026-10-08
   outputs:
     - { format: data, audience: ai }
@@ -60,7 +60,7 @@ metadata:
 | BlueStacks 開 ADB，`connect 127.0.0.1:<埠>` | 真機 run | exit 5 |
 | Pillow / numpy / pyyaml / openpyxl | aiqa、crop / wait-stable / locate | exit 8 |
 | tesseract（系統）| `--reader tesseract|dual` | 改用 `--reader llm` |
-| opencv-python-headless | locate 加速（選配） | numpy 慢速比對 |
+| opencv-python-headless | locate 加速（選配） | numpy FFT 比對（1600x900 約 0.3s／次；2.2.1 前為雙迴圈約 33s） |
 | LLM（`ARK_LLM_PROVIDER=anthropic|gemini` + key） | `--visual llm` / `--reader llm|dual` / `from-spec` | 無憑證用 `fake` 走 dry-run |
 
 `pip install -r requirements.txt`
