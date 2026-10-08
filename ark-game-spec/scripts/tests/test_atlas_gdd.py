@@ -27,13 +27,13 @@ def make_pack(d: pathlib.Path) -> pathlib.Path:
     from PIL import Image
     pack = d / "mini-pack"
     (pack / "rules").mkdir(parents=True)
-    (pack / "assets" / "圖騰").mkdir(parents=True)
-    (pack / "assets" / "全示意圖").mkdir(parents=True)
-    Image.new("RGB", (640, 360), (40, 30, 20)).save(pack / "assets" / "全示意圖" / "main_01.png")
-    Image.new("RGBA", (120, 120), (200, 160, 40, 255)).save(pack / "assets" / "圖騰" / "M1.png")
+    (pack / "assets" / "symbols").mkdir(parents=True)
+    (pack / "assets" / "illustrations").mkdir(parents=True)
+    Image.new("RGB", (640, 360), (40, 30, 20)).save(pack / "assets" / "illustrations" / "main_01.png")
+    Image.new("RGBA", (120, 120), (200, 160, 40, 255)).save(pack / "assets" / "symbols" / "M1.png")
     gdd = {"contract": "1", "slug": "mini-slot", "title": "Mini Slot 素材總覽", "short_title": "Mini Slot", "domain": "slot-game",
            "status": "draft", "distribution": "internal",
-           "assets": {"root": "assets", "symbols": "圖騰", "screens": "全示意圖"},
+           "assets": {"root": "assets", "symbols": "symbols", "screens": "illustrations"},
            "spec": [{"k": "盤面", "v": "主遊戲 3X5"}, {"k": "對獎方式", "v": "20 LINES"}],
            "symbol_groups": [{"id": "normal", "title": "一般圖騰"}],
            "features": [{"id": "main", "title": "MainGame", "rules": "rules/main.md"},

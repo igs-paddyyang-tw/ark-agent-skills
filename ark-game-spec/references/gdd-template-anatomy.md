@@ -1,4 +1,4 @@
-# 企劃樣板拆解（data/gdd-sample/賭博默示錄_素材總覽.html → gdd-pack）
+# 企劃樣板拆解（data/references/kaiji-gdd-sample/賭博默示錄_素材總覽.html → gdd-pack）
 
 > 為什麼契約長這樣：企劃 2026-09-16 交出的樣板其實是「資料 + 模板」——靜態骨架只有標題與規則列，
 > 圖騰牆 / 畫面流程 / 對照表 / INFO / 多語全由 8 個 JS 陣列渲染。gdd-pack 就是把那 8 個陣列顯式化。
@@ -30,4 +30,17 @@
 
 ## 保留不動的長相
 
-配色（暗棕金）、卡片尺寸、9:16 縮圖、odds 三格、tag 樣式、lightbox 右側資訊欄——全部沿用；只把顏色抽成 token（`assets/default-style.yaml`）。企劃樣板優先於圖書館一致性。
+配色（暗棕金）、卡片尺寸、9:16 縮圖、odds 三格、tag 樣式、lightbox 右側資訊欄——全部沿用；只把顏色抽成 token（`assets/gdd-default-style.yaml`）。企劃樣板優先於圖書館一致性。
+
+## 樣板目錄結構 → 交付夾（2.1）
+
+樣板（2026-10-07 版）以四個 JS 常數指圖夾：`const S = 'symbols/', P = 'illustrations/', C = 'spec-reference-images/', N = 'symbols/';`
+（S 圖騰、P 示意圖、C 規格書競品圖、N 工程命名圖騰，與 S 同夾）。HTML 與三夾同層，整夾即可寄出。
+
+| 樣板常數 | 夾 | gdd-pack 來源 | gdd_common.ASSET_DIRS key |
+|---|---|---|---|
+| `S`、`N` | `symbols/` | `symbols.yaml` 的 `file` | `symbols` |
+| `P` | `illustrations/` | `screens.yaml` 的 `file`、`info.yaml` slots 的 `file` | `screens` |
+| `C` | `spec-reference-images/` | `symbols.yaml` 的 `ref_files` | `reference` |
+
+`gdd_export` 產出的交付夾與此同結構（`<short_title>_素材總覽.html` + 三夾），差別只在 HTML 由 `gdd-template.html.j2` 渲染（不是手寫 JS 陣列），圖片以 `<img src="symbols/…">` 直接寫在 DOM 與燈箱 JSON 裡。

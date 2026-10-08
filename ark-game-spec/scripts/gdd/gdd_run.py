@@ -2,6 +2,7 @@
 """gdd_run — lint → build 一鍵（lint 有 error 就停，不產 HTML）。
 
 用法: python gdd_run.py --pack data/gdd/<slug> [--out <html>] [--style <style.yaml>]
+       [--export [--export-out <dir>] [--all-assets]]   # 再產企劃樣板交付夾（<short_title>_素材總覽.html + symbols/ illustrations/ spec-reference-images/）
 """
 from __future__ import annotations
 
@@ -35,12 +36,20 @@ def main() -> None:
     ap.add_argument("--pack", required=True)
     ap.add_argument("--out")
     ap.add_argument("--style")
+    ap.add_argument("--export", action="store_true", help="build 後再跑 gdd_export，產樣板交付夾")
+    ap.add_argument("--export-out", help="交付夾（預設 <pack>/export）")
+    ap.add_argument("--all-assets", action="store_true", help="交付夾連同來源三夾未引用的圖一起帶")
     a = ap.parse_args()
     pack = str(C.pack_dir(a.pack))
     lint = step("gdd_lint.py", "--pack", pack)
     bargs = ["--pack", pack] + (["--out", a.out] if a.out else []) + (["--style", a.style] if a.style else [])
     build = step("gdd_build.py", *bargs)
-    C.emit({"lint": lint["data"], "build": build["data"]}, {"stage": "gdd_run"})
+    res = {"lint": lint["data"], "build": build["data"]}
+    if a.export:
+        eargs = ["--pack", pack] + (["--out", a.export_out] if a.export_out else []) + (["--all-assets"] if a.all_assets else []) \
+            + (["--style", a.style] if a.style else [])
+        res["export"] = step("gdd_export.py", *eargs)["data"]
+    C.emit(res, {"stage": "gdd_run"})
 
 
 if __name__ == "__main__":

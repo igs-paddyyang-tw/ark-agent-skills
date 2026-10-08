@@ -5,9 +5,10 @@ description: |
   與 ark-game-prob（機率規格書）、ark-game-quicktest（Go 快測）三件套。一個入口 gs_run --stage 串八個 stage：
   video（影片 → 抽幀 → contact sheet → 唯讀 evidence）→ detect／analyze（多模態機制分析 → game-analysis.yaml + kb-refs + 報告）
   → draft／decide／dev（規格草稿 spec_lint → ark-grill-me 決議 → game-spec.v1 → dev-spec 六檔，config-spec value=null）
-  → gdd（規格書 xlsx 或 spec run → gdd-pack → 素材總覽.html + todo.md）→ atlas（圖文規格書單檔 HTML 入圖書館）→ pack（domain pack lint）。
+  → gdd（xlsx 或 spec run → gdd-pack → 素材總覽.html；--export 出企劃樣板交付夾：HTML + 三圖夾）
+  → atlas（圖文規格書入圖書館）→ pack（domain pack lint）。
   另含純提詞「從構想產 GDD」創作模式。只有 analyze 與 gs_review --llm 呼叫 LLM，其餘 deterministic。
-  使用此 skill 當提及：遊戲規格書、規格書、GDD、遊戲企劃、素材總覽、gdd-pack、圖騰對照表、競品影片分析、拆解競品機制、
+  使用此 skill 當提及：遊戲規格書、規格書、GDD、遊戲企劃、素材總覽、企劃樣板、交付夾、gdd-pack、圖騰對照表、競品影片分析、拆解競品機制、
   抽幀、contact sheet、evidence、機制規格草稿、Open Questions、decisions.yaml、dev-ready spec、config-spec、state machine、
   qa checklist、圖文規格書、遊戲 atlas、遊戲圖鑑、domain pack、新增遊戲類型、answer key、POC benchmark。
   不適用於：機率規格書／參數表／隱性規則（→ ark-game-prob）、Go 快測／RTP 模擬／odds.json（→ ark-game-quicktest）、
@@ -17,7 +18,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.0.0"
+  version: "2.1.0"
   updated: 2026-10-07
   outputs:
     - { format: data, audience: ai }
@@ -55,7 +56,7 @@ metadata:
 | `scripts/video/` | `vu_run.py`（fetch → timeline → events → keyframes → sheets → transcript → evidence；`--domain auto` 只產 detect sheets）、各 `vu_*.py`、`detectors/`（8 個 deterministic 偵測器 REGISTRY）| 影片入口；調偵測器看 `references/video-calibration.md` |
 | `scripts/analysis/` | `ga_detect.py`（LLM 判 domain）、`ga_run.py`（observe → analyze → validate → kb_match）、`ga_report.py`（md-report + html）、`wev_fetch.py`（網頁 evidence，type: web）| 機制分析；fake provider 跑測試 |
 | `scripts/spec/` | `gs_run.py --stage draft\|decide\|dev`（舊 1.x 三段）、`gs_draft / gs_review / gs_decide / gs_dev / gs_metrics / spec_lint` | 規格草稿 → 決議 → dev-spec |
-| `scripts/gdd/` | `gdd_extract.py`（規格書 xlsx → gdd-pack）、`gdd_from_spec.py`（spec run → gdd-pack）、`gdd_lint.py`、`gdd_build.py`（素材總覽.html + todo.md）、`gdd_run.py`（lint → build）、`gdd_common.py`（本 stage 自用 helper，2.1 併入 _lib）| 企劃規格書 |
+| `scripts/gdd/` | `gdd_extract.py`（規格書 xlsx → gdd-pack）、`gdd_from_spec.py`（spec run → gdd-pack）、`gdd_lint.py`、`gdd_build.py`（素材總覽.html + todo.md）、**`gdd_export.py`**（2.1：gdd-pack → 企劃樣板交付夾，與 `data/references/kaiji-gdd-sample` 同結構）、`gdd_run.py`（lint → build [→ export]）、`gdd_common.py`（`ASSET_DIRS` 三夾定版名、`bundle_html_name`；本 stage 自用 helper）| 企劃規格書 |
 | `scripts/atlas/` | `atlas_run.py`（`--run` 或 `--gdd`）、`atlas_compile / atlas_from_gdd / atlas_figures / atlas_lint / atlas_build / atlas_register` | 圖文書、圖書館上架 |
 | `scripts/pack/` | `pack_resolve.py`（`--list` / `--domain`）、`pack_lint.py`（`--all`）、`pack_new.py` | 新增 / 修改 domain pack |
 | `_lib/` | `run_common.py`（envelope / run / manifest / pack 載入 / evidence / spec parser / atlas / ffmpeg；四份舊 common 的超集）、`pack_common.py`、`llm_adapter.py`、`guard.py`（注入 regex 唯一一份）、`md_render.py`（content-src 戳記）| 所有 stage import |
@@ -64,7 +65,7 @@ metadata:
 | `references/pack-contract.md`、`gdd-contract.md`、`atlas-contract.md`、`gdd-template-anatomy.md`、`video-calibration.md` | 各 stage 契約與調參 | 對應 stage |
 | `references/concept-gdd-template.md`、`genre-guides.md`、`concept-example/` | **創作模式**（純提詞）：只有一句話概念時產 10 章 GDD 或 One Pager | 沒有影片也沒有 xlsx 時 |
 | `assets/` | `gdd-template.html.j2`、`gdd-default-style.yaml`（企劃暗棕金）、`atlas-default-style.yaml`（與 `domains/_core/atlas/style.yaml` 相同，2.1 刪）| gdd_build / atlas_build |
-| `scripts/tests/` | 49 tests：detectors（召回 ≥ 90%、deterministic）、postprocess、report、spec_lint、gdd、atlas、atlas_gdd、packs、**gs_run_dispatch**（video → analyze → draft → decide → dev → atlas 全鏈）；需 ffmpeg 的自動 skip | 改腳本後 `python -m pytest -q scripts/tests` |
+| `scripts/tests/` | 56 tests（2.1 +7：三夾預設名、舊中文夾相容、交付夾結構、--all-assets、斷鏈擋下、gdd_run --export）：detectors（召回 ≥ 90%、deterministic）、postprocess、report、spec_lint、gdd、atlas、atlas_gdd、packs、**gs_run_dispatch**（video → analyze → draft → decide → dev → atlas 全鏈）；需 ffmpeg 的自動 skip | 改腳本後 `python -m pytest -q scripts/tests` |
 
 ## 決策樹
 
@@ -78,7 +79,9 @@ metadata:
 │   └─ 要給人看：--stage atlas --run <run> --slug <slug>（圖文書）；要企劃樣板：--stage gdd --from spec --run <run> --out data/gdd/<slug>
 ├─ 企劃的規格書 xlsx（KAIJI 樣板）
 │   python scripts/gs_run.py --stage gdd --from xlsx --xlsx <規格書.xlsx> --out data/gdd/<slug>  → 素材總覽.html + todo.md
-│   └─ todo.md 給美術（缺示意圖 / 待修 / 檔名衛生）；--stage atlas --gdd data/gdd/<slug> 出圖文書
+│   ├─ todo.md 給美術（缺示意圖 / 待修 / 檔名衛生）；--stage atlas --gdd data/gdd/<slug> 出圖文書
+│   └─ 要交給企劃 / 美術的「樣板夾」：加 --export [--export-out <dir>] [--export-all-assets]
+│        → <short_title>_素材總覽.html + symbols/ + illustrations/ + spec-reference-images/（與 kaiji-gdd-sample 同結構；斷鏈 exit 3）
 ├─ 只有一句話概念 → 創作模式：讀 references/concept-gdd-template.md + genre-guides.md，Understanding Lock 後產 docs/<name>-gdd.md；數值一律「建議值待測試」
 ├─ 新遊戲類型（麻將 / 棋牌 / 街機）→ python scripts/pack/pack_new.py --domain <d> --display-name <名> → 填 pack → --stage pack --domain <d>
 └─ 規格定案要進機率段 → 交接檔在 <run>/dev-spec/ 與 data/gdd/<slug>/：下一步 ark-game-quicktest qt_config、ark-game-prob ps_run --qt
@@ -92,7 +95,10 @@ artifacts/cva/<run_id>/
 ├── observations.jsonl · game-analysis.yaml · entities.json · kb-refs.yaml · report/<date>-game-analysis-*.md   analysis
 ├── game-spec.draft.md · review-report.md/.json · decisions.template.yaml · decisions.yaml · game-spec.v1.md    spec
 ├── dev-spec/{game-spec, feature-spec, state-machine, ui-spec, qa-checklist}.md · config-spec.yaml · benchmark.json
-data/gdd/<slug>/   gdd.yaml · symbols.yaml · screens.yaml · rules/*.md · info.yaml · i18n.csv · assets/ · 素材總覽.html · todo.md   gdd
+data/gdd/<slug>/   gdd.yaml · symbols.yaml · screens.yaml · rules/*.md · info.yaml · i18n.csv · 素材總覽.html · todo.md · export-manifest.json   gdd
+                   assets/{symbols, illustrations, spec-reference-images}/   （2.1 起英文三夾；舊「圖騰 / 全示意圖 / 規格書競品圖」讀取相容）
+                   export/   ← --export 交付夾（企劃樣板結構，可整夾寄出）：
+                     <short_title>_素材總覽.html · symbols/ · illustrations/ · spec-reference-images/
 data/atlas/<slug>/ atlas.yaml · NN-*.md · assets/figures/ · site/index.html · data/library/atlas/catalog.json                     atlas
 ```
 
@@ -103,9 +109,19 @@ data/atlas/<slug>/ atlas.yaml · NN-*.md · assets/figures/ · site/index.html �
 | video | 預算 hard_max（exit 9）、evidence 已存在未 --force（exit 3）| 抽幀失控、覆寫唯讀 evidence |
 | analyze | `ga_analyze.postprocess`、`ga_validate`（exit 6）、`report_lint` | 未宣告 key、壞 evidence、口白撐 OBSERVED、UNKNOWN > 60% |
 | spec | `spec_lint` 四分法（NUM-OUTSIDE / OBS-EVIDENCE / KB-REF / UNKNOWN-Q / DECIDED-D / NAME / SECTIONS / PACK:*）、gs_dev 三道（defer / 必填 / value≠null）| 區塊外數字、沒 evidence 的 OBSERVED、競品值偷渡成定案 |
-| gdd | `gdd_lint` 7 組（YAML / SYM / SCR / INFO / I18N / RULES / INJECT）| 圖檔不存在、參考圖當定案、odds 不是 3 值、注入 |
+| gdd | `gdd_lint` 8 組（YAML / SYM / SCR / INFO / I18N / RULES / INJECT / ASSET）；`gdd_export` 交付夾守門（HTML 每個圖片連結都要在三夾內）| 圖檔不存在、參考圖當定案、odds 不是 3 值、注入、交付夾斷鏈 |
 | atlas | `atlas_lint` 10 組（含 ATL-NUM：書裡沒有 spec 沒有的數字、ATL-STALE）| 憑空數字、過期來源 |
 | pack | `pack_lint` 20 餘組（PACK-ITEMS 恰 10 項、PACK-KB-TAGS 受控詞彙…）| pack 契約破壞 |
+
+## 2.1 變更：對齊企劃樣板（data/references/kaiji-gdd-sample）
+
+| 項目 | 2.0 | 2.1 |
+|---|---|---|
+| 三夾預設名 | 圖騰 / 全示意圖 / 規格書競品圖 | **symbols / illustrations / spec-reference-images**（`gdd_common.ASSET_DIRS`）；gdd.yaml 沒寫夾名且只有中文夾 → 自動相容，lint `GDD-ASSET-LEGACY` 警告 |
+| gdd_extract / gdd_from_spec | 寫中文三夾 | 寫英文三夾，gdd.yaml.assets 帶英文名 |
+| 交付形態 | 只有 pack 內 `素材總覽.html`（圖指向 assets.root）| 新增 `gdd_export.py`：`<short_title>_素材總覽.html`（或 `build.bundle_html`）+ 三夾，HTML 只用 `symbols/…` 等相對路徑；與樣板逐檔比對：圖騰 25 / 示意圖 31（樣板夾 36，5 張樣板 HTML 也未引用，`--all-assets` 可整夾帶）/ 競品圖 40 |
+| HTML `<title>` | `gdd.yaml.title` | `{short_title} 素材總覽`（與樣板相同；h1 仍為 title）|
+| gs_run | — | `--stage gdd … --export [--export-out] [--export-all-assets]`；gs_run 關閉 argparse 前綴縮寫，避免透傳旗標（如 pack 的 `--all`）被吃掉 |
 
 ## 2.0 相對 1.x 的變更（給消費端）
 

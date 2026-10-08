@@ -8,6 +8,7 @@
   python scripts/gs_run.py --stage gdd     --pack <gdd-pack> [--out] [--style]            # lint → build（素材總覽.html + todo.md）
   python scripts/gs_run.py --stage gdd     --from xlsx --xlsx <規格書.xlsx> --out <pack>  # gdd_extract → lint → build
   python scripts/gs_run.py --stage gdd     --from spec --run <run> --out <pack>           # gdd_from_spec → lint → build
+  …上面三種加 --export [--export-out <dir>] [--export-all-assets]                                 # 再產企劃樣板交付夾（與 kaiji-gdd-sample 同結構）
   python scripts/gs_run.py --stage atlas   --run <run> --slug <slug> | --gdd <pack> [--out data/atlas] [--library …]
   python scripts/gs_run.py --stage pack    [--domain <d> | --all]                          # pack_lint
   python scripts/gs_run.py --stage all     --source <url|mp4> [--domain …] [--decisions decisions.yaml] [--slug <slug>]
@@ -60,7 +61,7 @@ def step(script: pathlib.Path, args: list[str], *, tolerate_rc: tuple[int, ...] 
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="ark-game-spec 2.0 總編排（薄派發器）")
+    ap = argparse.ArgumentParser(description="ark-game-spec 2.x 總編排（薄派發器）", allow_abbrev=False)  # 透傳旗標不可被前綴吃掉（如 pack 的 --all）
     ap.add_argument("--stage", required=True, choices=list(STAGES) + ["all"])
     ap.add_argument("--run")
     ap.add_argument("--source")
@@ -68,6 +69,9 @@ def main() -> None:
     ap.add_argument("--out")
     ap.add_argument("--pack")
     ap.add_argument("--gdd")
+    ap.add_argument("--export", action="store_true", help="gdd：build 後產企劃樣板交付夾（<short_title>_素材總覽.html + symbols/ illustrations/ spec-reference-images/）")
+    ap.add_argument("--export-out", help="gdd：交付夾位置（預設 <pack>/export）")
+    ap.add_argument("--export-all-assets", action="store_true", help="gdd：交付夾連同來源三夾未引用的圖一起帶")
     ap.add_argument("--xlsx")
     ap.add_argument("--from", dest="src", help="gdd：xlsx|spec（預設讀既有 pack）；atlas：v1|draft")
     ap.add_argument("--slug")
@@ -128,7 +132,9 @@ def main() -> None:
             pack = a.out
         if not pack:
             C.fail("BAD_INPUT", "需要 --pack，或 --from xlsx/--from spec 加 --out")
-        results["gdd"] = step(STAGES["gdd"], ["--pack", pack] + rest)["data"]
+        exp = (["--export"] if a.export else []) + (["--export-out", a.export_out] if a.export_out else []) \
+            + (["--all-assets"] if a.export_all_assets else [])
+        results["gdd"] = step(STAGES["gdd"], ["--pack", pack] + exp + rest)["data"]
         C.emit(results, {"stage": "gdd"})
     if st == "atlas":
         args = opt(("--run", a.run), ("--gdd", a.gdd), ("--slug", a.slug), ("--out", a.out), ("--from", a.src)) + rest

@@ -12,17 +12,19 @@ import gdd_common as C  # noqa: E402
 PNG = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0000000020001e221bc330000000049454e44ae426082")
 
 
-def make_pack(tmp: pathlib.Path, **tweak) -> pathlib.Path:
+def make_pack(tmp: pathlib.Path, legacy: bool = False, **tweak) -> pathlib.Path:
+    """legacy=True：舊中文三夾（圖騰/全示意圖/規格書競品圖）且 gdd.yaml.assets 不寫夾名，驗相容。"""
+    D = C.LEGACY_ASSET_DIRS if legacy else C.ASSET_DIRS
     pack = tmp / "demo"; (pack / "rules").mkdir(parents=True)
-    for d in ("圖騰", "全示意圖", "規格書競品圖"):
+    for d in D.values():
         (pack / "assets" / d).mkdir(parents=True)
     for f in ("S1.png", "S2.png", "W.png"):
-        (pack / "assets" / "圖騰" / f).write_bytes(PNG)
+        (pack / "assets" / D["symbols"] / f).write_bytes(PNG)
     for f in ("main_1.png", "bad.png.png", "Snipaste_1.png"):
-        (pack / "assets" / "全示意圖" / f).write_bytes(PNG)
-    (pack / "assets" / "規格書競品圖" / "S1_參考.png").write_bytes(PNG)
-    gdd = {"contract": "1", "slug": "demo", "title": "Demo 素材總覽", "domain": "slot-game", "status": "draft", "distribution": "internal",
-           "assets": {"root": "assets", "symbols": "圖騰", "screens": "全示意圖", "reference": "規格書競品圖"},
+        (pack / "assets" / D["screens"] / f).write_bytes(PNG)
+    (pack / "assets" / D["reference"] / "S1_參考.png").write_bytes(PNG)
+    gdd = {"contract": "1", "slug": "demo", "title": "Demo 素材總覽", "short_title": "Demo", "domain": "slot-game", "status": "draft", "distribution": "internal",
+           "assets": {"root": "assets"} if legacy else {"root": "assets", **C.ASSET_DIRS},
            "spec": [{"k": "盤面", "short": "3×5", "v": "3×5"}, {"k": "收費", "v": "88"}],
            "symbol_groups": [{"id": "normal", "title": "一般"}, {"id": "special", "title": "特殊"}],
            "odds_order": ["S1", "S2"],
@@ -112,8 +114,8 @@ def test_html_content(tmp_path):
     run("gdd_lint.py", "--pack", str(pack)); run("gdd_build.py", "--pack", str(pack))
     h = (pack / "out.html").read_text(encoding="utf-8")
     assert h.count('class="sym"') == 3 and h.count('class="scr"') == 3 and 'class="scr todo"' in h
-    assert 'src="assets/圖騰/S1.png"' in h and "S1_%E5%8F%83%E8%80%83.png" in h        # linked 模式相對路徑
-    assert '<img class="inl" src="assets/圖騰/S1.png"' in h                              # 佔位符 → 圖騰
+    assert 'src="assets/symbols/S1.png"' in h and "S1_%E5%8F%83%E8%80%83.png" in h        # linked 模式相對路徑
+    assert '<img class="inl" src="assets/symbols/S1.png"' in h                              # 佔位符 → 圖騰
     assert 'class="odds-grid"' in h and h.count('class="odds-cell"') == 4   # 2 語系 × 2 圖騰
     assert 'class="slot" data-gi=' in h and 'class="slot empty"' in h
     assert "<b>WILD</b>" in h and "<th>觸發</th>" in h                                    # rules md → html
@@ -177,7 +179,7 @@ def test_extract_classify_and_pack(tmp_path):
     assert c["spec"] >= 4 and c["odds"] == 2 and c["symbols"] == 2 and c["i18n"] == 1 and c["rules"] == 2
     syms = yaml.safe_load((out / "symbols.yaml").read_text(encoding="utf-8"))["symbols"]
     m1 = next(s for s in syms if s["code"] == "M1")
-    assert m1["sym_id"] == 11 and m1["odds"] == [1000, 125, 20] and m1["file"] and (out / "assets" / "圖騰" / m1["file"]).exists()
+    assert m1["sym_id"] == 11 and m1["odds"] == [1000, 125, 20] and m1["file"] and (out / "assets" / "symbols" / m1["file"]).exists()
     info = yaml.safe_load((out / "info.yaml").read_text(encoding="utf-8"))
     assert info["placeholders"] == {"星圖": None} or info["placeholders"].get("星圖") in (None, "M1")
     assert (out / "rules" / "blue.md").exists() and "- 有 Free Game Ball" in (out / "rules" / "blue.md").read_text(encoding="utf-8")
@@ -260,8 +262,78 @@ def test_from_spec_to_green(tmp_path):
     fg = (out / "rules" / "fg.md").read_text(encoding="utf-8")
     assert fg.startswith("<!-- spec:free_spin ") and "`free_spin.count_awarded` = 8 — evidence: E003" in fg   # 逐條繼承
     sc = yaml.safe_load((out / "screens.yaml").read_text(encoding="utf-8"))["screens"]
-    assert {s["feature"] for s in sc} == {"main"} and all((out / "assets" / "全示意圖" / s["file"]).exists() for s in sc)  # 無 feature 章 → 落 main
+    assert {s["feature"] for s in sc} == {"main"} and all((out / "assets" / "illustrations" / s["file"]).exists() for s in sc)  # 無 feature 章 → 落 main
     # lint：符號無圖依政策降 warn → 整包綠，build 出 HTML 且錨點保留為註解
     rr = run("gdd_run.py", "--pack", str(out)); assert rr["success"] and rr["data"]["lint"]["status"] == "PASS", rr
     html = (out / "素材總覽.html").read_text(encoding="utf-8")
     assert "<!-- spec:free_spin" in html and "待美術" in html and "Q001" in (out / "todo.md").read_text(encoding="utf-8")
+
+
+
+# ── 2.1：企劃樣板三夾與交付夾（對齊 data/references/kaiji-gdd-sample）──
+
+def test_default_asset_dirs_are_sample_names(tmp_path):
+    assert C.ASSET_DIRS == {"symbols": "symbols", "screens": "illustrations", "reference": "spec-reference-images"}
+    p = C.load_pack(make_pack(tmp_path))
+    assert C.asset_url(p, "screens", "main_1.png") == "assets/illustrations/main_1.png" and p["assets"]["legacy"] == []
+
+
+def test_legacy_chinese_dirs_still_build_with_warning(tmp_path):
+    pack = make_pack(tmp_path, legacy=True)
+    p = C.load_pack(pack)
+    assert p["assets"]["symbols"] == "圖騰" and set(p["assets"]["legacy"]) == {"symbols", "screens", "reference"}
+    r = run("gdd_lint.py", "--pack", str(pack))
+    rep = json.loads((pack / "lint-report.json").read_text(encoding="utf-8"))
+    assert sum(1 for w in rep["warnings"] if w["rule"] == "GDD-ASSET-LEGACY") == 3
+    assert run("gdd_build.py", "--pack", str(pack))["success"]
+
+
+def _layout(d: pathlib.Path) -> list[str]:
+    return sorted(x.name for x in d.iterdir())
+
+
+def test_export_matches_sample_layout(tmp_path):
+    pack = make_pack(tmp_path)
+    out = tmp_path / "bundle"
+    r = run("gdd_export.py", "--pack", str(pack), "--out", str(out)); assert r["success"], r
+    assert _layout(out) == sorted(["Demo_素材總覽.html", "symbols", "illustrations", "spec-reference-images"])
+    assert sorted(f.name for f in (out / "symbols").iterdir()) == ["S1.png", "S2.png", "W.png"]
+    assert sorted(f.name for f in (out / "spec-reference-images").iterdir()) == ["S1_參考.png"]
+    html = (out / "Demo_素材總覽.html").read_text(encoding="utf-8")
+    assert 'src="symbols/S1.png"' in html and "assets/" not in html and "<title>Demo 素材總覽</title>" in html
+    m = json.loads((pack / "export-manifest.json").read_text(encoding="utf-8"))
+    assert m["broken_links"] == [] and m["extra_top_level"] == [] and m["counts"]["illustrations"] == 3
+
+
+def test_export_from_legacy_pack_outputs_english_dirs(tmp_path):
+    pack = make_pack(tmp_path, legacy=True)
+    out = tmp_path / "bundle"
+    assert run("gdd_export.py", "--pack", str(pack), "--out", str(out))["success"]
+    assert {"symbols", "illustrations", "spec-reference-images"} <= set(_layout(out)) and "圖騰" not in _layout(out)
+
+
+def test_export_all_assets_and_bundle_name(tmp_path):
+    pack = make_pack(tmp_path)
+    (pack / "assets" / "illustrations" / "unused.png").write_bytes(PNG)
+    g = yaml.safe_load((pack / "gdd.yaml").read_text(encoding="utf-8")); g["build"]["bundle_html"] = "示範_素材總覽.html"
+    (pack / "gdd.yaml").write_text(yaml.safe_dump(g, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    out = tmp_path / "b1"
+    assert run("gdd_export.py", "--pack", str(pack), "--out", str(out))["success"]
+    assert not (out / "illustrations" / "unused.png").exists() and (out / "示範_素材總覽.html").exists()
+    out2 = tmp_path / "b2"
+    assert run("gdd_export.py", "--pack", str(pack), "--out", str(out2), "--all-assets")["success"]
+    assert (out2 / "illustrations" / "unused.png").exists()
+
+
+def test_export_blocks_broken_links(tmp_path):
+    pack = make_pack(tmp_path)
+    (pack / "assets" / "symbols" / "S2.png").unlink()
+    r = run("gdd_export.py", "--pack", str(pack), "--out", str(tmp_path / "b"))
+    assert not r["success"] and r["rc"] == 3 and r["error"]["code"] == "GATE_BLOCKED"
+
+
+def test_gdd_run_export_flag(tmp_path):
+    pack = make_pack(tmp_path, screens=[{"feature": "main", "step": "1", "title": "待機", "file": "main_1.png", "desc": "d"}])
+    r = run("gdd_run.py", "--pack", str(pack), "--export", "--export-out", str(tmp_path / "b"))
+    assert r["success"], r
+    assert r["data"]["export"]["html"] == "Demo_素材總覽.html" and (tmp_path / "b" / "symbols" / "W.png").exists()

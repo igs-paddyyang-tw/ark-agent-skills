@@ -5,7 +5,7 @@
   1. 分頁分類器（deterministic）：同義詞 + 內容特徵，把每個分頁貼上 role；貼不上 → unknown，不猜。
   2. extract-map.yaml：分類結果 + 人工覆寫（role / feature_id / 表頭列）。第一次 --classify 產草稿，人看一眼，之後全自動。
   3. 抽取：依 map 產 gdd.yaml / symbols.yaml / screens.yaml / rules/*.md / info.yaml / i18n.csv，
-     內嵌圖依儲存格錨點抽到 assets/{圖騰,全示意圖,規格書競品圖}/，最後交 gdd_lint（lint 紅 = 需要人補的地方，是預期訊號）。
+     內嵌圖依儲存格錨點抽到 assets/{symbols,illustrations,spec-reference-images}/，最後交 gdd_lint（lint 紅 = 需要人補的地方，是預期訊號）。
 
 role：version_log / design_points / spec / odds / symbols / rules / ui / info / i18n / art_list / audio / prob / flow / storyboard / protocol / dev_notes / unknown
 
@@ -516,7 +516,7 @@ def extract(xlsx: pathlib.Path, out: pathlib.Path, mp: dict) -> dict:
     wb = openpyxl.load_workbook(str(xlsx), data_only=True)
     out.mkdir(parents=True, exist_ok=True)
     (out / "rules").mkdir(exist_ok=True)
-    folders = {k: out / "assets" / v for k, v in (("symbols", "圖騰"), ("screens", "全示意圖"), ("reference", "規格書競品圖"))}
+    folders = {k: out / "assets" / v for k, v in C.ASSET_DIRS.items()}   # 樣板三夾英文名（symbols / illustrations / spec-reference-images）
     for f in folders.values():
         f.mkdir(parents=True, exist_ok=True)
     columns = ["en", "tw", "cn", "jp", "th", "id", "vi", "usage"]
@@ -599,7 +599,7 @@ def extract(xlsx: pathlib.Path, out: pathlib.Path, mp: dict) -> dict:
     gdd = {"contract": "1", "slug": mp["slug"], "title": f"{title} 素材總覽", "short_title": title, "domain": "slot-game",
            "status": "draft", "distribution": "internal",
            "subtitle": f"由 gdd_extract 自規格書「{xlsx.name}」抽出的草稿；參考圖為競品/概念素材，非定案。",
-           "assets": {"root": "assets", "symbols": "圖騰", "screens": "全示意圖", "reference": "規格書競品圖"},
+           "assets": {"root": "assets", **C.ASSET_DIRS},
            "spec": spec, "spec_note": "整理自規格書基本規格區。",
            "symbol_groups": groups, "symbols_note": "圖騰為規格書「圖騰設計 / Odds Table」抽出；最終圖請以美術交付的工程命名檔取代。",
            "odds_order": odds_order, "features": features,
@@ -633,7 +633,7 @@ def extract(xlsx: pathlib.Path, out: pathlib.Path, mp: dict) -> dict:
     if unres:
         L.append(f"- INFO 佔位符猜不到圖騰 code：{unres} → 改 info.yaml placeholders")
     if any(s["file"] is None for s in symbols):
-        L.append(f"- {sum(1 for s in symbols if s['file'] is None)} 個圖騰沒有圖（file: null）→ 補進 assets/圖騰 後填 file；lint 會擋")
+        L.append(f"- {sum(1 for s in symbols if s['file'] is None)} 個圖騰沒有圖（file: null）→ 補進 assets/symbols 後填 file；lint 會擋")
     L += ["", "## 下一步", "", "1. 改 `extract-map.yaml` 的 role / feature_id 後重跑（若分頁對錯）", "2. 補圖騰檔與佔位符", "3. `gdd_run.py --pack <此目錄>`", ""]
     C.atomic_write(out / "extract-report.md", "\n".join(L))
     return report

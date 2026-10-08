@@ -136,7 +136,13 @@ def main() -> None:
     screens = (C.yaml_load(pack / "screens.yaml").get("screens") or []) if (pack / "screens.yaml").exists() else []
     A = g.get("assets") or {}
     root = (pack / (A.get("root") or ".")).resolve()
-    sym_dir, scr_dir = root / A.get("symbols", "圖騰"), root / A.get("screens", "全示意圖")
+    def _adir(kind: str, en: str, zh: str) -> pathlib.Path:
+        """樣板三夾：gdd.yaml 有寫照寫；沒寫用英文定版名，只有舊中文夾時相容（同 gdd_common.load_pack）。"""
+        if A.get(kind):
+            return root / A[kind]
+        return root / zh if not (root / en).exists() and (root / zh).exists() else root / en
+
+    sym_dir, scr_dir = _adir("symbols", "symbols", "圖騰"), _adir("screens", "illustrations", "全示意圖")
     rules = {}
     for f in g.get("features", []):
         rp = f.get("rules")

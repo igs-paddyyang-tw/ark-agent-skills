@@ -12,6 +12,7 @@
   GDD-I18N     欄數與 gdd.i18n_columns 一致；每列欄數一致；{佔位符} 可解析（允許數字型 {25}、{000,000,000}）
   GDD-RULES    features.rules 檔存在；表格每列欄數與表頭一致
   GDD-INJECT   所有文字欄位無 script/事件屬性/隱形字元
+  GDD-ASSET    [warn] 三夾用舊中文名（LEGACY）；資產夾不存在仍由 GDD-YAML 報 error（pack 搬家後記得改 assets.root）
 
 用法: python gdd_lint.py --pack gdd/<slug> [--report lint-report.json]
 """
@@ -60,10 +61,15 @@ def lint(p: dict) -> dict:
         E("GDD-YAML", "features.id 重複")
     if len(set(grp_ids)) != len(grp_ids):
         E("GDD-YAML", "symbol_groups.id 重複")
+    # GDD-ASSET：三夾命名與存在（樣板定版英文名；舊中文名相容但提醒）
+    for kind in p["assets"].get("legacy") or []:
+        W("GDD-ASSET-LEGACY", f"assets.{kind} 使用舊中文夾名「{p['assets'][kind]}」；樣板定版為「{C.ASSET_DIRS[kind]}」"
+                              f"（gdd_export 一律輸出英文夾；可改名資料夾並更新 gdd.yaml.assets）", "gdd.yaml")
+
     for kind in ("symbols", "screens", "reference"):
         d = A["root"] / A[kind]
         if not d.is_dir():
-            E("GDD-YAML", f"資產夾不存在：{d}", f"assets.{kind}")
+            E("GDD-YAML", f"資產夾不存在：{d}（pack 搬家後 assets.root 要跟著改）", f"assets.{kind}")
     ref_files = set(os.listdir(A["root"] / A["reference"])) if (A["root"] / A["reference"]).is_dir() else set()
 
     # GDD-SYM

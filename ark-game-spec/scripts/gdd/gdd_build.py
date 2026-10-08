@@ -163,13 +163,17 @@ def todo_md(p: dict, lint_report: dict | None) -> str:
     return "\n".join(L)
 
 
-def build(pack: pathlib.Path, out: pathlib.Path | None, style_path: pathlib.Path | None) -> dict:
+def build(pack: pathlib.Path, out: pathlib.Path | None, style_path: pathlib.Path | None,
+          assets: dict | None = None, write_todo: bool = True) -> dict:
+    """assets：覆寫資產位置（gdd_export 用：root=輸出夾、root_rel='.'、三夾英文名），讓 HTML 以樣板相對路徑引用。"""
     try:
         import jinja2  # type: ignore
         import yaml  # type: ignore
     except ImportError:
         C.fail("MISSING_DEP", "需要 jinja2 與 pyyaml", "pip install jinja2 pyyaml")
     p = C.load_pack(pack)
+    if assets:
+        p["assets"] = {**p["assets"], **assets}
     style_path = style_path or C.SKILL_DIR / "assets" / "gdd-default-style.yaml"
     style = yaml.safe_load(style_path.read_text(encoding="utf-8"))
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(C.SKILL_DIR / "assets")), autoescape=True,
@@ -179,11 +183,12 @@ def build(pack: pathlib.Path, out: pathlib.Path | None, style_path: pathlib.Path
     html = tpl.render(g=p["gdd"], info=p["info"], i18n_rows=p["i18n_rows"], style=style, stamp=source_stamp(p), **ctx)
     out = out or (pack / (p["gdd"].get("build", {}) or {}).get("output", "素材總覽.html"))
     C.atomic_write(out, html)
-    lint_p = pack / "lint-report.json"
-    lint = json.loads(lint_p.read_text(encoding="utf-8")) if lint_p.exists() else None
     todo_p = pack / "todo.md"
-    C.atomic_write(todo_p, todo_md(p, lint))
-    return {"html": str(out), "todo": str(todo_p), "bytes": out.stat().st_size, "gallery": ctx["gallery_json"].count('"type"'),
+    if write_todo:
+        lint_p = pack / "lint-report.json"
+        lint = json.loads(lint_p.read_text(encoding="utf-8")) if lint_p.exists() else None
+        C.atomic_write(todo_p, todo_md(p, lint))
+    return {"html": str(out), "todo": str(todo_p) if write_todo else None, "bytes": out.stat().st_size, "gallery": ctx["gallery_json"].count('"type"'),
             "sections": 3 + len(p["gdd"].get("features", [])) + 3, "stamp": source_stamp(p)[14:-4]}
 
 

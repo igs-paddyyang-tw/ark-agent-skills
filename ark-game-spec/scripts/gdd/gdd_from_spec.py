@@ -152,7 +152,7 @@ def main() -> None:
     slug = a.slug or re.sub(r"[^a-z0-9-]+", "-", f"spec-{run_id}".lower()).strip("-")[:48]
     out = pathlib.Path(a.out)
     (out / "rules").mkdir(parents=True, exist_ok=True)
-    for d in ("圖騰", "全示意圖", "規格書競品圖"):
+    for d in C.ASSET_DIRS.values():
         (out / "assets" / d).mkdir(parents=True, exist_ok=True)
 
     # spec kv
@@ -206,7 +206,7 @@ def main() -> None:
                 fid = "main"
             counters[fid] = counters.get(fid, 0) + 1
             fn = f"E{kf['idx'] + 1:03d}_{kf.get('label', 'frame')}_{kf.get('ts', '').replace(':', '-').replace('.', '_')}{src.suffix}"
-            dst = out / "assets" / "全示意圖" / fn
+            dst = out / "assets" / C.ASSET_DIRS["screens"] / fn
             if not dst.exists() or dst.read_bytes() != src.read_bytes():
                 shutil.copy2(src, dst)
             screens.append({"feature": fid, "step": str(counters[fid]), "title": f"{kf.get('label', 'frame')} @ {kf.get('ts', '')}", "file": fn,
@@ -219,7 +219,7 @@ def main() -> None:
     gdd = {"contract": "1", "slug": slug, "title": f"{title} 素材總覽（規格草稿）", "short_title": str(title), "domain": fm.get("domain", "slot-game"),
            "status": "draft", "distribution": "internal",
            "subtitle": f"由 gdd_from_spec 自 {spec_p.name}（{stage}）逐條繼承；影片關鍵幀為競品畫面，僅供內部；數值待 quicktest。",
-           "assets": {"root": "assets", "symbols": "圖騰", "screens": "全示意圖", "reference": "規格書競品圖"},
+           "assets": {"root": "assets", **C.ASSET_DIRS},
            "spec": kv, "spec_note": "由 spec claims 換算；來源 key 見 extract.claims。",
            "symbol_groups": [{"id": g, "title": t} for g, t in (("normal", "一般圖騰（影片實體，待美術）"), ("special", "特殊圖騰")) if any(s["group"] == g for s in symbols)] or [{"id": "normal", "title": "一般圖騰"}],
            "symbols_note": "符號來自影片分析實體（不為競品符號取名）；圖檔待美術，賠率待數值。",

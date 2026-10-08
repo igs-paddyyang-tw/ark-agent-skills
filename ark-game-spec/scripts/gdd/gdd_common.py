@@ -82,6 +82,24 @@ def atomic_write(path: pathlib.Path, text: str) -> None:
 
 # ── pack 載入 ─────────────────────────────────────────────────────────────
 
+# 企劃樣板的三夾（data/references/kaiji-gdd-sample 定版，2026-10-01 英文化）：素材總覽.html 與三夾同層
+ASSET_DIRS = {"symbols": "symbols", "screens": "illustrations", "reference": "spec-reference-images"}
+# 舊中文夾名（2.0 以前預設）：讀取相容，lint 給 GDD-ASSET-LEGACY 警告，gdd_export 一律輸出英文夾
+LEGACY_ASSET_DIRS = {"symbols": "圖騰", "screens": "全示意圖", "reference": "規格書競品圖"}
+BUNDLE_SUFFIX = "_素材總覽.html"
+_BAD_FN = re.compile(r'[\\/:*?"<>|\s]+')
+
+
+def bundle_html_name(gdd: dict) -> str:
+    """樣板交付檔名：build.bundle_html ＞ {short_title}_素材總覽.html（樣板例：賭博默示錄_素材總覽.html）。"""
+    b = (gdd.get("build") or {}).get("bundle_html")
+    if b:
+        return str(b)
+    base = str(gdd.get("short_title") or gdd.get("title") or gdd.get("slug") or "game")
+    base = base.replace("素材總覽", "").strip(" _-（）()")
+    return _BAD_FN.sub("_", base).strip("_") + BUNDLE_SUFFIX
+
+
 def pack_dir(path: str) -> pathlib.Path:
     p = pathlib.Path(path).resolve()
     if p.is_file() and p.name == "gdd.yaml":
@@ -114,8 +132,17 @@ def load_pack(pack: pathlib.Path) -> dict:
     assets = {
         "root": root,
         "root_rel": (a.get("root") or ".").replace("\\", "/").rstrip("/"),
-        "symbols": a.get("symbols", "圖騰"), "screens": a.get("screens", "全示意圖"), "reference": a.get("reference", "規格書競品圖"),
+        "legacy": [],
     }
+    for kind, name in ASSET_DIRS.items():
+        if a.get(kind):                                   # gdd.yaml 有寫就照寫
+            assets[kind] = a[kind]
+        elif not (root / name).exists() and (root / LEGACY_ASSET_DIRS[kind]).exists():
+            assets[kind] = LEGACY_ASSET_DIRS[kind]        # 舊 pack 沒寫且只有中文夾 → 相容
+        else:
+            assets[kind] = name
+        if assets[kind] == LEGACY_ASSET_DIRS[kind]:
+            assets["legacy"].append(kind)
     return {"dir": pack, "gdd": gdd, "symbols": symbols, "screens": screens, "info": info,
             "i18n_header": i18n_header, "i18n_rows": i18n_rows, "rules": rules, "assets": assets}
 

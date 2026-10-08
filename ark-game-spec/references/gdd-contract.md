@@ -11,7 +11,9 @@ title / short_title / subtitle
 domain: slot-game                 # ark-game-domains pack id
 status: draft | review | published
 distribution: internal            # 固定；lint 擋其他值
-assets: {root: ../../gdd-sample, symbols: 圖騰, screens: 全示意圖, reference: 規格書競品圖}   # root 相對 gdd.yaml；pack 在 data/gdd/<slug>/ 時 ../../gdd-sample = data/gdd-sample
+assets: {root: assets, symbols: symbols, screens: illustrations, reference: spec-reference-images}   # root 相對 gdd.yaml
+#   三夾名省略時：預設英文定版名（gdd_common.ASSET_DIRS）；只有舊中文夾（圖騰/全示意圖/規格書競品圖）時自動相容並警告 GDD-ASSET-LEGACY
+#   golden case 直接指樣板：root: ../../data/references/kaiji-gdd-sample（依 pack 實際位置調整相對層數）
 spec: [{k, v, short?, short_k?, kv?: false}]   # short 有值 → 進首頁 spec 列（標籤用 short_k 或 k）；kv:false → 不進「遊戲規格」kv 表
 spec_note / symbols_note / map_note / info_note / i18n_note   # 各段 note（symbols_note 允許 <code>）
 symbols_internal_notes: [..]      # 只進 HTML 註解
@@ -98,3 +100,26 @@ slots:
 ## lint 規則
 
 見 SKILL.md「lint 規則」表；error 阻擋 build，warn 全部進 `todo.md`。
+
+## 交付夾（gdd_export，2.1）
+
+企劃樣板的交付形態是「一個 HTML + 三個圖夾」放同一層（`data/references/kaiji-gdd-sample` 定版）。`gdd_export.py`（或 `gdd_run --export`、`gs_run --stage gdd --export`）把 pack 編成同結構：
+
+```text
+<out>/                               預設 <pack>/export/
+├── <short_title>_素材總覽.html       檔名可用 gdd.yaml.build.bundle_html 覆寫；<title> = "{short_title} 素材總覽"
+├── symbols/                          symbols.yaml 的 file
+├── illustrations/                    screens.yaml 的 file ＋ info.yaml slots 的 file
+└── spec-reference-images/            symbols.yaml 的 ref_files
+```
+
+| 規則 | 內容 |
+|---|---|
+| 夾名 | 一律英文三夾，與來源 pack 用中文或英文無關；三夾即使空也建立 |
+| 複製範圍 | 預設只帶「HTML 有引用」的圖；`--all-assets` 連同來源三夾未引用的圖一起帶（重現原樣板夾）|
+| 連結 | HTML 內 img / href 與燈箱 gallery 的 src 一律是 `symbols/…`、`illustrations/…`、`spec-reference-images/…` 相對路徑（不含 `assets/` 或 assets.root）|
+| 守門 | 任一連結在交付夾找不到，或指向三夾以外 → exit 3（GATE_BLOCKED）；來源缺圖列在 manifest |
+| 交付夾內容 | 只有 HTML 與三夾，不放 yaml / json；核對清單寫回 pack 的 `export-manifest.json`（copied / counts / missing_sources / broken_links / extra_top_level / source_stamp / legacy_source_dirs）|
+| 戳記 | HTML 仍帶 `gdd-src` 戳記（來源 pack 各檔 sha），可追溯是哪一版 pack 產的 |
+
+KAIJI golden case 比對（2026-10-07）：交付夾 symbols 25 / illustrations 31 / spec-reference-images 40，全部 ⊆ 樣板夾；樣板夾多 5 張示意圖（樣板 HTML 本身也未引用）；`--all-assets` 時三夾與樣板逐檔一致。

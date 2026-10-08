@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ g.title }}</title>
+<title>{% if g.short_title %}{{ g.short_title }} 素材總覽{% else %}{{ g.title }}{% endif %}</title>
 <style>
 :root{
 {%- for k, v in style.tokens.items() %}
