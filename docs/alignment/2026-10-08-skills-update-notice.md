@@ -1,7 +1,7 @@
 # Skill 更新通知（2026-10-06 ~ 10-08）
 
 > 給各消費端 agent：請照本文件把 `.kiro/skills/` 同步到上游最新版。
-> **上游**：`igs-paddyyang-tw/ark-agent-skills`，`main` @ **`fc272d8`** 以後（release `skills-2026.10-r1`）
+> **上游**：`igs-paddyyang-tw/ark-agent-skills`，`main` @ **`91589e9`** 以後（release `skills-2026.10-r1`）
 > **本文件位置**：skills repo 的 `docs/alignment/2026-10-08-skills-update-notice.md`（同步 skill 後就在 `.kiro/skills/docs/alignment/`）
 
 ## 1. 一句話
@@ -16,7 +16,7 @@
 | `ark-game-prob` | **1.1.0** | （新 skill） | 🟢 新增 |
 | `ark-game-quicktest` | **2.1.0** | 1.x | 🔴 破壞性（機率規格書腳本已移出） |
 | `ark-html-report` | **1.2.0** | 1.0 / 1.1 | 🟡 新功能（需要 Pillow） |
-| `ark-mobile-adb` | **2.2.1** | 2.1.0 | 🟢 新功能 playtest（清單 md → 試玩 + 自我探索 → HTML 報告）＋ 修正：無 opencv 時模板比對 33s→0.3s（`fc272d8`） |
+| `ark-mobile-adb` | **2.2.2** | 2.1.0 | 🟢 新功能 playtest（清單 md → 試玩 + 自我探索 → HTML 報告）＋ 效能：無 opencv 時模板比對 33s→0.3s、同畫面多模板共用前處理（`91589e9`）；建議裝 `opencv-python-headless` |
 | `ark-github-cli`、`ark-spec-executor` | 版本沒變 | — | ⚪ 只改了測試檔名 |
 
 > ⚠️ **aidev 請注意**：你本地 `output/` 裡的 `ark-game-spec-2.2.0.zip`、`ark-html-report-1.1.0.zip` **已經合併進上游**，請改從上游同步 2.3.0 / 1.2.0，**不要再裝 output 裡的包**。
@@ -68,7 +68,7 @@ python .kiro/skills/ark-skills-align/scripts/align_sync.py plan   # 確認後 ap
 # 2) 刪掉第 3 節的舊 skill 目錄，並清掉引用
 grep -rn "ark-video-understanding\|ark-game-analysis\|ark-game-gdd\|ark-game-atlas\|ark-game-domains\|ark-game-design-doc" .kiro/ CLAUDE.md AGENTS.md
 # 3) 依賴
-pip install pyyaml jinja2 openpyxl Pillow formulas   # Pillow：html_images；formulas：prob Excel 真值驗證（選配）
+pip install pyyaml jinja2 openpyxl Pillow formulas opencv-python-headless   # opencv：mobile-adb 模板比對加速（選配）； Pillow：html_images；formulas：prob Excel 真值驗證（選配）
 # 4) 驗收
 python .kiro/skills/ark-game-spec/scripts/gs_run.py --stage pack --all
 python -m pytest -q .kiro/skills/ark-game-spec/scripts/tests .kiro/skills/ark-game-prob/scripts/tests \
