@@ -129,3 +129,21 @@ def test_probtable_xlsx(tmp_path):
     # md 改了 → xlsx 戳記 STALE
     md.write_text(md.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     assert any(v["rule"] == "PS-STALE" and "xlsx" in v["where"] for v in ps_lint.lint(md.parent)["violations"])
+
+
+def test_ps_run_dest_no_slug_layer(tmp_path):
+    """ps_run --dest 直接落目錄、不加 slug 層；內容 slug 仍正確（還原模式 output/games/<slug>/prob/）。"""
+    qt = qt_dir(tmp_path)
+    dest = tmp_path / "output" / "games" / "testgame" / "prob"
+    r = run("ps_run.py", "--qt", str(qt), "--dest", str(dest), "--slug", "testgame")
+    assert r["rc"] == 0, r
+    assert (dest / "prob-spec.md").exists(), "產物應直接在 dest"
+    assert not (dest / "testgame").exists(), "不應有多餘 slug 層"
+    meta = json.loads((dest / "prob-spec.meta.json").read_text(encoding="utf-8"))
+    assert meta.get("slug") == "testgame", "內容 slug 應維持真 slug，非落點名"
+
+
+def test_ps_run_xlsx_view_needs_config(tmp_path):
+    """xlsx 模式用 --xlsx-view 卻沒 --config → NEED_CONFIG，不靜默略過。"""
+    r = run("ps_run.py", "--xlsx", str(tmp_path / "nonexist.xlsx"), "--xlsx-view")
+    assert r.get("code") == "NEED_CONFIG" or "NEED_CONFIG" in str(r), r

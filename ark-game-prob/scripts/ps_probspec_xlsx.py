@@ -219,7 +219,7 @@ def run_from_args(a) -> None:
         C.fail("BAD_INPUT", f"找不到 {dp}", "先跑 ps_extract.py")
     data = json.loads(dp.read_text(encoding="utf-8"))
     slug = a.slug or data.get("slug") or dp.parent.name
-    out_dir = pathlib.Path(a.out) / slug if pathlib.Path(a.out).name != slug else pathlib.Path(a.out)
+    out_dir = pathlib.Path(a.dest) if getattr(a, "dest", None) else (pathlib.Path(a.out) / slug if pathlib.Path(a.out).name != slug else pathlib.Path(a.out))
     xlsx = pathlib.Path(a.xlsx) if a.xlsx else pathlib.Path(data["source"]["path"])
     meta = build(data, out_dir, slug=slug, author=a.author, date=a.date, xlsx_path=xlsx if xlsx.exists() else None, extra_sources={"prob-data": dp})
     C.emit({"out": str(out_dir / "prob-spec.md"), "verdict": meta["verdict"], "derived": len(meta["derived"]), "human_blocks": 5,

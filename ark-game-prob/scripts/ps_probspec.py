@@ -194,6 +194,7 @@ def main() -> None:
     ap.add_argument("--run", help="影片 run 目錄（預設由 qt-config.sources.config_spec 推）")
     ap.add_argument("--out", default="data/prob")
     ap.add_argument("--slug")
+    ap.add_argument("--dest", help="直接輸出到此目錄（優先於 --out/--slug，不加 slug 層）")
     ap.add_argument("--version", help="odds 版本（預設取 qt-config.version）")
     ap.add_argument("--author", default=os.getenv("ARK_AUTHOR", "paddyyang"))
     ap.add_argument("--date", default=dt.date.today().isoformat())
@@ -250,7 +251,7 @@ def main() -> None:
     gdd = C.yaml_load(gdd_dir / "gdd.yaml") if gdd_dir and (gdd_dir / "gdd.yaml").exists() else None
     dec = C.yaml_load(dec_p) if dec_p else None
 
-    out_dir = pathlib.Path(a.out) / slug
+    out_dir = pathlib.Path(a.dest) if a.dest else pathlib.Path(a.out) / slug
     md_p = out_dir / "prob-spec.md"
     # 人工區保留
     human: dict[str, str] = {}

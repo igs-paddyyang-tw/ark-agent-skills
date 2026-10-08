@@ -8,6 +8,9 @@
 用法:
     python qt_report.py --report <report_1.0.0.txt> [--targets quicktest.yaml] [--config-spec config-spec.yaml]
                         [--out <dir>] [--publish docs/reports] [--wiki-schema knowledge/shared/schema.md]
+                        [--version-id a-standard]   # 單一版本原則：對照 quicktest.yaml.versions[] 該版 expect/門檻/分母
+三版對照（單一版本原則，各版獨立跑）：各版跑各自快測產 report，再逐版 qt_report --version-id <id>；
+    versions[] 每版可帶 expect(pass/fail)、target_rtp、rtp_denominator: item_price + item_price（道具卡 RTP=FG平均倍率/售價）。
 exit: 0 / 2 BAD_INPUT / 6 lint FAIL（引擎 bug）
 """
 from __future__ import annotations
@@ -151,16 +154,38 @@ def load_award_csv(p: pathlib.Path) -> list[dict]:
 
 # ── 守門（P-003 三向）───────────────────────────────────────────────────────
 
-def gate(rep: dict, targets: dict, config_spec: dict | None) -> dict:
+def gate(rep: dict, targets: dict, config_spec: dict | None, version: str | None = None) -> dict:
     checks = []
-    tol = float(targets.get("rtp_tolerance", 0.005))
-    tgt = targets.get("target_rtp")
-    if tgt is None or rep.get("rtp_total") is None:
+    # 單一版本原則：targets 可帶 versions[]，--version 指定時取該版的 expect / 門檻 / 分母
+    vspec = {}
+    if version:
+        for v in targets.get("versions", []) or []:
+            if str(v.get("id")) == str(version):
+                vspec = v
+                break
+        if not vspec:
+            avail = [str(v.get("id")) for v in targets.get("versions", []) or []]
+            checks.append({"id": "version", "status": "SKIP",
+                           "msg": f"--version-id {version} 不在 quicktest.yaml.versions（有：{avail or '無 versions 段'}）→ 用頂層 target_rtp"})
+    tol = float(vspec.get("rtp_tolerance", targets.get("rtp_tolerance", 0.005)))
+    tgt = vspec.get("target_rtp", targets.get("target_rtp"))
+    # 道具卡：RTP 分母用售價（FG 平均倍率 / 售價倍數），非線注分母
+    denom = vspec.get("rtp_denominator")
+    rtp_val = rep.get("rtp_total")
+    if denom == "item_price":
+        price = vspec.get("item_price")
+        avg_mult = (rep.get("games", {}).get("SpecialGameTotal", {}) or {}).get("multi") or rep.get("avg_multi")
+        if price and avg_mult:
+            rtp_val = float(avg_mult) / float(price)
+            checks.append({"id": "rtp-denominator", "status": "INFO", "msg": f"道具卡 RTP 以售價為分母：FG 平均倍率 {avg_mult} / 售價 {price} = {rtp_val:.4%}"})
+        else:
+            checks.append({"id": "rtp-denominator", "status": "SKIP", "msg": "道具卡分母需 item_price + FG 平均倍率，缺一"})
+    if tgt is None or rtp_val is None:
         checks.append({"id": "rtp", "status": "SKIP", "msg": "無 target_rtp（quicktest.yaml）或報告無 Total RTP"})
     else:
-        diff = rep["rtp_total"] - float(tgt)
-        checks.append({"id": "rtp", "status": "PASS" if abs(diff) <= tol else "FAIL", "sim": rep["rtp_total"], "target": float(tgt), "diff": diff, "tol": tol,
-                       "msg": f"模擬 {rep['rtp_total']:.4%} vs 目標 {float(tgt):.2%}（差 {diff:+.4%}，容許 ±{tol:.1%}）"})
+        diff = rtp_val - float(tgt)
+        checks.append({"id": "rtp", "status": "PASS" if abs(diff) <= tol else "FAIL", "sim": rtp_val, "target": float(tgt), "diff": diff, "tol": tol,
+                       "msg": f"模擬 {rtp_val:.4%} vs 目標 {float(tgt):.2%}（差 {diff:+.4%}，容許 ±{tol:.1%}）"})
     feels = targets.get("feel") or []
     if not feels:
         checks.append({"id": "feel", "status": "SKIP", "msg": "無體感目標（quicktest.yaml.feel）"})
@@ -185,14 +210,24 @@ def gate(rep: dict, targets: dict, config_spec: dict | None) -> dict:
                 decided.add(p.get("name"))
         checks.append({"id": "null", "status": "FAIL" if decided else "PASS",
                        "msg": ("未經決議卻有值的參數：" + ", ".join(sorted(decided))) if decided else "parameters.value 全為 null 或附 decision", "params": sorted(decided)})
-    st = [c["status"] for c in checks]
+    st = [c["status"] for c in checks if c["status"] != "INFO"]
     if "FAIL" in st:
         verdict = "rejected"
     elif "PASS" in st and "SKIP" not in st:
         verdict = "confirmed"
     else:
         verdict = "inconclusive"
-    return {"checks": checks, "verdict": verdict}
+    out = {"checks": checks, "verdict": verdict}
+    # 單一版本原則：若指定版本有 expect，對照 verdict 是否符合預期
+    if version and vspec.get("expect"):
+        exp = str(vspec["expect"])  # pass / fail
+        met = (exp == "pass" and verdict == "confirmed") or (exp == "fail" and verdict == "rejected")
+        out["version"] = str(version)
+        out["expect"] = exp
+        out["expect_met"] = met
+        out["checks"].append({"id": "expect", "status": "PASS" if met else "FAIL",
+                              "msg": f"版本 {version} 期望 {exp}，實得 {verdict} → {'符合預期' if met else '不符預期'}"})
+    return out
 
 
 # ── Markdown（ark-md-report type: data）────────────────────────────────────
@@ -334,6 +369,7 @@ def main() -> None:
     ap.add_argument("--report", required=True)
     ap.add_argument("--targets", help="quicktest.yaml：target_rtp / rtp_tolerance / feel[] / game / slug")
     ap.add_argument("--config-spec")
+    ap.add_argument("--version-id", dest="version_id", help="單一版本原則：對照 quicktest.yaml 的 versions[] 該版 expect/門檻/分母")
     ap.add_argument("--out", help="輸出目錄（預設 report 同目錄 /qt-report）")
     ap.add_argument("--publish")
     ap.add_argument("--wiki-schema")
@@ -350,7 +386,7 @@ def main() -> None:
     rep["award_range"] = award
     targets = C.yaml_load(pathlib.Path(a.targets)) if a.targets else {}
     cfg = C.yaml_load(pathlib.Path(a.config_spec)) if a.config_spec else None
-    g = gate(rep, targets, cfg)
+    g = gate(rep, targets, cfg, version=a.version_id)
     rep["gate"] = g
     rep["template_caveats"] = template_caveats(rep, str(targets.get("scatter_id") or 2))
     out = pathlib.Path(a.out) if a.out else src.parent / "qt-report"
@@ -368,6 +404,10 @@ def main() -> None:
     result = {"json": str(out / "rtp-report.json"), "md": str(md_path), "lint": "PASS" if rc == 0 else "FAIL", "lint_output": lint_out.strip().splitlines()[-4:],
               "verdict": g["verdict"], "checks": [{"id": c["id"], "status": c["status"]} for c in g["checks"]],
               "rtp_total": rep.get("rtp_total"), "spins": rep.get("spins")}
+    if g.get("expect"):
+        result["version"] = g.get("version")
+        result["expect"] = g.get("expect")
+        result["expect_met"] = g.get("expect_met")
     if rc != 0:
         C.fail("QUERY_FAILED", "qt_report 產出未通過 report_lint（引擎 bug）", lint_out, result)
     if a.publish:

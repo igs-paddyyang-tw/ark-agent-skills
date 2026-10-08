@@ -44,6 +44,36 @@ def test_gate_three_way():
     assert Q.gate(rep, {}, None)["verdict"] == "inconclusive"
 
 
+def test_gate_version_expect():
+    """單一版本原則：versions[] 的 expect 對照 verdict（b-variant 破標 expect:fail → rejected 才算符合）。"""
+    rep = Q.parse_report(GOLDEN.read_text(encoding="utf-8"))  # rtp≈0.595
+    targets = {"feel": [{"game": "SpecialGameTotal", "preset": "標準節奏"}],
+               "versions": [
+                   {"id": "a-standard", "expect": "pass", "target_rtp": 0.595, "rtp_tolerance": 0.01},
+                   {"id": "b-variant", "expect": "fail", "target_rtp": 0.595, "rtp_tolerance": 0.01},
+               ]}
+    cfg = {"parameters": [{"name": "x", "value": None}]}
+    # a-standard：rtp 落在容許 + 三向過 → confirmed → 符合 expect:pass
+    ga = Q.gate(rep, targets, cfg, version="a-standard")
+    assert ga["verdict"] == "confirmed" and ga["expect_met"] is True, ga
+    # b-variant：同報告但 expect:fail → confirmed 不符預期（expect_met=False）
+    gb = Q.gate(rep, targets, cfg, version="b-variant")
+    assert gb["expect_met"] is False, "b 版期望 fail 卻 confirmed → 不符預期"
+
+
+def test_gate_itemcard_price_denominator():
+    """道具卡 RTP 以售價為分母：FG 平均倍率 / 售價。"""
+    rep = {"rtp_total": 0.5, "spins": 1000, "games": {"SpecialGameTotal": {"multi": 80}}}
+    targets = {"versions": [{"id": "itemcard", "expect": "pass", "target_rtp": 0.8,
+                             "rtp_tolerance": 0.01, "rtp_denominator": "item_price", "item_price": 100}]}
+    g = Q.gate(rep, targets, {"parameters": []}, version="itemcard")
+    denom = [c for c in g["checks"] if c["id"] == "rtp-denominator"]
+    assert denom and "80" in denom[0]["msg"] and "100" in denom[0]["msg"], g
+    # 80/100 = 0.8 → 命中 target 0.8 → rtp PASS
+    rtp = [c for c in g["checks"] if c["id"] == "rtp"][0]
+    assert rtp["status"] == "PASS", rtp
+
+
 def test_cli_md_lint_and_deterministic(tmp_path):
     out = tmp_path / "qt"
     a = run_cli("--report", str(GOLDEN), "--targets", str(FIX / "quicktest.golden.yaml"), "--out", str(out))

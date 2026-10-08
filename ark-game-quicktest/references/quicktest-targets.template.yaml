@@ -1,0 +1,26 @@
+# quicktest.yaml — 快測目標與驗收區間（qt_report 的三向守門來源）
+# 沒有目標 → 該向 SKIP，verdict 最多 inconclusive（回報數值不下結論）。
+#
+# 單一版本原則：一次快測對一版設定檔。多版就各自跑一次 qt_report --version-id <id>，
+# 從下方 versions[] 取該版的 expect / 門檻 / 分母。各版獨立、不混算。
+
+slug: <slug>            # 報告檔名用
+game: <遊戲名>
+
+# ── 單版（最常用）：直接寫 target_rtp / rtp_tolerance / feel ──
+target_rtp: 0.96
+rtp_tolerance: 0.005    # ±0.5%
+scatter_id: 2
+feel:
+  - {game: SpecialGameTotal, preset: 標準節奏}   # FG 觸發 1/150~1/80（preset 見 qt_report.FEEL_BANDS：稀有大事件/標準節奏/高頻小獎…）
+  # - {game: SpecialGameTotal, band: [0.00333, 0.00667]}  # 或自訂區間 [rate_lo, rate_hi]
+
+# ── 多版（可選）：qt_report --version-id <id> 時取對應版 ──
+# 每版獨立跑快測產各自 report，再逐版 qt_report 對照 expect。
+versions:
+  - {id: a-standard, expect: pass, target_rtp: 0.96, rtp_tolerance: 0.005}
+  - {id: b-variant,  expect: fail, note: 刻意破標示範（verdict=rejected 才算符合預期）}
+  - {id: itemcard,   expect: pass, rtp_denominator: item_price, item_price: 100,
+     note: "道具卡 RTP = FG 平均倍率 / 售價倍數；填實際售價"}
+
+# config-spec.yaml（另檔）：第③向 null 守門來源 —— 參數 value 全 null 或附 decision 才 PASS

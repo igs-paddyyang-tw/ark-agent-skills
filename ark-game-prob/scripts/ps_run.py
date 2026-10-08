@@ -3,9 +3,11 @@
 
   python ps_run.py --xlsx <機率表.xlsx> --out data/prob --slug <slug> [--game <名>] [--config <快測設定檔.json> [--map <map.yaml>]] [--xlsx-view]
   python ps_run.py --qt data/quicktest/<slug> [--out data/prob]      # qt 模式（新遊戲設計鏈）：ps_probspec --qt → ps_html → ps_lint
+  python ps_run.py --xlsx <xlsx> --config <json> --dest output/games/<slug>/prob --xlsx-view   # 還原模式：直接落 prob/（不加 slug 層），ps_diff 落 config-diff
 
 每步以 subprocess 執行同目錄腳本（F-6：stdout 一律 UTF-8；失敗即停並回傳該步的 envelope）。
---xlsx-view 另產公版 prob-spec.xlsx（ps_probtable，需 qt 模式來源；xlsx 模式下來源本身就是公版表，預設略過）。
+--dest <dir>：直接輸出到該目錄（不加 slug 層），對應 output/games/<slug>/prob/；與 --out/--slug 的 <out>/<slug> 落法互斥。
+--xlsx-view 另產公版 prob-spec.xlsx（需 --config 從設定檔 dump；xlsx 模式缺 --config → NEED_CONFIG，不靜默略過）。
 交付格式：ps_run <mode>｜<slug>｜ps_lint PASS/FAIL｜<N> 處待決議｜[ps_diff 一致 a / 不一致 b]
 """
 from __future__ import annotations
@@ -43,6 +45,7 @@ def main() -> None:
     ap.add_argument("--qt", help="qt 模式：data/quicktest/<slug>")
     ap.add_argument("--out", default="data/prob")
     ap.add_argument("--slug")
+    ap.add_argument("--dest", help="直接輸出到此目錄（不加 slug 層）；還原模式落 output/games/<slug>/prob/")
     ap.add_argument("--game")
     ap.add_argument("--config", help="選配：快測設定檔 JSON → 跑 ps_diff")
     ap.add_argument("--map", help="ps_diff 對照規則 yaml")
@@ -55,18 +58,24 @@ def main() -> None:
     a = ap.parse_args()
     if not a.xlsx and not a.qt:
         C.fail("BAD_INPUT", "需要 --xlsx 或 --qt")
+    # --xlsx-view 要求 --config（正規機率表從設定檔 dump）
+    if a.xlsx_view and a.xlsx and not a.config:
+        C.fail("NEED_CONFIG", "xlsx 模式的正規機率表要從設定檔 dump",
+               "加 --config <ProbSetting.json>；或改用來源 xlsx 本身當機率表")
     steps: dict[str, dict] = {}
     if a.xlsx:
         slug = a.slug or pathlib.Path(a.xlsx).stem.split("_")[0]
-        out_dir = pathlib.Path(a.out) / slug
+        out_dir = pathlib.Path(a.dest) if a.dest else pathlib.Path(a.out) / slug
         args = ["--xlsx", a.xlsx, "--out", str(out_dir), "--slug", slug] + (["--game", a.game] if a.game else [])
         steps["extract"] = step("ps_extract.py", args)
-        steps["probspec"] = step("ps_probspec.py", ["--data", str(out_dir / "prob-data.json"), "--out", a.out, "--slug", slug])
+        pargs = ["--data", str(out_dir / "prob-data.json")] + (["--dest", str(out_dir), "--slug", slug] if a.dest else ["--out", a.out, "--slug", slug])
+        steps["probspec"] = step("ps_probspec.py", pargs)
         mode = "xlsx"
     else:
         slug = a.slug or pathlib.Path(a.qt).name
-        out_dir = pathlib.Path(a.out) / slug
-        steps["probspec"] = step("ps_probspec.py", ["--qt", a.qt, "--out", a.out, "--slug", slug])
+        out_dir = pathlib.Path(a.dest) if a.dest else pathlib.Path(a.out) / slug
+        pargs = ["--qt", a.qt] + (["--dest", str(out_dir), "--slug", slug] if a.dest else ["--out", a.out, "--slug", slug])
+        steps["probspec"] = step("ps_probspec.py", pargs)
         if a.xlsx_view:
             steps["probtable"] = step("ps_probtable.py", ["--dir", str(out_dir)])
         mode = "qt"
