@@ -357,3 +357,24 @@
 ```css
 .report-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:64px; padding-top:20px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-3); }
 ```
+
+## 18. 圖片 figure／圖庫 gallery（1.1）
+
+放圖不要手寫 base64：先用相對路徑，交付前跑 `scripts/html_images.py embed --layout`，引擎會把獨立成段的圖包成下面的結構並內嵌。
+要自己排版時也照這個 class 寫，CSS 由引擎注入（`--layout`），只讀 token 變數。
+
+```html
+<!-- 單張：直式截圖（ar-portrait 限寬 360）、橫式（ar-landscape 滿版）、圖示（ar-icon 限寬 160）、圖表（ar-diagram）-->
+<figure class="ar-fig ar-portrait">
+  <img src="screens/fg_enter.png" alt="免費遊戲進場" data-role="portrait">
+  <figcaption>免費遊戲進場</figcaption>
+</figure>
+
+<!-- 多張：格狀圖庫（自動 auto-fill，最小 200px）；全部是圖示時加 ar-icons（最小 110px）-->
+<div class="ar-gallery">
+  <figure class="ar-fig ar-portrait"><img src="screens/a.png" alt="待機"><figcaption>待機</figcaption></figure>
+  <figure class="ar-fig ar-portrait"><img src="screens/b.png" alt="轉場"><figcaption>轉場</figcaption></figure>
+</div>
+```
+
+圖說寫「這張圖要讀者看什麼」，不寫檔名。同一張圖在報告裡出現很多次（例如圖示嵌在文字裡）沒關係，引擎會只存一份。

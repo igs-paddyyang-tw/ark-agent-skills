@@ -96,3 +96,28 @@ def test_template_caveats_on_golden():
     assert "F-2" in {c["finding"] for c in Q.template_caveats(rep)}
     rep["games"]["Ultra"]["freq"] = 300.0                 # 分型統計正常時不誤報
     assert "F-1" not in {c["finding"] for c in Q.template_caveats(rep)}
+
+
+def _restore_cfg(tmp_path, keys=("Bet_Cost", "RTP")):
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "a.json").write_text(json.dumps({"Bet_Cost": 50, "RTP": 0.96}), encoding="utf-8")
+    spec = tmp_path / "spec"; spec.mkdir()
+    return spec, {"mode": "restore-live", "parameters": [
+        {"name": k, "value": {"$ref": f"../config/a.json#/{k}"}, "decision": "restore-live: abc"} for k in keys]}
+
+
+def test_gate_restore_live_ref_resolvable(tmp_path):
+    rep = Q.parse_report(GOLDEN.read_text(encoding="utf-8"))
+    spec, cfg = _restore_cfg(tmp_path)
+    c = next(x for x in Q.gate(rep, {"target_rtp": 0.595}, cfg, config_spec_dir=spec)["checks"] if x["id"] == "null")
+    assert c["status"] == "PASS" and c["mode"] == "restore-live"
+
+
+def test_gate_restore_live_blocks_formal_pass(tmp_path):
+    """反證（F5）：還原模式每鍵都帶 decision —— 舊規則「有 decision 就過」會形式過關；$ref 壞掉／裸值必須 FAIL。"""
+    rep = Q.parse_report(GOLDEN.read_text(encoding="utf-8"))
+    spec, cfg = _restore_cfg(tmp_path, keys=("Bet_Cost", "NoSuchKey"))
+    cfg["parameters"].append({"name": "Desc", "value": "10 組 SC 密度分層權重", "decision": "restore-live: abc"})
+    g = Q.gate(rep, {"target_rtp": 0.595}, cfg, config_spec_dir=spec)
+    c = next(x for x in g["checks"] if x["id"] == "null")
+    assert c["status"] == "FAIL" and c["params"] == ["Desc", "NoSuchKey"] and g["verdict"] == "rejected"

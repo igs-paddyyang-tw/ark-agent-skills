@@ -493,5 +493,35 @@
     "skill": "ark-superpowers",
     "version": "1.0.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:cbddf1b9e59cf7509d54c329150e87a3f77589b0135fa2ce009ddb31eef3b090": {
+    "skill": "ark-game-quicktest",
+    "version": "2.1.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:12541a840304cee510dbeb8f7a8644b408e4ef31cbefed0c163cf3bea25c007f": {
+    "skill": "ark-game-spec",
+    "version": "2.3.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:a6358aeb610e2ae1be8aa1a2ce5235dae247e5421c1cc17b6aca66339069150c": {
+    "skill": "ark-github-cli",
+    "version": "0.2.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:7bde5e351ce4ddd127d9123d78d07a9b0f43cc244a4b606983996b5cc072656e": {
+    "skill": "ark-html-report",
+    "version": "1.2.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:772339e97236f990fc3e0549f571f108fdcf76586e928be0073a0df4a93d4e53": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:39357a97e525aa5dc885f0f4589c3f68b07039bdda036f5feb9bf23d619828ea": {
+    "skill": "ark-spec-executor",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
   }
 }

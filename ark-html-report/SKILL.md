@@ -1,16 +1,17 @@
 ---
 name: ark-html-report
-description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。只要使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時，就使用此 skill。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout 等），元件與風格可任意組合。與 ark-md-report 成對：本 skill 是 View 軌（給人看的網頁），給 AI／知識庫消費的結構化 Markdown 走 ark-md-report。不適用於：互動式數據儀錶板（篩選、排序、Chart.js）請用 ark-html-dashboard。
+description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。使用此 skill 當使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout、圖片 figure／gallery 等），元件與風格可任意組合。報告要放素材圖或示意圖時，附 html_images.py 放圖引擎：本機圖片自動縮圖、轉 WebP、去重後內嵌成零外部請求的單檔，並可自動排成圖說與圖庫（3.6 節）。與 ark-md-report 成對：本 skill 是 View 軌（給人看的網頁），給 AI／知識庫消費的結構化 Markdown 走 ark-md-report。不適用於：互動式數據儀錶板（篩選、排序、Chart.js）請用 ark-html-dashboard。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   schema_version: 1
   status: active
-  updated: 2026-09-27
+  updated: 2026-10-08
   category: view
   outputs:
     - format: html
       audience: human
   depends_on: []
+  requires: [Pillow]          # 只有 scripts/html_images.py 需要
   author: paddyyang
 ---
 
@@ -75,6 +76,33 @@ metadata:
 附件類一律 offline —— 讀者常在手機上點開，可能沒有網路。CDN 一掉，字體與圖表同時失效。
 規範與檢查清單見 `references/offline-mode.md`。
 
+### 3.6 放圖（報告有截圖、素材圖時）
+
+**不要手動 base64，也不要把原圖直接塞進 HTML。** 一張 1080×1920 截圖原檔就 2～3 MB，十幾張就幾十 MB。
+流程是「寫 HTML 時用相對路徑引用圖 → 交付前跑放圖引擎」：
+
+1. 寫 HTML 時照常用 `<img src="screens/main_01.png" alt="圖說">`（路徑相對報告檔，或絕對路徑）；
+   想讓引擎幫忙排版，就讓圖獨立成段（`<p><img …></p>`），連續幾張會自動排成圖庫。
+2. 需要時用 `data-role` 指定用途：`icon`（圖示、圖騰）／`portrait`（直式截圖）／`landscape`（橫式截圖、照片）／`diagram`（圖表、流程圖，保持銳利）／`full`（不縮）；不寫就依原圖尺寸自動判斷。
+3. 交付前跑：
+   ```bash
+   python scripts/html_images.py embed report.html --layout --lightbox --out report.final.html
+   ```
+   - `--layout`：獨立的圖包成 `<figure>`（alt 當圖說），連續的圖排成 `.ar-gallery`；直式截圖限寬 360、圖示限寬 160
+   - `--lightbox`：點圖放大
+   - `--quality lite|standard|hi`（預設 standard）、`--format jpeg`（要相容很舊的瀏覽器時）、`--budget-mb 8`（超過就擋，列出前 10 大張圖）、`--role 'symbols/*=icon'`（依路徑批次指定用途，可重複；同一張圖在 `<img>` 與 JSON 都被引用時用它讓兩邊共用一份）
+   - 先看會多大：`python scripts/html_images.py inspect report.html`
+4. 回覆使用者時報 `delivery` 那行：幾張圖、原圖幾 MB → 內嵌後幾 MB。
+
+| 用途 | 自動判斷 | 最大寬（standard）| 典型大小 |
+|---|---|---|---|
+| icon | 長邊 ≤ 400 | 240 | 3～8 KB |
+| portrait | 高 ≥ 1.3 × 寬 | 560 | 40～80 KB |
+| landscape | 其他 | 800 | 40～90 KB |
+| diagram | 只能手動指定 | 1200（無損）| 視內容 |
+
+內嵌方式自動選：沒有重複引用 → 直接 data URI（零 JS，信件預覽也能看）；同一張圖用很多次或頁面 JS 的資料裡有圖（燈箱、gallery JSON 的 `"src"`）→ 圖只存一份在 `window.__IMG`，頁面 JS 用 `window.__imgsrc(s)` 取圖。完整規格見 `references/images.md`。
+
 ### 4. 圖表（如有數據）
 
 讀 `references/charts.md`。標準模式用 Chart.js CDN，顏色一律取自 token（`--c1`~`--c6`），
@@ -82,7 +110,7 @@ metadata:
 
 ### 5. 產出與 QA
 
-- 單一 `.html` 檔，所有 CSS 內嵌於 `<style>`
+- 單一 `.html` 檔，所有 CSS 內嵌於 `<style>`；有本機圖片的一律跑過 `scripts/html_images.py embed`（`grep -c 'src="[^d#h]' ` 應為 0：沒有殘留本機路徑）
 - 標準模式最多兩個外部資源（Chart.js、Google Fonts）；**offline 模式零外部資源**
 - 從對應骨架開始（`assets/template.html` 或 `assets/template-offline.html`），貼入所選風格的 `:root` 區塊與基礎樣式
 - offline 模式交付前跑一次 `references/offline-mode.md` 的檢查指令，並**實際斷網開啟確認**

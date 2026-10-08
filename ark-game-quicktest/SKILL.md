@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.0.0"
+  version: "2.1.0"
   updated: 2026-10-06
   outputs:
     - { format: data, audience: ai }
@@ -91,7 +91,7 @@ data/quicktest/<slug>/
 |----|------|------|
 | ① RTP | \|Total RTP − target_rtp\| ≤ rtp_tolerance（預設 0.005） | FAIL → P0 |
 | ② 體感 | 各特殊遊戲 1/Freq 落在 P-005 區間（preset：驚喜型/期待型/節奏型/核心體驗型/稀有大事件/標準節奏/高頻小獎，或自訂 band） | FAIL → P1 |
-| ③ 無效值 | config-spec parameters 有 value 且無 decision | FAIL → P0 |
+| ③ 無效值 | config-spec parameters 有 value 且無 decision；`mode: restore-live`（ark-game-spec 還原模式）改判每鍵 value 為 `$ref` 且可解析到設定檔 | FAIL → P0 |
 
 verdict：任一 FAIL → rejected；全 PASS → confirmed；有 SKIP（缺目標）→ inconclusive。信心：樣本 ≥ 1e7 high / ≥ 1e6 medium / 其餘 low。
 

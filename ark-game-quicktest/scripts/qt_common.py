@@ -8,7 +8,7 @@ import re
 import sys
 
 CONTRACT = "1"
-SKILL_VERSION = "1.2.0"
+SKILL_VERSION = "2.1.0"
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "QUERY_FAILED": 6, "MISSING_DEP": 8}
 HERE = pathlib.Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent

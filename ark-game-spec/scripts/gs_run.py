@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gs_run — ark-game-spec 2.0 總編排（薄派發器）：一個入口、八個 stage，各 stage runner 原封保留在 scripts/<stage>/，flag 全部透傳。
+"""gs_run — ark-game-spec 2.x 總編排（薄派發器）：一個入口、十個 stage，各 stage runner 原封保留在 scripts/<stage>/，flag 全部透傳。
 
   python scripts/gs_run.py --stage video   --source <url|mp4> [--domain auto|slot-game|…] [--out artifacts/cva] [vu_run 其他 flag]
   python scripts/gs_run.py --stage detect  --run <run>                      # auto 模式：ga_detect 判 domain 並續跑 vu_run 剩餘 stage
@@ -10,7 +10,10 @@
   python scripts/gs_run.py --stage gdd     --from spec --run <run> --out <pack>           # gdd_from_spec → lint → build
   …上面三種加 --export [--export-out <dir>] [--export-all-assets]                                 # 再產企劃樣板交付夾（與 kaiji-gdd-sample 同結構）
   python scripts/gs_run.py --stage atlas   --run <run> --slug <slug> | --gdd <pack> [--out data/atlas] [--library …]
+  python scripts/gs_run.py --stage bundle  --bundle <bundle.yaml> [--quality lite|standard|hi] [--check]   # 競品分析 md + gdd-pack → 圖文單檔 HTML（需 ark-html-report ≥ 1.2）
   python scripts/gs_run.py --stage pack    [--domain <d> | --all]                          # pack_lint
+  python scripts/gs_run.py --stage restore --config <ProbSetting.json> [--xlsx <機率表.xlsx>] [--out <spec>] [--slug]  # 還原模式 config-spec（$ref）
+  python scripts/gs_run.py --stage restore --check <config-spec.yaml>                       # 還原模式自檢
   python scripts/gs_run.py --stage all     --source <url|mp4> [--domain …] [--decisions decisions.yaml] [--slug <slug>]
         all = video →（auto 時 detect）→ analyze → draft；有 --decisions 則續 decide → dev → atlas。中間人工決議是刻意的斷點（ark-grill-me）。
 
@@ -41,6 +44,8 @@ STAGES = {
     "gdd": HERE / "gdd" / "gdd_run.py",
     "atlas": HERE / "atlas" / "atlas_run.py",
     "pack": HERE / "pack" / "pack_lint.py",
+    "restore": HERE / "spec" / "gs_restore.py",
+    "bundle": HERE / "bundle" / "gs_bundle.py",
 }
 
 
@@ -72,6 +77,7 @@ def main() -> None:
     ap.add_argument("--export", action="store_true", help="gdd：build 後產企劃樣板交付夾（<short_title>_素材總覽.html + symbols/ illustrations/ spec-reference-images/）")
     ap.add_argument("--export-out", help="gdd：交付夾位置（預設 <pack>/export）")
     ap.add_argument("--export-all-assets", action="store_true", help="gdd：交付夾連同來源三夾未引用的圖一起帶")
+    ap.add_argument("--bundle", help="bundle：bundle.yaml")
     ap.add_argument("--xlsx")
     ap.add_argument("--from", dest="src", help="gdd：xlsx|spec（預設讀既有 pack）；atlas：v1|draft")
     ap.add_argument("--slug")
@@ -139,8 +145,14 @@ def main() -> None:
     if st == "atlas":
         args = opt(("--run", a.run), ("--gdd", a.gdd), ("--slug", a.slug), ("--out", a.out), ("--from", a.src)) + rest
         C.emit(step(STAGES["atlas"], args)["data"], {"stage": "atlas"})
+    if st == "bundle":
+        if not a.bundle:
+            C.fail("BAD_INPUT", "--stage bundle 需要 --bundle <bundle.yaml>")
+        C.emit(step(STAGES["bundle"], ["--bundle", a.bundle] + opt(("--out", a.out)) + rest)["data"], {"stage": "bundle"})
     if st == "pack":
         C.emit(step(STAGES["pack"], opt(("--domain", a.domain)) + rest)["data"], {"stage": "pack"})
+    if st == "restore":
+        C.emit(step(STAGES["restore"], opt(("--out", a.out), ("--slug", a.slug), ("--xlsx", a.xlsx)) + rest)["data"], {"stage": "restore"})
     if st == "all":
         if not a.source:
             C.fail("BAD_INPUT", "--stage all 需要 --source")

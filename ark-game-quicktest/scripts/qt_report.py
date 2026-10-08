@@ -154,7 +154,30 @@ def load_award_csv(p: pathlib.Path) -> list[dict]:
 
 # ── 守門（P-003 三向）───────────────────────────────────────────────────────
 
-def gate(rep: dict, targets: dict, config_spec: dict | None, version: str | None = None) -> dict:
+def resolve_ref(ref: str, base: pathlib.Path) -> bool:
+    """`<path>#/<JSON Pointer>`（path 相對 config-spec 所在目錄）能否解析。
+    刻意與 ark-game-spec gs_restore 各自實作（skill 間只靠資料契約不靠 import）。"""
+    path, _, frag = str(ref).partition("#")
+    f = base / path
+    if not path or not f.is_file() or not frag.startswith("/"):
+        return False
+    try:
+        node = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    for tok in frag[1:].split("/"):
+        tok = tok.replace("~1", "/").replace("~0", "~")
+        if isinstance(node, dict) and tok in node:
+            node = node[tok]
+        elif isinstance(node, list) and tok.isdigit() and int(tok) < len(node):
+            node = node[int(tok)]
+        else:
+            return False
+    return True
+
+
+def gate(rep: dict, targets: dict, config_spec: dict | None, version: str | None = None,
+         config_spec_dir: pathlib.Path | None = None) -> dict:
     checks = []
     # 單一版本原則：targets 可帶 versions[]，--version 指定時取該版的 expect / 門檻 / 分母
     vspec = {}
@@ -203,6 +226,18 @@ def gate(rep: dict, targets: dict, config_spec: dict | None, version: str | None
                        "msg": f"{game} 觸發 1/{fq:.1f}（{rate:.2%}）{'落在' if ok else '不在'}{f.get('preset') or '自訂'}區間 1/{1/hi:.0f}~1/{1/lo:.0f}"})
     if config_spec is None:
         checks.append({"id": "null", "status": "SKIP", "msg": "未提供 config-spec.yaml"})
+    elif config_spec.get("mode") == "restore-live":
+        # 還原模式（ark-game-spec gs_restore）：值來自已上線設定檔 → 判「value 全是 $ref 且可解析」，
+        # 不能沿用「有 decision 就過」（每鍵都帶 restore-live decision，會形式過關）
+        base = config_spec_dir or pathlib.Path(".")
+        params = config_spec.get("parameters", []) or []
+        bad = sorted(str(p.get("name")) for p in params
+                     if not (isinstance(p.get("value"), dict) and resolve_ref(p["value"].get("$ref") or "", base)))
+        if not params:
+            bad = ["(parameters 為空)"]
+        checks.append({"id": "null", "status": "FAIL" if bad else "PASS", "mode": "restore-live",
+                       "msg": ("還原模式 $ref 缺漏或無法解析：" + ", ".join(bad)) if bad else f"還原模式 {len(params)} 鍵 $ref 全可解析",
+                       "params": bad})
     else:
         decided = set()
         for p in config_spec.get("parameters", []) or []:
@@ -279,6 +314,9 @@ def render_md(rep: dict, g: dict, targets: dict, src: pathlib.Path, date: str, m
             sev = "P1" if c["id"].startswith("feel") else "P0"
             findings.append({"sev": sev, "what": c["msg"], "where": c["id"], "impact": {"rtp": "RTP 偏離目標，不得進 Dev-spec", "null": "競品值偷渡成定案，P-002 違規"}.get(c["id"], "體感節奏偏離企劃目標"),
                              "ev": c, "action": {"rtp": "調整輪帶 / 權重後重跑；差距大先查 Reel Set RTP 哪組偏", "null": "走 ark-grill-me 補 Decision Record 或把 value 改回 null"}.get(c["id"], "調整觸發帶的 Scatter 權重，對照 P-005 區間重跑")})
+            if c.get("mode") == "restore-live":
+                findings[-1].update(impact="config-spec 無法對回已上線設定檔，還原結果無約束力",
+                                    action="ark-game-spec gs_run --stage restore 重產 config-spec，或修正 $ref 路徑／鍵名")
     for c in g["checks"]:
         if c["status"] == "SKIP":
             findings.append({"sev": "P3", "what": c["msg"], "where": c["id"], "impact": "該向未驗，verdict 最多 inconclusive", "ev": c,
@@ -386,7 +424,8 @@ def main() -> None:
     rep["award_range"] = award
     targets = C.yaml_load(pathlib.Path(a.targets)) if a.targets else {}
     cfg = C.yaml_load(pathlib.Path(a.config_spec)) if a.config_spec else None
-    g = gate(rep, targets, cfg, version=a.version_id)
+    g = gate(rep, targets, cfg, version=a.version_id,
+             config_spec_dir=pathlib.Path(a.config_spec).resolve().parent if a.config_spec else None)
     rep["gate"] = g
     rep["template_caveats"] = template_caveats(rep, str(targets.get("scatter_id") or 2))
     out = pathlib.Path(a.out) if a.out else src.parent / "qt-report"
