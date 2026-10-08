@@ -15,7 +15,7 @@ import sys
 import time
 
 CONTRACT = "1"
-SKILL_VERSION = "2.0.0"
+SKILL_VERSION = "2.2.0"
 PROTOCOL_VERSION = "aiqa-protocol/1"
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8, "BUDGET_EXCEEDED": 9}
 HERE = pathlib.Path(__file__).resolve().parent

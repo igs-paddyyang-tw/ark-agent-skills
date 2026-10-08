@@ -25,7 +25,7 @@ from typing import Iterable, Sequence
 
 
 CONTRACT = "1"
-SKILL_VERSION = "2.1.0"
+SKILL_VERSION = "2.2.0"
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8}
 
 
@@ -89,6 +89,8 @@ def run_cmd(args: Sequence[str], timeout: float = 30, capture=True) -> subproces
         return subprocess.run(
             list(args),
             text=True,
+            encoding="utf-8",      # 中文 Windows 預設 cp950，dumpsys / logcat 含中文會 UnicodeDecodeError
+            errors="replace",
             capture_output=capture,
             timeout=timeout,
             check=False,

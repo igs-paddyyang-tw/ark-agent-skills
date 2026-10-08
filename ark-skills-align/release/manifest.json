@@ -1,7 +1,7 @@
 {
   "release": "skills-2026.10-r1",
-  "commit": "81f4e5d",
-  "generated_at": "2026-10-08T10:49:41+08:00",
+  "commit": "88c8566",
+  "generated_at": "2026-10-08T15:53:14+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.1.0",
@@ -424,14 +424,14 @@
       "updated": "2026-09-11"
     },
     "ark-mobile-adb": {
-      "version": "2.1.0",
-      "tree_hash": "sha256:9e0e99d9df2eb68eabfe9c83015117b839249a1eff0637f18c4581d585649af1",
-      "contract_hash": "sha256:b1b0d4f42088412a9aaff363b604049ea697d766f18d292d2361e93b8029384e",
+      "version": "2.2.0",
+      "tree_hash": "sha256:2ab8522f8fc7b868451065de8b66d45adf39560f0dc64a4fef6a695c586fef1c",
+      "contract_hash": "sha256:180f4991402ac8ac16dfdb2c0ad23c14fabd035e96c6d21d06e0211232a0c616",
       "status": "active",
       "category": "executor",
       "depends_on": [],
       "replaces": [],
-      "updated": "2026-09-21"
+      "updated": "2026-10-08"
     },
     "ark-pdf-tool": {
       "version": "1.0.0",
@@ -527,7 +527,7 @@
     },
     "ark-skills-align": {
       "version": "2.0.0",
-      "tree_hash": "sha256:772339e97236f990fc3e0549f571f108fdcf76586e928be0073a0df4a93d4e53",
+      "tree_hash": "sha256:920ffb41884db42be90859d01b4329c0ba1d0e6ba44cd2c579f89eb34b974285",
       "contract_hash": "sha256:4a3efb684ab2b1279b01211423caf504e35317b6cc633a7133ee842c60f7b456",
       "status": "active",
       "category": "ops",

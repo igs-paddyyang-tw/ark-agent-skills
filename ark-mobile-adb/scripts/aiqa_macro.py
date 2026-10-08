@@ -282,7 +282,7 @@ def record(game: str, machine: str | None, device: str | None, duration: float) 
     mx = re.search(r"0035.*?max (\d+)", p); my = re.search(r"0036.*?max (\d+)", p)
     abs_max = (int(mx.group(1)) if mx else wh[0], int(my.group(1)) if my else wh[1])
     try:
-        cp = subprocess.run([M.adb_path(), "-s", serial, "shell", "getevent", "-lt"], capture_output=True, text=True, timeout=duration)
+        cp = subprocess.run([M.adb_path(), "-s", serial, "shell", "getevent", "-lt"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=duration)
         raw = cp.stdout
     except subprocess.TimeoutExpired as e:
         raw = (e.stdout.decode(errors="replace") if isinstance(e.stdout, bytes) else e.stdout) or ""

@@ -102,7 +102,7 @@ def render_md(run: pathlib.Path, m: dict, results: list[dict], doc: dict, cmp: d
          f"| 測試項總數 / 本 run 執行 | {len(results)} / {executed} |",
          f"| PASS / FAIL / FLAKY / NEEDS_HUMAN / BLOCK / N/A | {' / '.join(str(counts[v]) for v in ORDER)} |",
          f"| 自動化率（得出 PASS/FAIL/FLAKY 判定 / 全部） | {round(auto / max(1, len(results)) * 100)}% |",
-         f"| 與人工結果一致率（{cmp['compared']} 項可比） | {f'{cmp['agreement_rate']:.0%}' if cmp['agreement_rate'] is not None else '—'}（不一致 {cmp['disagree']}） |",
+         f"| 與人工結果一致率（{cmp['compared']} 項可比） | {format(cmp['agreement_rate'], '.0%') if cmp['agreement_rate'] is not None else '—'}（不一致 {cmp['disagree']}） |",
          f"| **誤 PASS（人 fail、aiqa PASS）** | **{cmp['false_pass']}** |",
          f"| 執行時間 / LLM 呼叫 | {m.get('elapsed_s')} s / {(m.get('llm') or {}).get('llm_calls', 0)} |", ""]
     # 分類樹
