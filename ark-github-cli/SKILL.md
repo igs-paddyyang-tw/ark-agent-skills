@@ -47,7 +47,7 @@ metadata:
 | `scripts/wrapup_check.py` | 寫 | 盤點：未勾 todo、目錄/scripts 未入索引的漂移、memory 大小（唯讀） |
 | `scripts/memory_optimize.py` | 寫 | `daily` 追加（≤150 字守門）、`check` token 估算、`archive` 歸檔搬運 |
 | `scripts/wrapup_git.py` | 寫 | 收尾閘門 → 具名 add → commit → pull --rebase → push；衝突即停 |
-| `scripts/tests/test_cli_contract.py` | — | 四支 `--help` 零依賴、守衛先於第三方 import |
+| `scripts/tests/test_github_cli_cli_contract.py` | — | 四支 `--help` 零依賴、守衛先於第三方 import |
 
 ---
 

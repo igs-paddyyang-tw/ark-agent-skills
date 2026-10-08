@@ -51,8 +51,23 @@ def referenced(p: dict) -> dict[str, set[str]]:
     return refs
 
 
+def unsafe_names(refs: dict[str, set[str]]) -> list[dict]:
+    """檔名必須是單層純檔名：含路徑分隔、..、絕對路徑者會讓複製越出三夾（src_dir / name、dst_dir / name）。"""
+    bad = []
+    for kind, names in refs.items():
+        for n in sorted(names):
+            s = str(n)
+            if not s or "/" in s or "\\" in s or s in (".", "..") or pathlib.PurePath(s).is_absolute() or re.match(r"^[A-Za-z]:", s):
+                bad.append({"kind": kind, "file": s})
+    return bad
+
+
 def export(pack: pathlib.Path, out: pathlib.Path, all_assets: bool, clean: bool, style: pathlib.Path | None) -> dict:
     p = C.load_pack(pack)
+    bad = unsafe_names(referenced(p))
+    if bad:                                               # 先擋再動檔：任何複製／清理都不發生
+        C.fail("GATE_BLOCKED", f"{len(bad)} 個圖檔名含路徑（會越出交付夾三夾）",
+               "symbols/screens/info 的 file、ref_files 只能寫純檔名（如 S1.png），圖放進對應來源夾", {"unsafe_names": bad[:10]})
     if clean and out.exists():
         for kind in C.ASSET_DIRS.values():
             shutil.rmtree(out / kind, ignore_errors=True)

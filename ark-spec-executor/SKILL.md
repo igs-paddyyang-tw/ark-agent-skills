@@ -42,7 +42,7 @@ v2 把 Coordinator 與 Verifier 全部落成腳本：**LLM 只做一件事——
 | `references/task-prompt.md` | Implementor prompt 模板（單任務、只寫 output_file、docstring 標 AC） | run_plan 自動套 |
 | `references/runners.yaml` | runner 指令模板（kiro / claude；flags 依實際 CLI 核對） | 切真 runner 前 |
 | `tests/fixtures/` | plan-valid / plan-cycle / plan-badrole | lint 回歸 |
-| `scripts/tests/test_cli_contract.py` | 五支 `--help` 零依賴、守衛先於第三方 import | 改腳本後 |
+| `scripts/tests/test_spec_executor_cli_contract.py` | 五支 `--help` 零依賴、守衛先於第三方 import | 改腳本後 |
 
 ## 工作流
 

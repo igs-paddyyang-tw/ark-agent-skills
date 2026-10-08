@@ -332,6 +332,19 @@ def test_export_blocks_broken_links(tmp_path):
     assert not r["success"] and r["rc"] == 3 and r["error"]["code"] == "GATE_BLOCKED"
 
 
+@pytest.mark.parametrize("evil", ["../escape.png", "sub/x.png", "..\\x.png", "/etc/passwd", "C:x.png", ".."])
+def test_export_blocks_path_traversal_names(tmp_path, evil):
+    """反證：檔名含路徑必須在任何複製前擋下（exit 3），交付夾外不得出現檔案。"""
+    syms = [{"code": "S1", "group": "normal", "sym_id": 1, "name": "星", "file": "S1.png", "soft": True,
+             "ref_files": [evil], "odds": [50, 20, 10]}]
+    pack = make_pack(tmp_path, symbols=syms)
+    out = tmp_path / "b"
+    r = run("gdd_export.py", "--pack", str(pack), "--out", str(out))
+    assert not r["success"] and r["rc"] == 3 and r["error"]["code"] == "GATE_BLOCKED"
+    assert r["data"]["unsafe_names"][0]["file"] == evil
+    assert not out.exists() and not (tmp_path / "escape.png").exists()
+
+
 def test_gdd_run_export_flag(tmp_path):
     pack = make_pack(tmp_path, screens=[{"feature": "main", "step": "1", "title": "待機", "file": "main_1.png", "desc": "d"}])
     r = run("gdd_run.py", "--pack", str(pack), "--export", "--export-out", str(tmp_path / "b"))
