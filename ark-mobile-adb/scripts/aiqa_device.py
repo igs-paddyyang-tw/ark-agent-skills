@@ -192,11 +192,9 @@ def locate(pack: dict, ref: str, screen_img: pathlib.Path | None) -> dict:
 def detect_screen(pack: dict, screen_img: pathlib.Path) -> dict:
     """依 screens[*].template 比對；命中者以 priority（彈窗/錯誤畫面設高）再 score 排序；都未命中 → unknown。"""
     hits, best_any = [], {"screen": "unknown", "score": 0.0}
-    for name, s in (pack.get("screens") or {}).items():
-        tpl = s.get("template")
-        if not tpl or not pathlib.Path(tpl).exists():
-            continue
-        r = M.locate_template(screen_img, pathlib.Path(tpl), float(s.get("threshold", 0.85)))
+    cands = [(name, s) for name, s in (pack.get("screens") or {}).items() if s.get("template") and pathlib.Path(s["template"]).exists()]
+    results = M.locate_templates(screen_img, [(pathlib.Path(s["template"]), float(s.get("threshold", 0.85))) for _, s in cands])
+    for (name, s), r in zip(cands, results):     # 同畫面多模板：讀圖與前處理只做一次
         if r["score"] > best_any["score"]:
             best_any = {"screen": "unknown", "score": r["score"], "candidate": name}
         if r["found"]:

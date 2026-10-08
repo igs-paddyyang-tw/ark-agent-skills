@@ -54,3 +54,19 @@ def test_locate_template_fast_on_1600x900(tmp_path, monkeypatch):
     r = M.locate_template(tmp_path / "s.png", tmp_path / "t.png")
     assert time.time() - t0 < 5
     assert r["found"] and (r["x"], r["y"]) == (700, 300) and r["score"] > 0.99
+
+
+def test_locate_templates_batch_equals_single(tmp_path, monkeypatch):
+    """同畫面多模板（共用 NCCScreen，FFT 補零尺寸取最大模板）結果須與逐一 locate_template 相同。"""
+    monkeypatch.setitem(sys.modules, "cv2", None)
+    rng = np.random.default_rng(2)
+    S = rng.integers(0, 256, (300, 500), dtype=np.uint8)
+    Image.fromarray(S).save(tmp_path / "s.png")
+    boxes = [(10, 20, 40, 120), (100, 200, 90, 60), (250, 400, 30, 30)]    # y, x, h, w（大小不同）
+    tpls = []
+    for i, (y, x, h, w) in enumerate(boxes):
+        Image.fromarray(S[y:y + h, x:x + w]).save(tmp_path / f"t{i}.png"); tpls.append((tmp_path / f"t{i}.png", 0.9))
+    batch = M.locate_templates(tmp_path / "s.png", tpls)
+    single = [M.locate_template(tmp_path / "s.png", p, thr) for p, thr in tpls]
+    assert batch == single
+    assert [(r["y"], r["x"]) for r in batch] == [(y, x) for y, x, _, _ in boxes] and all(r["found"] for r in batch)

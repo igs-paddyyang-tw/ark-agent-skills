@@ -543,5 +543,15 @@
     "skill": "ark-skills-align",
     "version": "2.0.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:e7528d62b0a7e4e81dc7ec58fd73ddae1eb5d45ce127416ead92e14432f2b355": {
+    "skill": "ark-mobile-adb",
+    "version": "2.2.2",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:cbece66fe90589c01490b6f27e67894c86a7320de0506ca9eff64e65275c68d8": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
   }
 }

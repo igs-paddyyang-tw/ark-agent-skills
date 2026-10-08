@@ -497,56 +497,101 @@ def _fast_len(n: int) -> int:
     return best
 
 
-def ncc_map(S, T):
-    """無 opencv 時的正規化相關（等價 cv2.TM_CCOEFF_NORMED）：分子用 FFT 互相關、視窗均值/變異用積分圖。
+class NCCScreen:
+    """同一張畫面比多個模板時共用的前處理（無 opencv 時用）：積分圖只算一次、畫面 FFT 依補零尺寸快取。
 
-    回 (H-th+1, W-tw+1) 的分數圖；平坦視窗（變異≈0）記 0。舊版純 Python 雙迴圈 1600x900 一次 ~33s，這版 < 1s。
+    等價 cv2.TM_CCOEFF_NORMED：分子用 FFT 互相關、視窗均值/變異用積分圖；平坦視窗（變異≈0）記 0、分數 clip [-1,1]。
+    舊版純 Python 雙迴圈 1600x900 一次 ~33s；單模板 ~0.3s，同畫面後續模板只剩模板端 FFT。
     """
+
+    def __init__(self, S, max_th: int = 1, max_tw: int = 1):
+        np = _np()
+        self.S = S.astype(np.float64)
+        H, W = self.S.shape
+        self.H, self.W = H, W
+        self.fs = (_fast_len(H + max_th - 1), _fast_len(W + max_tw - 1))
+        self._ffts: dict = {}
+        self.ii1 = np.zeros((H + 1, W + 1)); self.ii1[1:, 1:] = self.S.cumsum(0).cumsum(1)
+        self.ii2 = np.zeros((H + 1, W + 1)); self.ii2[1:, 1:] = (self.S * self.S).cumsum(0).cumsum(1)
+
+    def _fft(self, fs):
+        np = _np()
+        if fs not in self._ffts:
+            self._ffts[fs] = np.fft.rfft2(self.S, fs)
+        return self._ffts[fs]
+
+    def map(self, T):
+        np = _np()
+        T = T.astype(np.float64)
+        H, W = self.H, self.W; th, tw = T.shape
+        if th > H or tw > W:
+            return np.zeros((0, 0))
+        n = th * tw
+        Tz = T - T.mean()
+        t_norm = float(np.sqrt((Tz * Tz).sum()))
+        fs = self.fs if (self.fs[0] >= H + th - 1 and self.fs[1] >= W + tw - 1) else (_fast_len(H + th - 1), _fast_len(W + tw - 1))
+        num = np.fft.irfft2(self._fft(fs) * np.fft.rfft2(Tz[::-1, ::-1], fs), fs)[th - 1:H, tw - 1:W]
+
+        def win(ii):
+            return ii[th:, tw:] - ii[:-th, tw:] - ii[th:, :-tw] + ii[:-th, :-tw]
+
+        s1 = win(self.ii1); s2 = win(self.ii2)
+        var = np.maximum(s2 - s1 * s1 / n, 0.0)
+        ok = (var > 1e-3 * n) & (t_norm > 1e-6)
+        res = np.zeros_like(num)
+        res[ok] = num[ok] / (np.sqrt(var[ok]) * t_norm)
+        return np.clip(res, -1.0, 1.0)
+
+
+def ncc_map(S, T):
+    """單模板正規化相關分數圖（無 opencv 退路）；多模板同畫面請用 NCCScreen 共用前處理。"""
+    return NCCScreen(S, *T.shape).map(T)
+
+
+def _gray(path: Path):
+    Image = _pil(); np = _np()
+    with Image.open(path) as im:
+        return np.asarray(im.convert("L"), dtype=np.float32)
+
+
+def _best(res, np) -> tuple[float, int, int]:
+    if res.size == 0:
+        return -1.0, 0, 0
+    y, x = (int(v) for v in np.unravel_index(int(np.argmax(res)), res.shape))
+    return float(res[y, x]), x, y
+
+
+def locate_templates(screen: Path, templates: list[tuple[Path, float]]) -> list[dict]:
+    """同一張畫面比多個模板（讀圖一次；無 opencv 時共用 NCCScreen）。每筆回 {found, x, y, w, h, score, center, threshold}。"""
     np = _np()
-    S = S.astype(np.float64); T = T.astype(np.float64)
-    H, W = S.shape; th, tw = T.shape
-    if th > H or tw > W:
-        return np.zeros((0, 0))
-    n = th * tw
-    Tz = T - T.mean()
-    t_norm = float(np.sqrt((Tz * Tz).sum()))
-    fs = (_fast_len(H + th - 1), _fast_len(W + tw - 1))
-    num = np.fft.irfft2(np.fft.rfft2(S, fs) * np.fft.rfft2(Tz[::-1, ::-1], fs), fs)[th - 1:H, tw - 1:W]
+    S = _gray(screen)
+    Ts = [(_gray(Path(p)), float(thr)) for p, thr in templates]
+    try:
+        import cv2
 
-    def win_sum(A):
-        ii = np.zeros((H + 1, W + 1)); ii[1:, 1:] = A.cumsum(0).cumsum(1)
-        return ii[th:, tw:] - ii[:-th, tw:] - ii[th:, :-tw] + ii[:-th, :-tw]
+        def match(T):
+            if T.shape[0] > S.shape[0] or T.shape[1] > S.shape[1]:
+                return -1.0, 0, 0
+            _, score, _, loc = cv2.minMaxLoc(cv2.matchTemplate(S, T, cv2.TM_CCOEFF_NORMED))
+            return float(score), int(loc[0]), int(loc[1])
+    except ImportError:
+        prep = NCCScreen(S, max((T.shape[0] for T, _ in Ts), default=1), max((T.shape[1] for T, _ in Ts), default=1))
 
-    s1 = win_sum(S); s2 = win_sum(S * S)
-    var = np.maximum(s2 - s1 * s1 / n, 0.0)
-    den = np.sqrt(var) * t_norm
-    ok = (var > 1e-3 * n) & (t_norm > 1e-6)
-    res = np.zeros_like(num)
-    res[ok] = num[ok] / den[ok]
-    return np.clip(res, -1.0, 1.0)
+        def match(T):
+            return _best(prep.map(T), np)
+    out = []
+    for T, thr in Ts:
+        th, tw = T.shape
+        score, x, y = match(T)
+        found = score >= thr
+        out.append({"found": found, "score": round(score, 4), "x": x, "y": y, "w": int(tw), "h": int(th),
+                    "center": [x + tw // 2, y + th // 2] if found else None, "threshold": thr})
+    return out
 
 
 def locate_template(screen: Path, template: Path, threshold: float = 0.85) -> dict:
-    """模板比對：優先 opencv；否則 ncc_map（numpy FFT + 積分圖，等價 TM_CCOEFF_NORMED）。回 {found, x, y, w, h, score, center}。"""
-    Image = _pil(); np = _np()
-    with Image.open(screen) as a, Image.open(template) as b:
-        S = np.asarray(a.convert("L"), dtype=np.float32); T = np.asarray(b.convert("L"), dtype=np.float32)
-    th, tw = T.shape
-    try:
-        import cv2
-        res = cv2.matchTemplate(S, T, cv2.TM_CCOEFF_NORMED)
-        _, score, _, loc = cv2.minMaxLoc(res)
-        x, y = int(loc[0]), int(loc[1])
-    except ImportError:
-        res = ncc_map(S, T)
-        if res.size == 0:
-            score, x, y = -1.0, 0, 0
-        else:
-            y, x = (int(v) for v in np.unravel_index(int(np.argmax(res)), res.shape))
-            score = float(res[y, x])
-    found = float(score) >= threshold
-    return {"found": found, "score": round(float(score), 4), "x": x, "y": y, "w": int(tw), "h": int(th),
-            "center": [x + tw // 2, y + th // 2] if found else None, "threshold": threshold}
+    """模板比對：優先 opencv；否則 NCCScreen（numpy FFT + 積分圖，等價 TM_CCOEFF_NORMED）。回 {found, x, y, w, h, score, center}。"""
+    return locate_templates(screen, [(template, threshold)])[0]
 
 
 def ocr_image(path: Path, digits: bool = False, lang: str = "eng") -> dict:
