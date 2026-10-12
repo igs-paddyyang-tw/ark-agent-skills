@@ -121,3 +121,15 @@ def test_gate_restore_live_blocks_formal_pass(tmp_path):
     g = Q.gate(rep, {"target_rtp": 0.595}, cfg, config_spec_dir=spec)
     c = next(x for x in g["checks"] if x["id"] == "null")
     assert c["status"] == "FAIL" and c["params"] == ["Desc", "NoSuchKey"] and g["verdict"] == "rejected"
+def test_cli_all_pass_no_findings_lint_pass(tmp_path):
+    """三向全 PASS（零 findings）時 md 不得被 report_lint 誤殺（金猴驗證 F-1：`—` 佔位列被當成 finding ID）。"""
+    tgt = tmp_path / "quicktest.yaml"
+    tgt.write_text("game: 全過範本\nslug: all-pass\ntarget_rtp: 0.595\nrtp_tolerance: 0.01\n"
+                   "feel:\n  - game: SpecialGameTotal\n    preset: 標準節奏\n", encoding="utf-8")
+    cfg = tmp_path / "config-spec.yaml"
+    cfg.write_text("parameters:\n  - name: x\n    value: null\n", encoding="utf-8")
+    a = run_cli("--report", str(GOLDEN), "--targets", str(tgt), "--config-spec", str(cfg), "--out", str(tmp_path / "qt"))
+    assert a["rc"] == 0 and a["success"] and a["data"]["verdict"] == "confirmed" and a["data"]["lint"] == "PASS", a
+    txt = pathlib.Path(a["data"]["md"]).read_text(encoding="utf-8")
+    sec = txt.split("## Findings", 1)[1].split("\n## ", 1)[0]
+    assert "| — |" not in sec and "三向皆 PASS" in sec

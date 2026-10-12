@@ -48,7 +48,7 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--slug", required=True)
     ap.add_argument("--game")
-    ap.add_argument("--target-rtp", type=float, required=True, help="小數（1.0003 = 100.03%）")
+    ap.add_argument("--target-rtp", type=float, required=True, help="小數（1.0003 = 100.03%%）")
     ap.add_argument("--tolerance", type=float, default=0.005)
     ap.add_argument("--feel", action="append", default=[])
     ap.add_argument("--config", help="這份目標對應的設定檔（記 sha，單一版本）")

@@ -563,5 +563,60 @@
     "skill": "ark-skills-align",
     "version": "2.0.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:45fa470eba9a8aed02ced0daa7c794fd5f2323ec22d8d9bc7416bb767a7202f0": {
+    "skill": "ark-agent-init",
+    "version": "2.2.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:652b75f36d3472488511c742ee27afd6b0a89dd450c9c956e454b16cd14a87fc": {
+    "skill": "ark-game-prob",
+    "version": "1.1.1",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:21c980ae7d99d405a41b7e6db464adec159b6847431c72407dd262ea07da3c90": {
+    "skill": "ark-game-quicktest",
+    "version": "2.1.1",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:53f226e2e9542e5b815fd40df28a5067caf60478d6b55c4639c04f10c09e0c4b": {
+    "skill": "ark-game-spec",
+    "version": "2.3.1",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:513294467ffebe00cabc746b8cc44b448efa155df28613cc254d491680a4186d": {
+    "skill": "ark-prompt-spec-validator",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:c59b57c3d228b09ba8386adafa65bba652c9895d2fdab6b4bb2b36623d64877c": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:39185e31f97e6f8ebc70ff0b4db7e3d7496089ae5022660f61a0995bc32e5814": {
+    "skill": "ark-superpowers",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:732ebbbd0d5630bd488c2173d3e4b3876be05a81ab3a5f649bbb698e7a04552c": {
+    "skill": "ark-wiki-engine",
+    "version": "3.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:fe3712f1a694f7c978cf1e5d8c06fdf334176bbd9f2bf9c899c64a0f74d684c7": {
+    "skill": "ark-game-quicktest",
+    "version": "2.1.1",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:08564a510846de2a9c115e326bbf4bb9014a238b0548618afda72686ee5de582": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:e7e0a3482507c20bae27b84b24517ee5a5d8cc37751f3cf84cd7bc61cd2d1306": {
+    "skill": "ark-superpowers",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r1"
   }
 }

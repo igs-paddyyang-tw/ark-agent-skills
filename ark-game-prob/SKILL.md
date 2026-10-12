@@ -19,7 +19,7 @@ metadata:
   author: paddyyang
   category: executor
   version: "1.1.1"
-  updated: 2026-10-08
+  updated: 2026-10-12
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -58,6 +58,7 @@ metadata:
 | `scripts/ps_html.py` | View 軌：`prob-data.json` + `prob-spec.md` → `prob-spec.html`（戳記 content-src）；`--body-only` 給會自己包骨架的發佈端 | 要給人看 |
 | `scripts/ps_lint.py` | PS-SECTIONS / PS-NUM / PS-PROV / PS-STALE / **PS-HTML-EMPTY**（去標籤純文字命中六段標題 < 4 判空殼 error、< 6 warn，防「過戳記但未渲染內容」）/ PS-HUMAN / PS-INJECT → `lint-report.json`；error exit 3 | 任何人手改 md 後必跑 |
 | `scripts/ps_diff.py` | `prob-data.json` ⇄ 設定檔 JSON 逐鍵對照（map：`references/config-map.fasttest.yaml`）→ `config-diff.md/.json`；不一致 exit 3（`--warn-only` 降 0）| 跑快測前、或規格 / 設定檔任一改了 |
+| `scripts/ps_layout.py` | 一款遊戲的產出佈局守門：讀 `output/games/<slug>/{spec,prob,quicktest,docs}/` 實檔比 sha / 數字 → `layout-report.json`（`--write-md` 重寫 LAYOUT.md）；規則 L-DIRS / L-STRAY / L-PROB / L-STAMP / L-SPEC / L-QT / L-DIFF / L-RTP；`--mode restore\|design`；error exit 3 | 畢業前（進 `data/` 前）|
 | `scripts/ps_probtable.py` | qt 模式來源 → 公版 `prob-spec.xlsx`（COUNTIF 活公式、`_meta` 戳記）| 要給機率同仁 Excel 版（xlsx 模式本身就是公版表，免跑）|
 | `scripts/ps_common.py` | envelope / sha16 / yaml / atomic_write | 被所有腳本 import |
 | `references/prob-spec-contract.md` | 六段契約、frontmatter、meta.json、人工區、prob-data.json schema、戳記規則、xlsx 與 qt 模式差異 | 改任何腳本或手寫規格書前 |
@@ -112,6 +113,7 @@ data/prob/<slug>/
 | PS-HUMAN | 人工區含數字（不受保護，請標來源）| warn |
 | PS-INJECT | 指令覆寫句型 / 零寬字元 | error |
 | ps_diff | map 任一規則 mismatch | exit 3（`--warn-only` 僅報告）|
+| ps_layout | L-* 任一 error（restore 模式缺可解析的 config.json → L-SPEC error，屬遊戲未做參數外部化，非 skill 壞）| exit 3（`--strict` 時 warning 也算）|
 
 ## 邊界
 
