@@ -18,7 +18,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.3.0"
+  version: "2.3.1"
   updated: 2026-10-08
   outputs:
     - { format: data, audience: ai }
@@ -124,7 +124,7 @@ data/atlas/<slug>/ atlas.yaml · NN-*.md · assets/figures/ · site/index.html �
 
 ## 2.3 變更：還原模式 config-spec（mode: restore-live）
 
-已上線遊戲不走設計鏈（value=null）：`gs_run --stage restore --config <ProbSetting.json> [--xlsx] [--out output/games/<slug>/spec]`
+已上線遊戲不走設計鏈（value=null）：`gs_run --stage restore --config <ProbSetting.json> [--xlsx] [--out data/slot/<slug>/spec]`
 → 設定檔**全部頂層鍵**逐鍵一條、`value: {$ref: "<相對 config-spec 的路徑>#/<JSON Pointer>"}`（不抄值）、`decision: restore-live: <sha16>`（有 --xlsx 用公版表 sha）。
 產出即自檢；`--stage restore --check <config-spec.yaml>` 單獨自檢：mode／$ref 可解析／decision 任一不符 → exit 3（SPEC-RESTORE）。
 gs_dev 設計鏈語意不變（value 非 null 仍 exit 3）。下游 ark-game-quicktest qt_report 第③向認 `mode: restore-live`（判 $ref 可解析，不再「有 decision 就過」）。

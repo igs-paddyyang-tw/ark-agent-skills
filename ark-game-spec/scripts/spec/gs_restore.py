@@ -8,7 +8,7 @@
 自檢（--check 或產出後自動）：mode 須為 restore-live、每鍵 value 是 $ref 且可解析 → 否則 exit 3（GATE_BLOCKED）。
 
 用法:
-  python gs_restore.py --config <ProbSetting.json> [--xlsx <公版機率表.xlsx>] [--out output/games/<slug>/spec] [--slug <slug>]
+  python gs_restore.py --config <ProbSetting.json> [--xlsx <公版機率表.xlsx>] [--out data/slot/<slug>/spec] [--slug <slug>]
   python gs_restore.py --check <config-spec.yaml>
 """
 from __future__ import annotations
@@ -150,7 +150,7 @@ def main() -> None:
             "source_config": rel, "decision": decision}
     gate(errs, data)
     C.atomic_write(out / "config-spec.yaml", C.yaml_dump(cfg))
-    C.emit({**data, "next": "ark-game-prob ps_run --dest output/games/<slug>/prob → ark-game-quicktest qt_report --config-spec 本檔"},
+    C.emit({**data, "next": "ark-game-prob ps_run --dest data/slot/<slug>/prob → ark-game-quicktest qt_report --config-spec 本檔"},
            {"stage": "restore"})
 
 

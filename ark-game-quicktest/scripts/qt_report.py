@@ -36,9 +36,29 @@ FEEL_BANDS = {  # P-005 體感分級 → 觸發率區間（rate = 1/Freq）
 
 # ── 解析 ──────────────────────────────────────────────────────────────────
 
+LEGACY_NAMES = {"Main": "MainGame", "Free": "SpecialGameTotal", "Total": "Total"}
+
+
+def parse_legacy_base_row(s: str):
+    """舊版 BASE INFO 一列 → (name, rec)。欄序：GAME% Freq Trigger% Multi PlayTimes RetriRate MaxMulti；分隔線回 None。
+    （F-3 根治：取代 aidev 的 qt_convert_milefo.py 橋接。）"""
+    if set(s) <= {"-"}:
+        return None
+    m = re.match(r"([A-Za-z][A-Za-z ]*?)\s+(-?[\d.]+%|-)\s+(.*)$", s)
+    if not m:
+        return None
+    name = LEGACY_NAMES.get(m.group(1).strip(), m.group(1).strip())
+    vals = [m.group(2)] + m.group(3).split()
+    keys = ["rtp", "freq", "hitrate", "multi", "playtimes", "retrirate", "maxmulti"]
+    rec = {k: C.num(v) for k, v in zip(keys, vals)}
+    if name == "Total":
+        rec = {"rtp": rec.get("rtp"), "maxmulti": rec.get("maxmulti")}
+    return name, rec
+
+
 def parse_report(text: str) -> dict:
     lines = text.splitlines()
-    out: dict = {"contract": C.CONTRACT, "version": None, "generated_at": None, "spins": None, "total_win": None, "total_bet": None,
+    out: dict = {"contract": C.CONTRACT, "format": "fasttest", "version": None, "generated_at": None, "spins": None, "total_win": None, "total_bet": None,
                  "games": {}, "detail": {}, "symbol_hit_rate": {}, "symbol_hit_rtp": {}, "reel_set_rtp": {}, "asset_100": [],
                  "multiple": [], "special_range": [], "decile": {}, "raw_sections": []}
     m = re.search(r"版本:\s*(\S+)\s*=+\s*([\d\-]+ [\d:.]+)", text)
@@ -58,8 +78,17 @@ def parse_report(text: str) -> dict:
         if not s or sec is None:
             continue
         if sec == "BASE INFO":
+            if s.startswith("GAME"):          # 舊版 FastTest（彌勒佛家族）：空白對齊、列名 Main/Free、欄序 GAME%/Freq/Trigger%
+                hdr = ["LEGACY"]
+                out["format"] = "fasttest-legacy"
+                continue
             if s.startswith("Game"):
                 hdr = s.split()
+                continue
+            if hdr == ["LEGACY"]:
+                rec_l = parse_legacy_base_row(s)
+                if rec_l:
+                    out["games"][rec_l[0]] = rec_l[1]
                 continue
             parts = re.split(r"\s+-\s+", s, maxsplit=1)
             if len(parts) == 2:
@@ -176,6 +205,54 @@ def resolve_ref(ref: str, base: pathlib.Path) -> bool:
     return True
 
 
+def restore_check(cs: dict, base: pathlib.Path) -> dict:
+    """restore-live config-spec 的第③向：$ref 全可解析（必驗）；若有宣告設定檔來源則加驗 sha 一致 + 頂層鍵全覆蓋。
+    設定檔來源三種寫法皆接受且皆為**選配**：`sources.config`（巢狀）/ 頂層 `source_config`（扁平）/ 都沒有（純靠各 param 的 $ref 內嵌路徑）。
+    value 不得是裸數字（restore-live 一律 $ref）。"""
+    src = ((cs.get("sources") or {}).get("config") or cs.get("source_config") or {})
+    problems: list[str] = []
+    params = cs.get("parameters") or []
+    if not params:
+        return {"id": "null", "status": "FAIL", "mode": "restore-live", "msg": "restore-live：parameters 為空", "params": ["(parameters 為空)"]}
+    # 選配：宣告了設定檔來源 → 加驗 sha + 鍵全覆蓋
+    cfg_rel = str(src.get("path") or "")
+    cfg_keys: set = set()
+    if cfg_rel:
+        cfg_p = base / cfg_rel
+        if not cfg_p.exists():
+            problems.append(f"宣告的設定檔不存在：{cfg_rel}")
+        else:
+            cur = C.sha16(cfg_p)
+            if src.get("sha256_16") and src.get("sha256_16") != cur:
+                problems.append(f"設定檔 sha 已變（記錄 {src.get('sha256_16')} / 現檔 {cur}）→ 重跑 gs_run --stage restore")
+            try:
+                cfg_keys = set(json.loads(cfg_p.read_text(encoding="utf-8")))
+            except (OSError, json.JSONDecodeError):
+                problems.append(f"設定檔無法解析為 JSON：{cfg_rel}")
+    names, bad_ref, raw = set(), [], []
+    for prm in params:
+        names.add(prm.get("name"))
+        v = prm.get("value")
+        if isinstance(v, dict) and "$ref" in v:
+            if not resolve_ref(v["$ref"], base):
+                bad_ref.append(prm.get("name"))
+        elif v is not None:
+            raw.append(prm.get("name"))
+    if bad_ref:
+        problems.append("$ref 無法解析：" + ", ".join(sorted(map(str, bad_ref))[:10]))
+    if raw:
+        problems.append("restore-live 的 value 必須是 $ref，不可抄數字：" + ", ".join(sorted(map(str, raw))[:10]))
+    missing = sorted(cfg_keys - names) if cfg_keys else []
+    if missing:
+        problems.append(f"設定檔有 {len(missing)} 鍵未列入 config-spec：" + ", ".join(missing[:10]))
+    ok = not problems
+    tot = f"{len(names)}/{len(cfg_keys)}" if cfg_keys else f"{len(names)}"
+    return {"id": "null", "status": "PASS" if ok else "FAIL", "mode": "restore-live",
+            "params": sorted(set(map(str, bad_ref)) | set(map(str, raw)) | set(missing)),
+            "action": "設定檔改了或 config-spec 手改過：python ark-game-spec/scripts/gs_run.py --stage restore --config <設定檔> --out <game>/spec --slug <slug>",
+            "msg": (f"restore-live：{tot} 鍵 $ref 全可解析" + ("、設定檔 sha 一致" if cfg_rel else "") if ok else "；".join(problems))}
+
+
 def gate(rep: dict, targets: dict, config_spec: dict | None, version: str | None = None,
          config_spec_dir: pathlib.Path | None = None) -> dict:
     checks = []
@@ -227,17 +304,9 @@ def gate(rep: dict, targets: dict, config_spec: dict | None, version: str | None
     if config_spec is None:
         checks.append({"id": "null", "status": "SKIP", "msg": "未提供 config-spec.yaml"})
     elif config_spec.get("mode") == "restore-live":
-        # 還原模式（ark-game-spec gs_restore）：值來自已上線設定檔 → 判「value 全是 $ref 且可解析」，
-        # 不能沿用「有 decision 就過」（每鍵都帶 restore-live decision，會形式過關）
-        base = config_spec_dir or pathlib.Path(".")
-        params = config_spec.get("parameters", []) or []
-        bad = sorted(str(p.get("name")) for p in params
-                     if not (isinstance(p.get("value"), dict) and resolve_ref(p["value"].get("$ref") or "", base)))
-        if not params:
-            bad = ["(parameters 為空)"]
-        checks.append({"id": "null", "status": "FAIL" if bad else "PASS", "mode": "restore-live",
-                       "msg": ("還原模式 $ref 缺漏或無法解析：" + ", ".join(bad)) if bad else f"還原模式 {len(params)} 鍵 $ref 全可解析",
-                       "params": bad})
+        # 還原模式（ark-game-spec gs_restore）：值來自已上線設定檔 → restore_check 驗
+        # $ref 全可解析 + 設定檔 sha 一致 + 鍵全覆蓋（接受 sources.config / source_config 兩種寫法）
+        checks.append(restore_check(config_spec, config_spec_dir or pathlib.Path(".")))
     else:
         decided = set()
         for p in config_spec.get("parameters", []) or []:
@@ -353,8 +422,8 @@ def render_md(rep: dict, g: dict, targets: dict, src: pathlib.Path, date: str, m
     for i, f in enumerate(findings, 1):
         f["id"] = f"F-{i}"
         L.append(f"| {f['id']} | {f['sev']} | {f['what']} | {f['where']} | {f['impact']} |")
-    if not findings:
-        L.append("| — | — | 三向皆 PASS | — | — |")
+    if not findings:  # 2.0.1：不放「— | —」佔位列（report_lint 會判 ID / 嚴重度格式錯）
+        L = L[:-2] + ["無 Finding：三向皆 PASS。"]
     L += ["", "## Evidence", ""]
     for i, f in enumerate(findings, 1):
         L += [f"### E-{i}（支持 F-{i}）", "", f"- 方法：解析 `{src.name}` 對應區塊並與 quicktest.yaml 目標比對", f"- 輸出：`{json.dumps({k: v for k, v in f['ev'].items() if k != 'msg'}, ensure_ascii=False)}`", "- confidence: high", ""]
@@ -394,6 +463,30 @@ def render_md(rep: dict, g: dict, targets: dict, src: pathlib.Path, date: str, m
     return "\n".join(L)
 
 
+def discover(report: pathlib.Path) -> dict:
+    """沒給 --targets / --config-spec 時，往上找佈局規範的標準位置（data/slot/<slug>/{quicktest,spec}/）。
+    從 report 所在目錄往上最多 4 層：quicktest.yaml 取最近一個；config-spec 優先 `<祖先>/spec/config-spec.yaml`（規範位置），
+    找不到才退回 `<祖先>/config-spec.yaml`。找到即用，envelope 的 inputs 記錄路徑。"""
+    out: dict = {}
+    ancestors = []
+    d = report.resolve().parent
+    for _ in range(5):
+        ancestors.append(d)
+        if d.parent == d:
+            break
+        d = d.parent
+    for d in ancestors:
+        if (d / "quicktest.yaml").exists():
+            out["targets"] = d / "quicktest.yaml"
+            break
+    for pat in ("spec/config-spec.yaml", "config-spec.yaml"):
+        hit = next((d / pat for d in ancestors if (d / pat).exists()), None)
+        if hit:
+            out["config_spec"] = hit
+            break
+    return out
+
+
 def run_tool(script: str, *args) -> tuple[int, str]:
     p = C.MD_REPORT / script
     if not p.exists():
@@ -408,6 +501,7 @@ def main() -> None:
     ap.add_argument("--targets", help="quicktest.yaml：target_rtp / rtp_tolerance / feel[] / game / slug")
     ap.add_argument("--config-spec")
     ap.add_argument("--version-id", dest="version_id", help="單一版本原則：對照 quicktest.yaml 的 versions[] 該版 expect/門檻/分母")
+    ap.add_argument("--no-discover", action="store_true", help="不自動往上找 quicktest.yaml / config-spec.yaml")
     ap.add_argument("--out", help="輸出目錄（預設 report 同目錄 /qt-report）")
     ap.add_argument("--publish")
     ap.add_argument("--wiki-schema")
@@ -422,10 +516,15 @@ def main() -> None:
     award_p = src.with_name(f"AwardRangeData_{rep.get('version')}.csv")
     award = load_award_csv(award_p) if award_p.exists() else []
     rep["award_range"] = award
-    targets = C.yaml_load(pathlib.Path(a.targets)) if a.targets else {}
-    cfg = C.yaml_load(pathlib.Path(a.config_spec)) if a.config_spec else None
+    found = {} if a.no_discover else discover(src)
+    tgt_p = pathlib.Path(a.targets) if a.targets else found.get("targets")
+    cs_p = pathlib.Path(a.config_spec) if a.config_spec else found.get("config_spec")
+    targets = C.yaml_load(tgt_p) if tgt_p else {}
+    cfg = C.yaml_load(cs_p) if cs_p else None
     g = gate(rep, targets, cfg, version=a.version_id,
-             config_spec_dir=pathlib.Path(a.config_spec).resolve().parent if a.config_spec else None)
+             config_spec_dir=cs_p.resolve().parent if cs_p else None)
+    g["inputs"] = {"targets": tgt_p.as_posix() if tgt_p else None, "config_spec": cs_p.as_posix() if cs_p else None,
+                   "discovered": sorted(k for k in found if not (a.targets if k == "targets" else a.config_spec))}
     rep["gate"] = g
     rep["template_caveats"] = template_caveats(rep, str(targets.get("scatter_id") or 2))
     out = pathlib.Path(a.out) if a.out else src.parent / "qt-report"
@@ -442,7 +541,7 @@ def main() -> None:
     rc, lint_out = run_tool("report_lint.py", *(["--wiki-schema", a.wiki_schema] if a.wiki_schema else []), str(md_path))
     result = {"json": str(out / "rtp-report.json"), "md": str(md_path), "lint": "PASS" if rc == 0 else "FAIL", "lint_output": lint_out.strip().splitlines()[-4:],
               "verdict": g["verdict"], "checks": [{"id": c["id"], "status": c["status"]} for c in g["checks"]],
-              "rtp_total": rep.get("rtp_total"), "spins": rep.get("spins")}
+              "rtp_total": rep.get("rtp_total"), "spins": rep.get("spins"), "format": rep.get("format"), "inputs": g.get("inputs")}
     if g.get("expect"):
         result["version"] = g.get("version")
         result["expect"] = g.get("expect")

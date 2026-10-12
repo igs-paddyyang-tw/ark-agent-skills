@@ -8,11 +8,25 @@ import re
 import sys
 
 CONTRACT = "1"
-SKILL_VERSION = "1.1.0"
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "QUERY_FAILED": 6, "MISSING_DEP": 8}
 HERE = pathlib.Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
 MD_REPORT = SKILL_DIR.parent / "ark-md-report" / "scripts"
+
+
+def _skill_version() -> str:
+    """從 SKILL.md frontmatter 讀 version（不再寫死）。"""
+    try:
+        for line in (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8").splitlines()[:40]:
+            m = re.match(r'\s*version:\s*"?([0-9][^"\s]*)"?', line)
+            if m:
+                return m.group(1)
+    except OSError:
+        pass
+    return "0.0.0"
+
+
+SKILL_VERSION = _skill_version()
 
 PCT_RE = re.compile(r"^-?\d+(?:\.\d+)?%$")
 
