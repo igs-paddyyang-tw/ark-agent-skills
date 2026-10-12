@@ -29,6 +29,20 @@ metadata:
 
 根據角色產出完整 agent workspace 配置（`.kiro/` + 多 CLI 入口檔）。
 
+## 🎯 核心目標：打造「個人化成長三引擎」
+
+本 skill 的產物不只是一堆設定檔 —— 它在為每個 agent **裝上三個引擎**，讓 agent 既「個人化」又「會成長」。這是本 skill 一切輸出的設計意圖，實戰設定細節見下方與 `references/`。
+
+| 引擎 | 落點 | 作用 | 本 skill 怎麼配 |
+|------|------|------|----------------|
+| 🧠 **大腦 BRAIN** | `.kiro/steering/`（`SOUL` 人格 · `BRAIN` 判準 · `AGENTS` 規範 · `CODE` · `USER` 畫像），always-on 常駐注入 | **個人化的根** —— 換一組 steering = 換一個 agent（決定它是誰、怎麼判斷、紅線在哪） | 依角色選模板渲染 SOUL；`--profile` 讓根目錄 manager 由指定角色渲染（§--profile） |
+| 📝 **記憶 Memory** | `memory/`（四層：`BRAIN.md` 判準 → `MEMORY.md` 導覽 → `memory.md` 蒸餾 → `daily/`+`archive/` 流水） | **成長的時間軸** —— 記得經歷過什麼、踩過什麼坑 | 產 `memory/daily`+`archive` 骨架與 `memory.md` 四分節；蒸餾走 `memory-distill` 排程（見 `references/memory-architecture.md`，門檻 ark_team_agent ≥ 1.11.0） |
+| 📚 **知識 Knowledge** | `knowledge/`（`raw` → ingest → `wiki` 四層搜尋；五類來源櫃） | **成長的能力庫** —— 查得到領域知識，問一次之後都在 | 依 `team.yaml` `knowledge_sources` 產五櫃骨架 + 自動補 `knowledge_search_order`（見 `references/knowledge-sources-map.md`） |
+
+> **一句話**：大腦給 agent「個性」、記憶給它「經歷」、知識庫給它「專業」。三者齊備，才是一個能交到某個團隊手上、越用越像自己人的 agent。這也是 `assets/steering/BRAIN.md`「三層資源」準則的上層視角 —— BRAIN 範本管「agent 執行時怎麼用這三種資源」，本段管「建置時怎麼把三引擎裝起來」。
+
+> 🟡 **已知對齊缺口（v2.2.0）**：三引擎中 🧠 **大腦的 `BRAIN.md` 判準層目前不由 `build_kiro.py` 自動產出**（grep 零命中），現行 workspace 的 `BRAIN.md` 多為手動補入。`assets/steering/BRAIN.md` 範本已就緒，待後續版本讓 `build_kiro.py` 一併產出（屬 code change，需測不破壞既有 workspace）。新建 workspace 時請留意手動補 `BRAIN.md`。
+
 > **更名紀錄**：本 skill 原名 `ark-kiro-init`（v1.x），於 v2.0（2026-09-07）
 > 更名為 `ark-agent-init` —— 因為它產出的不只是 Kiro 的 `.kiro/`，
 > 而是「一份 agent workspace 給多個 AI CLI 共用」。舊觸發詞（kiro init / kiro-init）
@@ -109,6 +123,7 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 │   │                                  #      靠 sync_skills.py 同步更新，gitignore 排除
 │   └── steering/
 │       ├── CODE.md                    #   程式碼規範（fileMatch）
+│       ├── BRAIN.md                   #   🧠 判準層（記憶/知識使用準則；手建，build_kiro 不產）
 │       ├── MEMORY.md                  #   entry 記憶
 │       ├── SOUL.md                    #   人格（--profile 給定則由 role-profile 渲染，含 sha 戳記）
 │       ├── USER.md                    #   使用者百科
@@ -128,6 +143,7 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 │       │   └── steering/
 │       │       ├── AGENTS.md          #   複本（供該 agent 載入；根那份是 SSOT）
 │       │       ├── CODE.md
+│       │       ├── BRAIN.md           #   🧠 判準層（手建，build_kiro 不產）
 │       │       ├── MEMORY.md
 │       │       ├── SOUL.md            #   角色專屬
 │       │       ├── USER.md
@@ -481,7 +497,6 @@ agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不
 
 ## 近期進度
 （Kiro 自動累積，格式：## YYYY-MM-DD — 一句話標題）
-```
 
 ### 4. steering/USER.md（使用者百科）
 
@@ -716,7 +731,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 ## 品質檢查
 
-產出後自動驗證（可用 `scripts/estimate_context.py` 量測 context 佔比）：
+產出後自動驗證（context 佔比可用 Kiro 內建量測或人工估算）：
 
 - [ ] `agents/{role}.json` 有 name/description/prompt/tools/resources/allowedTools
 - [ ] `agents/{role}.json` 有 knowledgeBase resource 指向 knowledge/
@@ -786,9 +801,9 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 ### assets/steering/（預設模板，直接 copy）
 
-> 🔴 **本表必須與目錄實況一致** —— `scripts/tests/test_scaffold.py::
-> test_skill_md_asset_table_matches_reality` 會驗。曾經列了四個不存在的檔名
-> （AGENTS/USER/SOUL/MEMORY.md），照著走的人會發現「說要 copy 的檔案不在」。
+> 🔴 **本表必須與 `assets/steering/` 目錄實況一致** —— 維護時逐一核對檔名。
+> 曾經列了四個不存在的檔名（AGENTS/USER/SOUL/MEMORY.md），照著走的人會發現「說要 copy 的檔案不在」。
+> （註：原文曾引用 `test_scaffold.py` 自動驗此表，該測試現不存在，改為人工核對。）
 
 | 檔案 | 說明 |
 |------|------|
