@@ -181,7 +181,10 @@ def lint_file(path: Path, dtype: str, cfg: dict, repo_skills: dict, rep: Report)
         return
     ign = set(cfg.get("ignore_rules") or [])
     for m in re.finditer(r"prompt-lint:\s*ignore\s+([\w,\- ]+)", text):
-        ign |= {x.strip() for x in m.group(1).split(",") if x.strip()}
+        for x in m.group(1).split(","):
+            x = x.strip().rstrip("-").strip()      # 去掉 HTML 註解尾 `-->` 殘留的 `--`
+            if re.fullmatch(r"[A-Za-z]{2,}-?\d*", x):  # 只收合法規則 ID（如 PL-011）
+                ign.add(x)
     sroot = skill_root(path)
     my = sroot.name if sroot else path.parent.name
     add = lambda rule, sev, line, msg, conf="high": rep.add(Finding(rule, sev, rel, line, msg, conf), ign)
