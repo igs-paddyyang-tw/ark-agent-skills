@@ -51,6 +51,78 @@ def num(v, d=None) -> str:
     return f"{v:,.{d}f}"
 
 
+def _col_letter(n: int) -> str:
+    s = ""
+    while n:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
+LONG_CELL = 40   # 超過此長度的字串格摺疊（如 xlsx 旁註的 Go 陣列字面量），避免撐爆欄寬
+
+
+def cell(v) -> str:
+    """通用表儲存格：空 → 空白；超長字串 → <details> 摺疊（`{a, b, …}` 陣列標項數）；其餘同 num()。"""
+    if v is None or v == "":
+        return ""
+    if isinstance(v, str) and len(v.strip()) > LONG_CELL:
+        s = v.strip()
+        label = f"陣列 {len(s.strip('{},; ').split(','))} 項" if s.startswith("{") else esc(s[:16]) + "…"
+        return f'<details class="cell-fold"><summary>{label}</summary><code>{esc(s)}</code></details>'
+    return num(v)
+
+
+def split_generic(rows: list[dict], c0: int = 1) -> list[dict]:
+    """把通用表切成並排子表：回傳 [{"captions", "head", "rows"}]。
+
+    ① 表頭：第一列 ≥2 個字串才算；下一列字串更多且無數字時，本列降為 caption（如「暫定基準」說明列）
+    ② 欄切（僅有表頭的表）：整欄皆空的欄為分隔；表頭首格（如 NORMAL）在同段內重出現 → 左右並排的另一張子表
+    ③ 表頭全空的段（xlsx 旁註欄）以 caption 標出所在欄字母；c0 = 表左緣的 1-based 欄號
+    """
+    def strs(r):
+        return sum(isinstance(v, str) for v in r["cells"])
+
+    def has_num(r):
+        return any(isnum(v) for v in r["cells"])
+
+    width = max(len(r["cells"]) for r in rows)
+    grid = [r["cells"] + [None] * (width - len(r["cells"])) for r in rows]
+    hi = None
+    if strs(rows[0]) >= 2:
+        hi = 0
+        while hi + 1 < len(rows) and strs(rows[hi + 1]) > strs(rows[hi]) and not has_num(rows[hi + 1]):
+            hi += 1
+    filled = [any(g[c] not in (None, "") for g in grid) for c in range(width)]
+    segs, start = [], None
+    for c in range(width + 1 if hi is not None else 0):
+        if c < width and filled[c]:
+            start = c if start is None else start
+        elif start is not None:
+            segs.append((start, c)); start = None
+    if hi is None:
+        segs = [(0, width)]
+    else:
+        cut = []
+        for a, b in segs:
+            head = grid[hi][a:b]
+            li = next((j for j, v in enumerate(head) if v not in (None, "")), None)   # 首格（左上可能空著）
+            reps = [] if li is None else [a + j for j in range(li + 1, b - a) if head[j] == head[li]]
+            ks = [a] + reps + [b]
+            cut += list(zip(ks, ks[1:]))
+        segs = cut
+    out = []
+    for a, b in segs:
+        caps = [esc(v) for g in grid[:hi or 0] for v in g[a:b] if v not in (None, "")]
+        head = [esc(v) if v is not None else "" for v in grid[hi][a:b]] if hi is not None else [""] * (b - a)
+        body = [g[a:b] for g in grid[(hi + 1 if hi is not None else 0):] if any(v not in (None, "") for v in g[a:b])]
+        if hi is not None and not any(head) and not caps:
+            caps = [f"xlsx {_col_letter(c0 + a)} 欄旁註"]
+        if body or any(head):
+            out.append({"captions": caps, "head": head, "rows": body})
+    return out
+
+
 def pc(v, d=2) -> str:
     return "—" if v is None else f"{v:.{d}f}%"
 
@@ -408,13 +480,8 @@ class View:
         flat = [v for r in rows for v in r["cells"] if v is not None]
         if len(rows) == 1 and len(flat) == 1:
             return f"<h4>{esc(flat[0])}</h4>"
-        width = max(len(r["cells"]) for r in rows)
-        first = rows[0]["cells"]
-        if sum(1 for v in first if isinstance(v, str)) >= 2:
-            head, body = [esc(v) if v is not None else "" for v in first], rows[1:]
-        else:
-            head, body = [""] * width, rows
-        return table(head + [""] * (width - len(head)), [[num(v) if v is not None else "" for v in r["cells"]] + [""] * (width - len(r["cells"])) for r in body], cls="compact")
+        return "".join(table(s["head"], [[cell(v) for v in r] for r in s["rows"]], cls="compact",
+                             caption=" ／ ".join(s["captions"]) or None) for s in split_generic(rows, t.get("c0", 1)))
 
     def r_reelsets(self, x):
         wsum = (x.get("totals") or {}).get("weight_sum") or sum(s["weight"] for s in x["sets"] if isnum(s["weight"]))

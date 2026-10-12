@@ -618,5 +618,20 @@
     "skill": "ark-superpowers",
     "version": "1.0.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:2e7c7bc5a13db51a8549c4867ea2001eefddfadebcba69adfc7f53a2b388a7d5": {
+    "skill": "ark-game-prob",
+    "version": "1.1.2",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:bbb2ed7a4e7f9078d3dd6bc7f1be37ca2d16daec34da424fa736cb668c0b4e78": {
+    "skill": "ark-game-quicktest",
+    "version": "2.1.1",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:09fd93e0fae6c02cdaa734b71f940b002b2517d153db50c1f8491b1f14af87dd": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
   }
 }

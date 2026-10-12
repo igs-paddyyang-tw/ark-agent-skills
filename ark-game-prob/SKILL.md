@@ -18,7 +18,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.1.1"
+  version: "1.1.2"
   updated: 2026-10-12
   outputs:
     - { format: data, audience: ai }
@@ -55,7 +55,7 @@ metadata:
 | `scripts/ps_run.py` | 一鍵：`--xlsx` → extract → probspec → html → lint [→ diff]；或 `--qt` → probspec → html → lint | 平常只跑這支 |
 | `scripts/ps_extract.py` | 公版機率表 xlsx → `prob-data.json`：參數表以「表 X-n」標籤為錨 generic 切表 + recognizer（表M-1 輪帶組 / F-1 權重表 / SC·SS 雙欄 / 是否表 / 組別×欄矩陣 / 橫向序列 / 單值）；數據資料 FastTest 報表逐段解析；Strip 區塊 | 拿到機率表 xlsx |
 | `scripts/ps_probspec.py` | Content 軌：`--data`（xlsx 模式，轉呼叫 `ps_probspec_xlsx.py`）或 `--qt`（qt 模式）→ `prob-spec.md` + `prob-spec.meta.json`；人工區 `<!-- human:id -->` 重產保留 | 要規格書 |
-| `scripts/ps_html.py` | View 軌：`prob-data.json` + `prob-spec.md` → `prob-spec.html`（戳記 content-src）；`--body-only` 給會自己包骨架的發佈端 | 要給人看 |
+| `scripts/ps_html.py` | View 軌：`prob-data.json` + `prob-spec.md` → `prob-spec.html`（戳記 content-src）；`--body-only` 給會自己包骨架的發佈端；未被辨識的表走通用表：說明列轉 caption、左右並排子表（表頭首格重出現）與空欄後的旁註欄拆開、超長格（Go 陣列字面量）摺疊 | 要給人看 |
 | `scripts/ps_lint.py` | PS-SECTIONS / PS-NUM / PS-PROV / PS-STALE / **PS-HTML-EMPTY**（去標籤純文字命中六段標題 < 4 判空殼 error、< 6 warn，防「過戳記但未渲染內容」）/ PS-HUMAN / PS-INJECT → `lint-report.json`；error exit 3 | 任何人手改 md 後必跑 |
 | `scripts/ps_diff.py` | `prob-data.json` ⇄ 設定檔 JSON 逐鍵對照（map：`references/config-map.fasttest.yaml`）→ `config-diff.md/.json`；不一致 exit 3（`--warn-only` 降 0）| 跑快測前、或規格 / 設定檔任一改了 |
 | `scripts/ps_layout.py` | 一款遊戲的產出佈局守門：讀 `output/games/<slug>/{spec,prob,quicktest,docs}/` 實檔比 sha / 數字 → `layout-report.json`（`--write-md` 重寫 LAYOUT.md）；規則 L-DIRS / L-STRAY / L-PROB / L-STAMP / L-SPEC / L-QT / L-DIFF / L-RTP；`--mode restore\|design`；error exit 3 | 畢業前（進 `data/` 前）|
