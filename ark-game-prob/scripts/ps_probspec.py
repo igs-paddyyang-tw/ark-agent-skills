@@ -430,6 +430,37 @@ def main() -> None:
                 cnt = strip_counts(reel or [], sym_order)
                 L.append(f"| {gi} | R{ri + 1} | {dv(str(len(reel or [])), f'len({key}[{gi}][{ri}])')} | " + " | ".join(dv(str(cnt.get(s, 0)), f'count({key}[{gi}][{ri}],{s})') for s in sym_order) + " |")
         L.append("")
+    # ── 客製玩法欄位 generic 渲染（範本 schema 以外的 extra_odds 鍵，如金幣鎖格 tiger_dragon）──
+    # 治本：qt 模式原本只渲染範本固定欄位，客製巢狀欄位會被漏印（見差距分析報告）。
+    # 這裡掃 extra_odds 裡「未被上面渲染過」的鍵，用通用表格印出，數字進 derived（PS-NUM 允許）。
+    RENDERED_KEYS = {k for k, _, _ in SCALAR_PARAMS} | {
+        "odds", "jackpot_multiple", "jackpot_acc_rate",
+        "main_game_reel_index_set", "main_game_reel_set_weight", "free_game_type_weight",
+        "free_game_reel_index_set", "free_game_reel_set_weight",
+    }
+    custom_keys = [k for k in eo if k not in RENDERED_KEYS and eo.get(k) is not None]
+    if custom_keys:
+        L += ["### 客製玩法參數（範本 schema 以外）", "",
+              "> 本款玩法超出範本固定欄位，以下為 odds.json `extra_odds` 的客製機率參數（generic 渲染）。", ""]
+        for ck in custom_keys:
+            val = eo.get(ck)
+            src = prov.get(f"extra_odds.{ck}") or "**UNKNOWN** 無 provenance"
+            if isinstance(val, dict):
+                # 巢狀 dict → 子表：list 值併成一列、scalar 值直接列
+                L += [f"**{ck}**", "", "| 參數 | 值 |", "|---|---|"]
+                for sk, sv in val.items():
+                    if isinstance(sv, list):
+                        cell = ", ".join(dv(fmt_num(x), f"extra_odds.{ck}.{sk}[]") for x in sv)
+                    else:
+                        cell = dv(fmt_num(sv), f"extra_odds.{ck}.{sk}")
+                    L.append(f"| {sk} | {cell} |")
+                L += [f"", f"- 來源：{src}", ""]
+            elif isinstance(val, list):
+                cell = ", ".join(dv(fmt_num(x), f"extra_odds.{ck}[]") for x in val)
+                L += [f"- **{ck}**：{cell}；來源 {src}", ""]
+            else:
+                L += [f"- **{ck}**：{dv(fmt_num(val), f'extra_odds.{ck}')}；來源 {src}", ""]
+
     L += hblock("param-notes", "（參數備註：隱性數值的設計目的、與編導規格書同步事項）") + [""]
 
     # ── 5 競品資料／手法對應 ──

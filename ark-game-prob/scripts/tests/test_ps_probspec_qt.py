@@ -147,3 +147,61 @@ def test_ps_run_xlsx_view_needs_config(tmp_path):
     """xlsx 模式用 --xlsx-view 卻沒 --config → NEED_CONFIG，不靜默略過。"""
     r = run("ps_run.py", "--xlsx", str(tmp_path / "nonexist.xlsx"), "--xlsx-view")
     assert r.get("code") == "NEED_CONFIG" or "NEED_CONFIG" in str(r), r
+
+
+
+def test_custom_extra_odds_rendered(tmp_path):
+    """治本反證：odds.json extra_odds 的客製欄位（範本 schema 以外，如金幣鎖格 tiger_dragon）
+    必須在 §4 被 generic 渲染印出；移除則不出現。防「客製機率參數被漏印」（見差距分析報告）。"""
+    d = qt_dir(tmp_path)
+    odds_p = d / "odds" / "odds_1.0.0.json"
+    odds = json.loads(odds_p.read_text(encoding="utf-8"))
+    # 加一個客製巢狀欄位（模擬金幣鎖格 tiger_dragon）
+    odds["extra_odds"]["tiger_dragon"] = {
+        "coin_rate": [700, 1090, 655],
+        "jackpot_threshold": 32,
+        "unlock_thresholds": [6, 9, 14, 19, 25],
+    }
+    odds_p.write_text(json.dumps(odds), encoding="utf-8")
+    # provenance 補來源（否則 generic 渲染標 UNKNOWN，仍會印但無來源）
+    cfg_p = d / "qt-config.yaml"
+    cfg_p.write_text(cfg_p.read_text(encoding="utf-8") +
+                     "\nprovenance:\n  extra_odds.tiger_dragon: D-TEST-01\n", encoding="utf-8")
+    md = gen(tmp_path, d)
+    text = md.read_text(encoding="utf-8")
+    # 正向：客製欄位的鍵與值都要出現在 §4
+    assert "客製玩法參數" in text, "§4 應有客製玩法參數段"
+    assert "tiger_dragon" in text, "客製欄位名應出現"
+    assert "coin_rate" in text and "700" in text, "客製欄位的子鍵與值應被渲染"
+    assert "32" in text and "D-TEST-01" in text, "JACKPOT 門檻與 provenance 應出現"
+    # lint 不因 generic 渲染的數字報 PS-NUM（已進 derived）
+    rep = ps_lint.lint(md.parent)
+    assert not any(v["rule"] == "PS-NUM" for v in rep["violations"]), "generic 渲染數字應進 derived，不觸發 PS-NUM"
+
+    # 反向：移除客製欄位 → §4 不應再出現該段
+    odds2 = json.loads(odds_p.read_text(encoding="utf-8"))
+    del odds2["extra_odds"]["tiger_dragon"]
+    odds_p.write_text(json.dumps(odds2), encoding="utf-8")
+    md2 = gen(tmp_path, d)
+    assert "tiger_dragon" not in md2.read_text(encoding="utf-8"), "移除客製欄位後不應再出現"
+
+
+
+# ── W0 反證（plan W0）：qt 模式最終 html 必含色階熱度(heat)與 KPI ──
+# 現況 qt 走 ps_probspec build_html（無 heat）→ 本測試應 FAIL；W2-W4 改走 ps_html 後轉綠。
+def _run_full(tmp, d):
+    """跑完整 ps_run(qt)，回傳 prob-spec.html 路徑。"""
+    prob = tmp / "prob"
+    r = run("ps_run.py", "--qt", str(d), "--dest", str(prob), "--slug", "tpl", cwd=tmp)
+    assert r.get("success") or r.get("rc") == 0, r
+    return prob / "prob-spec.html"
+
+
+def test_qt_html_has_heat_and_kpi(tmp_path):
+    """W0 反證：qt 模式產出的 prob-spec.html 必含色階熱度（class 含 heat）與 KPI 卡。
+    現況（build_html）無 → FAIL；對齊 xlsx View（走 ps_html）後 → PASS。"""
+    d = qt_dir(tmp_path)
+    html = _run_full(tmp_path, d)
+    t = html.read_text(encoding="utf-8")
+    assert "heat" in t, "qt html 應含色階熱度（heat）——對齊 xlsx View 的參數表/符號命中熱度"
+    assert "kpi" in t.lower(), "qt html 應含 KPI 卡（總覽）"

@@ -80,6 +80,8 @@ def main() -> None:
         if a.xlsx_view:
             steps["probtable"] = step("ps_probtable.py", ["--dir", str(out_dir)])
         mode = "qt"
+        # qt View 對齊 xlsx：產 prob-data.json（adapter）→ 下方自動觸發 ps_html（取代 ps_probspec 的簡易 build_html）
+        steps["qtdata"] = step("ps_qtdata.py", ["--qt", a.qt, "--slug", slug, "--dest", str(out_dir)])
     if (out_dir / "prob-data.json").exists():
         steps["html"] = step("ps_html.py", ["--dir", str(out_dir)])
     steps["lint"] = step("ps_lint.py", ["--dir", str(out_dir)])
