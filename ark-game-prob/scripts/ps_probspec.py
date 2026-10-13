@@ -7,13 +7,13 @@ deterministic、不呼叫 LLM；每個數字都能回溯到來源檔（odds.json
 
 用法: python ps_probspec.py --qt data/quicktest/<slug> [--gdd] [--run] [--out data/prob] [--slug] [--version]   （qt 模式）
       python ps_probspec.py --data data/prob/<slug>/prob-data.json [--out data/prob]                      （xlsx 模式）
+1.4：§2 另產「快測摘要 / 符號命中 / 輪帶組 RTP / 贏分分布」契約表、附錄「輪帶 Strip」帶面（ps_mdblocks）；html 由 ps_html 從 md 渲染。
 交付格式：prob-spec 已落盤 data/prob/<slug>/prob-spec.md｜6 段｜參數 N（待決議 M）｜數據：<verdict|未快測>｜html: …
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
-import html as _html
 import json
 import os
 import pathlib
@@ -22,6 +22,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ps_common as C  # noqa: E402
+import ps_mdblocks as B  # noqa: E402
 
 PS_CONTRACT = "1"
 HUMAN_RE = re.compile(r"<!--\s*human:([a-z0-9_-]+)\s*-->\n?(.*?)<!--\s*/human\s*-->", re.S)
@@ -96,93 +97,7 @@ def strip_counts(reel: list, sym_order: list[str]) -> dict[str, int]:
     return c
 
 
-def md_to_html(md: str) -> str:
-    """最小 markdown → html：#/##/###、bullet、表格、mermaid fence、段落；行內 **bold** / `code`。"""
-    def inline(t: str) -> str:
-        t = _html.escape(t, quote=False)
-        t = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", t)
-        t = re.sub(r"`([^`]+)`", r"<code>\1</code>", t)
-        t = re.sub(r"\b(SPEC|DECIDED|UNKNOWN|FROM_KB|OBSERVED|INFERRED|PROPOSED)\b", r'<span class="tag \1">\1</span>', t, count=1) if t.startswith("<strong>") else t
-        return t
-    out, lines, i = [], md.splitlines(), 0
-    in_ul = in_tbl = False
-    while i < len(lines):
-        ln = lines[i]
-        if ln.startswith("```"):
-            lang = ln[3:].strip(); buf = []; i += 1
-            while i < len(lines) and not lines[i].startswith("```"):
-                buf.append(lines[i]); i += 1
-            code = _html.escape("\n".join(buf), quote=False)
-            out.append(f'<pre class="mermaid">{code}</pre>' if lang == "mermaid" else f"<pre><code>{code}</code></pre>")
-            i += 1; continue
-        if ln.startswith("|"):
-            if not in_tbl:
-                out.append("<table>"); in_tbl = True; hdr = True
-            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
-            if all(re.fullmatch(r":?-{2,}:?", c) for c in cells):
-                i += 1; continue
-            tag = "th" if hdr else "td"
-            out.append("<tr>" + "".join(f"<{tag}>{inline(c)}</{tag}>" for c in cells) + "</tr>"); hdr = False
-            i += 1; continue
-        elif in_tbl:
-            out.append("</table>"); in_tbl = False
-        if ln.startswith("- "):
-            if not in_ul:
-                out.append("<ul>"); in_ul = True
-            out.append(f"<li>{inline(ln[2:])}</li>"); i += 1; continue
-        elif in_ul:
-            out.append("</ul>"); in_ul = False
-        if ln.startswith("<!--"):
-            if "human:" in ln:
-                out.append('<div class="human">')
-            elif "/human" in ln:
-                out.append("</div>")
-            i += 1; continue
-        if ln.startswith("# "):
-            out.append(f"<h1>{inline(ln[2:])}</h1>")
-        elif ln.startswith("## "):
-            out.append(f'<h2 id="s{len([o for o in out if o.startswith("<h2")]) + 1}">{inline(ln[3:])}</h2>')
-        elif ln.startswith("### "):
-            out.append(f"<h3>{inline(ln[4:])}</h3>")
-        elif ln.startswith("> "):
-            out.append(f"<blockquote>{inline(ln[2:])}</blockquote>")
-        elif ln.strip():
-            out.append(f"<p>{inline(ln)}</p>")
-        i += 1
-    if in_ul:
-        out.append("</ul>")
-    if in_tbl:
-        out.append("</table>")
-    return "\n".join(out)
-
-
-HTML_CSS = """
-:root{--bg:#14110e;--panel:#1f1813;--line:#3d2f24;--fg:#efe6d6;--muted:#a89a8a;--accent:#e9b949;--spec:#5fb0e6;--dec:#7bd389;--unk:#e07a5f}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}
-main{max-width:1080px;margin:0 auto;padding:32px 24px 80px}h1{font-size:28px;color:var(--accent);margin:0 0 4px}h2{font-size:21px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-top:40px;color:var(--accent)}
-h3{font-size:16px;color:var(--fg);margin:22px 0 6px}blockquote{margin:8px 0;padding:8px 14px;border-left:3px solid var(--accent);background:var(--panel);color:var(--muted)}
-table{border-collapse:collapse;margin:10px 0;width:100%;font-size:13.5px}th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}th{background:var(--panel);color:var(--accent)}
-code{background:var(--panel);padding:1px 5px;border-radius:3px;font-size:13px}pre{background:var(--panel);padding:12px;overflow:auto;border:1px solid var(--line)}pre.mermaid{background:#fff;color:#111}
-.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:3px;margin-right:4px;font-weight:600}.tag.SPEC{background:var(--spec);color:#06202e}.tag.DECIDED{background:var(--dec);color:#06260f}.tag.UNKNOWN,.tag.PROPOSED{background:var(--unk);color:#2b0e06}
-.human{border:1px dashed var(--accent);padding:8px 14px;margin:8px 0;background:#201a12}.human::before{content:"人工填寫區";font-size:11px;color:var(--accent)}
-.pending{color:var(--unk);font-weight:600}footer{margin-top:48px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:10px}
-p.sub{color:var(--muted);font-size:13px;margin:0 0 14px}nav{font-size:13px;color:var(--muted);margin-bottom:24px}nav a{color:var(--accent);text-decoration:none;margin-right:12px}
-"""
-
-
-def build_html(md_body: str, title: str, md_name: str, md_sha16: str, meta: dict) -> str:
-    body = md_to_html(md_body).replace(f">{PENDING}<", f'><span class="pending">{PENDING}</span><')
-    toc = " ".join(f'<a href="#s{i}">{i}. {t}</a>' for i, t in enumerate(meta["sections"], 1))
-    return f"""<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>{_html.escape(title)}</title>
-<!-- content-src: {md_name} sha256:{md_sha16} -->
-<meta name="viewport" content="width=device-width,initial-scale=1"><style>{HTML_CSS}</style></head><body><main>
-<h1>{_html.escape(title)}</h1>
-<p class="sub">odds {_html.escape(str(meta["odds_version"]))} · 數據：{_html.escape(str(meta["verdict"]))} · 待決議參數 {meta["pending_params"]} · {meta["generated"]} · distribution: internal</p>
-<nav>{toc}</nav>
-{body}
-<footer>distribution: internal · 由 ark-game-prob ps_probspec 自 Content 軌 {md_name} 渲染（sha256:{md_sha16}）· 數字皆可回溯來源，請勿只改 HTML</footer>
-</main><script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script><script>if(window.mermaid){{try{{mermaid.initialize({{startOnLoad:true,theme:'neutral'}});}}catch(e){{}}}}</script></body></html>
-"""
+# View 軌一律由 ps_html（md-first）渲染；1.4 起本檔不再內建 HTML 樣板。
 
 
 def main() -> None:
@@ -289,7 +204,7 @@ def main() -> None:
     derived: list[dict] = []  # 派生數字（給 ps_lint 的允許集）
 
     def dv(val: str, frm: str) -> str:
-        derived.append({"value": val, "from": frm})
+        derived.append({"value": str(val).replace(",", "").rstrip("%").lstrip("+"), "from": frm})
         return val
 
     L: list[str] = []
@@ -318,6 +233,7 @@ def main() -> None:
     if rep:
         spins = int(rep.get("spins") or 0)
         verdict = (rep.get("gate") or {}).get("verdict") or "inconclusive"
+        L += B.qt_summary(rep, targets, dv)
         L += [f"> 來源：`qt-report/rtp-report.json`（快測版本 {rep.get('version')}，{dv(f'{spins:,}', 'rtp-report.spins')} 手，{rep.get('generated_at')}）；P-003 三向 verdict：**{verdict}**。", "",
               "| 階段 | RTP | Hit % | 觸發率 | 平均觸發局數 | 平均倍率 | 最大倍率 | 平均局數 |", "|---|---|---|---|---|---|---|---|"]
         for name, r in (rep.get("games") or {}).items():
@@ -334,6 +250,7 @@ def main() -> None:
         if d:
             L.append(f"- SD {dv(fmt_num(d.get('sd')), 'detail.sd')}；P.I. {dv(fmt_num(d.get('pi')), 'detail.pi')}；Pay Out Rate {dv(fmt_pct(d.get('pay_out_rate')), 'detail.pay_out_rate') if d.get('pay_out_rate') is not None else '—'}")
         L.append("")
+        L += B.qt_data_tables(rep, dv)
     else:
         L += ["> **未快測**：`qt-report/rtp-report.json` 不存在。跑 `qt_run.py` 後重產本檔，本表自動填入。", "",
               "| 階段 | RTP | Hit % | 觸發率 | 平均觸發局數 | 平均倍率 | 最大倍率 | 平均局數 |", "|---|---|---|---|---|---|---|---|",
@@ -493,6 +410,16 @@ def main() -> None:
         L.append(f"| — | 另有 {dv(str(n_defer), 'decisions.defer_count')} 筆 defer | — | — | 待決議 |")
     L += [""] + hblock("hidden-rules", "（人工補充：上限保護、特殊盤面限制等隱性規則與其設計目的）") + [""]
 
+    # ── 輪帶 Strip（附錄；不計入六段）──
+    groups = []
+    for label, key in (("主遊戲", "main_game_reel_data"), ("免費遊戲", "free_game_reel_data")):
+        data = odds.get(key)
+        if isinstance(data, list):
+            for gi, grp in enumerate(data):
+                if grp and any(grp):
+                    groups.append({"name": f"{label} 組 {gi}", "reels": [[sym_by_id.get(str(v), {}).get("code") or str(v) for v in (reel or [])] for reel in grp]})
+    L += B.strips_section(groups, dv, f"來源：`odds/odds_{ver}.json`（sym_id → 符號 code 依 qt-config.structure.symbols）")
+
     # ── 邊界 ──
     L += ["## 邊界聲明", "",
           f"- 本檔由 ps_probspec 自來源檔 deterministic 組出（重產覆蓋，人工區保留）；來源 sha 記於 `prob-spec.meta.json`，ps_lint 擋 STALE。",
@@ -500,7 +427,7 @@ def main() -> None:
           "- RTP / 觸發率只引用快測結果，不在本檔定案；參數 null 依 P-002 顯示 待決議。", ""]
 
     body = "\n".join(L)
-    fm = ["---", f'title: "機率規格書：{game}"', "contract: \"1\"", "kind: prob-spec", f"slug: {slug}", f'game: "{game}"', f'odds_version: "{ver}"',
+    fm = ["---", f'title: "機率規格書：{game}"', "contract: \"1\"", "kind: prob-spec", f"slug: {slug}", f'game: "{game}"', "mode: qt", f'odds_version: "{ver}"',
           f"status: {'review' if rep else 'draft'}", "distribution: internal", f"date: {a.date}", f"author: {a.author}", "source_skill: ark-game-prob",
           f"verdict: {verdict}", f"pending_params: {pending}", "sources:"]
     def rel(p: pathlib.Path) -> str:
@@ -515,12 +442,12 @@ def main() -> None:
     md = "\n".join(fm) + body
     C.atomic_write(md_p, md)
     sha = C.sha16(md_p)
-    meta = {"contract": PS_CONTRACT, "slug": slug, "game": game, "odds_version": ver, "sections": sections, "pending_params": pending, "verdict": verdict,
+    meta = {"contract": PS_CONTRACT, "kind": "prob-spec", "mode": "qt", "slug": slug, "game": game, "odds_version": ver, "sections": sections, "pending_params": pending, "verdict": verdict,
             "sources": {k: {"path": rel(v), "sha256_16": C.sha16(v)} for k, v in sources_used.items()},
             "derived": derived, "md_sha256_16": sha, "generated": a.date}
     C.atomic_write(out_dir / "prob-spec.meta.json", json.dumps(meta, ensure_ascii=False, indent=1))
-    html_p = out_dir / "prob-spec.html"
-    C.atomic_write(html_p, build_html(body, f"機率規格書：{game}", "prob-spec.md", sha, meta))
+    import ps_html
+    html_p, _, _ = ps_html.render_file(md_p)   # View 軌一律由 ps_html 從 md 渲染（1.4：md-first）
     C.emit({"md": md_p.as_posix(), "html": html_p.as_posix(), "meta": (out_dir / "prob-spec.meta.json").as_posix(), "sections": len(sections), "pending_params": pending,
             "verdict": verdict, "sources": list(sources_used), "human_blocks_kept": len(human),
             "delivery": f"prob-spec 已落盤 {md_p.as_posix()}｜{len(sections)} 段｜待決議參數 {pending}｜數據：{verdict}｜html: {html_p.name}",

@@ -15,16 +15,64 @@
  "pending_params": 0,
  "verdict": "confirmed",
  "sources": {
-  "xlsx": {
-   "path": "<機率表來源>/彌勒佛機率表_v3_1001A版.xlsx",
-   "sha256_16": "408fa27462d5b3a1"
-  },
   "prob-data": {
    "path": "golden/milefo/prob-data.json",
-   "sha256_16": "a7d47e9cef12bc8d"
+   "sha256_16": "b8f24da8350800d4"
   }
  },
  "derived": [
+  {
+   "value": "99.9395",
+   "from": "數據資料 RTP 分項 總計"
+  },
+  {
+   "value": "39.05",
+   "from": "數據資料 RTP 分項 主遊戲"
+  },
+  {
+   "value": "60.8895",
+   "from": "數據資料 RTP 分項 免費遊戲"
+  },
+  {
+   "value": "39.6931",
+   "from": "BASE INFO Main Trigger %"
+  },
+  {
+   "value": "368.18",
+   "from": "BASE INFO Main MaxMulti"
+  },
+  {
+   "value": "0.4475",
+   "from": "BASE INFO Free Trigger %"
+  },
+  {
+   "value": "223.47",
+   "from": "BASE INFO Free Freq"
+  },
+  {
+   "value": "136.07",
+   "from": "BASE INFO Free Multi"
+  },
+  {
+   "value": "31120.36",
+   "from": "BASE INFO Free MaxMulti"
+  },
+  {
+   "value": "1000000000",
+   "from": "數據資料 Total"
+  },
+  {
+   "value": "100.03",
+   "from": "M-1 TOTAL RTP × 100"
+  },
+  {
+   "value": "-0.088",
+   "from": "rtp_total − golden"
+  },
+  {
+   "value": "0.2",
+   "from": "容許誤差常數 pp"
+  },
   {
    "value": "39.0500",
    "from": "數據資料 BASE INFO Main"
@@ -126,6 +174,1478 @@
    "from": "容許誤差常數 pp"
   },
   {
+   "value": "0",
+   "from": "symbol_hit_rate[11][0]"
+  },
+  {
+   "value": "1.01",
+   "from": "symbol_hit_rate[11][1]"
+  },
+  {
+   "value": "0.38",
+   "from": "symbol_hit_rate[11][2]"
+  },
+  {
+   "value": "0.1",
+   "from": "symbol_hit_rate[11][3]"
+  },
+  {
+   "value": "1.49",
+   "from": "symbol_hit_rate[11][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[12][0]"
+  },
+  {
+   "value": "1.52",
+   "from": "symbol_hit_rate[12][1]"
+  },
+  {
+   "value": "0.81",
+   "from": "symbol_hit_rate[12][2]"
+  },
+  {
+   "value": "0.21",
+   "from": "symbol_hit_rate[12][3]"
+  },
+  {
+   "value": "2.54",
+   "from": "symbol_hit_rate[12][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[13][0]"
+  },
+  {
+   "value": "3.9",
+   "from": "symbol_hit_rate[13][1]"
+  },
+  {
+   "value": "3.34",
+   "from": "symbol_hit_rate[13][2]"
+  },
+  {
+   "value": "2.47",
+   "from": "symbol_hit_rate[13][3]"
+  },
+  {
+   "value": "9.7",
+   "from": "symbol_hit_rate[13][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[14][0]"
+  },
+  {
+   "value": "12.76",
+   "from": "symbol_hit_rate[14][1]"
+  },
+  {
+   "value": "5.65",
+   "from": "symbol_hit_rate[14][2]"
+  },
+  {
+   "value": "1.67",
+   "from": "symbol_hit_rate[14][3]"
+  },
+  {
+   "value": "20.08",
+   "from": "symbol_hit_rate[14][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[15][0]"
+  },
+  {
+   "value": "7.56",
+   "from": "symbol_hit_rate[15][1]"
+  },
+  {
+   "value": "2.42",
+   "from": "symbol_hit_rate[15][2]"
+  },
+  {
+   "value": "1.29",
+   "from": "symbol_hit_rate[15][3]"
+  },
+  {
+   "value": "11.27",
+   "from": "symbol_hit_rate[15][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[21][0]"
+  },
+  {
+   "value": "0.5",
+   "from": "symbol_hit_rate[21][1]"
+  },
+  {
+   "value": "0.18",
+   "from": "symbol_hit_rate[21][2]"
+  },
+  {
+   "value": "0.06",
+   "from": "symbol_hit_rate[21][3]"
+  },
+  {
+   "value": "0.73",
+   "from": "symbol_hit_rate[21][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[22][0]"
+  },
+  {
+   "value": "1.05",
+   "from": "symbol_hit_rate[22][1]"
+  },
+  {
+   "value": "0.35",
+   "from": "symbol_hit_rate[22][2]"
+  },
+  {
+   "value": "0.11",
+   "from": "symbol_hit_rate[22][3]"
+  },
+  {
+   "value": "1.5",
+   "from": "symbol_hit_rate[22][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[23][0]"
+  },
+  {
+   "value": "0.33",
+   "from": "symbol_hit_rate[23][1]"
+  },
+  {
+   "value": "0.08",
+   "from": "symbol_hit_rate[23][2]"
+  },
+  {
+   "value": "0.02",
+   "from": "symbol_hit_rate[23][3]"
+  },
+  {
+   "value": "0.43",
+   "from": "symbol_hit_rate[23][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rate[TOTAL][0]"
+  },
+  {
+   "value": "28.63",
+   "from": "symbol_hit_rate[TOTAL][1]"
+  },
+  {
+   "value": "13.19",
+   "from": "symbol_hit_rate[TOTAL][2]"
+  },
+  {
+   "value": "5.93",
+   "from": "symbol_hit_rate[TOTAL][3]"
+  },
+  {
+   "value": "47.75",
+   "from": "symbol_hit_rate[TOTAL][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[11][0]"
+  },
+  {
+   "value": "0.31",
+   "from": "symbol_hit_rtp[11][1]"
+  },
+  {
+   "value": "0.46",
+   "from": "symbol_hit_rtp[11][2]"
+  },
+  {
+   "value": "0.65",
+   "from": "symbol_hit_rtp[11][3]"
+  },
+  {
+   "value": "1.42",
+   "from": "symbol_hit_rtp[11][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[12][0]"
+  },
+  {
+   "value": "0.47",
+   "from": "symbol_hit_rtp[12][1]"
+  },
+  {
+   "value": "1.05",
+   "from": "symbol_hit_rtp[12][2]"
+  },
+  {
+   "value": "1.41",
+   "from": "symbol_hit_rtp[12][3]"
+  },
+  {
+   "value": "2.93",
+   "from": "symbol_hit_rtp[12][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[13][0]"
+  },
+  {
+   "value": "0.99",
+   "from": "symbol_hit_rtp[13][1]"
+  },
+  {
+   "value": "2.29",
+   "from": "symbol_hit_rtp[13][2]"
+  },
+  {
+   "value": "19.35",
+   "from": "symbol_hit_rtp[13][3]"
+  },
+  {
+   "value": "22.63",
+   "from": "symbol_hit_rtp[13][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[14][0]"
+  },
+  {
+   "value": "1.75",
+   "from": "symbol_hit_rtp[14][1]"
+  },
+  {
+   "value": "2.09",
+   "from": "symbol_hit_rtp[14][2]"
+  },
+  {
+   "value": "4.12",
+   "from": "symbol_hit_rtp[14][3]"
+  },
+  {
+   "value": "7.95",
+   "from": "symbol_hit_rtp[14][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[15][0]"
+  },
+  {
+   "value": "1.14",
+   "from": "symbol_hit_rtp[15][1]"
+  },
+  {
+   "value": "0.82",
+   "from": "symbol_hit_rtp[15][2]"
+  },
+  {
+   "value": "2",
+   "from": "symbol_hit_rtp[15][3]"
+  },
+  {
+   "value": "3.96",
+   "from": "symbol_hit_rtp[15][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[21][0]"
+  },
+  {
+   "value": "0.02",
+   "from": "symbol_hit_rtp[21][1]"
+  },
+  {
+   "value": "0.01",
+   "from": "symbol_hit_rtp[21][2]"
+  },
+  {
+   "value": "0.01",
+   "from": "symbol_hit_rtp[21][3]"
+  },
+  {
+   "value": "0.04",
+   "from": "symbol_hit_rtp[21][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[22][0]"
+  },
+  {
+   "value": "0.05",
+   "from": "symbol_hit_rtp[22][1]"
+  },
+  {
+   "value": "0.03",
+   "from": "symbol_hit_rtp[22][2]"
+  },
+  {
+   "value": "0.01",
+   "from": "symbol_hit_rtp[22][3]"
+  },
+  {
+   "value": "0.09",
+   "from": "symbol_hit_rtp[22][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[23][0]"
+  },
+  {
+   "value": "0.01",
+   "from": "symbol_hit_rtp[23][1]"
+  },
+  {
+   "value": "0.01",
+   "from": "symbol_hit_rtp[23][2]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[23][3]"
+  },
+  {
+   "value": "0.02",
+   "from": "symbol_hit_rtp[23][4]"
+  },
+  {
+   "value": "0",
+   "from": "symbol_hit_rtp[TOTAL][0]"
+  },
+  {
+   "value": "4.75",
+   "from": "symbol_hit_rtp[TOTAL][1]"
+  },
+  {
+   "value": "6.76",
+   "from": "symbol_hit_rtp[TOTAL][2]"
+  },
+  {
+   "value": "27.55",
+   "from": "symbol_hit_rtp[TOTAL][3]"
+  },
+  {
+   "value": "39.05",
+   "from": "symbol_hit_rtp[TOTAL][4]"
+  },
+  {
+   "value": "40",
+   "from": "M-1 weight[0]"
+  },
+  {
+   "value": "242.264",
+   "from": "M-1 TOTAL RTP[0] × 100"
+  },
+  {
+   "value": "233.6593",
+   "from": "reel_set_rtp[0].total"
+  },
+  {
+   "value": "199.1367",
+   "from": "reel_set_rtp[0].fg"
+  },
+  {
+   "value": "40001298",
+   "from": "reel_set_rtp[0].spins"
+  },
+  {
+   "value": "100",
+   "from": "M-1 weight[1]"
+  },
+  {
+   "value": "127.4062",
+   "from": "M-1 TOTAL RTP[1] × 100"
+  },
+  {
+   "value": "119.6897",
+   "from": "reel_set_rtp[1].total"
+  },
+  {
+   "value": "80.8811",
+   "from": "reel_set_rtp[1].fg"
+  },
+  {
+   "value": "100002117",
+   "from": "reel_set_rtp[1].spins"
+  },
+  {
+   "value": "100",
+   "from": "M-1 weight[2]"
+  },
+  {
+   "value": "157.7854",
+   "from": "M-1 TOTAL RTP[2] × 100"
+  },
+  {
+   "value": "148.3192",
+   "from": "reel_set_rtp[2].total"
+  },
+  {
+   "value": "112.3896",
+   "from": "reel_set_rtp[2].fg"
+  },
+  {
+   "value": "100002539",
+   "from": "reel_set_rtp[2].spins"
+  },
+  {
+   "value": "100",
+   "from": "M-1 weight[3]"
+  },
+  {
+   "value": "162.0408",
+   "from": "M-1 TOTAL RTP[3] × 100"
+  },
+  {
+   "value": "151.7361",
+   "from": "reel_set_rtp[3].total"
+  },
+  {
+   "value": "113.3841",
+   "from": "reel_set_rtp[3].fg"
+  },
+  {
+   "value": "99999416",
+   "from": "reel_set_rtp[3].spins"
+  },
+  {
+   "value": "100",
+   "from": "M-1 weight[4]"
+  },
+  {
+   "value": "144.3309",
+   "from": "M-1 TOTAL RTP[4] × 100"
+  },
+  {
+   "value": "135.7563",
+   "from": "reel_set_rtp[4].total"
+  },
+  {
+   "value": "97.2436",
+   "from": "reel_set_rtp[4].fg"
+  },
+  {
+   "value": "100004414",
+   "from": "reel_set_rtp[4].spins"
+  },
+  {
+   "value": "100",
+   "from": "M-1 weight[5]"
+  },
+  {
+   "value": "71.4701",
+   "from": "M-1 TOTAL RTP[5] × 100"
+  },
+  {
+   "value": "86.4902",
+   "from": "reel_set_rtp[5].total"
+  },
+  {
+   "value": "49.2749",
+   "from": "reel_set_rtp[5].fg"
+  },
+  {
+   "value": "100004039",
+   "from": "reel_set_rtp[5].spins"
+  },
+  {
+   "value": "115",
+   "from": "M-1 weight[6]"
+  },
+  {
+   "value": "49.9947",
+   "from": "M-1 TOTAL RTP[6] × 100"
+  },
+  {
+   "value": "53.7354",
+   "from": "reel_set_rtp[6].total"
+  },
+  {
+   "value": "11.8999",
+   "from": "reel_set_rtp[6].fg"
+  },
+  {
+   "value": "115004320",
+   "from": "reel_set_rtp[6].spins"
+  },
+  {
+   "value": "115",
+   "from": "M-1 weight[7]"
+  },
+  {
+   "value": "52.1205",
+   "from": "M-1 TOTAL RTP[7] × 100"
+  },
+  {
+   "value": "58.0504",
+   "from": "reel_set_rtp[7].total"
+  },
+  {
+   "value": "19.3",
+   "from": "reel_set_rtp[7].fg"
+  },
+  {
+   "value": "115000161",
+   "from": "reel_set_rtp[7].spins"
+  },
+  {
+   "value": "115",
+   "from": "M-1 weight[8]"
+  },
+  {
+   "value": "54.4952",
+   "from": "M-1 TOTAL RTP[8] × 100"
+  },
+  {
+   "value": "60.288",
+   "from": "reel_set_rtp[8].total"
+  },
+  {
+   "value": "18.9553",
+   "from": "reel_set_rtp[8].fg"
+  },
+  {
+   "value": "114975048",
+   "from": "reel_set_rtp[8].spins"
+  },
+  {
+   "value": "115",
+   "from": "M-1 weight[9]"
+  },
+  {
+   "value": "52.3806",
+   "from": "M-1 TOTAL RTP[9] × 100"
+  },
+  {
+   "value": "57.3277",
+   "from": "reel_set_rtp[9].total"
+  },
+  {
+   "value": "15.9817",
+   "from": "reel_set_rtp[9].fg"
+  },
+  {
+   "value": "115006648",
+   "from": "reel_set_rtp[9].spins"
+  },
+  {
+   "value": "59.89",
+   "from": "special_range[0].appear[0]"
+  },
+  {
+   "value": "60.31",
+   "from": "special_range[0].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[0].appear[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[0].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[0].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[0].rtp[2]"
+  },
+  {
+   "value": "33.2",
+   "from": "special_range[1].appear[0]"
+  },
+  {
+   "value": "33.23",
+   "from": "special_range[1].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[1].appear[2]"
+  },
+  {
+   "value": "8.69",
+   "from": "special_range[1].rtp[0]"
+  },
+  {
+   "value": "8.69",
+   "from": "special_range[1].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[1].rtp[2]"
+  },
+  {
+   "value": "4.98",
+   "from": "special_range[2].appear[0]"
+  },
+  {
+   "value": "4.99",
+   "from": "special_range[2].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[2].appear[2]"
+  },
+  {
+   "value": "11.19",
+   "from": "special_range[2].rtp[0]"
+  },
+  {
+   "value": "11.19",
+   "from": "special_range[2].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[2].rtp[2]"
+  },
+  {
+   "value": "0.77",
+   "from": "special_range[3].appear[0]"
+  },
+  {
+   "value": "0.77",
+   "from": "special_range[3].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[3].appear[2]"
+  },
+  {
+   "value": "5.47",
+   "from": "special_range[3].rtp[0]"
+  },
+  {
+   "value": "5.47",
+   "from": "special_range[3].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[3].rtp[2]"
+  },
+  {
+   "value": "0.59",
+   "from": "special_range[4].appear[0]"
+  },
+  {
+   "value": "0.58",
+   "from": "special_range[4].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[4].appear[2]"
+  },
+  {
+   "value": "8.62",
+   "from": "special_range[4].rtp[0]"
+  },
+  {
+   "value": "8.3",
+   "from": "special_range[4].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[4].rtp[2]"
+  },
+  {
+   "value": "0.18",
+   "from": "special_range[5].appear[0]"
+  },
+  {
+   "value": "0.1",
+   "from": "special_range[5].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[5].appear[2]"
+  },
+  {
+   "value": "6.53",
+   "from": "special_range[5].rtp[0]"
+  },
+  {
+   "value": "3.48",
+   "from": "special_range[5].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[5].rtp[2]"
+  },
+  {
+   "value": "0.1",
+   "from": "special_range[6].appear[0]"
+  },
+  {
+   "value": "0.02",
+   "from": "special_range[6].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[6].appear[2]"
+  },
+  {
+   "value": "6.25",
+   "from": "special_range[6].rtp[0]"
+  },
+  {
+   "value": "1.12",
+   "from": "special_range[6].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[6].rtp[2]"
+  },
+  {
+   "value": "0.07",
+   "from": "special_range[7].appear[0]"
+  },
+  {
+   "value": "0.01",
+   "from": "special_range[7].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[7].appear[2]"
+  },
+  {
+   "value": "6.07",
+   "from": "special_range[7].rtp[0]"
+  },
+  {
+   "value": "0.45",
+   "from": "special_range[7].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[7].rtp[2]"
+  },
+  {
+   "value": "0.09",
+   "from": "special_range[8].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[8].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[8].appear[2]"
+  },
+  {
+   "value": "10.45",
+   "from": "special_range[8].rtp[0]"
+  },
+  {
+   "value": "0.24",
+   "from": "special_range[8].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[8].rtp[2]"
+  },
+  {
+   "value": "0.05",
+   "from": "special_range[9].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[9].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[9].appear[2]"
+  },
+  {
+   "value": "8.03",
+   "from": "special_range[9].rtp[0]"
+  },
+  {
+   "value": "0.1",
+   "from": "special_range[9].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[9].rtp[2]"
+  },
+  {
+   "value": "0.04",
+   "from": "special_range[10].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[10].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[10].appear[2]"
+  },
+  {
+   "value": "10.26",
+   "from": "special_range[10].rtp[0]"
+  },
+  {
+   "value": "0.02",
+   "from": "special_range[10].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[10].rtp[2]"
+  },
+  {
+   "value": "0.02",
+   "from": "special_range[11].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[11].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[11].appear[2]"
+  },
+  {
+   "value": "8.02",
+   "from": "special_range[11].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[11].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[11].rtp[2]"
+  },
+  {
+   "value": "0.01",
+   "from": "special_range[12].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[12].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[12].appear[2]"
+  },
+  {
+   "value": "3.62",
+   "from": "special_range[12].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[12].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[12].rtp[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[13].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[13].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[13].appear[2]"
+  },
+  {
+   "value": "1.61",
+   "from": "special_range[13].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[13].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[13].rtp[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[14].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[14].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[14].appear[2]"
+  },
+  {
+   "value": "3.9",
+   "from": "special_range[14].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[14].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[14].rtp[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[15].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[15].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[15].appear[2]"
+  },
+  {
+   "value": "1.05",
+   "from": "special_range[15].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[15].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[15].rtp[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[16].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[16].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[16].appear[2]"
+  },
+  {
+   "value": "0.15",
+   "from": "special_range[16].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[16].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[16].rtp[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[17].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[17].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[17].appear[2]"
+  },
+  {
+   "value": "0.03",
+   "from": "special_range[17].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[17].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[17].rtp[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[18].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[18].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[18].appear[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[18].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[18].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[18].rtp[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[19].appear[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[19].appear[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[19].appear[2]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[19].rtp[0]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[19].rtp[1]"
+  },
+  {
+   "value": "0",
+   "from": "special_range[19].rtp[2]"
+  },
+  {
+   "value": "3.01",
+   "from": "multiple[0].spins_per_hit"
+  },
+  {
+   "value": "0",
+   "from": "multiple[0].ge"
+  },
+  {
+   "value": "14.48",
+   "from": "multiple[0].spins_per_hit_ge"
+  },
+  {
+   "value": "20.06",
+   "from": "multiple[1].spins_per_hit"
+  },
+  {
+   "value": "1",
+   "from": "multiple[1].ge"
+  },
+  {
+   "value": "14.48",
+   "from": "multiple[1].spins_per_hit_ge"
+  },
+  {
+   "value": "130.14",
+   "from": "multiple[2].spins_per_hit"
+  },
+  {
+   "value": "5",
+   "from": "multiple[2].ge"
+  },
+  {
+   "value": "52.02",
+   "from": "multiple[2].spins_per_hit_ge"
+  },
+  {
+   "value": "168.97",
+   "from": "multiple[3].spins_per_hit"
+  },
+  {
+   "value": "10",
+   "from": "multiple[3].ge"
+  },
+  {
+   "value": "86.66",
+   "from": "multiple[3].spins_per_hit_ge"
+  },
+  {
+   "value": "543.28",
+   "from": "multiple[4].spins_per_hit"
+  },
+  {
+   "value": "25",
+   "from": "multiple[4].ge"
+  },
+  {
+   "value": "177.9",
+   "from": "multiple[4].spins_per_hit_ge"
+  },
+  {
+   "value": "987.98",
+   "from": "multiple[5].spins_per_hit"
+  },
+  {
+   "value": "50",
+   "from": "multiple[5].ge"
+  },
+  {
+   "value": "264.52",
+   "from": "multiple[5].spins_per_hit_ge"
+  },
+  {
+   "value": "1430.05",
+   "from": "multiple[6].spins_per_hit"
+  },
+  {
+   "value": "75",
+   "from": "multiple[6].ge"
+  },
+  {
+   "value": "361.23",
+   "from": "multiple[6].spins_per_hit_ge"
+  },
+  {
+   "value": "1171.76",
+   "from": "multiple[7].spins_per_hit"
+  },
+  {
+   "value": "100",
+   "from": "multiple[7].ge"
+  },
+  {
+   "value": "483.32",
+   "from": "multiple[7].spins_per_hit_ge"
+  },
+  {
+   "value": "2151.89",
+   "from": "multiple[8].spins_per_hit"
+  },
+  {
+   "value": "150",
+   "from": "multiple[8].ge"
+  },
+  {
+   "value": "822.63",
+   "from": "multiple[8].spins_per_hit_ge"
+  },
+  {
+   "value": "2352.51",
+   "from": "multiple[9].spins_per_hit"
+  },
+  {
+   "value": "200",
+   "from": "multiple[9].ge"
+  },
+  {
+   "value": "1331.74",
+   "from": "multiple[9].spins_per_hit_ge"
+  },
+  {
+   "value": "4629.37",
+   "from": "multiple[10].spins_per_hit"
+  },
+  {
+   "value": "300",
+   "from": "multiple[10].ge"
+  },
+  {
+   "value": "3069.16",
+   "from": "multiple[10].spins_per_hit_ge"
+  },
+  {
+   "value": "17142.96",
+   "from": "multiple[11].spins_per_hit"
+  },
+  {
+   "value": "500",
+   "from": "multiple[11].ge"
+  },
+  {
+   "value": "9106.64",
+   "from": "multiple[11].spins_per_hit_ge"
+  },
+  {
+   "value": "55456.97",
+   "from": "multiple[12].spins_per_hit"
+  },
+  {
+   "value": "800",
+   "from": "multiple[12].ge"
+  },
+  {
+   "value": "19426.15",
+   "from": "multiple[12].spins_per_hit_ge"
+  },
+  {
+   "value": "34237.2",
+   "from": "multiple[13].spins_per_hit"
+  },
+  {
+   "value": "1000",
+   "from": "multiple[13].ge"
+  },
+  {
+   "value": "29899.84",
+   "from": "multiple[13].spins_per_hit_ge"
+  },
+  {
+   "value": "251445.81",
+   "from": "multiple[14].spins_per_hit"
+  },
+  {
+   "value": "2000",
+   "from": "multiple[14].ge"
+  },
+  {
+   "value": "236016.05",
+   "from": "multiple[14].spins_per_hit_ge"
+  },
+  {
+   "value": "4291845.49",
+   "from": "multiple[15].spins_per_hit"
+  },
+  {
+   "value": "5000",
+   "from": "multiple[15].ge"
+  },
+  {
+   "value": "3846153.85",
+   "from": "multiple[15].spins_per_hit_ge"
+  },
+  {
+   "value": "37037037.04",
+   "from": "multiple[16].spins_per_hit"
+  },
+  {
+   "value": "10000",
+   "from": "multiple[16].ge"
+  },
+  {
+   "value": "37037037.04",
+   "from": "multiple[16].spins_per_hit_ge"
+  },
+  {
+   "value": "0",
+   "from": "multiple[17].spins_per_hit"
+  },
+  {
+   "value": "20000",
+   "from": "multiple[17].ge"
+  },
+  {
+   "value": "0",
+   "from": "multiple[17].spins_per_hit_ge"
+  },
+  {
+   "value": "0",
+   "from": "multiple[18].spins_per_hit"
+  },
+  {
+   "value": "50000",
+   "from": "multiple[18].ge"
+  },
+  {
+   "value": "0",
+   "from": "multiple[18].spins_per_hit_ge"
+  },
+  {
+   "value": "50.24",
+   "from": "asset_100[0].pct"
+  },
+  {
+   "value": "21.27",
+   "from": "asset_100[1].pct"
+  },
+  {
+   "value": "15.98",
+   "from": "asset_100[2].pct"
+  },
+  {
+   "value": "12.52",
+   "from": "asset_100[3].pct"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[0].vals[0]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[0].vals[1]"
+  },
+  {
+   "value": "35.4",
+   "from": "decile[0].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[0].vals[3]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[1].vals[0]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[1].vals[1]"
+  },
+  {
+   "value": "48.2",
+   "from": "decile[1].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[1].vals[3]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[2].vals[0]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[2].vals[1]"
+  },
+  {
+   "value": "61.0",
+   "from": "decile[2].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[2].vals[3]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[3].vals[0]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[3].vals[1]"
+  },
+  {
+   "value": "75.1",
+   "from": "decile[3].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[3].vals[3]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[4].vals[0]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[4].vals[1]"
+  },
+  {
+   "value": "91.7",
+   "from": "decile[4].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[4].vals[3]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[5].vals[0]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[5].vals[1]"
+  },
+  {
+   "value": "112.1",
+   "from": "decile[5].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[5].vals[3]"
+  },
+  {
+   "value": "0.1",
+   "from": "decile[6].vals[0]"
+  },
+  {
+   "value": "0.1",
+   "from": "decile[6].vals[1]"
+  },
+  {
+   "value": "139.6",
+   "from": "decile[6].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[6].vals[3]"
+  },
+  {
+   "value": "0.2",
+   "from": "decile[7].vals[0]"
+  },
+  {
+   "value": "0.2",
+   "from": "decile[7].vals[1]"
+  },
+  {
+   "value": "180.9",
+   "from": "decile[7].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[7].vals[3]"
+  },
+  {
+   "value": "0.6",
+   "from": "decile[8].vals[0]"
+  },
+  {
+   "value": "0.5",
+   "from": "decile[8].vals[1]"
+  },
+  {
+   "value": "259.2",
+   "from": "decile[8].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[8].vals[3]"
+  },
+  {
+   "value": "10000.0",
+   "from": "decile[9].vals[0]"
+  },
+  {
+   "value": "368.2",
+   "from": "decile[9].vals[1]"
+  },
+  {
+   "value": "31120.4",
+   "from": "decile[9].vals[2]"
+  },
+  {
+   "value": "0.0",
+   "from": "decile[9].vals[3]"
+  },
+  {
+   "value": "1.0",
+   "from": "decile[10].vals[0]"
+  },
+  {
+   "value": "0.4",
+   "from": "decile[10].vals[1]"
+  },
+  {
+   "value": "136.1",
+   "from": "decile[10].vals[2]"
+  },
+  {
+   "value": "1.0",
+   "from": "decile[10].vals[3]"
+  },
+  {
+   "value": "15.1",
+   "from": "decile[11].vals[0]"
+  },
+  {
+   "value": "1",
+   "from": "F-1 weight[超強]"
+  },
+  {
+   "value": "1.00",
+   "from": "F-1 weight[超強] / Σ × 100"
+  },
+  {
    "value": "45052",
    "from": "數據資料 FG內部"
   },
@@ -136,6 +1656,14 @@
   {
    "value": "9.24",
    "from": "數據資料 各組別RTP貢獻"
+  },
+  {
+   "value": "19",
+   "from": "F-1 weight[強]"
+  },
+  {
+   "value": "19.00",
+   "from": "F-1 weight[強] / Σ × 100"
   },
   {
    "value": "850270",
@@ -150,6 +1678,14 @@
    "from": "數據資料 各組別RTP貢獻"
   },
   {
+   "value": "70",
+   "from": "F-1 weight[中]"
+  },
+  {
+   "value": "70.00",
+   "from": "F-1 weight[中] / Σ × 100"
+  },
+  {
    "value": "3132594",
    "from": "數據資料 FG內部"
   },
@@ -162,6 +1698,14 @@
    "from": "數據資料 各組別RTP貢獻"
   },
   {
+   "value": "10",
+   "from": "F-1 weight[弱]"
+  },
+  {
+   "value": "10.00",
+   "from": "F-1 weight[弱] / Σ × 100"
+  },
+  {
    "value": "446978",
    "from": "數據資料 FG內部"
   },
@@ -172,8 +1716,1380 @@
   {
    "value": "5.24",
    "from": "數據資料 各組別RTP貢獻"
+  },
+  {
+   "value": "4474894",
+   "from": "FG 詳細統計 觸發面"
+  },
+  {
+   "value": "15.73",
+   "from": "FG 詳細統計 base_avg"
+  },
+  {
+   "value": "846.67",
+   "from": "FG 詳細統計 all888_avg"
+  },
+  {
+   "value": "136.07",
+   "from": "FG 詳細統計 settle_avg"
+  },
+  {
+   "value": "31120.36",
+   "from": "FG 詳細統計 settle_max"
+  },
+  {
+   "value": "180.58",
+   "from": "FG 詳細統計 sd"
+  },
+  {
+   "value": "1.33",
+   "from": "FG 詳細統計 cv"
+  },
+  {
+   "value": "5.21",
+   "from": "FG 詳細統計 avg_mult"
+  },
+  {
+   "value": "0.53",
+   "from": "FG 詳細統計 avg_coin_win"
+  },
+  {
+   "value": "8.5",
+   "from": "FG 詳細統計 avg_fish_win"
+  },
+  {
+   "value": "25539",
+   "from": "FG 詳細統計 all888.count"
+  },
+  {
+   "value": "0.5707",
+   "from": "FG 詳細統計 all888.pct"
+  },
+  {
+   "value": "2.4",
+   "from": "FG 詳細統計 avg_times.金幣"
+  },
+  {
+   "value": "3.62",
+   "from": "FG 詳細統計 avg_times.鯉魚"
+  },
+  {
+   "value": "3.01",
+   "from": "FG 詳細統計 avg_times.金龍"
+  },
+  {
+   "value": "0.6",
+   "from": "FG 詳細統計 avg_times.彩龍"
+  },
+  {
+   "value": "61.15",
+   "from": "FG 詳細統計 contrib.初始基底"
+  },
+  {
+   "value": "1.94",
+   "from": "FG 詳細統計 contrib.金幣"
+  },
+  {
+   "value": "36.9",
+   "from": "FG 詳細統計 contrib.鯉魚"
+  },
+  {
+   "value": "0",
+   "from": "FG 詳細統計 contrib.倍率放大"
+  },
+  {
+   "value": "6",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "3302135",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "73.79",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "7",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "900157",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "20.12",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "8",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "223596",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "5",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "9",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "40601",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "0.91",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "10",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "7213",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "0.16",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "11",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "1088",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "0.02",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "12",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "93",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "0",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "13",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "10",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "0",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "14",
+   "from": "FG 詳細統計 trigger_dist.k"
+  },
+  {
+   "value": "1",
+   "from": "FG 詳細統計 trigger_dist.count"
+  },
+  {
+   "value": "0",
+   "from": "FG 詳細統計 trigger_dist.pct"
+  },
+  {
+   "value": "3",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "433879",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "9.7",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "239.29",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "4",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "849507",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "18.98",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "198.66",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "5",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "602043",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "13.45",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "176.59",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "6",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "2024284",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "45.24",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "87.47",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "7",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "452442",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "10.11",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "92.53",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "8",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "98677",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "2.21",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "97.95",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "9",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "12526",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "0.28",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "99.62",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "10",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "1354",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "0.03",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "103.37",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "11",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "173",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "0",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "100.66",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "12",
+   "from": "FG 詳細統計 sc_enter.sc"
+  },
+  {
+   "value": "9",
+   "from": "FG 詳細統計 sc_enter.count"
+  },
+  {
+   "value": "0",
+   "from": "FG 詳細統計 sc_enter.pct"
+  },
+  {
+   "value": "82.22",
+   "from": "FG 詳細統計 sc_enter.avg"
+  },
+  {
+   "value": "45052",
+   "from": "FG 詳細統計 各組別詳細[0][1]"
+  },
+  {
+   "value": "0.00",
+   "from": "FG 詳細統計 各組別詳細[0][2]"
+  },
+  {
+   "value": "5.84",
+   "from": "FG 詳細統計 各組別詳細[0][3]"
+  },
+  {
+   "value": "5.88",
+   "from": "FG 詳細統計 各組別詳細[0][4]"
+  },
+  {
+   "value": "6.89",
+   "from": "FG 詳細統計 各組別詳細[0][5]"
+  },
+  {
+   "value": "20.67",
+   "from": "FG 詳細統計 各組別詳細[0][6]"
+  },
+  {
+   "value": "21.11",
+   "from": "FG 詳細統計 各組別詳細[0][7]"
+  },
+  {
+   "value": "1248.31",
+   "from": "FG 詳細統計 各組別詳細[0][8]"
+  },
+  {
+   "value": "31120.36",
+   "from": "FG 詳細統計 各組別詳細[0][9]"
+  },
+  {
+   "value": "850270",
+   "from": "FG 詳細統計 各組別詳細[1][1]"
+  },
+  {
+   "value": "2.00",
+   "from": "FG 詳細統計 各組別詳細[1][2]"
+  },
+  {
+   "value": "4.55",
+   "from": "FG 詳細統計 各組別詳細[1][3]"
+  },
+  {
+   "value": "3.89",
+   "from": "FG 詳細統計 各組別詳細[1][4]"
+  },
+  {
+   "value": "0.85",
+   "from": "FG 詳細統計 各組別詳細[1][5]"
+  },
+  {
+   "value": "6.59",
+   "from": "FG 詳細統計 各組別詳細[1][6]"
+  },
+  {
+   "value": "16.80",
+   "from": "FG 詳細統計 各組別詳細[1][7]"
+  },
+  {
+   "value": "181.62",
+   "from": "FG 詳細統計 各組別詳細[1][8]"
+  },
+  {
+   "value": "14718.55",
+   "from": "FG 詳細統計 各組別詳細[1][9]"
+  },
+  {
+   "value": "3132594",
+   "from": "FG 詳細統計 各組別詳細[2][1]"
+  },
+  {
+   "value": "2.50",
+   "from": "FG 詳細統計 各組別詳細[2][2]"
+  },
+  {
+   "value": "3.50",
+   "from": "FG 詳細統計 各組別詳細[2][3]"
+  },
+  {
+   "value": "2.89",
+   "from": "FG 詳細統計 各組別詳細[2][4]"
+  },
+  {
+   "value": "0.50",
+   "from": "FG 詳細統計 各組別詳細[2][5]"
+  },
+  {
+   "value": "4.89",
+   "from": "FG 詳細統計 各組別詳細[2][6]"
+  },
+  {
+   "value": "15.41",
+   "from": "FG 詳細統計 各組別詳細[2][7]"
+  },
+  {
+   "value": "116.93",
+   "from": "FG 詳細統計 各組別詳細[2][8]"
+  },
+  {
+   "value": "5750.06",
+   "from": "FG 詳細統計 各組別詳細[2][9]"
+  },
+  {
+   "value": "446978",
+   "from": "FG 詳細統計 各組別詳細[3][1]"
+  },
+  {
+   "value": "2.75",
+   "from": "FG 詳細統計 各組別詳細[3][2]"
+  },
+  {
+   "value": "2.50",
+   "from": "FG 詳細統計 各組別詳細[3][3]"
+  },
+  {
+   "value": "1.89",
+   "from": "FG 詳細統計 各組別詳細[3][4]"
+  },
+  {
+   "value": "0.20",
+   "from": "FG 詳細統計 各組別詳細[3][5]"
+  },
+  {
+   "value": "3.29",
+   "from": "FG 詳細統計 各組別詳細[3][6]"
+  },
+  {
+   "value": "15.43",
+   "from": "FG 詳細統計 各組別詳細[3][7]"
+  },
+  {
+   "value": "71.44",
+   "from": "FG 詳細統計 各組別詳細[3][8]"
+  },
+  {
+   "value": "4960.03",
+   "from": "FG 詳細統計 各組別詳細[3][9]"
+  },
+  {
+   "value": "126",
+   "from": "len(main_strip / Reels_0 R1)"
+  },
+  {
+   "value": "10",
+   "from": "count(main_strip / Reels_0 R1, M1)"
+  },
+  {
+   "value": "18",
+   "from": "count(main_strip / Reels_0 R1, M2)"
+  },
+  {
+   "value": "21",
+   "from": "count(main_strip / Reels_0 R1, M3)"
+  },
+  {
+   "value": "27",
+   "from": "count(main_strip / Reels_0 R1, M4)"
+  },
+  {
+   "value": "24",
+   "from": "count(main_strip / Reels_0 R1, M5)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_0 R1, WW)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R1, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_0 R1, SS)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_0 R1, FA)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_0 R1, FK)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_0 R1, FQ)"
+  },
+  {
+   "value": "188",
+   "from": "len(main_strip / Reels_0 R2)"
+  },
+  {
+   "value": "16",
+   "from": "count(main_strip / Reels_0 R2, M1)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R2, M2)"
+  },
+  {
+   "value": "38",
+   "from": "count(main_strip / Reels_0 R2, M3)"
+  },
+  {
+   "value": "36",
+   "from": "count(main_strip / Reels_0 R2, M4)"
+  },
+  {
+   "value": "29",
+   "from": "count(main_strip / Reels_0 R2, M5)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_0 R2, WW)"
+  },
+  {
+   "value": "13",
+   "from": "count(main_strip / Reels_0 R2, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_0 R2, SS)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_0 R2, FA)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_0 R2, FK)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_0 R2, FQ)"
+  },
+  {
+   "value": "160",
+   "from": "len(main_strip / Reels_0 R3)"
+  },
+  {
+   "value": "10",
+   "from": "count(main_strip / Reels_0 R3, M1)"
+  },
+  {
+   "value": "20",
+   "from": "count(main_strip / Reels_0 R3, M2)"
+  },
+  {
+   "value": "24",
+   "from": "count(main_strip / Reels_0 R3, M3)"
+  },
+  {
+   "value": "34",
+   "from": "count(main_strip / Reels_0 R3, M4)"
+  },
+  {
+   "value": "28",
+   "from": "count(main_strip / Reels_0 R3, M5)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_0 R3, WW)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R3, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_0 R3, SS)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_0 R3, FA)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_0 R3, FK)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_0 R3, FQ)"
+  },
+  {
+   "value": "112",
+   "from": "len(main_strip / Reels_0 R4)"
+  },
+  {
+   "value": "10",
+   "from": "count(main_strip / Reels_0 R4, M1)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R4, M2)"
+  },
+  {
+   "value": "29",
+   "from": "count(main_strip / Reels_0 R4, M3)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R4, M4)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R4, M5)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_0 R4, WW)"
+  },
+  {
+   "value": "13",
+   "from": "count(main_strip / Reels_0 R4, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_0 R4, SS)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_0 R4, FA)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_0 R4, FK)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_0 R4, FQ)"
+  },
+  {
+   "value": "133",
+   "from": "len(main_strip / Reels_0 R5)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R5, M1)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R5, M2)"
+  },
+  {
+   "value": "34",
+   "from": "count(main_strip / Reels_0 R5, M3)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R5, M4)"
+  },
+  {
+   "value": "17",
+   "from": "count(main_strip / Reels_0 R5, M5)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_0 R5, WW)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_0 R5, SC)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R5, SS)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R5, FA)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_0 R5, FK)"
+  },
+  {
+   "value": "10",
+   "from": "count(main_strip / Reels_0 R5, FQ)"
+  },
+  {
+   "value": "126",
+   "from": "len(main_strip / Reels_1 R1)"
+  },
+  {
+   "value": "13",
+   "from": "count(main_strip / Reels_1 R1, M1)"
+  },
+  {
+   "value": "20",
+   "from": "count(main_strip / Reels_1 R1, M2)"
+  },
+  {
+   "value": "23",
+   "from": "count(main_strip / Reels_1 R1, M3)"
+  },
+  {
+   "value": "32",
+   "from": "count(main_strip / Reels_1 R1, M4)"
+  },
+  {
+   "value": "24",
+   "from": "count(main_strip / Reels_1 R1, M5)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_1 R1, WW)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_1 R1, FA)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_1 R1, FK)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_1 R1, FQ)"
+  },
+  {
+   "value": "188",
+   "from": "len(main_strip / Reels_1 R2)"
+  },
+  {
+   "value": "16",
+   "from": "count(main_strip / Reels_1 R2, M1)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_1 R2, M2)"
+  },
+  {
+   "value": "45",
+   "from": "count(main_strip / Reels_1 R2, M3)"
+  },
+  {
+   "value": "39",
+   "from": "count(main_strip / Reels_1 R2, M4)"
+  },
+  {
+   "value": "32",
+   "from": "count(main_strip / Reels_1 R2, M5)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_1 R2, WW)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_1 R2, FA)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_1 R2, FK)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_1 R2, FQ)"
+  },
+  {
+   "value": "160",
+   "from": "len(main_strip / Reels_1 R3)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_1 R3, M1)"
+  },
+  {
+   "value": "23",
+   "from": "count(main_strip / Reels_1 R3, M2)"
+  },
+  {
+   "value": "24",
+   "from": "count(main_strip / Reels_1 R3, M3)"
+  },
+  {
+   "value": "37",
+   "from": "count(main_strip / Reels_1 R3, M4)"
+  },
+  {
+   "value": "32",
+   "from": "count(main_strip / Reels_1 R3, M5)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_1 R3, WW)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_1 R3, FA)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_1 R3, FK)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_1 R3, FQ)"
+  },
+  {
+   "value": "112",
+   "from": "len(main_strip / Reels_1 R4)"
+  },
+  {
+   "value": "10",
+   "from": "count(main_strip / Reels_1 R4, M1)"
+  },
+  {
+   "value": "15",
+   "from": "count(main_strip / Reels_1 R4, M2)"
+  },
+  {
+   "value": "35",
+   "from": "count(main_strip / Reels_1 R4, M3)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_1 R4, M4)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / Reels_1 R4, M5)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_1 R4, WW)"
+  },
+  {
+   "value": "8",
+   "from": "count(main_strip / Reels_1 R4, FA)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / Reels_1 R4, FK)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / Reels_1 R4, FQ)"
+  },
+  {
+   "value": "136",
+   "from": "len(main_strip / Reels_1 R5)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_1 R5, M1)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_1 R5, M2)"
+  },
+  {
+   "value": "38",
+   "from": "count(main_strip / Reels_1 R5, M3)"
+  },
+  {
+   "value": "15",
+   "from": "count(main_strip / Reels_1 R5, M4)"
+  },
+  {
+   "value": "25",
+   "from": "count(main_strip / Reels_1 R5, M5)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / Reels_1 R5, WW)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_1 R5, FA)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / Reels_1 R5, FK)"
+  },
+  {
+   "value": "10",
+   "from": "count(main_strip / Reels_1 R5, FQ)"
+  },
+  {
+   "value": "45",
+   "from": "len(main_strip / 假轉 R1)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R1, M1)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R1, M2)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R1, M3)"
+  },
+  {
+   "value": "7",
+   "from": "count(main_strip / 假轉 R1, M4)"
+  },
+  {
+   "value": "14",
+   "from": "count(main_strip / 假轉 R1, M5)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R1, WW)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R1, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R1, SS)"
+  },
+  {
+   "value": "2",
+   "from": "count(main_strip / 假轉 R1, FA)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R1, FK)"
+  },
+  {
+   "value": "2",
+   "from": "count(main_strip / 假轉 R1, FQ)"
+  },
+  {
+   "value": "41",
+   "from": "len(main_strip / 假轉 R2)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R2, M1)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R2, M2)"
+  },
+  {
+   "value": "6",
+   "from": "count(main_strip / 假轉 R2, M3)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R2, M4)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / 假轉 R2, M5)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R2, WW)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R2, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R2, SS)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R2, FA)"
+  },
+  {
+   "value": "1",
+   "from": "count(main_strip / 假轉 R2, FK)"
+  },
+  {
+   "value": "1",
+   "from": "count(main_strip / 假轉 R2, FQ)"
+  },
+  {
+   "value": "42",
+   "from": "len(main_strip / 假轉 R3)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R3, M1)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R3, M2)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R3, M3)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R3, M4)"
+  },
+  {
+   "value": "12",
+   "from": "count(main_strip / 假轉 R3, M5)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R3, WW)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R3, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R3, SS)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R3, FA)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R3, FK)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R3, FQ)"
+  },
+  {
+   "value": "37",
+   "from": "len(main_strip / 假轉 R4)"
+  },
+  {
+   "value": "2",
+   "from": "count(main_strip / 假轉 R4, M1)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R4, M2)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R4, M3)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R4, M4)"
+  },
+  {
+   "value": "7",
+   "from": "count(main_strip / 假轉 R4, M5)"
+  },
+  {
+   "value": "2",
+   "from": "count(main_strip / 假轉 R4, WW)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R4, SC)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R4, SS)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R4, FA)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R4, FK)"
+  },
+  {
+   "value": "2",
+   "from": "count(main_strip / 假轉 R4, FQ)"
+  },
+  {
+   "value": "38",
+   "from": "len(main_strip / 假轉 R5)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R5, M1)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R5, M2)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R5, M3)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R5, M4)"
+  },
+  {
+   "value": "3",
+   "from": "count(main_strip / 假轉 R5, M5)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R5, WW)"
+  },
+  {
+   "value": "0",
+   "from": "count(main_strip / 假轉 R5, SC)"
+  },
+  {
+   "value": "5",
+   "from": "count(main_strip / 假轉 R5, SS)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R5, FA)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R5, FK)"
+  },
+  {
+   "value": "4",
+   "from": "count(main_strip / 假轉 R5, FQ)"
+  },
+  {
+   "value": "60",
+   "from": "len(fake_strip / 假轉 R1)"
+  },
+  {
+   "value": "6",
+   "from": "count(fake_strip / 假轉 R1, M1)"
+  },
+  {
+   "value": "11",
+   "from": "count(fake_strip / 假轉 R1, M2)"
+  },
+  {
+   "value": "8",
+   "from": "count(fake_strip / 假轉 R1, M3)"
+  },
+  {
+   "value": "10",
+   "from": "count(fake_strip / 假轉 R1, M4)"
+  },
+  {
+   "value": "16",
+   "from": "count(fake_strip / 假轉 R1, M5)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R1, G1)"
+  },
+  {
+   "value": "5",
+   "from": "count(fake_strip / 假轉 R1, GW)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R1, S1)"
+  },
+  {
+   "value": "2",
+   "from": "count(fake_strip / 假轉 R1, YW)"
+  },
+  {
+   "value": "60",
+   "from": "len(fake_strip / 假轉 R2)"
+  },
+  {
+   "value": "4",
+   "from": "count(fake_strip / 假轉 R2, M1)"
+  },
+  {
+   "value": "6",
+   "from": "count(fake_strip / 假轉 R2, M2)"
+  },
+  {
+   "value": "14",
+   "from": "count(fake_strip / 假轉 R2, M3)"
+  },
+  {
+   "value": "6",
+   "from": "count(fake_strip / 假轉 R2, M4)"
+  },
+  {
+   "value": "21",
+   "from": "count(fake_strip / 假轉 R2, M5)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R2, G1)"
+  },
+  {
+   "value": "5",
+   "from": "count(fake_strip / 假轉 R2, GW)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R2, S1)"
+  },
+  {
+   "value": "2",
+   "from": "count(fake_strip / 假轉 R2, YW)"
+  },
+  {
+   "value": "60",
+   "from": "len(fake_strip / 假轉 R3)"
+  },
+  {
+   "value": "6",
+   "from": "count(fake_strip / 假轉 R3, M1)"
+  },
+  {
+   "value": "4",
+   "from": "count(fake_strip / 假轉 R3, M2)"
+  },
+  {
+   "value": "12",
+   "from": "count(fake_strip / 假轉 R3, M3)"
+  },
+  {
+   "value": "8",
+   "from": "count(fake_strip / 假轉 R3, M4)"
+  },
+  {
+   "value": "21",
+   "from": "count(fake_strip / 假轉 R3, M5)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R3, G1)"
+  },
+  {
+   "value": "5",
+   "from": "count(fake_strip / 假轉 R3, GW)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R3, S1)"
+  },
+  {
+   "value": "2",
+   "from": "count(fake_strip / 假轉 R3, YW)"
+  },
+  {
+   "value": "60",
+   "from": "len(fake_strip / 假轉 R4)"
+  },
+  {
+   "value": "6",
+   "from": "count(fake_strip / 假轉 R4, M1)"
+  },
+  {
+   "value": "14",
+   "from": "count(fake_strip / 假轉 R4, M2)"
+  },
+  {
+   "value": "10",
+   "from": "count(fake_strip / 假轉 R4, M3)"
+  },
+  {
+   "value": "4",
+   "from": "count(fake_strip / 假轉 R4, M4)"
+  },
+  {
+   "value": "17",
+   "from": "count(fake_strip / 假轉 R4, M5)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R4, G1)"
+  },
+  {
+   "value": "5",
+   "from": "count(fake_strip / 假轉 R4, GW)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R4, S1)"
+  },
+  {
+   "value": "2",
+   "from": "count(fake_strip / 假轉 R4, YW)"
+  },
+  {
+   "value": "60",
+   "from": "len(fake_strip / 假轉 R5)"
+  },
+  {
+   "value": "8",
+   "from": "count(fake_strip / 假轉 R5, M1)"
+  },
+  {
+   "value": "2",
+   "from": "count(fake_strip / 假轉 R5, M2)"
+  },
+  {
+   "value": "10",
+   "from": "count(fake_strip / 假轉 R5, M3)"
+  },
+  {
+   "value": "8",
+   "from": "count(fake_strip / 假轉 R5, M4)"
+  },
+  {
+   "value": "23",
+   "from": "count(fake_strip / 假轉 R5, M5)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R5, G1)"
+  },
+  {
+   "value": "5",
+   "from": "count(fake_strip / 假轉 R5, GW)"
+  },
+  {
+   "value": "1",
+   "from": "count(fake_strip / 假轉 R5, S1)"
+  },
+  {
+   "value": "2",
+   "from": "count(fake_strip / 假轉 R5, YW)"
   }
  ],
- "md_sha256_16": "91f7cd9480c42ed3",
- "generated": "2026-10-06T17:19:42"
+ "md_sha256_16": "e2157c5fde0b31cf",
+ "generated": "2026-10-13T14:42:59"
 }

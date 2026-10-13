@@ -17,6 +17,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ps_common as C  # noqa: E402
+import ps_mdblocks as B  # noqa: E402
 
 HUMAN_RE = re.compile(r"<!--\s*human:([a-z0-9_-]+)\s*-->\n?(.*?)<!--\s*/human\s*-->", re.S)
 PENDING = "待決議"
@@ -84,6 +85,7 @@ def build(data: dict, out_dir: pathlib.Path, *, slug: str, author: str, date: st
     L += ["## 2. 數據資料", ""]
     base = rep.get("base") or {}
     if base:
+        L += B.xlsx_summary(rep, K, dv)
         rows = []
         for name, zh in (("Main", "主遊戲"), ("Free", "免費遊戲"), ("Feature", "Feature"), ("GRAND", "GRAND"), ("Total", "總計")):
             v = base.get(name)
@@ -109,10 +111,8 @@ def build(data: dict, out_dir: pathlib.Path, *, slug: str, author: str, date: st
         if golden is not None and tot is not None:
             g = golden * 100 if golden < 5 else golden
             L += [f"- golden（{anchor_sheet} {rs.get('block')} 加權 TOTAL RTP）：{dv(f'{g:.2f}', 'reelsets.totals.TOTAL RTP × 100')}%；實測總 RTP {dv(f'{tot:.4f}', '數據資料 總計')}%；誤差 {dv(f'{tot - g:+.3f}', 'rtp_total − golden')} pp（容許 ± {dv('0.2', '容許誤差常數 pp')} pp）。**RTP 是模擬結果不是輸入**（P-000）。", ""]
-        fg = rep.get("fg_detail") or {}
-        if fg.get("groups"):
-            L += ["### FG 強中弱實測分佈", ""] + md_table(["組別", "次數", "佔比", "FG RTP 貢獻"], [[g["name"], dv(f"{g['count']:,}", "數據資料 FG內部"), dv(f"{g['pct']:.2f}", "數據資料 FG內部") + "%", (dv(f"{dict(fg.get('group_rtp') or {}).get(g['name'], '—')}", "數據資料 各組別RTP貢獻") + "%") if fg.get("group_rtp") else "—"] for g in fg["groups"]])
-        L += ["> 完整快測輸出見 View 軌（prob-spec.html §2）與 prob-data.json `raw_log`；本節只列守門用數字。", ""]
+        L += B.xlsx_data_tables(rep, K, dv)
+        L += ["> 完整快測輸出見 prob-data.json `raw_log`（View 軌以摺疊區附上）；以上各表皆由同一份報表程式化轉出。", ""]
     else:
         L += ["> **未快測**：xlsx 無「數據資料」分頁或無法解析。跑快測後把報表貼回 xlsx 數據資料分頁，重跑 ps_extract → ps_probspec。", ""]
         L += md_table(["階段", "RTP", "Freq", "Trigger %", "平均倍率", "最大倍率"], [["主遊戲"] + ["—"] * 5, ["免費遊戲"] + ["—"] * 5, ["總計"] + ["—"] * 5])
@@ -132,35 +132,8 @@ def build(data: dict, out_dir: pathlib.Path, *, slug: str, author: str, date: st
     L += ["### 流程補充", ""] + hblock("flow-notes", "（可在此放完整 mermaid 或逐步說明；每個節點標對應的表編號）")
 
     # ---------------- 4. 參數表
-    L += ["## 4. 參數表", "", "> 每一列的「來源」= xlsx 座標（分頁!儲存格）。數值為定案值（source: xlsx，pending_params 0）。", ""]
-    for b in (data.get("params") or {}).get("blocks", []):
-        title = f"### 表 {b['id']}" if re.match(r"^[A-Z]-", b["id"]) else f"### {b['id']}"
-        if b.get("title"):
-            title += f"　{b['title']}"
-        L += [title, ""]
-        for t in b["tables"]:
-            rows = t["rows"]
-            if not rows:
-                continue
-            width = max(len(r["cells"]) for r in rows)
-            # 單格文字 → 小標；否則整張表 + 來源欄
-            flat = [v for r in rows for v in r["cells"] if v is not None]
-            if len(rows) == 1 and len(flat) == 1 and isinstance(flat[0], str):
-                L += [f"**{flat[0]}**", ""]
-                continue
-            head = [f"c{i+1}" for i in range(width)]
-            first = rows[0]["cells"]
-            if sum(1 for v in first if isinstance(v, str)) >= 2 or (len(rows) > 1 and any(isinstance(v, str) for v in first) and not any(isinstance(v, (int, float)) and not isinstance(v, bool) for v in first)):
-                head = [("" if v is None else str(v)) for v in first] + [""] * (width - len(first))
-                body = rows[1:]
-            else:
-                body = rows
-            from openpyxl.utils import get_column_letter  # type: ignore
-            md_rows = []
-            for r in body:
-                cells = [fnum(v) if v is not None else "" for v in r["cells"]] + [""] * (width - len(r["cells"]))
-                md_rows.append(cells + [f"{anchor_sheet}!{get_column_letter(t['c0'])}{r['r']}"])
-            L += md_table([h or " " for h in head] + ["來源"], md_rows)
+    L += ["## 4. 參數表", "", "> 每一列的「來源」= xlsx 座標（分頁!儲存格 / 列）。數值為定案值（source: xlsx，pending_params 0）；有辨識的表（輪帶組 / 權重 / 雙欄 / 是否 / 矩陣 / 序列 / 單值）以契約表頭寫出，其餘照 xlsx 原樣。", ""]
+    L += B.xlsx_param_blocks(data, dv, anchor_sheet)
     L += ["### 參數備註", ""] + hblock("param-notes", "（參數語意、旋鈕用途、與設定檔鍵名對照；重產保留）")
 
     # ---------------- 5. 競品資料／手法對應
@@ -178,6 +151,13 @@ def build(data: dict, out_dir: pathlib.Path, *, slug: str, author: str, date: st
             L.append("- **SPEC** " + " ｜ ".join(c.replace("\n", " / ") for c in row))
         L.append("")
     L += hblock("hidden-rules", "\n".join(md_table(["規則", "設計目的", "對應表 / K 卡", "更改需同步"], [["（例）復活為演出層攔截，不改 RTP", "製造起死回生張力", "表 F-4 / K-021", "編導規格書"]])))
+
+    # ---------------- 輪帶 Strip（附錄；不計入六段）
+    groups = []
+    for key, gs in (data.get("strips") or {}).items():
+        for name, d in gs.items():
+            groups.append({"name": f"{key} / {name}", "reels": d["reels"]})
+    L += B.strips_section(groups, dv, "來源：xlsx Strip 分頁（ps_extract parse_strips）")
 
     # ---------------- 邊界聲明
     L += ["## 邊界聲明", "",

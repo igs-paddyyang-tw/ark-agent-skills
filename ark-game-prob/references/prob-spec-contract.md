@@ -83,3 +83,39 @@ raw_log / guide[] / brief[] / hidden[] / notes[]
 ## 8. ps_lint 規則
 
 PS-SECTIONS / PS-NUM（JSON 來源走結構化值並略過座標鍵 r / c0 / col / anchor；xlsx 等二進位只驗 sha；sha / 16 位以上 hex 不算數字）/ PS-PROV / PS-STALE / PS-HUMAN / PS-INJECT。error exit 3；`lint-report.json` 含 summary{errors, warnings, pending_marks, sections, sources}。
+
+
+## 表格契約（1.4 md-first：ps_html 只讀本檔，三種模式同一套 View）
+
+`ps_mdview.classify` 只看**表頭**（與第一欄）判斷表型；最後一欄「來源」一律允許（渲染時移到列 title）。寫 md 時照以下表頭命名即可，
+xlsx 模式（`ps_probspec --data`）與 qt 模式（`ps_probspec --qt`）由 `ps_mdblocks` 自動產出同樣表頭；手寫用 `assets/prob-spec.template.md`。
+
+| 表型 | 表頭特徵 | 典型位置 | 畫成 |
+|---|---|---|---|
+| summary | `指標 \| 值 [\| 來源]`；指標名用：總 RTP / 主遊戲 RTP / 免費遊戲 RTP / 主遊戲命中率 / 主遊戲最大倍數 / FG 觸發率 / FG 平均觸發局數 / FG 平均倍率 / FG 最大倍數 / 總手數 / 執行時間 / 引擎版本 / 旗標 / golden RTP 或 目標 RTP / 誤差 / 容許誤差 / 三向 verdict | §2 `### 快測摘要` | 總覽 KPI + RTP 圖 + 守門 |
+| base | `階段 \| RTP \| …`（Freq / Trigger % / 平均倍率 / 最大倍率…）| §2 | 數字表 |
+| symhit | `符號 \| x2 \| x3 \| … \| TOTAL` | §2 | 熱度表 |
+| reelset_rtp | `組 \| … \| 實測 Total RTP [\| 實測 FG RTP \| 實測手數]`（可含 `R1–R5 換帶`、`理論 Total RTP`）| §2 | 長條 |
+| range / multiple / asset / decile | `贏分區間（倍）\| 出現 Total …` ／ `… \| 約每幾局 …` ／ `100 手後剩餘資產 \| 佔比` ／ `分位 \| Total \| Main \| Free \| F_Spin` | §2 | 長條 / 數字表 |
+| fg_groups | `組別 \| F-1 權重 \| 理論佔比 \| 次數 \| 實際佔比 \| FG RTP 貢獻` | §2 | chip + 長條；守門「強中弱 ≈ F-1」由此算 |
+| kv | `項目 \| 值 [\| 來源]`、`參數 \| 值 [\| 來源]` | §1 基本規格、§4 觸發與上限參數 / 單值 | 規格格（待決議紅字）|
+| paytable | `層級 \| 符號 \| x3 \| x4 \| x5 [\| 來源]` | §1 | 符號 chip 表 |
+| odds | `符號 \| sym_id \| 名稱 \| 組 \| x1 … \| 來源` | §4（qt）| 符號 chip 表，全 0 欄省略 |
+| reelsets | `Index \| R1 \| R2 … \| 權重 [\| 說明 \| TOTAL RTP \| FG RTP] \| 來源`（值 0/1 = 換帶旗標）；或 `組合 \| R1 用組 … \| 權重`（值 = 用第幾組）| §4 表 M-1 | 旗標 / 用組號 + 權重長條 + Σ |
+| weights | `組別|項目 \| 權重 [\| 備註] \| 來源`（≤ 5 欄）| §4 | 長條 + % + Σ |
+| yesno | 含 `是` 與 `否` 欄 | §4 | 是否條 |
+| dual | 成對 `<名> 倍數 \| <名> 權重`（如 SC / SS）| §4 | 雙欄配對條；首欄非數字的列（均倍 / Σ）當表尾 |
+| matrix | `組別 \| 0 \| 1 \| 2 … [\| 權重和 \| 平均…] \| 來源`（≥ 3 個數字表頭）| §4 表 F-2 類；表前可放 `**小標**` 當 caption | 列內色階，尾端全 0 欄省略 |
+| series | 首欄標籤 + 數字 / 短名表頭，≤ 3 列（如 `項目 \| 金幣 \| 鯉魚 \| 金龍 \| 彩龍 \| Total`）| §4 | 每列長條，Total 粗體 |
+| strip_counts | `組 \| 軸 \| 長度 \| <符號>…` | §4（qt）或「## 輪帶 Strip（附錄）」| 每組一張熱度表 |
+| generic | 其餘 | 任何 | 緊湊表，數字欄右對齊，超長格摺疊 |
+
+其他區塊：`### 表 X-n　標題` → 標題左側 tid 標籤；```` ```mermaid ```` → 流程圖；```` ```strip ````（第一行 `# 名稱`，其後 `R1: M1 M2 …` 每軸一行）→ 帶面；
+`<!-- human:<id> -->…<!-- /human -->` → 人工區（id：summary / flow-notes / param-notes / competitor / hidden-rules，重產保留）。
+「## 輪帶 Strip（附錄）」不計入六段（PS-SECTIONS 只數 `## N.`）。
+
+### md 模式（1.4）
+
+沒有 xlsx 也沒有快測產物：照 `assets/prob-spec.template.md` 寫 → `python scripts/ps_run.py --md <file> --dest <dir>`
+（= ps_mdmeta → ps_html → ps_lint）。frontmatter `mode: md`；meta 無派生值表，PS-NUM 降為 warning（請在來源欄標出處）；
+frontmatter `sources:` 列出的檔案若存在會記 sha 進 meta（PS-STALE 守）。之後拿到 xlsx 或快測，改跑 xlsx / qt 模式重產，人工區保留。

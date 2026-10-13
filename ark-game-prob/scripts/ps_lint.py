@@ -9,6 +9,7 @@
   PS-HTML-EMPTY html 疑似空殼：去標籤純文字命中六段標題 < 4 → error；< 6 → warn（過戳記 ≠ 內容完整）
   PS-HUMAN     人工區含數字 → warn（未受 PS-NUM 保護，請自行標來源）
   PS-INJECT    指令覆寫句型 / 零寬字元 → error
+md 模式（meta.mode == md，1.4 手寫 Content 軌）：沒有派生值表，PS-NUM 降為 warning（請在來源欄 / 文中標出處）；其餘規則相同。
 用法: python ps_lint.py --dir data/prob/<slug>   → lint-report.json；error exit 3
 """
 from __future__ import annotations
@@ -188,12 +189,20 @@ def lint(d: pathlib.Path) -> dict:
             add("PS-HUMAN", f"human:{hid}", "人工區含數字，不受 PS-NUM 保護，請在文中標來源", "warning")
     stripped = HUMAN_RE.sub("", body)
 
-    # PS-NUM
+    # PS-NUM（md 模式降為 warning：手寫 md 沒有派生值表）
+    md_mode = str(meta.get("mode") or "") == "md"
+    num_sev = "warning" if md_mode else "error"
+    in_fence = False
     for i, ln in enumerate(stripped.splitlines(), 1):
-        if ln.startswith("#") or ln.startswith("```") or ln.startswith("<!--"):
+        if ln.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence and ln.startswith("R") and ":" in ln:   # ```strip 帶面：R1: M1 M2 …（符號不是數字）
+            continue
+        if ln.startswith("#") or ln.startswith("<!--"):
             continue
         for tok in numbers_in(ln) - allowed:
-            add("PS-NUM", f"prob-spec.md 行「{ln[:40]}」", f"數字 '{tok}' 無法回溯到來源 / 派生值")
+            add("PS-NUM", f"prob-spec.md 行「{ln[:40]}」", f"數字 '{tok}' 無法回溯到來源 / 派生值" + ("（md 模式：請標出處）" if md_mode else ""), num_sev)
 
     # PS-PROV（§4）
     s4 = stripped.split("## 4. 參數表", 1)[1].split("## 5.", 1)[0] if "## 4. 參數表" in stripped else ""

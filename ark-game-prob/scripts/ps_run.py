@@ -4,6 +4,8 @@
   python ps_run.py --xlsx <機率表.xlsx> --out data/prob --slug <slug> [--game <名>] [--config <快測設定檔.json> [--map <map.yaml>]] [--xlsx-view]
   python ps_run.py --qt data/quicktest/<slug> [--out data/prob]      # qt 模式（新遊戲設計鏈）：ps_probspec --qt → ps_html → ps_lint
   python ps_run.py --xlsx <xlsx> --config <json> --dest data/slot/<slug>/prob --xlsx-view   # 還原模式：直接落 prob/（不加 slug 層），ps_diff 落 config-diff
+  python ps_run.py --md <prob-spec.md> [--dest <dir>]   # md 模式（1.4）：沒有 xlsx / 快測也能出 View 軌 —— 照 assets/prob-spec.template.md 手寫 md → ps_html → ps_lint
+View 軌一律由 ps_html 從 prob-spec.md 渲染（md-first）；三種模式產出同一套 html（qt 模式不再經 prob-data adapter）。
 
 每步以 subprocess 執行同目錄腳本（F-6：stdout 一律 UTF-8；失敗即停並回傳該步的 envelope）。
 --dest <dir>：直接輸出到該目錄（不加 slug 層），對應 <game>/prob/；與 --out/--slug 的 <out>/<slug> 落法互斥。
@@ -44,6 +46,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--xlsx", help="xlsx 模式：公版機率表")
     ap.add_argument("--qt", help="qt 模式：data/quicktest/<slug>")
+    ap.add_argument("--md", help="md 模式：手寫 / 既有的 prob-spec.md（Content 軌即唯一來源）")
     ap.add_argument("--out", help="輸出根（<out>/<slug>）；未給依 ARK_GAME_ROOT，再無則 data/prob")
     ap.add_argument("--slug")
     ap.add_argument("--dest", help="直接輸出到此目錄（不加 slug 層）；還原模式落 data/slot/<slug>/prob/")
@@ -57,14 +60,25 @@ def main() -> None:
     ap.add_argument("--golden", type=float, help="--excel qtreport 的 golden RTP")
     ap.add_argument("--diff-warn-only", action="store_true")
     a = ap.parse_args()
-    if not a.xlsx and not a.qt:
-        C.fail("BAD_INPUT", "需要 --xlsx 或 --qt")
+    if not a.xlsx and not a.qt and not a.md:
+        C.fail("BAD_INPUT", "需要 --xlsx、--qt 或 --md")
     # --xlsx-view 要求 --config（正規機率表從設定檔 dump）
     if a.xlsx_view and a.xlsx and not a.config:
         C.fail("NEED_CONFIG", "xlsx 模式的正規機率表要從設定檔 dump",
                "加 --config <ProbSetting.json>；或改用來源 xlsx 本身當機率表")
     steps: dict[str, dict] = {}
-    if a.xlsx:
+    if a.md:
+        md_src = pathlib.Path(a.md)
+        if not md_src.exists():
+            C.fail("BAD_INPUT", f"找不到 {md_src}")
+        slug = a.slug or md_src.parent.name
+        out_dir = pathlib.Path(a.dest) if a.dest else md_src.parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+        if md_src.resolve() != (out_dir / "prob-spec.md").resolve():
+            (out_dir / "prob-spec.md").write_text(md_src.read_text(encoding="utf-8"), encoding="utf-8")
+        steps["meta"] = step("ps_mdmeta.py", ["--dir", str(out_dir)])
+        mode = "md"
+    elif a.xlsx:
         slug = a.slug or pathlib.Path(a.xlsx).stem.split("_")[0]
         out_dir, _ = C.resolve_out(a.out, a.dest, slug)
         args = ["--xlsx", a.xlsx, "--out", str(out_dir), "--slug", slug] + (["--game", a.game] if a.game else [])
@@ -80,16 +94,14 @@ def main() -> None:
         if a.xlsx_view:
             steps["probtable"] = step("ps_probtable.py", ["--dir", str(out_dir)])
         mode = "qt"
-        # qt View 對齊 xlsx：產 prob-data.json（adapter）→ 下方自動觸發 ps_html（取代 ps_probspec 的簡易 build_html）
-        steps["qtdata"] = step("ps_qtdata.py", ["--qt", a.qt, "--slug", slug, "--dest", str(out_dir)])
-    if (out_dir / "prob-data.json").exists():
-        steps["html"] = step("ps_html.py", ["--dir", str(out_dir)])
+    # View 軌（md-first）：三種模式一律由 ps_html 從 prob-spec.md 渲染；qt 模式不再產 prob-data adapter
+    steps["html"] = step("ps_html.py", ["--dir", str(out_dir)])
     steps["lint"] = step("ps_lint.py", ["--dir", str(out_dir)])
     lint_env = steps["lint"]["env"]
     lint_ok = lint_env.get("success") is True
     summ = (lint_env.get("data") or {}) if lint_ok else ((lint_env.get("data") or {}).get("summary") or {})
     diff_txt = ""
-    if a.config:
+    if a.config and (out_dir / "prob-data.json").exists():
         steps["diff"] = step("ps_diff.py", ["--data", str(out_dir / "prob-data.json"), "--config", a.config, "--warn-only"] + (["--map", a.map] if a.map else []))
         d = (steps["diff"]["env"].get("data") or {})
         diff_txt = f"｜ps_diff 一致 {d.get('match')} / 不一致 {d.get('mismatch')}"
@@ -97,7 +109,7 @@ def main() -> None:
     result = {"mode": mode, "slug": slug, "out": str(out_dir), "lint": summ, "steps": {k: v["env"].get("data", {}).get("delivery") or v["env"].get("error") for k, v in steps.items()}, "delivery": deliver}
     if not lint_ok:
         C.fail("GATE_BLOCKED", "ps_lint 未通過", deliver, result)
-    if a.config and not a.diff_warn_only and (steps["diff"]["env"].get("data") or {}).get("mismatch"):
+    if a.config and "diff" in steps and not a.diff_warn_only and (steps["diff"]["env"].get("data") or {}).get("mismatch"):
         C.fail("GATE_BLOCKED", "規格 ⇄ 設定檔不一致（見 config-diff.md）", deliver, result)
     # ── Excel View 軌（--excel 或 --xlsx-view）──
     kinds = None

@@ -5,7 +5,8 @@
 | 檔 | 說明 |
 |---|---|
 | prob-data.json | ps_extract 產出（16 個參數區塊、9 個數據段、4 組輪帶）|
-| prob-spec.md / .meta.json | ps_probspec xlsx 模式產出；verdict confirmed（10 億手 99.9395% vs golden 100.03%，−0.088 pp）|
+| prob-spec.md / .meta.json | ps_probspec xlsx 模式產出（1.4：§2 含快測摘要 / 符號命中 / 輪帶組 RTP / 贏分分布 / FG 詳細，§4 契約表，附錄輪帶 Strip 帶面）；verdict confirmed（10 億手 99.9395% vs golden 100.03%，−0.088 pp）|
+| prob-spec.html | ps_html 1.4 md-first 由上面的 md 渲染（總覽 KPI / RTP 圖 / 守門 / 熱度 / 長條 / 旗標 / 帶面）— 拿來對照「md 寫對表頭就長這樣」|
 | lint-report.json | ps_lint PASS（0 error）|
 | config-diff.md | ps_diff 39 條規則：36 一致、3 不一致（ReviveThreshold 300 vs 200；復活保留權重索引起點）— 這三條是真實發現，不是測試資料 |
 
