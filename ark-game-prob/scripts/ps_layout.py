@@ -5,7 +5,7 @@
 規範：aidev docs/designs/2026-10-07-game-pipeline-output-layout.md；單一版本原則（一款一份設定檔，例：A 版）。
 
 規則（error 擋畢業；warning 列出不擋）：
-  L-DIRS     prob/、quicktest/ 必須存在；design 模式另需 spec/；docs/ 選配
+  L-DIRS     prob/、quicktest/ 必須存在；design 模式另需 spec/；analysis/①、server/⑥、docs/ 選配
   L-STRAY    出現 data/prob/<slug>/ 這類多一層的舊佈局 → error（請用 ps_run --dest <game>/prob 重產後移除）
   L-PROB     prob/ 需有 prob-spec.md / .meta.json / .html / lint-report.json；md frontmatter source_skill 必須是 ark-game-prob
              （非 skill 產物 → error）；ps_lint 重跑 0 error
@@ -13,6 +13,10 @@
   L-SPEC     config-spec.yaml：<game>/spec/ 為規範位置（只在 quicktest/ → warning）；mode restore-live 時 $ref 全可解析、設定檔 sha 一致、鍵全覆蓋
   L-QT       quicktest/quicktest.yaml 需有 target_rtp；qt-report/rtp-report.json 存在；gate.verdict confirmed（rejected → error、inconclusive → warning）
   L-DIFF     prob/config-diff.json：mismatch > 0 → error；沒有 → warning（還原模式建議跑 ps_run --config）
+  L-SIZE     體積守門（設計文件 §2，data/slot/<slug> 目標 < 1 MB）：*.exe/*.dll/*.bin 進 game → error；
+             單檔 > 500 KB（排除 *.html View 軌與 _retired/）→ warning；quicktest/config/ 有 > 1 個 *.json（多版本設定檔，違反單一版本原則）→ error
+  L-SERVER   server/handoff.md 存在時：frontmatter 的 config_sha256_16 / rtp_report_sha256_16 必須 = 現檔實算 sha
+             （不符 → error；只對帳交付件來源，不改 server code）；無 handoff.md → 不報（⑥ 選配）
   L-RTP      docs/ 下（人寫的）md 提到的「Total RTP / 總 RTP」實測數字 ≠ rtp-report（±0.01 個百分點）→ warning（列檔名:行號；數字前後出現 golden／目標／理論／參數表者略過）
 
 用法: python ps_layout.py --game output/games/<slug> [--mode restore|design] [--write-md] [--strict]
@@ -63,11 +67,13 @@ def check(game: pathlib.Path, mode: str) -> dict:
     rel = lambda p: p.relative_to(game).as_posix() if p.is_relative_to(game) else p.as_posix()  # noqa: E731
     slug = game.name
     prob, qt, spec, docs = game / "prob", game / "quicktest", game / "spec", game / "docs"
+    analysis, server = game / "analysis", game / "server"
 
-    # L-DIRS
+    # L-DIRS（analysis/①、server/⑥、docs/ 為選配，認識但不強制）
     for d, need in ((prob, True), (qt, True), (spec, mode == "design")):
         if not d.is_dir():
             add("L-DIRS", rel(d), f"缺 {d.name}/", "error" if need else "warning")
+    facts["dirs"] = {d.name: d.is_dir() for d in (prob, qt, spec, analysis, server, docs)}
     # L-STRAY
     for stray in sorted(game.glob("data/prob/*")) + sorted(game.glob("data/quicktest/*")):
         if stray.is_dir():
@@ -189,6 +195,43 @@ def check(game: pathlib.Path, mode: str) -> dict:
     else:
         add("L-DIFF", "prob/config-diff.json", "沒有規格 ⇄ 設定檔對照（ps_run --xlsx … --config <設定檔>）", "warning")
 
+    # L-SIZE（體積守門：設計文件 §2，data/slot/<slug> 目標 < 1 MB、禁二進位、單一版本原則）
+    BIN_EXT = (".exe", ".dll", ".bin")
+    SIZE_WARN = 500 * 1024
+    max_file, exe_count = ("", 0), 0
+    for f in game.rglob("*"):
+        if not f.is_file() or "_retired" in f.parts:
+            continue
+        suf = f.suffix.lower()
+        if suf in BIN_EXT:
+            exe_count += 1
+            add("L-SIZE", rel(f), f"二進位檔不得進 data（{suf}）：移到 output/slot/<slug>/build/")
+            continue
+        sz = f.stat().st_size
+        if sz > max_file[1]:
+            max_file = (rel(f), sz)
+        if sz > SIZE_WARN and suf != ".html":  # html View 軌允許較大
+            add("L-SIZE", rel(f), f"單檔 {sz // 1024} KB > 500 KB：可重產大檔請移到 output/slot/<slug>/", "warning")
+    cfg_dir = qt / "config"
+    cfg_jsons = sorted(cfg_dir.glob("*.json")) if cfg_dir.is_dir() else []
+    if len(cfg_jsons) > 1:
+        add("L-SIZE", "quicktest/config/", f"{len(cfg_jsons)} 個設定檔（違反單一版本原則，只收 A 版）：" + ", ".join(p.name for p in cfg_jsons[:6]) + "；其餘移到 output/slot/<slug>/")
+    facts["size"] = {"max_file": max_file[0], "max_bytes": max_file[1], "exe_count": exe_count, "config_versions": len(cfg_jsons)}
+
+    # L-SERVER（⑥ 交付守門：server/handoff.md 的來源 sha 必須與現檔一致；只對帳不改 server code）
+    handoff = server / "handoff.md"
+    if handoff.is_file():
+        htxt = handoff.read_text(encoding="utf-8", errors="replace")
+        srv_facts: dict = {"handoff": True}
+        checks = (("config_sha256_16", facts.get("config", {}).get("sha256_16") if isinstance(facts.get("config"), dict) else None),
+                  ("rtp_report_sha256_16", facts.get("rtp_report", {}).get("sha256_16") if isinstance(facts.get("rtp_report"), dict) else None))
+        for key, want in checks:
+            declared = fm_get(htxt, key)
+            srv_facts[key] = {"declared": declared, "actual": want}
+            if declared and want and declared != want:
+                add("L-SERVER", "server/handoff.md", f"{key} 宣告 {declared} ≠ 現檔 {want}：交付件來源已變，重出 handoff")
+        facts["server"] = srv_facts
+
     # L-RTP
     if rtp_total is not None:
         want = rtp_total * 100
@@ -231,8 +274,8 @@ def render_md(rep: dict) -> str:
         L += ["| 嚴重度 | 規則 | 位置 | 說明 |", "|---|---|---|---|"]
         for v in sorted(rep["violations"], key=lambda x: (x["severity"] != "error", x["rule"])):
             L.append(f"| {'🔴 error' if v['severity'] == 'error' else '🟡 warning'} | {v['rule']} | `{v['where']}` | {v['message'].replace('|', '／')} |")
-    L += ["", "## 畢業判準", "", "error = 0（ps_lint PASS、無舊佈局殘留、html 戳記綁對、config-spec 可驗、三向 confirmed、規格 ⇄ 設定檔一致）。",
-          "warning 不擋，但 L-RTP 代表文件裡還有過期數字。", ""]
+    L += ["", "## 畢業判準", "", "error = 0（ps_lint PASS、無舊佈局殘留、html 戳記綁對、config-spec 可驗、三向 confirmed、規格 ⇄ 設定檔一致、無二進位 / 單一設定檔、交付件 sha 對帳）。",
+          "warning 不擋，但 L-RTP 代表文件裡還有過期數字、L-SIZE warning 代表有可重產大檔該移到 output/。", ""]
     return "\n".join(L)
 
 

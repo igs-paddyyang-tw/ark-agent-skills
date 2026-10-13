@@ -100,3 +100,57 @@ def test_layout_accepts_flat_source_config(game):
     assert r["data"]["verdict"] == "PASS" and r["data"]["errors"] == 0
     rep = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
     assert rep["facts"]["config_spec_keys"] == "3/3"
+
+
+def test_layout_lsize_catches_exe_and_multi_config(game):
+    """1.2 G-3：二進位檔與多版本設定檔應被 L-SIZE 擋下（error）。"""
+    (game / "quicktest" / "FastTest.exe").write_bytes(b"MZ" + b"\x00" * 100)        # 二進位
+    (game / "quicktest" / "config" / "b-variant.json").write_text("{}", encoding="utf-8")  # 第 2 份設定檔
+    r = run("ps_layout.py", "--game", str(game))
+    assert not r["success"] and r["_rc"] == 3
+    size_v = [v for v in r["data"]["violations"] if v["rule"] == "L-SIZE" and v["severity"] == "error"]
+    msgs = " ".join(v["message"] for v in size_v)
+    assert any(".exe" in v["where"] or "FastTest" in v["where"] for v in size_v)
+    assert "設定檔" in msgs and "單一版本" in msgs
+    rep = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
+    assert rep["facts"]["size"]["exe_count"] == 1 and rep["facts"]["size"]["config_versions"] == 2
+
+
+def test_layout_lserver_sha_mismatch(game):
+    """1.2 G-3：server/handoff.md 宣告的 config sha 與現檔不符 → L-SERVER error。"""
+    (game / "server").mkdir()
+    cp = game / "quicktest" / "config" / "a-standard.json"
+    good = sha16(cp)
+    handoff = ("---\n"
+               "kind: server-handoff\n"
+               "config_sha256_16: \"deadbeefdeadbeef\"\n"           # 故意錯
+               f"rtp_report_sha256_16: \"{sha16(game / 'quicktest' / 'qt-report' / 'rtp-report.json')}\"\n"
+               "---\n\n# 交付單\n")
+    (game / "server" / "handoff.md").write_text(handoff, encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    assert not r["success"] and r["_rc"] == 3
+    srv_v = [v for v in r["data"]["violations"] if v["rule"] == "L-SERVER"]
+    assert srv_v and "config_sha256_16" in srv_v[0]["message"]
+    rep = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
+    assert rep["facts"]["server"]["config_sha256_16"]["actual"] == good
+
+
+def test_layout_accepts_analysis_and_valid_server(game):
+    """1.2 G-3：analysis/① 與合規的 server/handoff.md（sha 相符）存在時仍 PASS。"""
+    (game / "analysis").mkdir()
+    (game / "analysis" / "game-analysis.md").write_text("# 競品分析\n", encoding="utf-8")
+    (game / "server").mkdir()
+    cp = game / "quicktest" / "config" / "a-standard.json"
+    rr = game / "quicktest" / "qt-report" / "rtp-report.json"
+    handoff = ("---\n"
+               "kind: server-handoff\n"
+               f"config_sha256_16: \"{sha16(cp)}\"\n"
+               f"rtp_report_sha256_16: \"{sha16(rr)}\"\n"
+               "---\n\n# 交付單\n")
+    (game / "server" / "handoff.md").write_text(handoff, encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    assert r["success"], r
+    assert r["data"]["verdict"] == "PASS" and r["data"]["errors"] == 0
+    rep = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
+    assert rep["facts"]["dirs"]["analysis"] is True and rep["facts"]["dirs"]["server"] is True
+    assert rep["facts"]["server"]["handoff"] is True
