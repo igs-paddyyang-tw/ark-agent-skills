@@ -270,7 +270,7 @@ def test_from_spec_to_green(tmp_path):
 
 
 
-# ── 2.1：企劃樣板三夾與交付夾（對齊 data/references/kaiji-gdd-sample）──
+# ── 2.1：企劃樣板三夾與交付夾（對齊 gdd_common.ASSET_DIRS 三夾定版）──
 
 def test_default_asset_dirs_are_sample_names(tmp_path):
     assert C.ASSET_DIRS == {"symbols": "symbols", "screens": "illustrations", "reference": "spec-reference-images"}

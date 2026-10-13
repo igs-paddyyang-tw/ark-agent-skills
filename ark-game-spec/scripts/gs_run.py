@@ -8,7 +8,7 @@
   python scripts/gs_run.py --stage gdd     --pack <gdd-pack> [--out] [--style]            # lint → build（素材總覽.html + todo.md）
   python scripts/gs_run.py --stage gdd     --from xlsx --xlsx <規格書.xlsx> --out <pack>  # gdd_extract → lint → build
   python scripts/gs_run.py --stage gdd     --from spec --run <run> --out <pack>           # gdd_from_spec → lint → build
-  …上面三種加 --export [--export-out <dir>] [--export-all-assets]                                 # 再產企劃樣板交付夾（與 kaiji-gdd-sample 同結構）
+  …上面三種加 --export [--export-out <dir>] [--export-all-assets]                                 # 再產企劃樣板交付夾（與 ASSET_DIRS 三夾定版同結構）
   python scripts/gs_run.py --stage atlas   --run <run> --slug <slug> | --gdd <pack> [--out data/atlas] [--library …]
   python scripts/gs_run.py --stage bundle  --bundle <bundle.yaml> [--quality lite|standard|hi] [--check]   # 競品分析 md + gdd-pack → 圖文單檔 HTML（需 ark-html-report ≥ 1.2）
   python scripts/gs_run.py --stage pack    [--domain <d> | --all]                          # pack_lint

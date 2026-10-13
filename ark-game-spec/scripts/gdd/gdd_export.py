@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gdd_export — gdd-pack → 企劃樣板交付夾（與 data/references/kaiji-gdd-sample 同目錄結構）。
+"""gdd_export — gdd-pack → 企劃樣板交付夾（與 gdd_common.ASSET_DIRS 定版三夾同目錄結構）。
 
 輸出（--out，預設 <pack>/export/）：
   <short_title>_素材總覽.html     單檔 HTML，圖一律以樣板相對路徑引用（symbols/…、illustrations/…、spec-reference-images/…）

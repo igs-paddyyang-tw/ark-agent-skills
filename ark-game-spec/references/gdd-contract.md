@@ -13,7 +13,7 @@ status: draft | review | published
 distribution: internal            # 固定；lint 擋其他值
 assets: {root: assets, symbols: symbols, screens: illustrations, reference: spec-reference-images}   # root 相對 gdd.yaml
 #   三夾名省略時：預設英文定版名（gdd_common.ASSET_DIRS）；只有舊中文夾（圖騰/全示意圖/規格書競品圖）時自動相容並警告 GDD-ASSET-LEGACY
-#   golden case 直接指樣板：root: ../../data/references/kaiji-gdd-sample（依 pack 實際位置調整相對層數）
+#   golden case 直接指樣板交付夾：root: <pack>/export（依 pack 實際位置調整相對層數）
 spec: [{k, v, short?, short_k?, kv?: false}]   # short 有值 → 進首頁 spec 列（標籤用 short_k 或 k）；kv:false → 不進「遊戲規格」kv 表
 spec_note / symbols_note / map_note / info_note / i18n_note   # 各段 note（symbols_note 允許 <code>）
 symbols_internal_notes: [..]      # 只進 HTML 註解
@@ -103,7 +103,7 @@ slots:
 
 ## 交付夾（gdd_export，2.1）
 
-企劃樣板的交付形態是「一個 HTML + 三個圖夾」放同一層（`data/references/kaiji-gdd-sample` 定版）。`gdd_export.py`（或 `gdd_run --export`、`gs_run --stage gdd --export`）把 pack 編成同結構：
+企劃樣板的交付形態是「一個 HTML + 三個圖夾」放同一層（三夾名由 `gdd_common.ASSET_DIRS` 定版）。`gdd_export.py`（或 `gdd_run --export`、`gs_run --stage gdd --export`）把 pack 編成同結構：
 
 ```text
 <out>/                               預設 <pack>/export/

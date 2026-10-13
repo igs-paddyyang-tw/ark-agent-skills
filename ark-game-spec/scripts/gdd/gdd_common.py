@@ -82,7 +82,7 @@ def atomic_write(path: pathlib.Path, text: str) -> None:
 
 # ── pack 載入 ─────────────────────────────────────────────────────────────
 
-# 企劃樣板的三夾（data/references/kaiji-gdd-sample 定版，2026-10-01 英文化）：素材總覽.html 與三夾同層
+# 企劃樣板的三夾（本 skill 定版，見 references/gdd-contract.md「交付夾」；2026-10-01 英文化）：素材總覽.html 與三夾同層
 ASSET_DIRS = {"symbols": "symbols", "screens": "illustrations", "reference": "spec-reference-images"}
 # 舊中文夾名（2.0 以前預設）：讀取相容，lint 給 GDD-ASSET-LEGACY 警告，gdd_export 一律輸出英文夾
 LEGACY_ASSET_DIRS = {"symbols": "圖騰", "screens": "全示意圖", "reference": "規格書競品圖"}

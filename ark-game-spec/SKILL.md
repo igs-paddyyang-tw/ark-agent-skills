@@ -58,7 +58,7 @@ metadata:
 | `scripts/video/` | `vu_run.py`（fetch → timeline → events → keyframes → sheets → transcript → evidence；`--domain auto` 只產 detect sheets）、各 `vu_*.py`、`detectors/`（8 個 deterministic 偵測器 REGISTRY）| 影片入口；調偵測器看 `references/video-calibration.md` |
 | `scripts/analysis/` | `ga_detect.py`（LLM 判 domain）、`ga_run.py`（observe → analyze → validate → kb_match）、`ga_report.py`（md-report + html）、`wev_fetch.py`（網頁 evidence，type: web）| 機制分析；fake provider 跑測試 |
 | `scripts/spec/` | `gs_run.py --stage draft\|decide\|dev`（舊 1.x 三段）、`gs_draft / gs_review / gs_decide / gs_dev / gs_metrics / spec_lint`、**`gs_restore`**（2.3：已上線還原，`--stage restore`）、**`gs_publish`**（2.4：定版件收進 data 家，`--stage publish`）| 規格草稿 → 決議 → dev-spec；還原 config-spec |
-| `scripts/gdd/` | `gdd_extract.py`（規格書 xlsx → gdd-pack）、`gdd_from_spec.py`（spec run → gdd-pack）、`gdd_lint.py`、`gdd_build.py`（素材總覽.html + todo.md）、**`gdd_export.py`**（2.1：gdd-pack → 企劃樣板交付夾，與 `data/references/kaiji-gdd-sample` 同結構）、`gdd_run.py`（lint → build [→ export]）、`gdd_common.py`（`ASSET_DIRS` 三夾定版名、`bundle_html_name`；本 stage 自用 helper）| 企劃規格書 |
+| `scripts/gdd/` | `gdd_extract.py`（規格書 xlsx → gdd-pack）、`gdd_from_spec.py`（spec run → gdd-pack）、`gdd_lint.py`、`gdd_build.py`（素材總覽.html + todo.md）、**`gdd_export.py`**（2.1：gdd-pack → 企劃樣板交付夾，與 `gdd_common.ASSET_DIRS` 三夾定版同結構）、`gdd_run.py`（lint → build [→ export]）、`gdd_common.py`（`ASSET_DIRS` 三夾定版名、`bundle_html_name`；本 stage 自用 helper）| 企劃規格書 |
 | `scripts/atlas/` | `atlas_run.py`（`--run` 或 `--gdd`）、`atlas_compile / atlas_from_gdd / atlas_figures / atlas_lint / atlas_build / atlas_register` | 圖文書、圖書館上架 |
 | `scripts/bundle/` | **`gs_bundle.py`**（2.2）：bundle.yaml（md 段 + 至多一段 gdd-pack）→ 圖文內嵌的單檔 HTML；素材總覽頁當外殼、md 段插入 nav／main，交給 ark-html-report `html_images` 縮圖 → WebP → 去重 → 內嵌；`--check` 驗戳記 | 競品分析與規格書要合成一份可寄出的 HTML 時；契約 `references/bundle-contract.md` |
 | `scripts/pack/` | `pack_resolve.py`（`--list` / `--domain`）、`pack_lint.py`（`--all`）、`pack_new.py` | 新增 / 修改 domain pack |
@@ -84,7 +84,7 @@ metadata:
 │   python scripts/gs_run.py --stage gdd --from xlsx --xlsx <規格書.xlsx> --out data/gdd/<slug>  → 素材總覽.html + todo.md
 │   ├─ todo.md 給美術（缺示意圖 / 待修 / 檔名衛生）；--stage atlas --gdd data/gdd/<slug> 出圖文書
 │   └─ 要交給企劃 / 美術的「樣板夾」：加 --export [--export-out <dir>] [--export-all-assets]
-│        → <short_title>_素材總覽.html + symbols/ + illustrations/ + spec-reference-images/（與 kaiji-gdd-sample 同結構；斷鏈 exit 3）
+│        → <short_title>_素材總覽.html + symbols/ + illustrations/ + spec-reference-images/（與 ASSET_DIRS 三夾定版同結構；斷鏈 exit 3）
 ├─ 競品分析報告（md）＋ 規格書（gdd-pack）要合成一份可寄出的 HTML（圖文都在、檔案小）
 │   寫 bundle.yaml（parts：md 段 + gdd 段，順序即頁面順序）→ python scripts/gs_run.py --stage bundle --bundle <bundle.yaml>
 │   → <out>.html（圖 WebP 內嵌、去重，零外部請求）+ <out>.bundle.json；超過 budget_mb → exit 3，改 --quality lite
@@ -150,7 +150,7 @@ gs_dev 設計鏈語意不變（value 非 null 仍 exit 3）。下游 ark-game-qu
 | 實測 KAIJI | 競品分析 md + gdd-pack：96 張圖、335 處引用，原圖 85.9 MB → 內嵌 2.15 MB，HTML 3.04 MB（standard）；同輸入重跑 bit-identical |
 | gdd 模板 | 燈箱改 `(window.__imgsrc \|\| (s => s))(d.src)`（由 bundle 注入；未內嵌時行為不變，模板本身未改）|
 
-## 2.1 變更：對齊企劃樣板（data/references/kaiji-gdd-sample）
+## 2.1 變更：對齊企劃樣板（三夾定版 `gdd_common.ASSET_DIRS`）
 
 | 項目 | 2.0 | 2.1 |
 |---|---|---|
