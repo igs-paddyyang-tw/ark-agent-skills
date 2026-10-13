@@ -64,7 +64,7 @@ def main() -> None:
     ap.add_argument("--timeout", type=int, default=3600)
     ap.add_argument("--seed", type=int, default=20261001, help="固定 worker seed（seed + i×1000003）；0 = 保留範本的時間 seed")
     ap.add_argument("--probspec", action="store_true", help="跑完 qt_report 後轉呼叫同層 ark-game-prob 產 data/prob/<slug>/prob-spec.md（需安裝 ark-game-prob）")
-    ap.add_argument("--prob-out", default="data/prob")
+    ap.add_argument("--prob-out", help="prob 產物根（<out>/<slug>）；未給交 ps_run 依 ARK_GAME_ROOT（<root>/<slug>/prob）決定，再無則 data/prob")
     a = ap.parse_args()
     d = pathlib.Path(a.dir).resolve()
     lint = step("qt_lint.py", "--dir", str(d), "--version", a.version)["data"]
@@ -131,7 +131,7 @@ def main() -> None:
         if not prob_skill.exists():
             C.fail("MISSING_DEP", "ark-game-prob skill 不在同層",
                    f"機率規格書已移至 ark-game-prob（v2.0 拆分）。\n安裝：複製 ark-game-prob/ 到 .kiro/skills/\n找到後預期位置：{prob_skill}")
-        ps_args = [sys.executable, str(prob_skill), "--qt", str(d), "--out", a.prob_out]
+        ps_args = [sys.executable, str(prob_skill), "--qt", str(d)] + (["--out", a.prob_out] if a.prob_out else [])
         ps_r = subprocess.run(ps_args, capture_output=True, text=True, encoding="utf-8")
         if ps_r.returncode != 0:
             C.fail("QUERY_FAILED", f"ark-game-prob ps_run 失敗（exit={ps_r.returncode}）", ps_r.stderr[-500:])

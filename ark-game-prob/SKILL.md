@@ -18,7 +18,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.2.0"
+  version: "1.3.0"
   updated: 2026-10-13
   outputs:
     - { format: data, audience: ai }
@@ -76,14 +76,14 @@ metadata:
 ```
 手上有什麼？
 ├─ 機率人員的公版「機率表 xlsx」（已上線還原 / 機率人員已做好表）→ xlsx 模式
-│   python scripts/ps_run.py --xlsx <機率表.xlsx> --out data/prob --slug <slug> --game <名> [--config <設定檔.json>]
+│   python scripts/ps_run.py --xlsx <機率表.xlsx> --slug <slug> --game <名> [--config <設定檔.json>]
 │   ├─ ps_extract 抓不到某張表 → 看 prob-data.json params.blocks 是否有該區塊；沒有 → xlsx 標籤不是「表 X-n」格式，
 │   │     照 references/xlsx-layout.md 補標籤，或先用 generic 表（View 會照原樣列出，只是沒有長條 / 色階）
 │   ├─ ps_lint PS-NUM → 不要改文，回 xlsx 改（文中數字只能來自 xlsx / 派生值）
 │   ├─ ps_diff 🔴 → 規格與設定檔不一致：找機率人員 + 工程師裁定哪邊對，改完重跑；這是跑快測前的硬門
 │   └─ 機率人員只動人工區：summary / flow-notes / param-notes / competitor / hidden-rules（重產保留）
 ├─ 走 ark-game-spec → ark-game-quicktest 的新遊戲設計鏈（有 data/quicktest/<slug>/）→ qt 模式
-│   python scripts/ps_run.py --qt data/quicktest/<slug> --out data/prob [--xlsx-view]
+│   python scripts/ps_run.py --qt data/slot/<slug>/quicktest [--xlsx-view]
 │   ├─ 參數 null → §4 顯示「待決議」（P-002），frontmatter pending_params > 0；不是錯，是還沒決議
 │   └─ 還沒快測 → §2 整表「—」標未快測；qt_run 跑完重產，§2 自動填入
 ├─ 兩者都沒有（純討論階段）→ 複製 assets/prob-spec.template.md 手寫；人工區以外不要放數字
@@ -91,6 +91,9 @@ metadata:
 ```
 
 ## 目錄
+
+落點（1.3，G-2）：`--dest` > `--out`（`<out>/<slug>`）> 環境變數 `ARK_GAME_ROOT`（`<root>/<slug>/prob/`）> 舊預設 `data/prob/<slug>/`（相容一版）。
+`--qt` 指到 `<game>/quicktest` 時 slug 取上一層名。下面以舊預設示意，檔案組成相同。
 
 ```text
 data/prob/<slug>/

@@ -17,8 +17,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.1.1"
-  updated: 2026-10-08
+  version: "2.1.2"
+  updated: 2026-10-13
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }
@@ -69,7 +69,7 @@ metadata:
 │     ├─ 沒 go → engine/ 已就位，拿去 daemon 主機（~/.local/go）跑，再 qt_report --report engine/report_<ver>.txt
 │     └─ qt-report/<date>-quicktest-<slug>.md：verdict confirmed / inconclusive / rejected
 ├─ rejected → 看 Findings（P0 RTP 偏離 / null 偷渡；P1 體感區間）→ 調參重跑；confirmed → 審核後彙整
-└─ 要機率規格書 / 參數表 / 隱性規則 → 用 **ark-game-prob**（`ps_run.py --qt data/quicktest/<slug>`）；本 skill 的 `qt_run --probspec` 會轉呼叫同層 ark-game-prob
+└─ 要機率規格書 / 參數表 / 隱性規則 → 用 **ark-game-prob**（`ps_run.py --qt data/quicktest/<slug>`）；本 skill 的 `qt_run --probspec` 會轉呼叫同層 ark-game-prob（未給 `--prob-out` 時落點交 ps_run 依 `ARK_GAME_ROOT` 決定）
 ```
 
 ## 目錄

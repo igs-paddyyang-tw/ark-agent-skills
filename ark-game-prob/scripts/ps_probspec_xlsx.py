@@ -218,8 +218,8 @@ def run_from_args(a) -> None:
     if not dp.exists():
         C.fail("BAD_INPUT", f"找不到 {dp}", "先跑 ps_extract.py")
     data = json.loads(dp.read_text(encoding="utf-8"))
-    slug = a.slug or data.get("slug") or dp.parent.name
-    out_dir = pathlib.Path(a.dest) if getattr(a, "dest", None) else (pathlib.Path(a.out) / slug if pathlib.Path(a.out).name != slug else pathlib.Path(a.out))
+    slug = a.slug or data.get("slug") or C.slug_of(dp.parent)
+    out_dir, _ = C.resolve_out(a.out, getattr(a, "dest", None), slug)
     xlsx = pathlib.Path(a.xlsx) if a.xlsx else pathlib.Path(data["source"]["path"])
     meta = build(data, out_dir, slug=slug, author=a.author, date=a.date, xlsx_path=xlsx if xlsx.exists() else None, extra_sources={"prob-data": dp})
     C.emit({"out": str(out_dir / "prob-spec.md"), "verdict": meta["verdict"], "derived": len(meta["derived"]), "human_blocks": 5,
@@ -230,7 +230,8 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True, help="prob-data.json（ps_extract 產）")
-    ap.add_argument("--out", default="data/prob")
+    ap.add_argument("--out")
+    ap.add_argument("--dest")
     ap.add_argument("--slug")
     ap.add_argument("--xlsx", help="來源 xlsx（預設取 prob-data.source.path）")
     ap.add_argument("--author", default=os.getenv("ARK_AUTHOR", "paddyyang"))

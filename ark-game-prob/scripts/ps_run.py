@@ -3,10 +3,11 @@
 
   python ps_run.py --xlsx <機率表.xlsx> --out data/prob --slug <slug> [--game <名>] [--config <快測設定檔.json> [--map <map.yaml>]] [--xlsx-view]
   python ps_run.py --qt data/quicktest/<slug> [--out data/prob]      # qt 模式（新遊戲設計鏈）：ps_probspec --qt → ps_html → ps_lint
-  python ps_run.py --xlsx <xlsx> --config <json> --dest output/games/<slug>/prob --xlsx-view   # 還原模式：直接落 prob/（不加 slug 層），ps_diff 落 config-diff
+  python ps_run.py --xlsx <xlsx> --config <json> --dest data/slot/<slug>/prob --xlsx-view   # 還原模式：直接落 prob/（不加 slug 層），ps_diff 落 config-diff
 
 每步以 subprocess 執行同目錄腳本（F-6：stdout 一律 UTF-8；失敗即停並回傳該步的 envelope）。
---dest <dir>：直接輸出到該目錄（不加 slug 層），對應 output/games/<slug>/prob/；與 --out/--slug 的 <out>/<slug> 落法互斥。
+--dest <dir>：直接輸出到該目錄（不加 slug 層），對應 <game>/prob/；與 --out/--slug 的 <out>/<slug> 落法互斥。
+都不給時：有 ARK_GAME_ROOT（例 data/slot）→ <ARK_GAME_ROOT>/<slug>/prob/；沒有 → 舊預設 data/prob/<slug>（相容一版）。
 --xlsx-view 另產公版 prob-spec.xlsx（需 --config 從設定檔 dump；xlsx 模式缺 --config → NEED_CONFIG，不靜默略過）。
 交付格式：ps_run <mode>｜<slug>｜ps_lint PASS/FAIL｜<N> 處待決議｜[ps_diff 一致 a / 不一致 b]
 """
@@ -43,9 +44,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--xlsx", help="xlsx 模式：公版機率表")
     ap.add_argument("--qt", help="qt 模式：data/quicktest/<slug>")
-    ap.add_argument("--out", default="data/prob")
+    ap.add_argument("--out", help="輸出根（<out>/<slug>）；未給依 ARK_GAME_ROOT，再無則 data/prob")
     ap.add_argument("--slug")
-    ap.add_argument("--dest", help="直接輸出到此目錄（不加 slug 層）；還原模式落 output/games/<slug>/prob/")
+    ap.add_argument("--dest", help="直接輸出到此目錄（不加 slug 層）；還原模式落 data/slot/<slug>/prob/")
     ap.add_argument("--game")
     ap.add_argument("--config", help="選配：快測設定檔 JSON → 跑 ps_diff")
     ap.add_argument("--map", help="ps_diff 對照規則 yaml")
@@ -65,16 +66,16 @@ def main() -> None:
     steps: dict[str, dict] = {}
     if a.xlsx:
         slug = a.slug or pathlib.Path(a.xlsx).stem.split("_")[0]
-        out_dir = pathlib.Path(a.dest) if a.dest else pathlib.Path(a.out) / slug
+        out_dir, _ = C.resolve_out(a.out, a.dest, slug)
         args = ["--xlsx", a.xlsx, "--out", str(out_dir), "--slug", slug] + (["--game", a.game] if a.game else [])
         steps["extract"] = step("ps_extract.py", args)
-        pargs = ["--data", str(out_dir / "prob-data.json")] + (["--dest", str(out_dir), "--slug", slug] if a.dest else ["--out", a.out, "--slug", slug])
+        pargs = ["--data", str(out_dir / "prob-data.json"), "--dest", str(out_dir), "--slug", slug]
         steps["probspec"] = step("ps_probspec.py", pargs)
         mode = "xlsx"
     else:
-        slug = a.slug or pathlib.Path(a.qt).name
-        out_dir = pathlib.Path(a.dest) if a.dest else pathlib.Path(a.out) / slug
-        pargs = ["--qt", a.qt] + (["--dest", str(out_dir), "--slug", slug] if a.dest else ["--out", a.out, "--slug", slug])
+        slug = a.slug or C.slug_of(pathlib.Path(a.qt).resolve())
+        out_dir, _ = C.resolve_out(a.out, a.dest, slug)
+        pargs = ["--qt", a.qt, "--dest", str(out_dir), "--slug", slug]
         steps["probspec"] = step("ps_probspec.py", pargs)
         if a.xlsx_view:
             steps["probtable"] = step("ps_probtable.py", ["--dir", str(out_dir)])
@@ -106,7 +107,7 @@ def main() -> None:
         excel_made = {}
         diff_json = out_dir / "config-diff.json"
         for k in kinds:
-            xa = ["--kind", k, "--out", a.out, "--slug", slug] + (["--game", a.game] if a.game else []) + (["--map", a.map] if a.map else [])
+            xa = ["--kind", k, "--dest", str(out_dir), "--slug", slug] + (["--game", a.game] if a.game else []) + (["--map", a.map] if a.map else [])
             if k in ("probtable", "all") and a.config:
                 xa += ["--config", a.config]
             if k in ("diff", "review", "all") and diff_json.exists():

@@ -2,9 +2,9 @@
 name: ark-game-spec
 description: |
   遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill，
-  與 ark-game-prob（機率規格書）、ark-game-quicktest（Go 快測）三件套。一個入口 gs_run --stage 串十個 stage：
+  與 ark-game-prob（機率規格書）、ark-game-quicktest（Go 快測）三件套。一個入口 gs_run --stage 串各 stage：
   video（影片→抽幀→contact sheet→唯讀 evidence）→ detect／analyze（多模態機制分析→game-analysis.yaml＋kb-refs＋報告）
-  → draft／decide／dev（規格草稿 spec_lint → ark-grill-me 決議 → game-spec.v1 → dev-spec 六檔，config-spec value=null）→ restore（已上線設定檔→config-spec $ref）
+  → draft／decide／dev（規格草稿 spec_lint → ark-grill-me 決議 → game-spec.v1 → dev-spec 六檔，config-spec value=null）→ restore（已上線設定檔→config-spec $ref）→ publish（①② 定版件 run→data/slot/<slug>）
   → gdd（xlsx 或 spec run → gdd-pack → 素材總覽.html；--export 企劃樣板交付夾）
   → atlas（圖文規格書入圖書館）→ bundle（分析＋規格書→單檔 HTML）→ pack（domain pack lint）。
   另含純提詞「從構想產 GDD」創作模式。僅 analyze／gs_review --llm 用 LLM，其餘 deterministic。
@@ -18,8 +18,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.3.1"
-  updated: 2026-10-08
+  version: "2.4.0"
+  updated: 2026-10-13
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -54,10 +54,10 @@ metadata:
 
 | 路徑 | 用途 | 何時載入 |
 |------|------|---------|
-| `scripts/gs_run.py` | **總編排（薄派發器）**：`--stage video\|detect\|analyze\|report\|draft\|decide\|dev\|restore\|gdd\|atlas\|bundle\|pack\|all`，flag 透傳各 stage runner；`analyze` 自動補跑 ga_report（D-3）；`all` 跑到 draft 停（人工決議是刻意斷點），帶 `--decisions` 續到 atlas | 平常只用這支 |
+| `scripts/gs_run.py` | **總編排（薄派發器）**：`--stage video\|detect\|analyze\|report\|draft\|decide\|dev\|restore\|publish\|gdd\|atlas\|bundle\|pack\|all`，flag 透傳各 stage runner；`analyze` 自動補跑 ga_report（D-3）；`all` 跑到 draft 停（人工決議是刻意斷點），帶 `--decisions` 續到 atlas | 平常只用這支 |
 | `scripts/video/` | `vu_run.py`（fetch → timeline → events → keyframes → sheets → transcript → evidence；`--domain auto` 只產 detect sheets）、各 `vu_*.py`、`detectors/`（8 個 deterministic 偵測器 REGISTRY）| 影片入口；調偵測器看 `references/video-calibration.md` |
 | `scripts/analysis/` | `ga_detect.py`（LLM 判 domain）、`ga_run.py`（observe → analyze → validate → kb_match）、`ga_report.py`（md-report + html）、`wev_fetch.py`（網頁 evidence，type: web）| 機制分析；fake provider 跑測試 |
-| `scripts/spec/` | `gs_run.py --stage draft\|decide\|dev`（舊 1.x 三段）、`gs_draft / gs_review / gs_decide / gs_dev / gs_metrics / spec_lint`、**`gs_restore`**（2.3：已上線還原，`--stage restore`）| 規格草稿 → 決議 → dev-spec；還原 config-spec |
+| `scripts/spec/` | `gs_run.py --stage draft\|decide\|dev`（舊 1.x 三段）、`gs_draft / gs_review / gs_decide / gs_dev / gs_metrics / spec_lint`、**`gs_restore`**（2.3：已上線還原，`--stage restore`）、**`gs_publish`**（2.4：定版件收進 data 家，`--stage publish`）| 規格草稿 → 決議 → dev-spec；還原 config-spec |
 | `scripts/gdd/` | `gdd_extract.py`（規格書 xlsx → gdd-pack）、`gdd_from_spec.py`（spec run → gdd-pack）、`gdd_lint.py`、`gdd_build.py`（素材總覽.html + todo.md）、**`gdd_export.py`**（2.1：gdd-pack → 企劃樣板交付夾，與 `data/references/kaiji-gdd-sample` 同結構）、`gdd_run.py`（lint → build [→ export]）、`gdd_common.py`（`ASSET_DIRS` 三夾定版名、`bundle_html_name`；本 stage 自用 helper）| 企劃規格書 |
 | `scripts/atlas/` | `atlas_run.py`（`--run` 或 `--gdd`）、`atlas_compile / atlas_from_gdd / atlas_figures / atlas_lint / atlas_build / atlas_register` | 圖文書、圖書館上架 |
 | `scripts/bundle/` | **`gs_bundle.py`**（2.2）：bundle.yaml（md 段 + 至多一段 gdd-pack）→ 圖文內嵌的單檔 HTML；素材總覽頁當外殼、md 段插入 nav／main，交給 ark-html-report `html_images` 縮圖 → WebP → 去重 → 內嵌；`--check` 驗戳記 | 競品分析與規格書要合成一份可寄出的 HTML 時；契約 `references/bundle-contract.md` |
@@ -91,6 +91,8 @@ metadata:
 │   只有 md（沒有 gdd-pack）也行：用內建簡版外殼；md 圖可寫 symbols/xxx.png 直接共用規格書素材
 ├─ 只有一句話概念 → 創作模式：讀 references/concept-gdd-template.md + genre-guides.md，Understanding Lock 後產 docs/<name>-gdd.md；數值一律「建議值待測試」
 ├─ 新遊戲類型（麻將 / 棋牌 / 街機）→ python scripts/pack/pack_new.py --domain <d> --display-name <名> → 填 pack → --stage pack --domain <d>
+├─ 分析／規格定版要收進 data 家 → python scripts/gs_run.py --stage publish --run <run> [--dest data/slot/<slug>]（無 --dest 讀 ARK_GAME_ROOT）[--dry-run]
+│   → analysis/ + spec/（config-spec 提到 spec/）+ publish-manifest.json；再跑 ark-game-prob ps_layout --game data/slot/<slug>
 └─ 規格定案要進機率段 → 交接檔在 <run>/dev-spec/ 與 data/gdd/<slug>/：下一步 ark-game-quicktest qt_config、ark-game-prob ps_run --qt
 ```
 
@@ -107,6 +109,9 @@ data/gdd/<slug>/   gdd.yaml · symbols.yaml · screens.yaml · rules/*.md · inf
                    export/   ← --export 交付夾（企劃樣板結構，可整夾寄出）：
                      <short_title>_素材總覽.html · symbols/ · illustrations/ · spec-reference-images/
 <bundle 目錄>/    bundle.yaml · <title>.html（單檔，圖片內嵌）· <title>.bundle.json                                                              bundle
+data/slot/<slug>/  publish-manifest.json（來源 run、每檔 sha256_16、取代檔舊 sha）                                      publish
+                   analysis/{game-analysis.yaml, kb-refs.yaml, evidence.jsonl, report/}
+                   spec/{game-spec.v1.md, decisions.yaml, decisions-applied.json, config-spec.yaml, dev-spec/五檔}
 data/atlas/<slug>/ atlas.yaml · NN-*.md · assets/figures/ · site/index.html · data/library/atlas/catalog.json                     atlas
 ```
 
@@ -121,6 +126,12 @@ data/atlas/<slug>/ atlas.yaml · NN-*.md · assets/figures/ · site/index.html �
 | bundle | md 段注入（script／iframe／on*=）、md 圖找不到 → exit 2；預算 `budget_mb`、內嵌後殘留本機圖片連結 → exit 3；`--check` 戳記過期 → exit 3 | 寄出的 HTML 破圖、爆大小、夾帶可執行碼 |
 | atlas | `atlas_lint` 10 組（含 ATL-NUM：書裡沒有 spec 沒有的數字、ATL-STALE）| 憑空數字、過期來源 |
 | pack | `pack_lint` 20 餘組（PACK-ITEMS 恰 10 項、PACK-KB-TAGS 受控詞彙…）| pack 契約破壞 |
+
+## 2.4 變更：publish stage（①② 定版件 → data/slot/<slug>，G-1）
+
+`gs_run --stage publish --run <run> [--dest data/slot/<slug>] [--slug] [--dry-run] [--force]`：只複製、不改內容、不刪 run；
+frames／video 等可重產大檔不收。`--dest` 未給 → `$ARK_GAME_ROOT/<slug>`，兩者皆無 → exit 2。
+重發時記錄被取代檔的舊 sha；dest 的 `spec/config-spec.yaml` 是 `mode: restore-live` 而要被設計鏈覆蓋 → exit 3（`--force` 放行）。
 
 ## 2.3 變更：還原模式 config-spec（mode: restore-live）
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import pathlib
 import re
 import sys
@@ -27,6 +28,32 @@ def _skill_version() -> str:
 
 
 SKILL_VERSION = _skill_version()
+
+LEGACY_OUT = "data/prob"  # ARK_GAME_ROOT 未設時的舊預設（相容一版，G-2）
+
+
+def game_root() -> pathlib.Path | None:
+    """G-2：環境變數 ARK_GAME_ROOT（例 data/slot）→ 一款遊戲的家 = <root>/<slug>/；未設回 None。"""
+    v = os.environ.get("ARK_GAME_ROOT", "").strip()
+    return pathlib.Path(v) if v else None
+
+
+def slug_of(p: pathlib.Path) -> str:
+    """從目錄推 slug：`<game>/quicktest`、`<game>/prob` 這類規範子目錄取上一層名，其餘取本身名。"""
+    p = pathlib.Path(p)
+    return p.parent.name if p.name in ("quicktest", "prob", "spec") else p.name
+
+
+def resolve_out(out: str | None, dest: str | None, slug: str) -> tuple[pathlib.Path, bool]:
+    """決定 prob 產物落點，回 (目錄, 是否 dest 落法)。
+    優先序：--dest > --out（<out>/<slug>）> ARK_GAME_ROOT（<root>/<slug>/prob）> 舊預設 data/prob/<slug>。"""
+    if dest:
+        return pathlib.Path(dest), True
+    if not out and (root := game_root()):
+        return root / slug / "prob", True
+    base = pathlib.Path(out or LEGACY_OUT)
+    return (base if base.name == slug else base / slug), False
+
 
 PCT_RE = re.compile(r"^-?\d+(?:\.\d+)?%$")
 

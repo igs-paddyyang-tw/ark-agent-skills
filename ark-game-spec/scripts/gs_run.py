@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""gs_run — ark-game-spec 2.x 總編排（薄派發器）：一個入口、十個 stage，各 stage runner 原封保留在 scripts/<stage>/，flag 全部透傳。
+"""gs_run — ark-game-spec 2.x 總編排（薄派發器）：一個入口、多個 stage，各 stage runner 原封保留在 scripts/<stage>/，flag 全部透傳。
 
   python scripts/gs_run.py --stage video   --source <url|mp4> [--domain auto|slot-game|…] [--out artifacts/cva] [vu_run 其他 flag]
   python scripts/gs_run.py --stage detect  --run <run>                      # auto 模式：ga_detect 判 domain 並續跑 vu_run 剩餘 stage
@@ -14,6 +14,7 @@
   python scripts/gs_run.py --stage pack    [--domain <d> | --all]                          # pack_lint
   python scripts/gs_run.py --stage restore --config <ProbSetting.json> [--xlsx <機率表.xlsx>] [--out <spec>] [--slug]  # 還原模式 config-spec（$ref）
   python scripts/gs_run.py --stage restore --check <config-spec.yaml>                       # 還原模式自檢
+  python scripts/gs_run.py --stage publish --run <run> [--dest data/slot/<slug>] [--slug] [--dry-run] [--force]  # ①② 定版件 → data 家（無 --dest 讀 ARK_GAME_ROOT）
   python scripts/gs_run.py --stage all     --source <url|mp4> [--domain …] [--decisions decisions.yaml] [--slug <slug>]
         all = video →（auto 時 detect）→ analyze → draft；有 --decisions 則續 decide → dev → atlas。中間人工決議是刻意的斷點（ark-grill-me）。
 
@@ -46,6 +47,7 @@ STAGES = {
     "pack": HERE / "pack" / "pack_lint.py",
     "restore": HERE / "spec" / "gs_restore.py",
     "bundle": HERE / "bundle" / "gs_bundle.py",
+    "publish": HERE / "spec" / "gs_publish.py",
 }
 
 
@@ -153,6 +155,10 @@ def main() -> None:
         C.emit(step(STAGES["pack"], opt(("--domain", a.domain)) + rest)["data"], {"stage": "pack"})
     if st == "restore":
         C.emit(step(STAGES["restore"], opt(("--out", a.out), ("--slug", a.slug), ("--xlsx", a.xlsx)) + rest)["data"], {"stage": "restore"})
+    if st == "publish":
+        if not a.run:
+            C.fail("BAD_INPUT", "--stage publish 需要 --run <run>")
+        C.emit(step(STAGES["publish"], opt(("--run", a.run), ("--slug", a.slug)) + rest)["data"], {"stage": "publish"})
     if st == "all":
         if not a.source:
             C.fail("BAD_INPUT", "--stage all 需要 --source")

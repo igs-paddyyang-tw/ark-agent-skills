@@ -276,7 +276,8 @@ def main() -> None:
     ap.add_argument("--spec", help="檢核表規格 yaml（check）")
     ap.add_argument("--report", help="rtp-report.json 或 result.txt（qtreport）")
     ap.add_argument("--dir", help="data/prob/<slug>（probtable 相容模式：轉呼叫 ps_probtable）")
-    ap.add_argument("--out", default="data/prob", help="輸出目錄")
+    ap.add_argument("--out", help="輸出根（<out>/<slug>）；未給依 ARK_GAME_ROOT（<root>/<slug>/prob），再無則 data/prob")
+    ap.add_argument("--dest", help="直接輸出到此目錄（不加 slug 層）")
     ap.add_argument("--slug", default="game")
     ap.add_argument("--game", default="")
     ap.add_argument("--map", help="config-map yaml")
@@ -284,9 +285,7 @@ def main() -> None:
     if "--help" in sys.argv or "-h" in sys.argv:
         ap.parse_args(); return
     a = ap.parse_args()
-    out = pathlib.Path(a.out)
-    if a.slug and not str(out).endswith(a.slug):
-        out = out / a.slug
+    out, _ = C.resolve_out(a.out, a.dest, a.slug)
     out.mkdir(parents=True, exist_ok=True)
 
     if a.kind == "probtable":
