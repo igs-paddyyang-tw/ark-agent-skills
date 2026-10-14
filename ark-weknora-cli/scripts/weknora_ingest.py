@@ -175,11 +175,79 @@ def cmd_kb_list(args) -> None:
 
 def cmd_kb_create(args) -> None:
     t0 = timer()
-    payload = {"name": args.name}
+    # P0：建庫時 model 必須在頂層欄位帶入 —— WeKnora 的 CreateKnowledgeBase 把 request body
+    # 整個 bind 成 KnowledgeBase，而 UpdateKnowledgeBase 的 struct 不含這兩欄，事後 PUT 補不回來，
+    # 只能刪庫重建。未帶時自動沿用租戶既有 KB 的 model id（唯讀 key 看不到 /models）。
+    tmpl = _lookup_template_kb(args.from_template) if getattr(args, "from_template", "") else {}
+    emb = args.embedding_model or tmpl.get("embedding_model_id") or _infer_model("embedding_model_id")
+    summ = args.summary_model or tmpl.get("summary_model_id") or _infer_model("summary_model_id")
+    if not emb:
+        emit_error(
+            "BAD_INPUT",
+            "建庫缺 embedding model：未帶 --embedding-model 且租戶無既有 KB 可沿用",
+            "帶 --embedding-model <id>（可用 model id 見 SKILL.md）；"
+            "或先確認租戶已有至少一個綁好 model 的 KB 供沿用",
+        )
+    payload: dict = {"name": args.name, "embedding_model_id": emb}
+    if summ:
+        payload["summary_model_id"] = summ
     if args.desc:
         payload["description"] = args.desc
     body = _request("POST", "/knowledge-bases", json_body=payload, headers=_json_headers())
-    emit_success({"knowledge_base": body.get("data") or body}, {"elapsed_ms": elapsed_ms(t0)})
+    kb = body.get("data") or body
+    # P0 建完自檢：回應 embedding_model_id 若空 → 建出廢庫，必須報錯提示重建（不靜默成功）
+    got_emb = (kb.get("embedding_model_id") if isinstance(kb, dict) else "") or ""
+    if not got_emb:
+        emit_error(
+            "RUNTIME",
+            f"建庫回應的 embedding_model_id 為空（kb_id={kb.get('id') if isinstance(kb, dict) else '?'}）"
+            "：此庫無法向量化、上傳必失敗，且事後 PUT 補不回來",
+            "刪掉此空殼庫後，帶明確的 --embedding-model 重建",
+        )
+    emit_success(
+        {"knowledge_base": kb, "embedding_model_id": got_emb,
+         "summary_model_id": (kb.get("summary_model_id") if isinstance(kb, dict) else "") or ""},
+        {"elapsed_ms": elapsed_ms(t0), "model_source": _model_source(args, tmpl)},
+    )
+
+
+def _list_kbs() -> list:
+    """GET /knowledge-bases → KB list（空/非 list 回 []）。"""
+    body = _request("GET", "/knowledge-bases", headers=_headers())
+    kbs = body.get("data") or []
+    return kbs if isinstance(kbs, list) else []
+
+
+def _infer_model(field: str) -> str:
+    """從租戶既有 KB 沿用 model id：回第一個該欄位非空的值（唯讀 key 看不到 /models 時的來源）。"""
+    try:
+        for k in _list_kbs():
+            v = (k.get(field) if isinstance(k, dict) else "") or ""
+            if v:
+                return v
+    except RuntimeError:
+        pass  # 列舉失敗（如無權限）→ 無法沿用，交由上層缺 model 的守門處理
+    return ""
+
+
+def _lookup_template_kb(alias_or_id: str) -> dict:
+    """--from-template：以別名/UUID 定位既有 KB，回其完整設定 dict（找不到回 {}）。"""
+    target = _resolve_kb(alias_or_id)
+    try:
+        for k in _list_kbs():
+            if isinstance(k, dict) and k.get("id") == target:
+                return k
+    except RuntimeError:
+        pass
+    return {}
+
+
+def _model_source(args, tmpl: dict) -> str:
+    if args.embedding_model:
+        return "explicit"
+    if tmpl:
+        return "from_template"
+    return "inherited_from_tenant"
 
 
 def cmd_add_manual(args) -> None:
@@ -314,22 +382,38 @@ def cmd_status(args) -> None:
 def cmd_wait(args) -> None:
     t0 = timer()
     deadline = time.monotonic() + args.timeout
+    until = getattr(args, "until", "enabled")
     last = ""
     while True:
         try:
             data = _fetch_status(args.id)
         except RuntimeError as e:
             emit_error("FETCH_FAILED", str(e), "確認 knowledge_id / 服務")
-        last = str(data.get("parse_status", ""))
-        if last in _TERMINAL:
-            ok = last == "completed"
-            # 到終態即視為輪詢成功完成；實際解析結果由 completed 布林承載
-            emit_success(
-                {"knowledge_id": args.id, "parse_status": last, "reached_terminal": True,
-                 "completed": ok, "enable_status": data.get("enable_status"),
-                 "error_message": data.get("error_message", "")},
-                {"elapsed_ms": elapsed_ms(t0)},
-            )
+        parse_status = str(data.get("parse_status", ""))
+        enable_status = str(data.get("enable_status", ""))
+        if until == "enabled":
+            # P1：預設看 enable_status=enabled —— 向量索引就緒即可檢索，不必等 summary 的
+            # finalizing 完成（卡 finalizing 會讓舊的 parse_status=completed 判定誤判逾時）。
+            # 解析失敗（parse_status=failed）仍是終態，據實回報 completed=false。
+            last = enable_status or parse_status
+            if enable_status == "enabled" or parse_status == "failed":
+                ok = enable_status == "enabled"
+                emit_success(
+                    {"knowledge_id": args.id, "until": until, "reached_terminal": True,
+                     "completed": ok, "parse_status": parse_status, "enable_status": enable_status,
+                     "error_message": data.get("error_message", "")},
+                    {"elapsed_ms": elapsed_ms(t0)},
+                )
+        else:  # until == "completed"（舊行為：等 parse_status 終態）
+            last = parse_status
+            if parse_status in _TERMINAL:
+                ok = parse_status == "completed"
+                emit_success(
+                    {"knowledge_id": args.id, "until": until, "parse_status": parse_status,
+                     "reached_terminal": True, "completed": ok,
+                     "enable_status": enable_status, "error_message": data.get("error_message", "")},
+                    {"elapsed_ms": elapsed_ms(t0)},
+                )
         if time.monotonic() >= deadline:
             emit_error(
                 "RUNTIME",
@@ -357,6 +441,134 @@ def cmd_search(args) -> None:
     )
 
 
+def cmd_ingest_dir(args) -> None:
+    """P2：批次上傳一個目錄下的檔案，逐檔 add-file → 等 enabled，最後匯總。"""
+    import glob as _glob
+    t0 = timer()
+    kb = _resolve_kb(args.kb)
+    root = Path(args.dir)
+    if not root.is_dir():
+        emit_error("BAD_INPUT", f"目錄不存在：{args.dir}", "確認路徑")
+    pats = [p.strip() for p in (args.pattern or "").split(",") if p.strip()] or ["*"]
+    paths: list[Path] = []
+    for pat in pats:
+        paths += [Path(p) for p in _glob.glob(str(root / ("**/" + pat if args.recursive else pat)),
+                                              recursive=args.recursive)]
+    files = sorted({p for p in paths if p.is_file()})
+    if not files:
+        emit_error("BAD_INPUT", f"目錄無符合檔案（pattern={pats}）", "調整 --pattern / --recursive")
+    results = []
+    for fp in files:
+        try:
+            with fp.open("rb") as fh:
+                body = _request("POST", f"/knowledge-bases/{kb}/knowledge/file",
+                                files={"file": (fp.name, fh)}, headers=_headers())
+            kid = (body.get("data") or {}).get("id")
+            status = "uploaded"
+            if kid and not args.no_wait:
+                # 逐檔等 enabled（P1 的判定）
+                deadline = time.monotonic() + args.timeout
+                status = "waiting"
+                while time.monotonic() < deadline:
+                    d = _fetch_status(kid)
+                    if str(d.get("enable_status", "")) == "enabled":
+                        status = "enabled"
+                        break
+                    if str(d.get("parse_status", "")) == "failed":
+                        status = "failed"
+                        break
+                    time.sleep(args.interval)
+            results.append({"file": fp.name, "knowledge_id": kid, "status": status})
+        except RuntimeError as e:
+            msg = str(e)
+            # 同 hash 檔 409 視為已存在，不中斷整批
+            results.append({"file": fp.name, "status": "exists" if "已存在" in msg else "error",
+                            "error": msg})
+    ok = sum(1 for r in results if r["status"] in ("enabled", "uploaded"))
+    emit_success(
+        {"kb": kb, "total": len(results), "ok": ok, "items": results},
+        {"elapsed_ms": elapsed_ms(t0)},
+    )
+
+
+def cmd_kb_verify(args) -> None:
+    """P2：比對 kb_registry 別名 ↔ 實際 KB 名，報出名實不符 / 找不到的別名。"""
+    t0 = timer()
+    kbs = _list_kbs()
+    by_id = {k.get("id"): k.get("name", "") for k in kbs if isinstance(k, dict)}
+    reg = _load_registry()
+    checks = []
+    for alias, uuid in reg.items():
+        if alias.startswith("_"):
+            continue
+        if not isinstance(uuid, str) or uuid.startswith("REPLACE_"):
+            checks.append({"alias": alias, "status": "placeholder", "kb_name": None})
+            continue
+        if uuid in by_id:
+            checks.append({"alias": alias, "uuid": uuid, "kb_name": by_id[uuid], "status": "ok"})
+        else:
+            checks.append({"alias": alias, "uuid": uuid, "kb_name": None,
+                           "status": "not_found"})
+    bad = [c for c in checks if c["status"] == "not_found"]
+    emit_success(
+        {"registry_entries": len(checks), "ok": sum(1 for c in checks if c["status"] == "ok"),
+         "not_found": len(bad), "checks": checks},
+        {"elapsed_ms": elapsed_ms(t0)},
+    )
+
+
+def _load_registry() -> dict:
+    """讀 kb_registry.json（與 _resolve_kb 的來源一致）；失敗回 {}。"""
+    try:
+        from _weknora_chat import _registry_path  # type: ignore
+        p = Path(_registry_path())
+    except Exception:  # noqa: BLE001
+        p = Path(__file__).resolve().parent.parent / "kb_registry.json"
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def cmd_kb_delete(args) -> None:
+    """P2：刪除 KB —— 破壞性操作，執行期 fail-safe 二次確認守門。
+
+    保護（預設安全，絕不自動刪）：
+      1. 必須帶 --confirm（純旗標不足以執行，只是表示「我知道這會刪」）。
+      2. 必須帶 --expect-name，且其值要與伺服器上該 KB 的實際名稱**完全相符**才執行。
+    缺任一、或名稱對不上，一律拒絕（exit 1），不送出 DELETE。
+    """
+    t0 = timer()
+    kb = _resolve_kb(args.kb)
+    # 先取實際 KB 名供核對（也確認 KB 真的存在）
+    try:
+        info = _request("GET", f"/knowledge-bases/{kb}", headers=_headers())
+        actual = (info.get("data") or info).get("name", "") if isinstance(info, dict) else ""
+    except RuntimeError as e:
+        emit_error("FETCH_FAILED", f"無法取得 KB 資訊：{e}", "確認 --kb 的別名/UUID 正確且 KB 存在")
+    # 守門一：必須明示 --confirm
+    if not args.confirm:
+        emit_error(
+            "BAD_INPUT",
+            f"kb-delete 是破壞性操作，拒絕執行：缺 --confirm（目標 KB「{actual}」/ {kb}）",
+            f"確認要刪除請加：--confirm --expect-name \"{actual}\"",
+        )
+    # 守門二：必須打出與實際完全相符的 KB 名核對
+    if (args.expect_name or "") != actual:
+        emit_error(
+            "BAD_INPUT",
+            f"kb-delete 名稱核對不符，拒絕執行：--expect-name=「{args.expect_name}」"
+            f"，但目標 KB 實際名稱為「{actual}」",
+            f"若確定要刪，--expect-name 必須與實際名稱完全一致：--expect-name \"{actual}\"",
+        )
+    # 兩道守門都通過才送出 DELETE
+    _request("DELETE", f"/knowledge-bases/{kb}", headers=_headers())
+    emit_success(
+        {"deleted": True, "kb_id": kb, "kb_name": actual},
+        {"elapsed_ms": elapsed_ms(t0)},
+    )
+
+
 # ── argparse ──────────────────────────────────────────────────────────────
 
 def build_parser():
@@ -371,6 +583,12 @@ def build_parser():
     sp = sub.add_parser("kb-create")
     sp.add_argument("--name", required=True)
     sp.add_argument("--desc", default="")
+    sp.add_argument("--embedding-model", default="",
+                    help="embedding model id（必要；未帶則沿用租戶既有 KB 的 model）")
+    sp.add_argument("--summary-model", default="",
+                    help="summary model id（選用；未帶則沿用既有/範本）")
+    sp.add_argument("--from-template", default="",
+                    help="以既有 KB（別名或 UUID）的設定為範本建新庫")
 
     sp = sub.add_parser("add-manual")
     sp.add_argument("--kb", default="", help="知識庫 ID；省略時用 WEKNORA_KB_ID")
@@ -416,11 +634,32 @@ def build_parser():
     sp.add_argument("--id", required=True)
     sp.add_argument("--timeout", type=int, default=300)
     sp.add_argument("--interval", type=int, default=3)
+    sp.add_argument("--until", default="enabled", choices=["enabled", "completed"],
+                    help="終態判定：enabled=看 enable_status（預設，索引就緒即可）；"
+                         "completed=看 parse_status（含 summary finalizing）")
 
     sp = sub.add_parser("search")
     sp.add_argument("--keyword", required=True)
     sp.add_argument("--file-types", default="")
     sp.add_argument("--limit", type=int, default=20)
+
+    sp = sub.add_parser("ingest-dir", help="批次上傳目錄下檔案，逐檔等 enabled")
+    sp.add_argument("--kb", default="", help="知識庫 ID；省略時用 WEKNORA_KB_ID")
+    sp.add_argument("--dir", required=True, help="來源目錄")
+    sp.add_argument("--pattern", default="*", help="檔名樣式，逗號分隔（如 *.md,*.pdf）")
+    sp.add_argument("--recursive", action="store_true", help="遞迴子目錄")
+    sp.add_argument("--no-wait", action="store_true", help="只上傳不等 enabled")
+    sp.add_argument("--timeout", type=int, default=300, help="每檔等 enabled 的逾時秒數")
+    sp.add_argument("--interval", type=int, default=3)
+
+    sub.add_parser("kb-verify", help="比對 kb_registry 別名 ↔ 實際 KB 名")
+
+    sp = sub.add_parser("kb-delete", help="刪除 KB（破壞性！需 --confirm + --expect-name 核對）")
+    sp.add_argument("--kb", default="", help="要刪的知識庫（別名或 UUID）；省略時用 WEKNORA_KB_ID")
+    sp.add_argument("--confirm", action="store_true",
+                    help="明示確認要刪除（缺此旗標一律拒絕執行）")
+    sp.add_argument("--expect-name", default="",
+                    help="打出該 KB 的實際名稱核對；與伺服器實際名稱完全相符才執行")
 
     return p
 
@@ -437,6 +676,9 @@ _DISPATCH = {
     "status": cmd_status,
     "wait": cmd_wait,
     "search": cmd_search,
+    "ingest-dir": cmd_ingest_dir,
+    "kb-verify": cmd_kb_verify,
+    "kb-delete": cmd_kb_delete,
 }
 
 
