@@ -15,8 +15,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "3.0.0"
-  updated: 2026-09-04
+  version: "3.0.1"
+  updated: 2026-10-15
   outputs:
     # wiki_query / wiki_context 的 JSON 契約歸受控詞彙 data
     # （`json` 不是合法 format 值，與 ark-db-query 同一判準：不為單一 skill 放寬守門）

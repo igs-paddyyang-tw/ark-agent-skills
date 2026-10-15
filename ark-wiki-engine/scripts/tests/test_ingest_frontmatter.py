@@ -66,3 +66,64 @@ def test_raw_type_is_preserved_not_detected(tmp_path):
     src = _make_raw(tmp_path)
     page = build_wiki_page(src, "bq-tables", "bq", src.read_text(encoding="utf-8"), tmp_path)
     assert parse_frontmatter(page).get("type") == "entity", "type 被 detect_type 誤改（應沿用 raw 的 entity）"
+
+
+# raw title 與 H1 刻意不同，才能驗證「沿用 frontmatter title」而非「抓第一個 #」
+RAW_TITLE_DIFFERS = """---
+title: "活動設定表權威清單"
+type: entity
+tags: [bq-table, activity, config]
+---
+
+# 內文用的另一個標題
+
+說明文字。
+"""
+
+
+def test_raw_title_is_preserved_not_from_h1(tmp_path):
+    """殘留修正：raw 有 title 就沿用，不被內文第一個 # 標題覆寫（aibi-agent 回報殘留）。"""
+    d = tmp_path / "raw" / "bq"
+    d.mkdir(parents=True)
+    src = d / "activity.md"
+    src.write_text(RAW_TITLE_DIFFERS, encoding="utf-8")
+    page = build_wiki_page(src, "activity", "bq", src.read_text(encoding="utf-8"), tmp_path)
+    assert parse_frontmatter(page).get("title") == "活動設定表權威清單", (
+        "title 被內文 H1 覆寫（應沿用 raw frontmatter 的 title）"
+    )
+
+
+# raw 帶 [[wikilink]] 錨點，驗證不被骨架硬寫的 overview 覆蓋
+RAW_WITH_RELATED = """---
+title: "虎機 k8s 發布"
+type: pipeline
+tags: [devops, k8s]
+related: [[GoldenHoyeahServer-DevOps]]
+---
+
+# 虎機 k8s 發布
+
+內容。
+"""
+
+
+def test_raw_related_anchor_is_preserved_not_overwritten(tmp_path):
+    """殘留修正：raw 的 related [[wikilink]] 錨點應沿用，不被骨架硬寫的 [overview] 吃掉。"""
+    d = tmp_path / "raw" / "infra"
+    d.mkdir(parents=True)
+    src = d / "k8s.md"
+    src.write_text(RAW_WITH_RELATED, encoding="utf-8")
+    page = build_wiki_page(src, "k8s", "infra", src.read_text(encoding="utf-8"), tmp_path)
+    assert "GoldenHoyeahServer-DevOps" in page, "related 錨點遺失（被 overwrite 成 overview）"
+    rel = parse_frontmatter(page).get("related", [])
+    rel_str = ", ".join(str(r) for r in rel) if isinstance(rel, list) else str(rel)
+    assert "GoldenHoyeahServer-DevOps" in rel_str, f"related={rel}（錨點未保留）"
+
+
+def test_related_defaults_to_overview_when_raw_has_none(tmp_path):
+    """raw 無 related 時，骨架回退預設 overview（維持原行為）。"""
+    src = _make_raw(tmp_path)  # RAW_WITH_FM 無 related
+    page = build_wiki_page(src, "bq-tables", "bq", src.read_text(encoding="utf-8"), tmp_path)
+    rel = parse_frontmatter(page).get("related", [])
+    rel_str = ", ".join(str(r) for r in rel) if isinstance(rel, list) else str(rel)
+    assert "overview" in rel_str, f"related={rel}（無 raw related 時應預設 overview）"

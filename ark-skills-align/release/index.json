@@ -708,5 +708,15 @@
     "skill": "ark-weknora-cli",
     "version": "1.0.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:a0653cdb765837895f160910a37234f9c2c7f9699c965bf3c493a2a56f8d7679": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:d43ee09f4d6c2dfa729fd816e4374dab4093d7948feac385bfc8afeed5184f68": {
+    "skill": "ark-wiki-engine",
+    "version": "3.0.1",
+    "release": "skills-2026.10-r1"
   }
 }

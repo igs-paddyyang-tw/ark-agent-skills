@@ -1,7 +1,7 @@
 {
   "release": "skills-2026.10-r1",
-  "commit": "5985ba1",
-  "generated_at": "2026-10-15T09:56:14+08:00",
+  "commit": "81e7216",
+  "generated_at": "2026-10-15T13:13:25+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.1.0",
@@ -540,7 +540,7 @@
     },
     "ark-skills-align": {
       "version": "2.0.0",
-      "tree_hash": "sha256:925c401e7cfc16fc8c432e2d30afcae53a7dfa4cc2be0197b8cb39913e0d025a",
+      "tree_hash": "sha256:a0653cdb765837895f160910a37234f9c2c7f9699c965bf3c493a2a56f8d7679",
       "contract_hash": "sha256:4a3efb684ab2b1279b01211423caf504e35317b6cc633a7133ee842c60f7b456",
       "status": "active",
       "category": "ops",
@@ -648,9 +648,9 @@
       "updated": "2026-09-11"
     },
     "ark-wiki-engine": {
-      "version": "3.0.0",
-      "tree_hash": "sha256:2c5ae3303ba8f82e448767c20e7ccb85dfb23e9c21fa33af48a14bcae35f66f7",
-      "contract_hash": "sha256:73d2fe6e28d66f5e59293d45f970db2e8b923909b2064dc0d09c3a8ffc1af133",
+      "version": "3.0.1",
+      "tree_hash": "sha256:d43ee09f4d6c2dfa729fd816e4374dab4093d7948feac385bfc8afeed5184f68",
+      "contract_hash": "sha256:2293866af647137071f702a335242445f2d99d9c5c5769e9ffd6f248044c8b0f",
       "status": "active",
       "category": "executor",
       "depends_on": [],
@@ -658,7 +658,7 @@
         "mcp-wiki-server",
         "team-mcp.wiki_query"
       ],
-      "updated": "2026-09-04"
+      "updated": "2026-10-15"
     },
     "ark-xlsx-tool": {
       "version": "1.0.0",

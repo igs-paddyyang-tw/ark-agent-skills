@@ -231,7 +231,6 @@ def build_wiki_page(source_path: Path, page_name: str, category: str, content: s
                     domain_root: Path) -> str:
     """產出含 frontmatter 的 wiki 頁面骨架。"""
     today = date.today().isoformat()
-    title = extract_title_from_content(content, page_name)
     rel_source = relative_source(source_path, domain_root)
     _bucket_warn = warn_if_not_bucketed(rel_source)
     if _bucket_warn:
@@ -239,6 +238,10 @@ def build_wiki_page(source_path: Path, page_name: str, category: str, content: s
 
     # 🔴 先讀 raw 自己的 frontmatter —— raw 有宣告就沿用，不自行推測改寫（aibi-agent 回報 P1）。
     raw_fm = parse_frontmatter(content) or {}
+
+    # title：raw 有就沿用（含 CJK）；無才由第一個 # 標題 / 檔名推測（aibi-agent 回報殘留）
+    raw_title = raw_fm.get("title")
+    title = str(raw_title).strip() if raw_title else extract_title_from_content(content, page_name)
 
     # type：raw 有就沿用，無才用 detect_type 推測
     page_type = raw_fm.get("type") or detect_type(content)
@@ -261,12 +264,19 @@ def build_wiki_page(source_path: Path, page_name: str, category: str, content: s
     approved = str(raw_fm.get("approved", "false")).lower()
     status = raw_fm.get("status") or "seedling"
 
+    # related：raw 有就沿用（保留 [[wikilink]] 錨點，含 CJK）；無才預設 overview
+    # （aibi-agent 回報殘留的第三類 —— 同 title/type/tags，骨架硬寫 overview 會吃掉來源錨點）
+    raw_related = raw_fm.get("related")
+    if isinstance(raw_related, str):
+        raw_related = [t.strip() for t in raw_related.split(",") if t.strip()]
+    related_str = ", ".join(str(r) for r in raw_related) if raw_related else "overview"
+
     return f"""---
 title: "{title}"
 type: {page_type}
 tags: [{tags_str}]
 sources: [{rel_source}]
-related: [overview]
+related: [{related_str}]
 created: {today}
 updated: {today}
 status: {status}
@@ -417,9 +427,10 @@ def ingest_file(source_path: Path, wiki_dir: Path, category: str, page_name: str
     out_path.write_text(wiki_content, encoding="utf-8")
 
     # ── 步驟 5：index.md + log.md
-    title = extract_title_from_content(content, page_name)
+    _page_fm = parse_frontmatter(wiki_content)
+    title = _page_fm.get("title") or extract_title_from_content(content, page_name)
     # trust 對齊頁面實際值（build_wiki_page 依 raw frontmatter 決定；預設 llm-distilled）
-    page_trust = parse_frontmatter(wiki_content).get("trust", "llm-distilled")
+    page_trust = _page_fm.get("trust", "llm-distilled")
     update_index(wiki_dir, category, page_name, title)
     update_log(wiki_dir, page_name, source_path, trust=page_trust, by=by,
                note=guard_note, page_rel=out_path.relative_to(wiki_dir.parent).as_posix())
