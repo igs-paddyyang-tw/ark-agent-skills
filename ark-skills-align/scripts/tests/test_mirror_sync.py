@@ -144,3 +144,15 @@ def test_local_ignored_artifacts_not_preserved(env):
     [r] = M.run(up, team, [], None, do_apply=True)
     assert r.local_data == [], f"ignored 產物被當成本地資料：{r.local_data}"
     assert not (local / "scripts" / ".index").exists()
+
+
+def test_accept_upstream_overrides_reviewed_local(env):
+    """人審過確認是舊版 → --accept-upstream 讓 LOCAL 改按 stale 對齊；--keep 仍優先保留。"""
+    up, v1, team = env
+    local = _place(team, ".", v1)
+    (local / "scripts" / "run.py").write_text("pre-history old\n", encoding="utf-8")
+    (local / "SKILL.md").write_text("old skill md\n", encoding="utf-8")
+    [r] = M.run(up, team, ["SKILL.md"], None, do_apply=True, accept=["ark-demo"])
+    assert r.status == "STALE" and "scripts/run.py" in r.stale and r.keep == ["SKILL.md"]
+    assert (local / "scripts" / "run.py").read_text(encoding="utf-8") == "print('v1.1')\n"
+    assert (local / "SKILL.md").read_text(encoding="utf-8") == "old skill md\n"

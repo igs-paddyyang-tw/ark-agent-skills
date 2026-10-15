@@ -2,7 +2,7 @@
 """weknora_agent_chat.py — 走 WeKnora /agent-chat（智能體問答）。
 
 範圍由 agent 配置決定（agent 自己找它綁定的知識庫），適合 ReAct 多步推理、工具、web search。
-查「指定的自建知識庫」請改用 weknora_kb_chat.py。
+查「指定的自建知識庫」請改用 weknora_knowledge_chat.py。
 
 用法：
   python weknora_agent_chat.py --query "海狗機 RTP 是多少"

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""weknora_kb_chat.py — 走 WeKnora /knowledge-chat（知識庫純 RAG）。
+"""weknora_knowledge_chat.py — 走 WeKnora /knowledge-chat（知識庫純 RAG）。
 
 範圍由請求指定的知識庫決定（不綁 agent）。這是「查自建知識庫」的正確路徑。
 --kb-id 接受兩種輸入：kb_registry.json 的別名（自動解析成 UUID）或直接 UUID（fallback）。
 可帶多個 --kb-id 跨庫檢索；未帶則用 WEKNORA_KB_ID。
 
 用法：
-  python weknora_kb_chat.py --query "玩家畫像系統有幾個模組" --kb-id player-profile
-  python weknora_kb_chat.py --query "..." --kb-id a32f7777-...            # 直接 UUID
-  python weknora_kb_chat.py --query "..." --kb-id player-profile --kb-id other-kb
-  python weknora_kb_chat.py --query "..." --new-session
+  python weknora_knowledge_chat.py --query "玩家畫像系統有幾個模組" --kb-id player-profile
+  python weknora_knowledge_chat.py --query "..." --kb-id a32f7777-...            # 直接 UUID
+  python weknora_knowledge_chat.py --query "..." --kb-id player-profile --kb-id other-kb
+  python weknora_knowledge_chat.py --query "..." --new-session
 
 env：WEKNORA_API_URL / WEKNORA_API_KEY / WEKNORA_KB_ID
 輸出：{answer, references(citation), session_id, kb_ids} envelope。

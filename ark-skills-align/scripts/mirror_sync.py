@@ -6,7 +6,8 @@
 
 用法:
     python mirror_sync.py plan  --upstream <skills repo> --target <team 根> [--keep PATH ...] [--json]
-    python mirror_sync.py apply --upstream <skills repo> --target <team 根> [--keep PATH ...] [--only SKILL ...] --yes
+    python mirror_sync.py apply --upstream <skills repo> --target <team 根> [--keep PATH ...] [--only SKILL ...]
+                                [--accept-upstream SKILL ...] --yes
 
 exit: 0 正常；2 參數錯誤／apply 未帶 --yes；3 上游不是 git repo。
 """
@@ -122,8 +123,12 @@ def ignored_by_upstream(upstream: Path, name: str, rels: list[str]) -> set[str]:
 
 
 def classify(local: Path, up: Path, history: set[str], keep: list[str], base: str,
-             ignored: set[str] = frozenset()) -> SkillReport:
-    """依規格逐檔判定一個 skill 複本。`ignored`：上游 .gitignore 命中的本地獨有檔。"""
+             ignored: set[str] = frozenset(), accept: bool = False) -> SkillReport:
+    """依規格逐檔判定一個 skill 複本。
+
+    `ignored`：上游 .gitignore 命中的本地獨有檔。
+    `accept`：人已審過、確認本地修改只是上游歷史之前的舊版 → local-mod 改按 stale 對齊。
+    """
     r = SkillReport(base=base, name=local.name)
     lv, uv = _version(local / "SKILL.md"), _version(up / "SKILL.md")
     r.local_version, r.upstream_version = _fmt(lv), _fmt(uv)
@@ -135,6 +140,8 @@ def classify(local: Path, up: Path, history: set[str], keep: list[str], base: st
             r.stale.append(rel)
         elif _kept(rel, keep):
             r.keep.append(rel)
+        elif accept:
+            r.stale.append(rel)
         else:
             r.local_mod.append(rel)
     for rel in sorted(lf.keys() - uf.keys() - ignored):
@@ -165,8 +172,8 @@ def apply_one(local: Path, up: Path, r: SkillReport) -> None:
 
 
 def run(upstream: Path, target: Path, keep: list[str], only: list[str] | None,
-        do_apply: bool) -> list[SkillReport]:
-    """掃描 target 全部複本；do_apply 時對齊 STALE。"""
+        do_apply: bool, accept: list[str] | None = None) -> list[SkillReport]:
+    """掃描 target 全部複本；do_apply 時對齊 STALE。`accept`：審過可用上游覆蓋的 skill 名。"""
     reports: list[SkillReport] = []
     with tempfile.TemporaryDirectory() as tmp:
         up_root = Path(tmp)
@@ -181,7 +188,7 @@ def run(upstream: Path, target: Path, keep: list[str], only: list[str] | None,
                     continue
                 only_local = sorted(set(_files(local)) - set(_files(up)))
                 ign = ignored_by_upstream(upstream, local.name, only_local)
-                r = classify(local, up, history, keep, base, ign)
+                r = classify(local, up, history, keep, base, ign, local.name in (accept or []))
                 if r.status == "SAME":
                     continue
                 if do_apply and r.status == "STALE":
@@ -215,6 +222,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--target", required=True, type=Path, help="team repo 根")
     ap.add_argument("--keep", action="append", default=[], help="保留本地版本的 skill 內相對路徑（可重複）")
     ap.add_argument("--only", action="append", help="只處理指定 skill（可重複）")
+    ap.add_argument("--accept-upstream", action="append", default=[], metavar="SKILL",
+                    help="人工審過、確認本地修改只是舊版的 skill：本地修改改用上游覆蓋（可重複）")
     ap.add_argument("--yes", action="store_true", help="apply 必填")
     ap.add_argument("--json", action="store_true", help="輸出 JSON")
     a = ap.parse_args(argv)
@@ -223,7 +232,8 @@ def main(argv: list[str] | None = None) -> int:
         print("❌ apply 需帶 --yes（先跑 plan 確認）", file=sys.stderr)
         return 2
     try:
-        reports = run(a.upstream.resolve(), a.target.resolve(), a.keep, a.only, a.verb == "apply")
+        reports = run(a.upstream.resolve(), a.target.resolve(), a.keep, a.only, a.verb == "apply",
+                      a.accept_upstream)
     except NotADirectoryError as e:
         print(f"❌ {e}", file=sys.stderr)
         return 3

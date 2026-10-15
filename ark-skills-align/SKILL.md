@@ -13,7 +13,7 @@ description: |
   或任何需要批次修改、驗證、重組 ark-agent-skills repo 的場景。
   單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
 metadata:
-  version: "2.1.1"
+  version: "2.2.0"
   author: paddyyang
   schema_version: 1
   category: ops
@@ -76,7 +76,7 @@ python ark-skills-align/scripts/mirror_sync.py plan  --upstream <skills repo> --
 python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> --keep kb_registry.json --yes
 ```
 
-LOCAL（本地修改）先判斷是否回貢上游，**不要用 --keep 蓋過真修正**。
+LOCAL（本地修改）先判斷是否回貢上游，**不要用 --keep 蓋過真修正**；審過確認只是上游歷史之前的舊版，才用 `--accept-upstream <skill>` 覆蓋。
 
 對齊單位是 **release train**（`skills-YYYY.MM-rN`），個別 skill 只能例外 pin（附 reason）。
 tier 策略:base 全隊同版（Loop 五件套，major 不一致 P0）· role 走範圍 · domain（local_only）自由。

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """_weknora_chat.py — ark-weknora-kb 問答共用工具（session + SSE + 別名解析 + envelope）。
 
-被 weknora_agent_chat.py（/agent-chat）與 weknora_kb_chat.py（/knowledge-chat）共用。
+被 weknora_agent_chat.py（/agent-chat）與 weknora_knowledge_chat.py（/knowledge-chat）共用。
 skill 自足：不依賴專案根 scripts._common，自帶 envelope；stdlib + httpx，UTF-8。
 """
 from __future__ import annotations

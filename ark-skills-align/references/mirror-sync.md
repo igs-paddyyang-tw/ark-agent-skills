@@ -25,6 +25,7 @@
 | 兩邊都有、內容相同 | — | same | 不動 |
 | 兩邊都有、內容不同 | 是 | stale | 換成上游 |
 | 兩邊都有、內容不同 | 否，且符合 `--keep` | keep | 保留本地 |
+| 兩邊都有、內容不同 | 否，且 skill 在 `--accept-upstream` | stale（人已審過） | 換成上游 |
 | 兩邊都有、內容不同 | 否 | **local-mod** | 整個 skill 不動，列出待審 |
 | 只有本地有、符合上游 `.gitignore` | — | ignored（測試產物等） | 不保留 |
 | 只有本地有 | 是 | obsolete | 刪除 |
@@ -52,6 +53,7 @@ python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --
 - 掃描 `<team 根>/.kiro/skills` 與 `<team 根>/projects/*/.kiro/skills`；symlink 目錄跳過。
 - 只處理上游也有的 skill；本地獨有的 skill（domain / local_only）不碰。
 - `--keep PATH`：skill 內相對路徑或其前綴（可重複），例如 `kb_registry.json`、`artifacts`。
+- `--accept-upstream SKILL`：人審過 LOCAL、確認只是**上游 git 歷史之前的舊版**（無 version、舊措辭）時，明確指定用上游覆蓋。真修正先回貢上游，不可用此旗標蓋掉。
 - `apply` 必須帶 `--yes`；不帶時等同 plan 並 exit 2。
 - 不做 git 操作；提交由呼叫端以 pathspec 執行（刪除大量檔時 pre-push 可能阻擋，屬預期）。
 - exit：0 正常；2 參數錯誤／未帶 `--yes`；3 上游不是 git repo。
@@ -66,3 +68,4 @@ python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --
 6. 上游工作樹的未追蹤／忽略檔不會被帶入。
 7. `--help` exit 0 且不在 cwd 產生檔案。
 8. 本地獨有且符合上游 `.gitignore` 的檔（如 wiki `.index/`）不算本地資料，對齊後不保留。
+9. `--accept-upstream` 的 skill：local-mod 改按 stale 對齊；`--keep` 仍優先。
