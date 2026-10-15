@@ -723,5 +723,20 @@
     "skill": "ark-skills-align",
     "version": "2.1.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:66d02da49a31dbb569729f46f2f2ff4250e036f0dfa868a5f316ba322a4761d4": {
+    "skill": "ark-skills-align",
+    "version": "2.1.1",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:22ac31e3b8205c893ed5bcfc41a41390fdcf9ff933f3eaeb37f71b92e9ff88b0": {
+    "skill": "ark-mobile-adb",
+    "version": "2.3.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:71fceac9f4f4715f14e2bbaf581fbaf6c322b3a66b4f5608175526e9e01c7e84": {
+    "skill": "ark-skills-align",
+    "version": "2.1.1",
+    "release": "skills-2026.10-r1"
   }
 }

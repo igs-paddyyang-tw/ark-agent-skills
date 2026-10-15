@@ -1,7 +1,7 @@
 {
   "release": "skills-2026.10-r1",
-  "commit": "4c4eb72",
-  "generated_at": "2026-10-15T16:00:04+08:00",
+  "commit": "431c8b6",
+  "generated_at": "2026-10-15T18:53:36+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.1.0",
@@ -437,14 +437,14 @@
       "updated": "2026-09-11"
     },
     "ark-mobile-adb": {
-      "version": "2.2.2",
-      "tree_hash": "sha256:e7528d62b0a7e4e81dc7ec58fd73ddae1eb5d45ce127416ead92e14432f2b355",
-      "contract_hash": "sha256:5b92f6488f1a19cbdf989a6280e519397c8c6d60a673bf8a5e46cfaab087b471",
+      "version": "2.3.0",
+      "tree_hash": "sha256:22ac31e3b8205c893ed5bcfc41a41390fdcf9ff933f3eaeb37f71b92e9ff88b0",
+      "contract_hash": "sha256:bcc568498e096ddcdd361440cec534fb2eba22e8a43fa3c976fe938596fa0b2e",
       "status": "active",
       "category": "executor",
       "depends_on": [],
       "replaces": [],
-      "updated": "2026-10-08"
+      "updated": "2026-10-15"
     },
     "ark-pdf-tool": {
       "version": "1.0.0",
@@ -539,9 +539,9 @@
       "updated": "2026-09-14"
     },
     "ark-skills-align": {
-      "version": "2.1.0",
-      "tree_hash": "sha256:5e90bd69b839a1117c0ce3a67e0431cc27ccc3093cc73b7c8559238bcaaaf8d2",
-      "contract_hash": "sha256:3aed857b6d28fef17d1a0fbb8d642d90fa1c5f1b01193defcd323fc5a14a12c3",
+      "version": "2.1.1",
+      "tree_hash": "sha256:71fceac9f4f4715f14e2bbaf581fbaf6c322b3a66b4f5608175526e9e01c7e84",
+      "contract_hash": "sha256:9a8afcab8fdab9312395451c2d28698924878790eb85bec0f4f2f71e61f7ce65",
       "status": "active",
       "category": "ops",
       "depends_on": [
@@ -565,7 +565,7 @@
     },
     "ark-superpowers": {
       "version": "1.0.0",
-      "tree_hash": "sha256:6fba0d80df5d0bbe6419625b347ffce1ec036ac4536575e646560e23f286c057",
+      "tree_hash": "sha256:e7e0a3482507c20bae27b84b24517ee5a5d8cc37751f3cf84cd7bc61cd2d1306",
       "contract_hash": "sha256:d2949417f15bdba47cab73db6f557dbb6627f1faf35f8107c29eec09f3c280f6",
       "status": "active",
       "category": "process",

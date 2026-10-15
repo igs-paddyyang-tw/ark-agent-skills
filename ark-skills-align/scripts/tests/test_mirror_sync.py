@@ -40,6 +40,9 @@ def env(tmp_path: Path):
     (sk / "scripts" / "old.py").unlink()
     _git(up, "add", "-A")
     _git(up, "commit", "-q", "-m", "v1.1")
+    (up / ".gitignore").write_text("ark-demo/scripts/.index/\n", encoding="utf-8")
+    _git(up, "add", ".gitignore")
+    _git(up, "commit", "-q", "-m", "ignore")
     # 上游工作樹的未追蹤產物（驗收 6）
     (sk / "scripts" / ".index").mkdir()
     (sk / "scripts" / ".index" / "junk.json").write_text("{}", encoding="utf-8")
@@ -130,3 +133,14 @@ def test_help_is_readonly(tmp_path):
                        cwd=tmp_path, capture_output=True, text=True)
     assert r.returncode == 0 and "mirror_sync" in r.stdout
     assert list(tmp_path.iterdir()) == []
+
+
+def test_local_ignored_artifacts_not_preserved(env):
+    """本地跑測試產生、上游 .gitignore 命中的檔 → 不算本地資料，對齊後不留。"""
+    up, v1, team = env
+    local = _place(team, ".", v1)
+    (local / "scripts" / ".index").mkdir()
+    (local / "scripts" / ".index" / "manifest.json").write_text("{}", encoding="utf-8")
+    [r] = M.run(up, team, [], None, do_apply=True)
+    assert r.local_data == [], f"ignored 產物被當成本地資料：{r.local_data}"
+    assert not (local / "scripts" / ".index").exists()

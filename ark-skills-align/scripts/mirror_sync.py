@@ -112,8 +112,18 @@ def skill_dirs(target: Path) -> list[Path]:
     return [d for d in cands if d.is_dir() and not d.is_symlink()]
 
 
-def classify(local: Path, up: Path, history: set[str], keep: list[str], base: str) -> SkillReport:
-    """依規格逐檔判定一個 skill 複本。"""
+def ignored_by_upstream(upstream: Path, name: str, rels: list[str]) -> set[str]:
+    """本地獨有檔中，符合上游 .gitignore 者（測試產物等）—— 不算本地資料、對齊時不保留。"""
+    if not rels:
+        return set()
+    r = subprocess.run(["git", "-C", str(upstream), "check-ignore", "--no-index", "--stdin"],
+                       input="\n".join(f"{name}/{x}" for x in rels), capture_output=True, text=True)
+    return {line.split("/", 1)[1] for line in r.stdout.splitlines() if "/" in line}
+
+
+def classify(local: Path, up: Path, history: set[str], keep: list[str], base: str,
+             ignored: set[str] = frozenset()) -> SkillReport:
+    """依規格逐檔判定一個 skill 複本。`ignored`：上游 .gitignore 命中的本地獨有檔。"""
     r = SkillReport(base=base, name=local.name)
     lv, uv = _version(local / "SKILL.md"), _version(up / "SKILL.md")
     r.local_version, r.upstream_version = _fmt(lv), _fmt(uv)
@@ -127,7 +137,7 @@ def classify(local: Path, up: Path, history: set[str], keep: list[str], base: st
             r.keep.append(rel)
         else:
             r.local_mod.append(rel)
-    for rel in sorted(lf.keys() - uf.keys()):
+    for rel in sorted(lf.keys() - uf.keys() - ignored):
         (r.obsolete if blob_hash(lf[rel]) in history else r.local_data).append(rel)
     r.missing = sorted(uf.keys() - lf.keys())
 
@@ -169,7 +179,9 @@ def run(upstream: Path, target: Path, keep: list[str], only: list[str] | None,
                     continue                       # 本地獨有 skill（domain／local_only）不碰
                 if only and local.name not in only:
                     continue
-                r = classify(local, up, history, keep, base)
+                only_local = sorted(set(_files(local)) - set(_files(up)))
+                ign = ignored_by_upstream(upstream, local.name, only_local)
+                r = classify(local, up, history, keep, base, ign)
                 if r.status == "SAME":
                     continue
                 if do_apply and r.status == "STALE":

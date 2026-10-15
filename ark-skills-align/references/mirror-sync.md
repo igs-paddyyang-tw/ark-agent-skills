@@ -26,6 +26,7 @@
 | 兩邊都有、內容不同 | 是 | stale | 換成上游 |
 | 兩邊都有、內容不同 | 否，且符合 `--keep` | keep | 保留本地 |
 | 兩邊都有、內容不同 | 否 | **local-mod** | 整個 skill 不動，列出待審 |
+| 只有本地有、符合上游 `.gitignore` | — | ignored（測試產物等） | 不保留 |
 | 只有本地有 | 是 | obsolete | 刪除 |
 | 只有本地有 | 否 | local-data | 保留 |
 | 只有上游有 | — | missing | 補上 |
@@ -64,3 +65,4 @@ python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --
 5. 本地版號較新 → `NEWER`，apply 不動。
 6. 上游工作樹的未追蹤／忽略檔不會被帶入。
 7. `--help` exit 0 且不在 cwd 產生檔案。
+8. 本地獨有且符合上游 `.gitignore` 的檔（如 wiki `.index/`）不算本地資料，對齊後不保留。
