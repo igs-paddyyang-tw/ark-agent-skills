@@ -673,5 +673,40 @@
     "skill": "ark-skills-align",
     "version": "2.0.0",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:fa09c06ad607c98d5bfb27a0f4d765ee3c0c6d98c7da32e4a6195b1149b4cdaa": {
+    "skill": "ark-agent-init",
+    "version": "2.2.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:07a503fcfcdf5af9dcf0cd8837af29fbef0173073aa344d09cda83c0cbf7f4d5": {
+    "skill": "ark-game-prob",
+    "version": "1.4.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:9c3ce24fc970d2b2bbf539b247da8ccca3054bd7ed704547bffd2baa9f4edb44": {
+    "skill": "ark-game-proto",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:e549bfb8d1fd4bce74cf6c4502bb42f0409094ab25df736e539fa617a87e6457": {
+    "skill": "ark-game-spec",
+    "version": "2.4.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:925c401e7cfc16fc8c432e2d30afcae53a7dfa4cc2be0197b8cb39913e0d025a": {
+    "skill": "ark-skills-align",
+    "version": "2.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:6fba0d80df5d0bbe6419625b347ffce1ec036ac4536575e646560e23f286c057": {
+    "skill": "ark-superpowers",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:5f88480e715330d8b08e3b907d24d52438fdde9e1326e9121ca8f990bbd3fdb5": {
+    "skill": "ark-weknora-cli",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r1"
   }
 }

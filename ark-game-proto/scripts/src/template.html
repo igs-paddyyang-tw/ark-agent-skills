@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root{
+  --bg:#120707;--panel:#1d1414;--panel2:#261b1a;--line:#3a2a28;--ink:#f3ece4;--ink2:#c9bdb0;--ink3:#8f8377;
+  --gold:#f5c542;--gold2:#b9770e;--red:#c0392b;
+  --s1:#3987e5;--s2:#d95926;
+  --good:#3fb950;--warn:#d29922;--bad:#f85149;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:linear-gradient(#2a0d0d,#160808)}
+header h1{margin:0;font-size:18px;color:var(--gold);letter-spacing:.5px}
+.chip{display:inline-flex;gap:6px;align-items:center;padding:2px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--ink2);background:#0006}
+.chip b{color:var(--ink)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 480px;gap:12px;padding:12px;max-width:1800px;margin:0 auto}
+@media (max-width:1180px){.layout{grid-template-columns:minmax(0,1fr)}}
+#stage{min-width:0}
+#game{width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#000}
+#game canvas{width:100%!important;height:100%!important;display:block}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.ctrl .grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ctrl .sep{width:1px;height:24px;background:var(--line)}
+button{font:inherit;font-size:13px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--gold2)}
+button.on{background:#5a3a08;border-color:var(--gold)}
+button.pri{background:linear-gradient(#e0a92a,#a8680c);color:#2a1500;font-weight:700;border-color:#f5c542}
+button:disabled{opacity:.45;cursor:default}
+input[type=number],input[type=text]{font:13px var(--mono);background:#0008;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:120px}
+label.small{font-size:12px;color:var(--ink3)}
+aside{min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--panel);display:flex;flex-direction:column;max-height:calc(100vh - 90px);position:sticky;top:12px}
+@media (max-width:1180px){aside{max-height:none;position:static}}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;border-radius:0;background:transparent;padding:10px 4px;color:var(--ink3);border-bottom:2px solid transparent}
+.tabs button.on{color:var(--gold);border-bottom-color:var(--gold);background:transparent}
+.pane{display:none;padding:12px 14px;overflow:auto}
+.pane.on{display:block}
+h3{margin:14px 0 6px;font-size:14px;color:var(--gold)}
+h3:first-child{margin-top:0}
+p.note{margin:4px 0 8px;color:var(--ink3);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0 10px}
+th,td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--ink3);font-weight:500}
+th:first-child,td:first-child{text-align:left}
+td.num,.num{font-family:var(--mono)}
+.v{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600}
+.v.pass{color:#0d2b12;background:var(--good)}.v.warn{color:#2b1f00;background:var(--warn)}.v.fail{color:#2b0505;background:var(--bad)}.v.info{color:var(--ink2);background:#ffffff14}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 10px}
+.kpi{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.kpi .l{font-size:11px;color:var(--ink3)}.kpi .n{font:600 20px var(--mono)}.kpi .s{font-size:11px;color:var(--ink2)}
+.bar{height:6px;background:#ffffff12;border-radius:4px;overflow:hidden;margin:6px 0}
+.bar>i{display:block;height:100%;background:var(--gold);width:0}
+.gap{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:0 0 8px;background:var(--panel2)}
+.gap .h{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.gap .h b{color:var(--ink)}
+.gap dl{display:grid;grid-template-columns:52px 1fr;gap:2px 8px;margin:6px 0 0;font-size:12px}
+.gap dt{color:var(--ink3)}.gap dd{margin:0;color:var(--ink2)}
+pre{font:11px/1.45 var(--mono);background:#0007;border:1px solid var(--line);border-radius:8px;padding:8px;overflow:auto;max-height:340px;margin:4px 0 10px;color:#d8cfc4}
+.hist{display:flex;flex-direction:column;gap:2px;font:12px var(--mono)}
+.hist button{display:flex;justify-content:space-between;text-align:left;padding:3px 8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0}
+#chart{width:100%;height:220px;display:block}
+#tip{position:fixed;pointer-events:none;background:#000d;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font:12px var(--mono);display:none;z-index:9}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin:2px 0 4px}
+.legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:5px}
+footer{padding:8px 16px 16px;color:var(--ink3);font-size:12px;text-align:center}
+</style>
+<!--PIXI-->
+</head>
+<body>
+<header>
+  <h1>__TITLE__</h1>
+  <span class="chip" id="chipSrc"></span>
+  <span class="chip" id="chipMode"></span>
+  <span class="chip" id="chipL1"></span>
+  <span class="chip" id="chipSession"></span>
+</header>
+<div class="layout">
+  <section id="stage">
+    <div id="game"></div>
+    <div class="ctrl">
+      <div class="grp">
+        <button class="pri" id="btnSpin">SPIN（空白鍵）</button>
+        <button id="btnAuto">自動 ×50</button>
+        <button id="btnTurbo">快速</button>
+      </div>
+      <span class="sep"></span>
+      <div class="grp">
+        <label class="small" for="seed">seed</label><input type="number" id="seed" min="1">
+        <button id="btnReplay" title="用這個 seed 重播一局（同 seed 同結果）">重現</button>
+      </div>
+      <span class="sep"></span>
+      <div class="grp" id="scenarios">
+        <label class="small">情境（搜尋真 seed，不改結果）</label>
+      </div>
+    </div>
+  </section>
+  <aside>
+    <div class="tabs" role="tablist">
+      <button class="on" data-tab="l1">L1 精算</button>
+      <button data-tab="l2">L2 模擬</button>
+      <button data-tab="gaps">規格缺口</button>
+      <button data-tab="go">Go 對照</button>
+      <button data-tab="spin">單局</button>
+    </div>
+    <div class="pane on" id="pane-l1"></div>
+    <div class="pane" id="pane-l2"></div>
+    <div class="pane" id="pane-gaps"></div>
+    <div class="pane" id="pane-go"></div>
+    <div class="pane" id="pane-spin"></div>
+  </aside>
+</div>
+<div id="tip"></div>
+<footer>雛型只驗證機率與演出節奏，美術全部為程式產生的 SVG 佔位圖；數字來源 = 規格書表格（每列可回溯 src）。</footer>
+<script>/*CONFIG*/</script>
+<script id="core-src">/*CORE*/</script>
+<script>/*ART*/</script>
+<script>/*APP*/</script>
+</body>
+</html>

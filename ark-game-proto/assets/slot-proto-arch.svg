@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" width="1200" height="820" font-family="'Noto Sans TC','Noto Sans CJK TC','Microsoft JhengHei','PingFang TC',sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#5b4a3a"/></marker>
+    <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#c0392b"/></marker>
+    <style>
+      .lane{fill:#faf6f0;stroke:#e3d9cc}
+      .lt{font-size:13px;font-weight:700;fill:#8a6d4b;letter-spacing:1px}
+      .box{fill:#fff;stroke:#b9a48a;stroke-width:1.5}
+      .key{fill:#fff7e0;stroke:#d9a23a;stroke-width:2.5}
+      .core{fill:#eef4ff;stroke:#3d6fd1;stroke-width:2}
+      .pix{fill:#fff0ee;stroke:#c0392b;stroke-width:2}
+      .ver{fill:#eefaf2;stroke:#2f9e5b;stroke-width:2}
+      .fut{fill:#f4f4f4;stroke:#9a9a9a;stroke-width:1.5;stroke-dasharray:6 4}
+      .h{font-size:15px;font-weight:700;fill:#2b2118}
+      .s{font-size:12px;fill:#5b4a3a}
+      .m{font-size:11px;fill:#6b5a48;font-family:ui-monospace,Menlo,Consolas,monospace}
+      .e{stroke:#5b4a3a;stroke-width:1.6;fill:none;marker-end:url(#ar)}
+      .fb{stroke:#c0392b;stroke-width:1.6;fill:none;stroke-dasharray:5 4;marker-end:url(#arR)}
+      .el{font-size:11px;fill:#5b4a3a}
+      .elr{font-size:11px;fill:#c0392b;font-weight:700}
+    </style>
+  </defs>
+  <rect width="1200" height="820" fill="#fffdf9"/>
+  <text x="24" y="34" font-size="20" font-weight="800" fill="#2b2118">ark-game-proto — 機率規格書 → 可玩雛型 → 精算 / 模擬 / Go 逐局對照</text>
+  <text x="24" y="56" class="s">原則：規格書是唯一來源 · 結果先決、演出後演 · 數學 RNG 與演出 RNG 分流 · 每個參數可回溯到表編號 · 規格缺口以推定 + 自動回驗呈現</text>
+
+  <!-- lanes -->
+  <rect class="lane" x="16" y="72" width="1168" height="138" rx="10"/><text class="lt" x="30" y="94">① 來源（Content 軌）</text>
+  <rect class="lane" x="16" y="220" width="1168" height="132" rx="10"/><text class="lt" x="30" y="242">② 建置（Python，deterministic）</text>
+  <rect class="lane" x="16" y="362" width="1168" height="150" rx="10"/><text class="lt" x="30" y="384">③ 數學核心（純 JS，無 DOM：瀏覽器 / Worker / node 共用）</text>
+  <rect class="lane" x="16" y="522" width="1168" height="286" rx="10"/><text class="lt" x="30" y="544">④ 消費端（只讀 SpinResult，不改結果）</text>
+
+  <!-- ① -->
+  <rect class="box" x="40" y="106" width="200" height="88" rx="8"/>
+  <text class="h" x="54" y="130">機率表 xlsx</text><text class="s" x="54" y="150">已上線還原（彌勒佛）</text><text class="m" x="54" y="172">ps_extract → prob-data</text>
+  <rect class="box" x="256" y="106" width="200" height="88" rx="8"/>
+  <text class="h" x="270" y="130">快測 quicktest</text><text class="s" x="270" y="150">odds.json + rtp-report</text><text class="m" x="270" y="172">ps_probspec --qt</text>
+  <rect class="box" x="472" y="106" width="170" height="88" rx="8"/>
+  <text class="h" x="486" y="130">手寫 md</text><text class="s" x="486" y="150">設計局 / 競品反解</text><text class="m" x="486" y="172">ps_run --md</text>
+  <rect class="key" x="720" y="96" width="440" height="106" rx="10"/>
+  <text class="h" x="736" y="120">prob-spec.md（ark-game-prob 1.4 md-first）唯一來源</text>
+  <text class="s" x="736" y="142">§1 盤面 / Pay table　§2 快測指標（驗證目標）　§4 參數表 M-1…F-5</text>
+  <text class="s" x="736" y="162">附錄 ```strip 帶面（Reels_0 / Reels_1 / 假轉）</text>
+  <text class="m" x="736" y="184">frontmatter mode · verdict · sha16 → 雛型頁首戳記</text>
+  <path class="e" d="M642 150 H716"/>
+  <text class="el" x="680" y="136" text-anchor="middle">三模式</text><text class="el" x="680" y="170" text-anchor="middle">同契約表</text>
+  <path class="e" d="M940 202 V252"/>
+
+  <!-- ② -->
+  <rect class="box" x="40" y="254" width="300" height="86" rx="8"/>
+  <text class="h" x="54" y="278">ps_mdview（ark-game-prob）</text>
+  <text class="s" x="54" y="298">parse_md · classify 22 表型 · summary_of</text>
+  <text class="m" x="54" y="320">通用段：board / paytable / strips / §2</text>
+  <rect class="box" x="360" y="254" width="320" height="86" rx="8"/>
+  <text class="h" x="374" y="278">adapters/&lt;slug&gt;.py（玩法語意）</text>
+  <text class="s" x="374" y="298">milefo（collect-mult）· tiger_dragon（coin-lock）</text>
+  <text class="m" x="374" y="320">gaps[] 推定 + 回驗 + Go 證據 · go_rules</text>
+  <rect class="key" x="720" y="254" width="440" height="86" rx="10"/>
+  <text class="h" x="736" y="278">game-config.json（slot-proto-config/1）</text>
+  <text class="s" x="736" y="298">board · paytable · strips · reelsets · mg · fg · targets · gaps</text>
+  <text class="m" x="736" y="320">每個參數帶 src（表 M-5 / 參數表!A75）</text>
+  <path class="e" d="M340 297 H360"/><path class="e" d="M680 297 H720"/>
+  <text class="m" x="560" y="246" text-anchor="middle">proto_build.py --md … --adapter … [--go-config …]</text>
+
+  <!-- ③ -->
+  <rect class="core" x="40" y="396" width="250" height="104" rx="8"/>
+  <text class="h" x="54" y="420">RNG：xoshiro / GoRand</text>
+  <text class="s" x="54" y="442">math 流：輪帶組 / 停點 / FG 抽表</text>
+  <text class="s" x="54" y="462">fx 流：假轉分數 / 聽牌 / 出場順序 / 復活</text>
+  <text class="m" x="54" y="484">GoRand = Go math/rand 逐位元</text>
+  <rect class="core" x="310" y="396" width="300" height="104" rx="8"/>
+  <text class="h" x="324" y="420">spin(C, seed) → SpinResult</text>
+  <text class="s" x="324" y="442">選組 → 停點 → 倍數WILD → Ways 評獎</text>
+  <text class="s" x="324" y="462">觸發 → MODELS[collect-mult | coin-lock]</text>
+  <text class="m" x="324" y="484">抽值順序 = Go 引擎順序</text>
+  <rect class="core" x="630" y="396" width="260" height="104" rx="8"/>
+  <text class="h" x="644" y="420">exact(C)　L1 精算</text>
+  <text class="s" x="644" y="442">停點逐一期望值（不抽樣）</text>
+  <text class="s" x="644" y="462">觸發二維卷積 · FG 期望 / Bonus 抽樣</text>
+  <text class="m" x="644" y="484">彌勒佛 99.85/99.94 · T&amp;D 96.3/96.5</text>
+  <rect class="core" x="910" y="396" width="250" height="104" rx="8"/>
+  <text class="h" x="924" y="420">simulate / report　L2</text>
+  <text class="s" x="924" y="442">可合併累加器 → §2 同口徑</text>
+  <text class="s" x="924" y="462">95% CI · 收斂曲線 · 分級直方圖</text>
+  <text class="m" x="924" y="484">findSeed(pred) 情境搜尋</text>
+  <path class="e" d="M940 340 V372 H465 V396"/>
+  <path class="e" d="M290 448 H310"/>
+
+  <!-- ④ -->
+  <rect class="pix" x="40" y="560" width="520" height="232" rx="10"/>
+  <text class="h" x="56" y="586">演出層 PixiJS 8（Presentation，只讀）</text>
+  <rect class="box" x="56" y="600" width="236" height="84" rx="6"/>
+  <text class="h" x="68" y="622" font-size="13">ReelScene</text>
+  <text class="s" x="68" y="642">tape 捲動 + Blur · 錯開停輪</text>
+  <text class="s" x="68" y="660">彩色聽牌 M-4 · 群預告 M-3-1</text>
+  <text class="s" x="68" y="676">SC/SS 分數牌 M-2 / M-5</text>
+  <rect class="box" x="308" y="600" width="236" height="84" rx="6"/>
+  <text class="h" x="320" y="622" font-size="13">WinPresenter</text>
+  <text class="s" x="320" y="642">Ways 高亮 / 輪播 · 計數器</text>
+  <text class="s" x="320" y="660">分級 BIG…GOLDEN（M-16）</text>
+  <text class="s" x="320" y="676">左板：輪帶組 #k 旗標 / 權重</text>
+  <rect class="box" x="56" y="696" width="236" height="84" rx="6"/>
+  <text class="h" x="68" y="718" font-size="13">FG / Bonus Scene</text>
+  <text class="s" x="68" y="738">collect-mult：基底 → 物件 → 乘倍</text>
+  <text class="s" x="68" y="756">coin-lock：落子鎖格 → 解鎖</text>
+  <text class="s" x="68" y="772">→ 成組翻值連讀 → JACKPOT</text>
+  <rect class="box" x="308" y="696" width="236" height="84" rx="6"/>
+  <text class="h" x="320" y="718" font-size="13">ArtLayer（SVG → Texture）</text>
+  <text class="s" x="320" y="738">名稱 = 規格符號代碼 M1…SS</text>
+  <text class="s" x="320" y="756">美術出圖只換這層</text>
+  <text class="m" x="320" y="772">SlotArt.load(PIXI, 256)</text>
+
+  <rect class="ver" x="580" y="560" width="360" height="232" rx="10"/>
+  <text class="h" x="596" y="586">驗證台（HTML 側欄）</text>
+  <text class="s" x="596" y="612">L1 精算：§2 指標 / 10 組輪帶 / FG 四組 / 進場 SC</text>
+  <text class="s" x="596" y="634">L2 模擬：Web Worker ×4 · 95% CI</text>
+  <text class="s" x="596" y="656">　判定：模擬 vs 精算（CI）→ 驗引擎實作</text>
+  <text class="s" x="596" y="678">規格缺口：推定 + 自動回驗 + Go 已證</text>
+  <text class="s" x="596" y="700">單局：抽表軌跡（表 → 值）· JSON · 重現</text>
+  <text class="s" x="596" y="722">情境：FG 超強…復活 = 搜尋真 seed，不改結果</text>
+  <text class="m" x="596" y="752">PASS = |精算−規格| ≤ 0.2 pp（P-000）</text>
+  <text class="m" x="596" y="772">或 |模擬−精算| ≤ 95% CI</text>
+
+  <rect class="core" x="960" y="560" width="200" height="232" rx="10"/>
+  <text class="h" x="974" y="586">Go 快測對照</text>
+  <text class="s" x="974" y="612">--go-config 逐鍵</text>
+  <text class="s" x="974" y="632">彌勒佛 27/27、T&amp;D 32/32</text>
+  <text class="s" x="974" y="656">go_parity 同 seed 逐局</text>
+  <text class="s" x="974" y="680">trace.go 注入暫存複本</text>
+  <text class="s" x="974" y="700">彌勒佛 4,020 萬手 0 差</text>
+  <text class="s" x="974" y="724">T&amp;D 2,030 萬手 0 差</text>
+  <text class="s" x="974" y="748">含封頂 / JACKPOT 局</text>
+
+  <path class="e" d="M465 500 V530 H300 V560"/>
+  <path class="e" d="M760 500 V560"/>
+  <path class="e" d="M1035 500 V530 H860 V560"/>
+  <text class="el" x="310" y="526">SpinResult</text>
+  <text class="el" x="768" y="530">L1 報告</text>
+  <text class="el" x="852" y="550" text-anchor="end">累加器</text>
+
+  <!-- feedback -->
+  <path class="fb" d="M925 560 V517 H1174 V150 H1164"/>
+  <text class="elr" x="1168" y="536" text-anchor="end">缺口回寫 §3 / §6</text>
+</svg>
