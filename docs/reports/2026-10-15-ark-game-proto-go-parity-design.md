@@ -84,11 +84,11 @@ ark-game-proto/
 └── golden/{milefo,tiger-and-dragon}/   md · Go 設定檔 · parity 記錄 · 期望 config
 ```
 
-依賴 ark-game-prob 1.4.1（ps_mdview；自動找同層 skill / `.kiro/skills` / `ARK_GAME_PROB_SCRIPTS`）。
+依賴 ark-game-prob 1.4+（ps_mdview；實測 1.4.0 即可——原標「1.4.1」為超前標註，該版不存在；自動找同層 skill / `.kiro/skills` / `ARK_GAME_PROB_SCRIPTS`）。
 安裝走 ark-skills-align：整個目錄放到 `.kiro/skills/ark-game-proto`（kiro-cli 根與 aidev 兩邊）；`skills-matrix.yaml` 加一列（C3 演出驗證）。
 
 # 5. 下一步（決策）
 
 1️⃣ 規格書回寫：彌勒佛補 MaxWin 列與 G-1～G-3 規則句；Tiger and Dragon 更正 G-TD-7 註記、決議 G-TD-2 倍數分佈、改 G-TD-3 欄名
-2️⃣ 安裝 ark-game-proto + ark-game-prob 1.4.1 到兩邊 `.kiro/skills`，並重產 milefo prob-spec.md（1.4 格式）
+2️⃣ 安裝 ark-game-proto + ark-game-prob 1.4+ 到兩邊 `.kiro/skills`，並重產 milefo prob-spec.md（1.4 格式）
 3️⃣ 第三款或 Go slotcore：把 go-rand + SpinResult 契約接到 slot-bot server 端，做同 seed 上線前對帳
