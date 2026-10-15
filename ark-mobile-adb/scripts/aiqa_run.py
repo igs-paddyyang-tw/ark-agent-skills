@@ -146,8 +146,60 @@ class Executor:
     def a_read(self, a):
         img = self._shot(f"read_{a['roi']}")
         r = D.read_roi(self.dev, self.pack, a["roi"], img, self.dir, self.reader, a.get("oracle", "ocr_number"), self.llm)
+        stab = a.get("stabilize")
+        if stab:
+            # count-up 動畫等會變動的讀數：連兩次相同 / 雙位置一致才收；讀不穩收 None（→ oracle 判 NEEDS_HUMAN，不誤 PASS）
+            value, stable, tries = self._read_stable(a, r, img)
+            self._record(a["name"], value if stable else None)
+            self.evidence.append({"kind": "read", "name": a["name"], "value": value, "stabilized": stable,
+                                  "stabilize_mode": (stab or {}).get("mode", "same_twice"), "tries": tries,
+                                  "engine": r["engine"], "confidence": r["confidence"], "crop": r["crop"], "screen": str(img)})
+            return
         self._record(a["name"], r["value"])
         self.evidence.append({"kind": "read", "name": a["name"], "value": r["value"], "engine": r["engine"], "confidence": r["confidence"], "crop": r["crop"], "screen": str(img)})
+
+    def _read_stable(self, a, first_r, first_img):
+        """穩定讀數：回 (value, stable, tries)。
+
+        mode=same_twice（預設）：連兩次讀數相同才算穩定（適合 count-up 動畫停穩）。
+        mode=two_sources：同一畫面讀兩個 roi（roi + roi2）值一致才算穩定（適合上下兩處資產列互證）。
+        逾時仍不穩 → stable=False（呼叫端收 None）。純讀數不改畫面，用 self.dev.tick 推進假時間 / 真機 sleep。
+        """
+        stab = a.get("stabilize") or {}
+        mode = stab.get("mode", "same_twice")
+        interval = float(stab.get("interval_ms", 400)) / 1000.0
+        timeout = float(stab.get("timeout_s", 8))
+        oracle = a.get("oracle", "ocr_number")
+        t0 = self.dev.now()
+        if mode == "two_sources":
+            roi2 = stab.get("roi2") or a["roi"]
+            v1 = first_r["value"]
+            img2 = self._shot(f"read_{roi2}_src2")
+            v2 = D.read_roi(self.dev, self.pack, roi2, img2, self.dir, self.reader, oracle, self.llm)["value"]
+            tries = 1
+            while self.dev.now() - t0 <= timeout:
+                if v1 is not None and v1 == v2:
+                    return v1, True, tries
+                self.dev.tick(interval)
+                tries += 1
+                i1 = self._shot(f"read_{a['roi']}_r{tries}")
+                v1 = D.read_roi(self.dev, self.pack, a["roi"], i1, self.dir, self.reader, oracle, self.llm)["value"]
+                i2 = self._shot(f"read_{roi2}_src2_r{tries}")
+                v2 = D.read_roi(self.dev, self.pack, roi2, i2, self.dir, self.reader, oracle, self.llm)["value"]
+            return None, False, tries
+        # same_twice
+        prev = first_r["value"]
+        tries = 1
+        while self.dev.now() - t0 <= timeout:
+            self.dev.tick(interval)
+            tries += 1
+            img = self._shot(f"read_{a['roi']}_r{tries}")
+            cur = D.read_roi(self.dev, self.pack, a["roi"], img, self.dir, self.reader, oracle, self.llm)["value"]
+            if cur is not None and cur == prev:
+                return cur, True, tries
+            prev = cur
+        return None, False, tries
+
 
     def a_capture(self, a):
         img = self._shot(f"capture_{a.get('name', 'shot')}")

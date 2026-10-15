@@ -20,6 +20,7 @@
 | assertions | 見下 |
 | block_if / na_if | 執行前 gate 條件（字串） |
 | baseline | import 自公司表的人工結果 `{android, ios, tester, date, mantis}`，報告用來算一致率與誤 PASS |
+| review | 人工審查意見（`aiqa_testgen refine` 讀此欄套修正產下一版）。換行分隔指令：`刪除`／`改步驟:a;b`／`改預期:x;y`／`改目的:x`／`補:x`／`備註:x`；其他自由文字列入「待人工」。套用後清空此欄 |
 
 ## actions
 | do | 參數 | 說明 |
@@ -28,7 +29,7 @@
 | tap | target(`btn:x`), wait?, timeout_s? | 模板命中座標優先，退回 pack xy |
 | key | name | KEYCODE_<name> |
 | wait | screen / state / seconds / until_popup(+record, since) , timeout_s | state 走 wait_stable |
-| read | name, roi, oracle(ocr_number\|text) | 裁切放大 → reader（fake / tesseract / llm / dual）→ observations[name].append |
+| read | name, roi, oracle(ocr_number\|text), stabilize? | 裁切放大 → reader（fake / tesseract / llm / dual）→ observations[name].append。`stabilize:{mode:same_twice\|two_sources, interval_ms:400, timeout_s:8, roi2?}`：count-up 等會變動的讀數連兩次相同（或 roi+roi2 雙位置一致）才收；逾時不穩 → 收 None（oracle 判 NEEDS_HUMAN，不誤 PASS） |
 | capture | name, roi?, zoom? | 存證 |
 | ask | name, question | 視覺是非題 → observations[name] = {answer, confidence} |
 | repeat | times, actions | 巢狀 |

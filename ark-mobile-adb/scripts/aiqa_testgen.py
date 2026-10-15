@@ -387,13 +387,104 @@ def render_md(doc: dict, pack: dict) -> str:
     return "\n".join(L)
 
 
+# ---------------------------------------------------------------- refine（人工回饋迴圈）
+
+def refine(doc: dict) -> tuple[dict, list[dict], list[dict]]:
+    """讀每個 item 的「review」欄（人工審查意見，換行分隔指令）→ 套修正產下一版。
+
+    指令協定（對齊公司測試表「審查意見」欄）：
+      刪除                整列移除
+      改步驟:a;b;c        覆蓋 manual_steps（; 分多步）
+      改預期:x;y          覆蓋 assertions 的 expect（逐條；超出的 assertion 不動）
+      改目的:x            覆蓋 title
+      補:x                在最後一條 assertion 的 expect 末尾追加（補 [待補] 數值常用）
+      備註:x              覆蓋/新增 item.note
+      其他自由文字        不自動套用，列入「待人工」報告
+
+    未填 review 的 item 原樣保留。套用後清空該 item 的 review 欄（代表已處理）。
+    回 (new_doc, changes, pending)。
+    """
+    kept: list[dict] = []
+    changes: list[dict] = []
+    pending: list[dict] = []
+    for it in doc.get("items", []):
+        review = (it.get("review") or "").strip()
+        if not review:
+            kept.append(it)
+            continue
+        cmds = [ln.strip() for ln in review.splitlines() if ln.strip()]
+        done: list[str] = []
+        deleted = False
+        for cmd in cmds:
+            key, sep, val = cmd.partition(":")
+            key = key.strip()
+            val = val.strip()
+            if cmd in ("刪除", "刪除:") or key == "刪除":
+                deleted = True
+                done.append("刪除整列")
+                break
+            elif key == "改步驟" and sep:
+                it["manual_steps"] = [s.strip() for s in val.split(";") if s.strip()]
+                done.append(f"改步驟→{len(it['manual_steps'])} 步")
+            elif key == "改預期" and sep:
+                parts = [s.strip() for s in val.split(";") if s.strip()]
+                asserts = it.get("assertions") or []
+                for i, p in enumerate(parts):
+                    if i < len(asserts):
+                        asserts[i]["expect"] = p
+                done.append(f"改預期→{min(len(parts), len(asserts))} 條")
+            elif key == "改目的" and sep:
+                it["title"] = val
+                done.append("改目的")
+            elif key == "補" and sep:
+                asserts = it.get("assertions") or []
+                if asserts:
+                    asserts[-1]["expect"] = (str(asserts[-1].get("expect", "")) + "；" + val).lstrip("；")
+                    done.append("補:末條預期")
+                else:
+                    it.setdefault("note", "")
+                    it["note"] = (it["note"] + "；" + val).lstrip("；")
+                    done.append("補:note（無 assertion）")
+            elif key == "備註" and sep:
+                it["note"] = val
+                done.append("備註")
+            else:
+                pending.append({"id": it.get("id"), "text": cmd})
+        if deleted:
+            changes.append({"id": it.get("id"), "ops": done, "result": "deleted"})
+            continue
+        it.pop("review", None)  # 已處理
+        if done:
+            changes.append({"id": it.get("id"), "ops": done, "result": "updated"})
+        kept.append(it)
+    doc["items"] = kept
+    return doc, changes, pending
+
+
+def render_refine_report(changes: list[dict], pending: list[dict], total: int) -> str:
+    L = ["# 測項修正變更報告", "",
+         f"- 處理前項數：{total}",
+         f"- 本次異動：{len(changes)} 項（刪除 {sum(1 for c in changes if c['result'] == 'deleted')}、"
+         f"修改 {sum(1 for c in changes if c['result'] == 'updated')}）",
+         f"- 待人工處理：{len(pending)} 條", ""]
+    if changes:
+        L += ["## 已套用", "", "| id | 動作 | 結果 |", "|---|---|---|"]
+        L += [f"| {c['id']} | {' / '.join(c['ops'])} | {c['result']} |" for c in changes]
+        L += [""]
+    if pending:
+        L += ["## 待人工處理（自由文字，未自動套用）", "", "| id | 審查意見 |", "|---|---|"]
+        L += [f"| {p['id']} | {p['text']} |" for p in pending]
+        L += ["", "> 這些意見需人或 AI 再判斷，必要時回頭改 gamepack 的模板/bindings 重產。"]
+    return "\n".join(L)
+
+
 # ---------------------------------------------------------------- main
 def main() -> None:
     ap = argparse.ArgumentParser(description="aiqa testgen")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("import-xlsx", "expand", "from-qa", "from-spec", "lint", "render"):
+    for name in ("import-xlsx", "expand", "from-qa", "from-spec", "lint", "render", "refine"):
         s = sub.add_parser(name)
-        s.add_argument("--game", required=name != "render"); s.add_argument("--machine")
+        s.add_argument("--game", required=name not in ("render", "refine")); s.add_argument("--machine")
         if name == "import-xlsx":
             s.add_argument("--xlsx", required=True); s.add_argument("--sheet", action="append")
         if name == "expand":
@@ -402,8 +493,10 @@ def main() -> None:
             s.add_argument("--qa", required=True)
         if name == "from-spec":
             s.add_argument("--spec", required=True); s.add_argument("--max-items", type=int, default=60)
-        if name in ("lint", "render"):
+        if name in ("lint", "render", "refine"):
             s.add_argument("--checklist", required=True)
+        if name == "refine":
+            s.add_argument("--report", help="變更報告 md 輸出路徑")
         s.add_argument("--out", required=name != "lint")
     a = ap.parse_args()
     if a.cmd == "render":
@@ -411,6 +504,21 @@ def main() -> None:
         pack = C.load_pack(doc["game"], doc.get("machine"))
         C.atomic_write(pathlib.Path(a.out), render_md(doc, pack))
         C.emit({"file": a.out, "items": len(doc["items"])})
+    if a.cmd == "refine":
+        doc = load_checklist(pathlib.Path(a.checklist))
+        total = len(doc.get("items", []))
+        with C.Timer() as t:
+            doc, changes, pending = refine(doc)
+        out = pathlib.Path(a.out)
+        save_checklist(out, doc)
+        report_path = a.report or str(out.with_name(out.stem + "-變更報告.md"))
+        C.atomic_write(pathlib.Path(report_path), render_refine_report(changes, pending, total))
+        C.emit({"file": str(out), "report": report_path, "before": total, "after": len(doc["items"]),
+                "deleted": sum(1 for c in changes if c["result"] == "deleted"),
+                "updated": sum(1 for c in changes if c["result"] == "updated"), "pending": len(pending),
+                "next": "人工再檢查下一版，或 lint/render 定稿"},
+               {"stage": "refine", "elapsed_ms": t.elapsed_ms})
+        return
     try:
         pack = C.load_pack(a.game, a.machine)
     except C.PackError as e:

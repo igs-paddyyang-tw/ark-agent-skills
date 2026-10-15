@@ -3,12 +3,12 @@ name: ark-mobile-adb
 description: |
   Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。裝置層：Python CLI 直接包 adb（不需 MCP / Node）：
   doctor / connect / use / screenshot / thumb / crop / wait-stable / wait-pixel / locate / ocr / logcat / tap / batch / net，--json 回單一 envelope，adb offline 自動重連；Unity 畫面只走座標 + 模板 / 找色。aiqa：`aiqa_testgen` 把公司測試表 xlsx /
-  規格 / qa-checklist 轉成可執行 test-checklist（原子斷言 + oracle + Tier）並用模板展開；`aiqa_run` 依 gamepack 在 BlueStacks 或
+  規格 / qa-checklist 轉成可執行 test-checklist（原子斷言 + oracle + Tier）並用模板展開；`aiqa_testgen refine` 讀 review 欄的人工審查意見套修正產下一版（AI 產→人工檢查→AI 修正迴圈）；`aiqa_run` 依 gamepack 在 BlueStacks 或
   fake 裝置執行，AI 只讀數與答是非題、腳本判定；`aiqa_report` 產 test-report.md / xlsx / Mantis 草稿；`aiqa_macro`
   record（錄人手點擊）/ replay（零 LLM、checkpoint）/ lint / explain（SOP）。playtest：`aiqa_playtest` 讀清單 md → 基本測試 + 自我探索（E1–E16）→
   單檔 HTML 報告 + 下一輪回歸清單。
   使用此 skill 當提及：BlueStacks / 模擬器 / Android 裝置操作、adb 連不上、遊戲畫面自動化、aiqa、AI QA、遊戲測試自動化、
-  測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、trigger / GM harness、掛測、
+  測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、trigger / GM harness、掛測、穩定讀數 / count-up 讀數 / 資產對帳、測項人工回饋 / 審查意見 / refine 下一版、
   按鍵精靈 / 座標腳本 / 錄製重放 / macro、adb 太慢、座標點空、縮圖座標、找色、試玩報告、AI 試玩、新手體驗、
   探索測試、冒煙測試、清單 md 產報告 html、playtest。
   不適用於：iOS、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-game-spec）、一般程式測試（→ ark-test-runner）。
@@ -17,8 +17,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.2.2"
-  updated: 2026-10-08
+  version: "2.3.0"
+  updated: 2026-10-15
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -78,7 +78,7 @@ metadata:
 | `examples/ghy-newbie.checklist.md` | 金猴爺新手體驗清單範例（三種寫法、探索重點、禁止） | 寫清單的起點 |
 | `scripts/ark_mobile_adb.py` | 裝置層 CLI；`--json` envelope；`doctor` 由下往上診斷 | 任何裝置操作 |
 | `scripts/aiqa_pack.py` | gamepack `lint` / `new` / `resolve` / `calibrate-demo` | 新遊戲、校準後 |
-| `scripts/aiqa_testgen.py` | `import-xlsx` / `expand` / `from-qa` / `from-spec` / `lint` / `render` | 產測試清單 |
+| `scripts/aiqa_testgen.py` | `import-xlsx` / `expand` / `from-qa` / `from-spec` / `lint` / `render` / `refine` | 產測試清單 + 人工回饋修正 |
 | `scripts/aiqa_run.py` | 執行 checklist（`--backend adb|fake`、`--reader`、`--visual`、`--tiers`、`--items`、`--bugs`） | 跑測試 |
 | `scripts/aiqa_report.py` | run → test-report.md / test-results.xlsx / mantis-drafts.md / benchmark.json | 出報告 |
 | `scripts/aiqa_macro.py` | 按鍵精靈式腳本：`record` / `replay [--backend fake] [--dry-run]` / `lint` / `explain` | 建座標腳本、量加速比 |
