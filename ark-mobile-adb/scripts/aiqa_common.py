@@ -26,6 +26,21 @@ TIERS = ("T1", "T2", "T3", "T4", "T5", "NA")
 ORACLES = ("ocr_number", "text", "state", "sequence", "timing", "no_crash", "visual", "expr")
 
 
+def resolve_pack_root(pack_dir: str | None):
+    """--pack-dir CLI 參數 → gamepack 根目錄 Path（供 load_pack(root=...)）。
+
+    gamepack 校準資料本質是 DATA（特定遊戲/版本的輸入），可放 skill 目錄外（如 data/<game>/gamepack）
+    以避免「skill 升級 vs 校準保留」衝突。優先序：--pack-dir > 環境變數 ARK_AIQA_GAMEPACKS（GAMEPACKS_DIR）
+    > skill 內建 gamepacks/。回 None 代表沿用預設（load_pack 內 root or GAMEPACKS_DIR）。
+    """
+    if not pack_dir:
+        return None
+    p = pathlib.Path(pack_dir).expanduser()
+    if not p.is_dir():
+        raise PackError(f"--pack-dir 目錄不存在: {p}")
+    return p
+
+
 def _utf8():
     try:
         sys.stdout.reconfigure(encoding="utf-8")

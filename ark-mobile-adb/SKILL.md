@@ -8,7 +8,7 @@ description: |
   record（錄人手點擊）/ replay（零 LLM、checkpoint）/ lint / explain（SOP）。playtest：`aiqa_playtest` 讀清單 md → 基本測試 + 自我探索（E1–E16）→
   單檔 HTML 報告 + 下一輪回歸清單。
   使用此 skill 當提及：BlueStacks / 模擬器 / Android 裝置操作、adb 連不上、遊戲畫面自動化、aiqa、AI QA、遊戲測試自動化、
-  測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、trigger / GM harness、掛測、穩定讀數 / count-up 讀數 / 資產對帳、測項人工回饋 / 審查意見 / refine 下一版、
+  測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、gamepack 解耦 / 外部 pack 目錄 / --pack-dir、trigger / GM harness、掛測、穩定讀數 / count-up 讀數 / 資產對帳、測項人工回饋 / 審查意見 / refine 下一版、
   按鍵精靈 / 座標腳本 / 錄製重放 / macro、adb 太慢、座標點空、縮圖座標、找色、試玩報告、AI 試玩、新手體驗、
   探索測試、冒煙測試、清單 md 產報告 html、playtest。
   不適用於：iOS、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-game-spec）、一般程式測試（→ ark-test-runner）。
@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.3.0"
+  version: "2.4.0"
   updated: 2026-10-15
   outputs:
     - { format: data, audience: ai }
@@ -86,6 +86,20 @@ metadata:
 | `scripts/aiqa_device.py` `aiqa_oracle.py` `aiqa_llm.py` `aiqa_fake_game.py` `aiqa_common.py` | 裝置抽象、判定、LLM、合成遊戲、共用 | 不直接執行 |
 | `gamepacks/_templates/*.yaml` | 通用測試模板（recover / network / shared_buttons / long_run / visual_integrity） | 改模板 |
 | `gamepacks/demo-slot/` | 已校準的合成遊戲 pack（fake 後端可全鏈跑） | dry-run、學 pack 怎麼寫 |
+
+### gamepack 校準資料解耦（`--pack-dir`，2.4）
+
+gamepack 校準資料（`game.yaml` / `machine.yaml` 的 res / buttons / rois / screens / macros）本質是
+**DATA**（特定遊戲 / 版本的輸入），不是 skill 引擎。放 skill 內 `gamepacks/` 會造成「skill 升級
+vs 校準保留」衝突與多複本分歧。`aiqa_run` / `aiqa_testgen` / `aiqa_pack lint` 支援 `--pack-dir`
+把 gamepack 根指到 skill 外（如 `data/<game>/gamepack/`）：
+
+```bash
+python aiqa_run.py --checklist cl.json --backend fake --pack-dir /path/to/data/ghy/gamepack
+```
+
+gamepack 根的優先序：`--pack-dir` ＞ 環境變數 `ARK_AIQA_GAMEPACKS` ＞ skill 內建 `gamepacks/`。
+未帶時行為與過去完全一致（讀 skill 內建），零回歸。
 | `gamepacks/ghy/` + `machines/aztec2/` | 金猴爺骨架：分類樹、共用按鈕、模板參數、bindings；**未校準** | 接真機前先校準 |
 | `gamepacks/_template/` | 新 pack 骨架 | `aiqa_pack.py new` |
 | `examples/demo-slot.checklist.json` | 規格專屬項範例（計分、乘倍、info 頁） | 學 checklist 怎麼寫 |

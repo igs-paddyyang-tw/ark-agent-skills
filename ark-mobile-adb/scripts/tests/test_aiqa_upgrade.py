@@ -138,3 +138,47 @@ def test_refine_freeform_goes_pending():
     assert "PM" in pending[0]["text"]
     # 自由文字未改任何欄位，但 review 會被清空（已轉入報告）
     assert "review" not in doc["items"][0]
+
+
+
+# ── --pack-dir：gamepack 校準 DATA 解耦（從 skill 目錄外讀）────────────
+
+import shutil  # noqa: E402
+
+import aiqa_common as C  # noqa: E402
+
+
+def test_resolve_pack_root_none_uses_default():
+    """無 --pack-dir → None（load_pack 內走預設 GAMEPACKS_DIR）。"""
+    assert C.resolve_pack_root(None) is None
+    assert C.resolve_pack_root("") is None
+
+
+def test_resolve_pack_root_missing_dir_raises():
+    """反證：--pack-dir 指不存在目錄 → PackError（不靜默吞）。"""
+    with pytest.raises(C.PackError):
+        C.resolve_pack_root("/no/such/pack/dir/zzz")
+
+
+def test_pack_dir_loads_external_pack_not_skill_internal(tmp_path):
+    """反證（解耦核心）：--pack-dir 指外部目錄 → 讀到的是外部那份 pack，不是 skill 內建。
+
+    把 skill 內 demo-slot 複製到 tmp 外部目錄並改 display_name 當標記，
+    load_pack(root=tmp) 讀到改過的標記 = 證明確實從外部讀，而非 skill 內。
+    """
+    ext = tmp_path / "ext_packs"
+    shutil.copytree(C.GAMEPACKS_DIR / "demo-slot", ext / "demo-slot")
+    gy = ext / "demo-slot" / "game.yaml"
+    txt = gy.read_text(encoding="utf-8")
+    assert "display_name" in txt
+    gy.write_text(txt.replace("display_name:", "display_name: EXTERNAL_MARK #", 1), encoding="utf-8")
+    root = C.resolve_pack_root(str(ext))
+    pack = C.load_pack("demo-slot", root=root)
+    assert "EXTERNAL_MARK" in str(pack.get("display_name")), f"應讀到外部 pack，實際 {pack.get('display_name')}"
+
+
+def test_default_still_loads_skill_internal_no_regression():
+    """零回歸：不帶 root → 仍載 skill 內建 demo-slot（無 EXTERNAL_MARK）。"""
+    pack = C.load_pack("demo-slot")
+    assert "EXTERNAL_MARK" not in str(pack.get("display_name"))
+    assert pack.get("game") == "demo-slot"

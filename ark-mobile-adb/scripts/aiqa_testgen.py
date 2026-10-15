@@ -498,10 +498,11 @@ def main() -> None:
         if name == "refine":
             s.add_argument("--report", help="變更報告 md 輸出路徑")
         s.add_argument("--out", required=name != "lint")
+        s.add_argument("--pack-dir", help="gamepack 根目錄（校準 DATA 放 skill 外時指入；預設 skill 內或 $ARK_AIQA_GAMEPACKS）")
     a = ap.parse_args()
     if a.cmd == "render":
         doc = load_checklist(pathlib.Path(a.checklist))
-        pack = C.load_pack(doc["game"], doc.get("machine"))
+        pack = C.load_pack(doc["game"], doc.get("machine"), root=C.resolve_pack_root(a.pack_dir))
         C.atomic_write(pathlib.Path(a.out), render_md(doc, pack))
         C.emit({"file": a.out, "items": len(doc["items"])})
     if a.cmd == "refine":
@@ -520,7 +521,7 @@ def main() -> None:
                {"stage": "refine", "elapsed_ms": t.elapsed_ms})
         return
     try:
-        pack = C.load_pack(a.game, a.machine)
+        pack = C.load_pack(a.game, a.machine, root=C.resolve_pack_root(a.pack_dir))
     except C.PackError as e:
         C.fail("BAD_INPUT", str(e), f"可用: {C.list_games()}")
     if a.cmd == "lint":

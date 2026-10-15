@@ -372,10 +372,11 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--bugs", help="fake 後端注入 bug 的 JSON，例 '{\"payout_off_by\": 10}'")
     ap.add_argument("--max-llm-calls", type=int, default=300)
+    ap.add_argument("--pack-dir", help="gamepack 根目錄（校準 DATA 放 skill 外時指入；預設 skill 內 gamepacks/ 或 $ARK_AIQA_GAMEPACKS）")
     a = ap.parse_args()
     doc = json.loads(pathlib.Path(a.checklist).read_text(encoding="utf-8"))
     try:
-        pack = C.load_pack(doc["game"], doc.get("machine"))
+        pack = C.load_pack(doc["game"], doc.get("machine"), root=C.resolve_pack_root(a.pack_dir))
     except C.PackError as e:
         C.fail("BAD_INPUT", str(e), "")
     backend = a.backend or pack.get("backend_default", "adb")

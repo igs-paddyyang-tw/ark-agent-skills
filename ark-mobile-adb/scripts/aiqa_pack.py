@@ -24,11 +24,11 @@ import aiqa_common as C  # noqa: E402
 ACTIONS = {"macro", "navigate", "tap", "key", "wait", "read", "capture", "ask", "repeat", "restart_app", "net", "harness", "crash_check", "loop_spin", "manual_step", "swipe"}
 
 
-def lint_pack(game: str, machine: str | None) -> list[dict]:
+def lint_pack(game: str, machine: str | None, root=None) -> list[dict]:
     v = []
     add = lambda sev, rule, msg: v.append({"severity": sev, "rule": rule, "message": msg})  # noqa: E731
     try:
-        pack = C.load_pack(game, machine)
+        pack = C.load_pack(game, machine, root=root)
     except C.PackError as e:
         return [{"severity": "error", "rule": "PACK-LOAD", "message": str(e)}]
     for k in ("game", "display_name", "package", "resolution", "calibrated", "taxonomy", "harness", "screens", "buttons", "rois", "navigation", "templates"):
@@ -126,6 +126,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="gamepack tools")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("lint"); s.add_argument("--game", required=True); s.add_argument("--machine")
+    s.add_argument("--pack-dir", help="gamepack 根目錄（校準 DATA 放 skill 外時指入）")
     s = sub.add_parser("new"); s.add_argument("--game", required=True); s.add_argument("--display-name", required=True)
     sub.add_parser("calibrate-demo")
     s = sub.add_parser("resolve"); s.add_argument("--game", required=True); s.add_argument("--machine"); s.add_argument("--out")
@@ -134,7 +135,7 @@ def main() -> None:
     if a.cmd == "list":
         C.emit({"games": C.list_games(), "dir": str(C.GAMEPACKS_DIR)})
     if a.cmd == "lint":
-        v = lint_pack(a.game, a.machine)
+        v = lint_pack(a.game, a.machine, root=C.resolve_pack_root(getattr(a, "pack_dir", None)))
         errs = [x for x in v if x["severity"] == "error"]
         data = {"game": a.game, "machine": a.machine, "errors": errs, "warnings": [x for x in v if x["severity"] == "warn"]}
         if errs:
