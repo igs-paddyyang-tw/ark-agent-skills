@@ -718,5 +718,10 @@
     "skill": "ark-wiki-engine",
     "version": "3.0.1",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:5e90bd69b839a1117c0ce3a67e0431cc27ccc3093cc73b7c8559238bcaaaf8d2": {
+    "skill": "ark-skills-align",
+    "version": "2.1.0",
+    "release": "skills-2026.10-r1"
   }
 }

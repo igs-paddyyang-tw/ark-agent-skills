@@ -13,7 +13,7 @@ description: |
   或任何需要批次修改、驗證、重組 ark-agent-skills repo 的場景。
   單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
 metadata:
-  version: "2.0.0"
+  version: "2.1.0"
   author: paddyyang
   schema_version: 1
   category: ops
@@ -23,7 +23,7 @@ metadata:
   render: none
   depends_on: [ark-md-report]
   status: active
-  updated: 2026-09-17
+  updated: 2026-10-15
 ---
 
 # ark-skills-align
@@ -33,7 +33,7 @@ ark-agent-skills 庫的維運 skill，兩個模式。與 ark-skill-creator 分�
 > 敘事、踩坑與判準（不進排程/三段判準/邊界宣告/多 session 協定/版本對齊判準）見
 > `references/ops-playbook.md` 與 `references/judgment-checklist.md`;通用判準在根 `AGENTS.md`。
 > 標準手順見 `references/alignment-workflow.md`;frontmatter 規格見 `references/metadata-schema.md`;
-> 消費端契約（matrix/lock schema）見 `references/consumer-contract.md`。
+> 消費端契約（matrix/lock schema）見 `references/consumer-contract.md`;鏡像同步規格見 `references/mirror-sync.md`。
 
 ## 模式一:upstream（維護者/CI，在 repo 根執行）
 
@@ -67,6 +67,16 @@ python .kiro/skills/ark-skills-align/scripts/align_sync.py verify --remote    # 
 python .kiro/skills/ark-skills-align/scripts/align_sync.py heartbeat          # 送 team 頻道（同版只寫 health）
 python .kiro/skills/ark-skills-align/scripts/align_sync.py resolve <path>     # 這個複本是哪版？
 ```
+
+沒接 align_sync（無 matrix／lock，或 `local_mirror` 指向別台）的 team，用**本機鏡像同步**：
+逐檔比 git blob 歷史，過期才對齊、上游從未有過的本地修改不覆蓋（規格 `references/mirror-sync.md`）。
+
+```bash
+python ark-skills-align/scripts/mirror_sync.py plan  --upstream <skills repo> --target <team 根>   # 列 STALE/LOCAL/NEWER
+python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> --keep kb_registry.json --yes
+```
+
+LOCAL（本地修改）先判斷是否回貢上游，**不要用 --keep 蓋過真修正**。
 
 對齊單位是 **release train**（`skills-YYYY.MM-rN`），個別 skill 只能例外 pin（附 reason）。
 tier 策略:base 全隊同版（Loop 五件套，major 不一致 P0）· role 走範圍 · domain（local_only）自由。
