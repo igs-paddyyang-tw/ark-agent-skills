@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>__TITLE__</title>
+__STYLES__
+</head>
+<body>
+<!-- ark-game-proto Stage（PixiJS 8 正式演出版型）｜由 stage_build.py 產生，請勿手改；改遊戲請改 game.js -->
+__SCRIPTS__
+<script>
+(function () {
+  if (!window.PIXI) { document.body.textContent = '找不到 PixiJS（vendor/pixi.min.js）'; return; }
+  if (!window.Proto || !Proto.config) { document.body.textContent = 'game.js 裡沒有呼叫 Proto.game({ ... })'; return; }
+  Proto.start();
+})();
+</script>
+</body>
+</html>

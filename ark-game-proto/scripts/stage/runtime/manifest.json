@@ -1,0 +1,32 @@
+{
+  "comment": "Stage runtime 載入順序（stage_build 與 index.template.html 共用；新增檔案只改這裡）；@src/ = ark-game-proto scripts/src（與驗證台共用）",
+  "styles": [
+    "core/style.css"
+  ],
+  "scripts": [
+    "core/core.js",
+    "core/tween.js",
+    "core/sim.js",
+    "@src/go-rand.js",
+    "service/result.js",
+    "service/service.js",
+    "slot/logic.js",
+    "features/鎖格重轉/logic.js",
+    "core/assets.js",
+    "core/audio.js",
+    "core/stage.js",
+    "core/timeline.js",
+    "core/ui.js",
+    "core/hud.js",
+    "slot/reels.js",
+    "slot/module.js",
+    "core/app.js"
+  ],
+  "features": {
+    "鎖格重轉": {
+      "scripts": [
+        "features/鎖格重轉/present.js"
+      ]
+    }
+  }
+}

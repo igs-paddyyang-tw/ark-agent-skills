@@ -66,9 +66,17 @@
     const WILD = sid[cfg.board.wild || 'WW'];
     const wmc = cfg.mg && cfg.mg.wild_mult;
     const tr = cfg.fg.trigger;
-    const trig = tr.model === 'tiger-dragon'
-      ? { model: 'tiger-dragon', t: sid[tr.tiger], d: sid[tr.dragon], gate: tr.gate, mixed: tr.mixed, rate: tr.rate }
-      : { model: 'count', ids: (tr.symbols || ['SC', 'SS']).map((s) => sid[s]), min: tr.min };
+    let trig;
+    if (tr.model === 'tiger-dragon') {
+      trig = { model: 'tiger-dragon', t: sid[tr.tiger], d: sid[tr.dragon], gate: tr.gate, mixed: tr.mixed, rate: tr.rate };
+    } else if (tr.model === 'house') {
+      // 大轉盤分流：wheel = [{variant, type, w}]（type 1..3 對應三 FG 變體，0 保留給 SC 觸發的 Free）
+      const wheel = tr.wheel.map((x, i) => ({ variant: x.variant, type: i + 1, w: x.w }));
+      trig = { model: 'house', sc: sid[tr.sc || 'SC'], bs: sid[tr.bs || 'BS'], gate_sc: tr.gate_sc, gate_bs: tr.gate_bs,
+        wheel, wheelT: wtable(wheel), min: tr.gate_sc };
+    } else {
+      trig = { model: 'count', ids: (tr.symbols || ['SC', 'SS']).map((s) => sid[s]), min: tr.min };
+    }
     const C = {
       cfg, SYM, sid, R: cfg.board.reels, ROWS: cfg.board.rows, bet: cfg.board.bet, paySyms, pay, sets, reelsets,
       WILD, WW: WILD, SC: sid.SC, SS: sid.SS,
@@ -77,6 +85,15 @@
       reelsetT: wtable(reelsets), maxWin: cfg.board.max_win || null,
       G: cfg.fg.groups, model: cfg.fg.model || 'collect-mult',
     };
+    // MG 雙神秘圖騰替換（three-pigs：MY1→歸零該 index→MY2→全盤替換；大圖騰組合主力贏分來自此）
+    const mm = cfg.mg && cfg.mg.mystery;
+    if (mm) {
+      C.mgMy = {
+        result: mm.result.map((s) => (s in sid ? sid[s] : -1)),
+        my1T: wtable(mm.mystery1.map((w, i) => ({ i, w }))),
+        my2raw: mm.mystery2, MY1: sid.MY1, MY2: sid.MY2,
+      };
+    }
     MODELS[C.model].compile(cfg, C);
     return C;
   }
@@ -129,6 +146,16 @@
       for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const k = T.ids.indexOf(grid[r][y]); if (k >= 0) cnt[k]++; }
       return { cnt, type: sum(cnt) >= T.min ? 0 : -1 };
     }
+    // house（吉屋出豬 three_pigs baseRun 同順序）：先判 BS ≥ gate_bs → 大轉盤抽變體（type 1/2/3）；再判 SC ≥ gate_sc → Free FG（type 0）。
+    // 兩條觸發線各一門檻；BS 線優先（Go 先跑 BonusGame 再跑 FreeGame，但單局 BS≥3 與 SC≥6 幾乎互斥，變體以轉盤權重分流）。
+    if (T.model === 'house') {
+      let sc = 0, bs = 0;
+      for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const v = grid[r][y]; if (v === T.sc) sc++; else if (v === T.bs) bs++; }
+      const cnt = [sc, bs];
+      if (bs >= T.gate_bs) { const w = pick(rng, T.wheelT); return { cnt, type: w.type, variant: w.variant, line: 'bonus' }; }   // 大轉盤三變體
+      if (sc >= T.gate_sc) return { cnt, type: 0, variant: 'Free', line: 'free' };                                               // SC 觸發 Free FG
+      return { cnt, type: -1 };
+    }
     // tiger-dragon（Go check.specialGameCheck 同順序）：混合 ≥5 → T&D；虎 ≥3；龍 ≥3；否則隨機觸發（rate 萬分率 × 顆數）
     let t = 0, d = 0;
     for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const v = grid[r][y]; if (v === T.t) t++; else if (v === T.d) d++; }
@@ -158,6 +185,14 @@
       for (let y = 0; y < C.ROWS; y++) col.push(strip[(st + y) % L]);
       grid.push(col);
     }
+    // MG 雙神秘圖騰替換（抽 MY1 → 歸零該 index → 抽 MY2 → 全盤替換；抽值順序對齊 Go M-007）
+    if (C.mgMy) {
+      const i1 = pick(rng, C.mgMy.my1T).i;
+      const t2 = wtable(C.mgMy.my2raw.map((w, i) => ({ i, w: i === i1 ? 0 : w })));
+      const i2 = t2.total > 0 ? pick(rng, t2).i : i1;
+      const s1 = C.mgMy.result[i1], s2 = C.mgMy.result[i2];
+      for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const v = grid[r][y]; if (v === C.mgMy.MY1) grid[r][y] = s1; else if (v === C.mgMy.MY2) grid[r][y] = s2; }
+    }
     let mult = null, preGrid = null;
     if (C.wm) {                                   // 銅鑼 → 倍數 WILD（逐軸逐列，各自擲倍數）
       preGrid = opts.present ? grid.map((c) => c.slice()) : null;
@@ -169,7 +204,8 @@
     const M = MODELS[C.model];
     const res = { seed: seed >>> 0, reelset: rs.idx, flags: rs.use, stops, grid, mult, mgWin: mg.win, ways: mg.ways, trig: tg, fg: null, bet: C.bet };
     if (C.model === 'collect-mult') { res.nSC = tg.cnt[0]; res.nSS = tg.cnt[1]; }
-    if (tg.type >= 0) res.fg = M.play(C, rng, res, !!opts.present);
+    if (C.model === 'house-collect') { res.nSC = tg.cnt[0]; res.nBS = tg.cnt[1]; }
+    if (tg.type >= 0 && !opts.mgOnly) res.fg = M.play(C, rng, res, !!opts.present);
     // MaxWin：MG + FG 合計封頂（fg.win 保留未封頂自然值）
     const raw = mg.win + (res.fg ? res.fg.win : 0), cap = C.maxWin ? C.maxWin * C.bet : Infinity;
     res.totalWin = Math.min(raw, cap); res.capped = raw > cap;
@@ -359,6 +395,157 @@
     return { value, vals, raw, kinds, arrowAdd: add };
   }
 
+  // ───── house-collect（吉屋出豬 three-pigs）─────
+  // FG = 單一引擎（Go FreeGame）：進前抽強度 → 每手抽 FG 輪帶組生盤 → SC 落格升級（1→2→3）→ 滿級溢出轉移 → 結算逐格依等級抽草/木/磚屋。
+  // SC 觸發 = Free 變體（空初始框）；BS 觸發 = 大轉盤三變體（mega_hat / buzz_saw / mansions）各給不同初始框。無解析解 → L1 以固定 seed 抽樣 N 次附 CI。
+  const STRENGTHS = ['WEAK', 'NORMAL', 'SUPER', 'ULTRA'];
+  const HOUSE_VARIANTS = ['Free', 'mansions', 'mega_hat', 'buzz_saw'];
+  MODELS['house-collect'] = {
+    compile(cfg, C) {
+      const fg = cfg.fg;
+      // FG 符號碼（icon 名 → id）
+      const hsid = (s) => (s in C.sid ? C.sid[s] : -1);
+      // FG 輪帶組：fg.fg_strips 是 6 條帶（free_reels 0-5）轉成 id 陣列；fg.reel_combos 是 51 組 5 軸索引；每個 "{變體}_{強度}" 一組權重欄
+      const stripIds = {};
+      for (const k in fg.fg_strips) stripIds[k] = fg.fg_strips[k].map((r) => Int8Array.from(r.map((s) => hsid(s))));
+      const combos = fg.reel_combos;                                   // [[a,b,c,d,e], ...] 1-based 帶索引（對應 free_reels key）
+      const wsets = {};
+      for (const key in fg.reel_weights) wsets[key] = wtable(combos.map((c, i) => ({ c, w: fg.reel_weights[key][i] })));
+      // 強度抽選（每變體一組 [W,N,S,U]）
+      const strengthT = {};
+      for (const v in fg.strength) strengthT[v] = wtable(fg.strength[v].map((w, i) => ({ s: STRENGTHS[i], w })));
+      // 房子獎項權重表（grass/wood/stone/stone_4plus/_2/_3）→ 值用 jackpot 名換算成倍數
+      const jp = fg.jackpot || {};
+      const toVal = (k) => (k in jp ? jp[k] : Number(k));
+      const houseT = {};
+      for (const k in fg.houses) {
+        if (k === 'selector') continue;
+        const t = fg.houses[k];
+        houseT[k] = wtable(Object.keys(t).map((kk) => ({ v: toVal(kk), w: t[kk], name: kk })));
+      }
+      const sel = fg.houses.selector || { stone: 1 };
+      const selT = wtable(Object.keys(sel).map((k) => ({ k, w: sel[k] })));
+      // 神秘圖騰（FG）：每變體 MY1/MY2 權重（index 對 result 陣列）；僅影響 Ways 線獎
+      const myT1 = {}, my2raw = {};
+      if (fg.mystery) {
+        for (const v in fg.mystery.mystery1) myT1[v] = wtable(fg.mystery.mystery1[v].map((w, i) => ({ i, w })));
+        for (const v in fg.mystery.mystery2) my2raw[v] = fg.mystery.mystery2[v];
+      }
+      Object.assign(C, {
+        BS: C.sid[fg.trigger.bs || 'BS'], MY1: C.sid.MY1 != null ? C.sid.MY1 : hsid('MY1'), MY2: C.sid.MY2 != null ? C.sid.MY2 : hsid('MY2'),
+        hStripIds: stripIds, hCombos: combos, hWsets: wsets, hStrengthT: strengthT,
+        hHouseT: houseT, hSelT: selT, hExtra: fg.extra_multi, hStone15: fg.stone15_threshold || 15,
+        hSpins: fg.init_spins || 6, hVariants: fg.groups || HOUSE_VARIANTS,
+        hMyT1: fg.mystery ? myT1 : null, hMyResult: fg.mystery ? fg.mystery.result.map((s) => hsid(s)) : null,
+        hMyT2zero: (v, zeroIdx) => wtable((my2raw[v] || []).map((w, i) => ({ i, w: i === zeroIdx ? 0 : w }))),
+      });
+    },
+    // 單場 FG：rng 決定一切；rec=true 時記 timeline 給演出。回 {model, variant, strength, win, ...}
+    play(C, rng, res, rec) {
+      const variant = res.trig.variant || 'Free';
+      // 1) 抽強度 → 權重組名
+      const stT = C.hStrengthT[variant] || C.hStrengthT.Free;
+      const strength = pick(rng, stT).s;
+      let key = variant + '_' + strength;
+      if (!C.hWsets[key]) { for (const fb of ['NORMAL', 'SUPER', 'WEAK', 'ULTRA']) { if (C.hWsets[variant + '_' + fb]) { key = variant + '_' + fb; break; } } }
+      const wset = C.hWsets[key] || C.hWsets[Object.keys(C.hWsets)[0]];
+      // 2) 初始框盤（marks 5×3，值 0..3）
+      const marks = []; for (let c = 0; c < 5; c++) marks.push([0, 0, 0]);
+      const SC = C.SC, BS = C.BS;
+      const initGrid = res.grid;                                       // MG 盤面（觸發此 FG 的盤）
+      if (variant === 'mansions') {
+        for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) if (initGrid[c][r] === BS) marks[c][r] = 3;
+      } else if (variant === 'buzz_saw') {
+        for (let col = 4; col >= 0; col--) for (let row = 0; row < 3; row++) if (initGrid[col][row] === BS) for (let k = col; k < 5; k++) marks[k][row] += 1;
+      } else if (variant === 'mega_hat') {
+        // 從 FG 帶 0 取對齊位置，5 軸同起點，SC 格標 1
+        const s0 = C.hStripIds['0'] || C.hStripIds[Object.keys(C.hStripIds)[0]];
+        const len = s0[0].length, maxIdx = Math.floor((len - 3) / 3), start = rng.int(maxIdx + 1) * 3;
+        for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) if (s0[c][(start + r) % len] === SC) marks[c][r] = 1;
+      } else {                                                         // Free：初始框由 MG 盤 SC 標 1
+        for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) if (initGrid[c][r] === SC) marks[c][r] = 1;
+      }
+      // 3) FG 迴圈
+      let spinTime = C.hSpins, spins = 0, lineWin = 0, extra = 0, addSc = 0;
+      const timeline = rec ? [] : null;
+      while (spinTime > 0) {
+        spins++; spinTime--;
+        const combo = pick(rng, wset).c;                              // [a..e]：第 c 軸用 fg_strips[combo[c]] 的第 c 條帶（對齊 Go reels_data[set][col+1]）
+        const grid = [];
+        for (let c = 0; c < 5; c++) { const strip = C.hStripIds[String(combo[c])][c], L = strip.length, st = rng.int(L); const col = []; for (let r = 0; r < 3; r++) col.push(strip[(st + r) % L]); grid.push(col); }
+        // 雙神秘圖騰替換（Go M-007 同序：抽 MY1 → 歸零該 index → 抽 MY2 → 全盤替換）；僅影響 Ways 線獎
+        if (C.hMyT1 && C.hMyT1[variant]) {
+          const i1 = pick(rng, C.hMyT1[variant]).i;
+          const t2 = C.hMyT2zero(variant, i1);
+          const i2 = t2.total > 0 ? pick(rng, t2).i : i1;
+          const s1 = C.hMyResult[i1], s2 = C.hMyResult[i2];
+          for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) { if (grid[c][r] === C.MY1) grid[c][r] = s1; else if (grid[c][r] === C.MY2) grid[c][r] = s2; }
+        }
+        // Ways 線獎（含 wild 替代；SC/BS 不計線）
+        lineWin += evalWaysGrid(C, grid);
+        // 數本手 SC
+        let scN = 0; const scPos = [];
+        for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) if (grid[c][r] === SC) { scN++; scPos.push([c, r]); }
+        addSc += scN;
+        if (scN >= 3) spinTime += 1;                                  // 加手不重置
+        // SC 落格升級 + 溢出
+        let overflow = 0;
+        for (const [c, r] of scPos) {
+          if (marks[c][r] < 3) { marks[c][r] = (variant === 'mansions') ? 3 : marks[c][r] + 1; }
+          else overflow++;
+        }
+        for (let o = 0; o < overflow; o++) {
+          const avail = [];
+          for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) if (marks[c][r] < 3) avail.push([c, r]);
+          if (!avail.length) { extra += C.bet * C.hExtra; continue; }
+          const p2 = avail.filter(([c, r]) => marks[c][r] === 2), p1 = avail.filter(([c, r]) => marks[c][r] === 1), p0 = avail.filter(([c, r]) => marks[c][r] === 0);
+          const pool = p2.length ? p2 : (p1.length ? p1 : p0);
+          const ch = pool[rng.int(pool.length)];
+          marks[ch[0]][ch[1]] = (variant === 'mansions') ? 3 : marks[ch[0]][ch[1]] + 1;
+        }
+        if (timeline) timeline.push({ combo, scPos: scPos.slice(), marks: marks.map((c) => c.slice()), remain: spinTime });
+      }
+      // 4) 結算：數磚屋 → stone15 換池 → 逐格抽獎
+      let stoneCount = 0; for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) if (marks[c][r] === 3) stoneCount++;
+      let stoneName = 'stone';
+      if (stoneCount >= C.hStone15 && C.hSelT.total > 0) { const k = pick(rng, C.hSelT).k; stoneName = C.hHouseT[k] ? k : 'stone'; }
+      let score = 0; const houses = { grass: 0, wood: 0, stone: 0 }; const settle = rec ? [] : null;
+      for (let c = 0; c < 5; c++) for (let r = 0; r < 3; r++) {
+        const lv = marks[c][r];
+        if (lv === 1) { const v = pick(rng, C.hHouseT.grass).v * C.bet; score += v; houses.grass++; if (settle) settle.push({ c, r, kind: 'grass', win: v }); }
+        else if (lv === 2) { const v = pick(rng, C.hHouseT.wood).v * C.bet; score += v; houses.wood++; if (settle) settle.push({ c, r, kind: 'wood', win: v }); }
+        else if (lv === 3) { const t = C.hHouseT[stoneName] || C.hHouseT.stone; const v = pick(rng, t).v * C.bet; score += v; houses.stone++; if (settle) settle.push({ c, r, kind: 'stone', win: v }); }
+      }
+      const win = score + extra + lineWin;
+      return { model: 'house-collect', variant, group: variant, strength, win, score, extra, lineWin, addSc, spins, stoneCount, stoneName, houses,
+        ...(rec ? { timeline, settle, marks: marks.map((c) => c.slice()) } : {}) };
+    },
+    present(C, fx, res) {
+      const tags = [];
+      for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const v = res.grid[r][y]; if (v === C.SC) tags.push({ r, y, sym: 'SC' }); else if (v === C.BS) tags.push({ r, y, sym: 'BS' }); }
+      res.tags = tags; res.tease = false;
+    },
+    statsAdd(g, f) { g.spins = (g.spins || 0) + f.spins; g.stone15 = (g.stone15 || 0) + (f.stoneCount >= 15 ? 1 : 0); g.grass = (g.grass || 0) + f.houses.grass; g.wood = (g.wood || 0) + f.houses.wood; g.stone = (g.stone || 0) + f.houses.stone;
+      g.str = g.str || {}; g.str[f.strength] = (g.str[f.strength] || 0) + 1; },
+    groupReport(x, b) { return { spins: x.spins / x.n, grass: x.grass / x.n, wood: x.wood / x.n, stone: x.stone / x.n, stone15_rate: (100 * (x.stone15 || 0)) / x.n }; },
+  };
+  // FG 盤面 Ways（符號碼直接比對；WILD 替代；SC/BS/MY 不當起手符號）—— 給 house-collect FG 用
+  function evalWaysGrid(C, grid) {
+    let win = 0;
+    const WILD = C.WILD, SC = C.SC, BS = C.BS;
+    const bases = [];
+    for (let r = 0; r < 3; r++) { const s = grid[0][r]; if (s !== WILD && s !== SC && s !== BS && s >= 0 && C.pay[C.paySyms.indexOf(s)] && !bases.includes(s)) bases.push(s); }
+    for (const s of bases) {
+      const pi = C.paySyms.indexOf(s); if (pi < 0) continue;
+      let len = 0; const counts = [];
+      for (let c = 0; c < 5; c++) { let cnt = 0; for (let r = 0; r < 3; r++) { const v = grid[c][r]; if (v === s || v === WILD) cnt++; } if (!cnt) break; counts.push(cnt); len++; }
+      if (len < 3 || !C.pay[pi][len]) continue;
+      let ways = 1; for (let i = 0; i < len; i++) ways *= counts[i];
+      win += C.pay[pi][len] * ways;
+    }
+    return win;
+  }
+
   // ═════════ 情境搜尋：「強制」= 找出真的會出這個結果的 seed（不改結果）═════════
   function findSeed(C, pred, start, limit) {
     let s = (start >>> 0) || 1;
@@ -458,7 +645,7 @@
       A.forEach((ra, i) => ra.forEach((pa, j) => { if (pa) B.forEach((rb, k) => rb.forEach((pb, l) => { if (pb) out[i + k][j + l] += pa * pb; })); }));
       return out;
     };
-    const pairIds = C.trig.model === 'count' ? C.trig.ids : [C.trig.t, C.trig.d];
+    const pairIds = C.trig.model === 'count' ? C.trig.ids : (C.trig.model === 'house' ? [C.trig.sc, C.trig.bs] : [C.trig.t, C.trig.d]);
     const rsOut = []; let mgW = 0; const joint = {};
     for (const rs of C.reelsets) {
       let mg = 0;
@@ -493,7 +680,8 @@
         for (let i = 0; i < L; i++) { let a = 0, c = 0; for (let y = 0; y < C.ROWS; y++) { const v = st[(i + y) % L]; if (v === pairIds[0]) a++; else if (v === pairIds[1]) c++; } d2[a][c] += 1 / L; }
         D = conv2(D, d2);
       }
-      const pt = [0, 0, 0];
+      const nType = C.trig.model === 'house' ? C.trig.wheel.length + 1 : 3;
+      const pt = new Array(nType).fill(0);
       D.forEach((row, a) => row.forEach((p, c) => {
         if (!p) return;
         const k = a + ',' + c;
@@ -503,15 +691,24 @@
       rsOut.push({ idx: rs.idx, w: rs.w, mg_rtp: (100 * mg) / b, trig: 100 * sum(pt), trigs: pt.map((x) => 100 * x), spec_mg: rs.spec_total != null ? 100 * (rs.spec_total - rs.spec_fg) : null });
       mgW += (mg * rs.w) / W;
     }
-    const trigs = [0, 1, 2].map((i) => sum(rsOut.map((r) => (r.trigs[i] * r.w) / W)));
+    const nType = C.trig.model === 'house' ? C.trig.wheel.length + 1 : 3;
+    const trigs = Array.from({ length: nType }, (_, i) => sum(rsOut.map((r) => (r.trigs[i] * r.w) / W)));
     const base = { reelsets: rsOut, rtp_main: (100 * mgW) / b, fg_rate: sum(trigs), trigs };
     const fg = EXACT_FG[C.model](C, joint, base, opts);
-    return { ...base, ...fg, rtp_total: base.rtp_main + fg.rtp_free };
+    const mainRtp = fg.rtp_main != null ? fg.rtp_main : base.rtp_main;
+    return { ...base, ...fg, rtp_main: mainRtp, rtp_total: mainRtp + fg.rtp_free + (fg.rtp_bonus || 0) };
   }
-  // 觸發機率（給定盤面 (a,c) 顆數）→ [P(type0), P(type1), P(type2)]
+  // 觸發機率（給定盤面 (a,c) 顆數）→ [P(type0), P(type1), …]
   function trigProb(C, a, c) {
     const T = C.trig;
     if (T.model === 'count') return [a + c >= T.min ? 1 : 0, 0, 0];
+    if (T.model === 'house') {
+      // a=SC, c=BS。BS≥gate_bs → 大轉盤（依 wheel 權重分流 type 1..n）；否則 SC≥gate_sc → Free（type 0）
+      const out = new Array(T.wheel.length + 1).fill(0);
+      if (c >= T.gate_bs) { const tot = T.wheelT.total; T.wheel.forEach((w, i) => (out[i + 1] = w.w / tot)); }
+      else if (a >= T.gate_sc) out[0] = 1;
+      return out;
+    }
     const m = a + c, r = T.rate / 10000;
     if (m >= T.mixed) return [0, 0, 1];
     if (a >= T.gate) return [1, 0, 0];
@@ -571,6 +768,63 @@
       });
       const tr = base.fg_rate / 100;
       return { fg_avg: tr ? fgWin / tr / b : 0, rtp_free: (100 * fgWin) / b, groups: grp, bonusN: N };
+    },
+    // house-collect（吉屋出豬）：觸發率精算（trigProb 卷積），每變體平均贏分以「抽真的會觸發的盤面 → 跑整場 FG」估（固定 seed、附 95% CI）。
+    // 無解析解（框升級＋溢出路徑相依）；初始框與觸發盤面相關，故用整盤抽樣而非合成框。
+    'house-collect'(C, joint, base, opts) {
+      const N = opts.bonusN || 20000, b = C.bet, T = C.trig;
+      // 只保留「能觸發」的 reelset（strip 內含 SC 或 BS）→ 加速 rejection sampling
+      const hasTrig = (rs) => rs.reels.some((st) => { for (const v of st) if (v === T.sc || v === T.bs) return true; return false; });
+      const trigRS = C.reelsets.filter(hasTrig);
+      const trigRST = trigRS.length ? wtable(trigRS.map((r) => ({ r, w: r.w }))) : C.reelsetT;
+      const variants = C.G;                                            // ['Free','mansions','mega_hat','buzz_saw']
+      const acc = {}; variants.forEach((v) => (acc[v] = { s: 0, s2: 0, sp: 0, n: 0, g: 0, w: 0, st: 0, s15: 0 }));
+      const rng = createRng(0x7013);
+      const maxTries = N * 400;
+      let got = 0, tries = 0;
+      const want = N;
+      while (got < want * variants.length && tries < maxTries) {
+        tries++;
+        const rs = pick(rng, trigRST).r;
+        const grid = [];
+        for (let r = 0; r < C.R; r++) { const strip = rs.reels[r], L = strip.length, st = rng.int(L); const col = []; for (let y = 0; y < C.ROWS; y++) col.push(strip[(st + y) % L]); grid.push(col); }
+        let sc = 0, bs = 0; for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const v = grid[r][y]; if (v === T.sc) sc++; else if (v === T.bs) bs++; }
+        let variant = null;
+        if (bs >= T.gate_bs) variant = pick(rng, T.wheelT).variant;
+        else if (sc >= T.gate_sc) variant = 'Free';
+        if (!variant) continue;
+        const a = acc[variant]; if (a.n >= want) continue;
+        const f = MODELS['house-collect'].play(C, rng, { grid, trig: { type: 0, variant } }, false);
+        a.s += f.win; a.s2 += f.win * f.win; a.sp += f.spins; a.g += f.houses.grass; a.w += f.houses.wood; a.st += f.houses.stone; a.s15 += (f.stoneCount >= 15 ? 1 : 0); a.n++; got++;
+      }
+      // 觸發率：type 1..n = 變體（對應 wheel 順序），type 0 = Free
+      const rateOf = (variant) => {
+        if (variant === 'Free') return base.trigs[0];
+        const idx = T.wheel.findIndex((w) => w.variant === variant);
+        return idx >= 0 ? base.trigs[idx + 1] : 0;
+      };
+      const grp = {}; let fgWin = 0;
+      for (const v of variants) {
+        const a = acc[v]; const rate = rateOf(v) || 0;
+        if (!a.n) { grp[v] = { rate, n: 0, avg_win: 0, rtp: 0 }; continue; }
+        const m = a.s / a.n, sd = Math.sqrt(Math.max(a.s2 / a.n - m * m, 0));
+        grp[v] = { rate, n: a.n, avg_win: m / b, avg_ci: (1.96 * sd) / Math.sqrt(a.n) / b, spins: a.sp / a.n,
+          grass: a.g / a.n, wood: a.w / a.n, stone: a.st / a.n, stone15_rate: (100 * a.s15) / a.n, rtp: (rate * m) / b };
+        fgWin += (rate / 100) * m;
+      }
+      // §2 口徑：Free = 免費遊戲 RTP；三變體合計 = 大轉盤 RTP
+      const freeRtp = grp.Free ? grp.Free.rtp : 0;
+      const bonusRtp = variants.filter((v) => v !== 'Free').reduce((s, v) => s + (grp[v] ? grp[v].rtp : 0), 0);
+      const trFree = (grp.Free ? grp.Free.rate : 0) / 100;
+      // MG RTP：含神秘圖騰替換無解析解（MY 全盤替換相關），以抽樣估（固定 seed）覆蓋 base.rtp_main（純帶面低估）
+      let mgRtp = base.rtp_main;
+      if (C.mgMy) {
+        const mn = opts.mgN || 300000, mr = createRng(0x3a9f); let s = 0;
+        for (let i = 0; i < mn; i++) { const rr = spin(C, (i + 1) >>> 0, { rng: mr, mgOnly: true }); s += rr.mgWin; }
+        mgRtp = (100 * s) / mn / b;
+      }
+      return { fg_avg: trFree ? (grp.Free ? grp.Free.avg_win : 0) : 0, rtp_free: freeRtp, rtp_bonus: bonusRtp, rtp_main: mgRtp,
+        groups: grp, bonusN: N, sampled: got, tries, fg_total_rtp: freeRtp + bonusRtp };
     },
   };
 

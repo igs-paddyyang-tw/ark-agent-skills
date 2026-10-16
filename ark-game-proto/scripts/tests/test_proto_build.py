@@ -90,3 +90,46 @@ def test_recorded_go_parity_zero_mismatch(slug):
     for p in (GOLDEN / slug).glob("go-parity.*.json"):
         x = json.loads(p.read_text(encoding="utf-8"))
         assert x["mismatch"] == 0 and x["spins"] >= 200_000, p.name
+
+
+# ───────── three-pigs（house-collect；Python 引擎，無 Go 對照，雙觸發線）─────────
+# 註：three_pigs adapter 讀 data/slot/three-pigs 下的 configB.json 與 rtp-report.json（workspace-root 相對路徑），
+# 故這組測試需從 workspace root 執行（CWD）。no-Go：不跑 --go-config / go-parity。
+REPO_ROOT = SCRIPTS.parents[3]  # .kiro/skills/ark-game-proto/scripts → workspace root
+TP_MD = REPO_ROOT / "data" / "slot" / "three-pigs" / "prob" / "prob-spec.md"
+TP_CFGB = REPO_ROOT / "data" / "slot" / "three-pigs" / "quicktest" / "engine" / "configB.json"
+_tp_ready = TP_MD.exists() and TP_CFGB.exists()
+
+
+def _build_tp(out: pathlib.Path) -> dict:
+    args = [sys.executable, "-X", "utf8", str(SCRIPTS / "proto_build.py"), "--md", str(TP_MD),
+            "--adapter", "three_pigs", "--out", str(out), "--config-only"]
+    r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", cwd=str(REPO_ROOT))
+    assert r.stdout.strip(), r.stderr[-800:]
+    env = json.loads(r.stdout.strip().splitlines()[-1])
+    assert env["success"], env
+    return env["data"]
+
+
+@pytest.mark.skipif(not _tp_ready, reason="需要 data/slot/three-pigs 的 prob-spec.md 與 configB.json")
+def test_three_pigs_build(tmp_path):
+    d = _build_tp(tmp_path)
+    cfg = json.loads((tmp_path / "game-config.json").read_text(encoding="utf-8"))
+    assert cfg["schema"] == "slot-proto-config/1"
+    assert cfg["fg"]["model"] == "house-collect" and cfg["art"] == "three_pigs"
+    assert cfg["fg"]["trigger"]["model"] == "house"  # 雙觸發線
+    assert all({"id", "what", "spec", "assume", "check"} <= set(g) for g in cfg["gaps"])
+    assert d["gaps"] >= 6
+    # 房子三變體目標已從 rtp-report.json 併入
+    assert "bonus" in cfg["targets"] and "mega_hat" in cfg["targets"]["bonus"]
+    golden = json.loads((GOLDEN / "three-pigs" / "game-config.json").read_text(encoding="utf-8"))
+    for k in ("board", "paytable", "strips", "reelsets", "fg", "gaps"):
+        assert cfg[k] == golden[k], f"{k} 與 golden 不一致（改了 adapter 請重產 golden）"
+
+
+@pytest.mark.skipif(not (shutil.which("node") and _tp_ready), reason="需要 node 與 three-pigs 資料")
+def test_three_pigs_node_core():
+    """house-collect L1 精算對 §2（含房子守恆、三變體、總 RTP ±0.88pp）。"""
+    r = subprocess.run(["node", str(HERE / "core_test.js"), str(GOLDEN / "three-pigs" / "game-config.json")],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(REPO_ROOT))
+    assert r.returncode == 0, r.stdout[-1500:]

@@ -130,7 +130,55 @@
   TD.SC_D = tile('td', '#26a69a', '#00332c', `<text x="100" y="134" font-family="${FONT}" font-size="104" font-weight="900" text-anchor="middle" fill="#e0f2f1" stroke="#00221d" stroke-width="5">龍</text>`);
   TD.COIN = S.SC;
   TD.ARROW = wrap(`<circle cx="100" cy="100" r="84" fill="#1e63c8" stroke="#bfe0ff" stroke-width="6"/><path d="M60 100 L130 100 M110 74 L140 100 L110 126" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`);
-  const SETS = { milefo: S, tiger_dragon: TD };
+  // ───── 吉屋出豬 three-pigs 套（房子收集主題；程式產生 SVG 佔位，不仿原廠美術）─────
+  const TP = {};
+  const tpTile = (id, c1, c2, body, defs) => wrap(`<rect x="10" y="10" width="180" height="180" rx="28" fill="url(#${id})" stroke="url(#g${id})" stroke-width="7"/>${body}`,
+    `<radialGradient id="${id}" cx=".5" cy=".38" r=".75"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>` + goldGrad('g' + id) + (defs || ''));
+  // 三隻小豬（H1 粉 / H2 金 / H3 紅）：圓臉 + 豬鼻 + 耳朵
+  const pig = (id, c1, c2) => tpTile(id, c1, c2, `<ellipse cx="64" cy="70" rx="20" ry="24" fill="#ffc0cb" stroke="#9b5b63" stroke-width="3"/><ellipse cx="136" cy="70" rx="20" ry="24" fill="#ffc0cb" stroke="#9b5b63" stroke-width="3"/>
+    <circle cx="100" cy="108" r="56" fill="#ffd1dc" stroke="#9b5b63" stroke-width="4"/>
+    <ellipse cx="100" cy="118" rx="30" ry="22" fill="#ffb0c4" stroke="#9b5b63" stroke-width="3"/>
+    <ellipse cx="90" cy="118" rx="6" ry="9" fill="#6b2a35"/><ellipse cx="110" cy="118" rx="6" ry="9" fill="#6b2a35"/>
+    <circle cx="80" cy="94" r="6" fill="#2a1015"/><circle cx="120" cy="94" r="6" fill="#2a1015"/>`);
+  TP.H1 = pig('p1', '#d0507a', '#5c0b2b');
+  TP.H2 = pig('p2', '#e0a030', '#5a3a06');
+  TP.H3 = pig('p3', '#d0302a', '#5c0b0b');
+  // M1 磚屋 / M2 木屋（中獎圖騰）
+  TP.M1 = tpTile('m1', '#b85c3a', '#4a1e0e', `<path d="M100 50 L160 96 L140 96 L140 156 L60 156 L60 96 L40 96Z" fill="#c8745a" stroke="#4a1e0e" stroke-width="4"/>
+    <rect x="60" y="96" width="80" height="60" fill="none" stroke="#4a1e0e" stroke-width="2"/>
+    <path d="M60 110 H140 M60 124 H140 M60 138 H140 M86 96 V156 M114 96 V156" stroke="#8a4a30" stroke-width="2"/>
+    <rect x="88" y="128" width="24" height="28" fill="#5a2a16"/>`);
+  TP.M2 = tpTile('m2', '#8a6a3a', '#3a2a10', `<path d="M100 52 L158 98 L138 98 L138 156 L62 156 L62 98 L42 98Z" fill="#c9a05a" stroke="#3a2a10" stroke-width="4"/>
+    <path d="M62 98 H138 M62 118 H138 M62 138 H138" stroke="#6a4a1a" stroke-width="3"/>
+    <rect x="86" y="126" width="28" height="30" fill="#4a3012"/>`);
+  // L1-L6 低賠（撲克字牌，草屋色系）
+  TP.L1 = card('A', '#2e7d5b', '#0e3326'); TP.L2 = card('K', '#2b5aa8', '#0c1f45');
+  TP.L3 = card('Q', '#8e3b8e', '#2e0f33'); TP.L4 = card('J', '#9a5a12', '#331c03');
+  TP.L5 = card('10', '#3a7d7d', '#0e3030'); TP.L6 = card('9', '#7d3a5a', '#300e1f');
+  // WILD 百搭
+  TP.WILD = wrap(`<rect x="10" y="10" width="180" height="180" rx="28" fill="url(#tpjade)" stroke="url(#gtw)" stroke-width="8"/>
+    <text x="100" y="104" font-family="${FONT}" font-size="60" font-weight="900" text-anchor="middle" fill="url(#gtw)" stroke="#20402a" stroke-width="2">百搭</text>
+    <text x="100" y="154" font-family="Georgia,serif" font-size="34" font-weight="700" text-anchor="middle" fill="#fff6c8" letter-spacing="4">WILD</text>`,
+    goldGrad('gtw') + `<radialGradient id="tpjade" cx=".5" cy=".35" r=".8"><stop offset="0" stop-color="#9ff0c4"/><stop offset=".55" stop-color="#2fa36b"/><stop offset="1" stop-color="#0d4a2c"/></radialGradient>`);
+  // SC 房框 scatter（收集符號 = 房子地基 / 加分星）
+  TP.SC = wrap(`<circle cx="100" cy="100" r="84" fill="url(#gtsc)" stroke="#8a5a06" stroke-width="6"/>
+    <path d="M100 54 L116 90 L156 94 L126 120 L134 160 L100 138 L66 160 L74 120 L44 94 L84 90Z" fill="#fff3b0" stroke="#8a5a06" stroke-width="3"/>
+    <text x="100" y="112" font-family="${FONT}" font-size="30" font-weight="900" text-anchor="middle" fill="#8a5a06">框</text>`,
+    `<radialGradient id="gtsc" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#ffe9a0"/><stop offset="1" stop-color="#d08a1a"/></radialGradient>`);
+  // BS 大轉盤 bonus
+  TP.BS = wrap(`<circle cx="100" cy="100" r="84" fill="url(#gtbs)" stroke="#5a0b0b" stroke-width="6"/>
+    <g stroke="#fff" stroke-width="3" opacity=".8"><path d="M100 20 V100 M100 100 L156 44 M100 100 H180 M100 100 L156 156 M100 100 V180 M100 100 L44 156 M100 100 H20 M100 100 L44 44"/></g>
+    <circle cx="100" cy="100" r="20" fill="#ffd36b" stroke="#5a0b0b" stroke-width="3"/>
+    <text x="100" y="192" font-family="${FONT}" font-size="20" font-weight="900" text-anchor="middle" fill="#ffd36b">轉盤</text>`,
+    `<radialGradient id="gtbs" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#ff6b5b"/><stop offset="1" stop-color="#8a1010"/></radialGradient>`);
+  // MY1 / MY2 神秘圖騰
+  const myTile = (id, label, c1, c2) => wrap(`<rect x="10" y="10" width="180" height="180" rx="28" fill="url(#${id})" stroke="#f5d27a" stroke-width="7"/>
+    <text x="100" y="128" font-family="${FONT}" font-size="92" font-weight="900" text-anchor="middle" fill="#fff" stroke="#2a1a05" stroke-width="3">${label}</text>`,
+    `<radialGradient id="${id}" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>`);
+  TP.MY1 = myTile('my1', '?', '#6b3f8f', '#1f0b33');
+  TP.MY2 = myTile('my2', '?', '#1f6f8b', '#06232e');
+
+  const SETS = { milefo: S, tiger_dragon: TD, three_pigs: TP };
 
   // 背景（廟宇紅金 + 雲紋）
   function background(w, h) {

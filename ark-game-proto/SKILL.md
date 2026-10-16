@@ -5,18 +5,20 @@ description: |
   deterministic：① proto_build 把 prob-spec.md（ark-game-prob 1.4+ 格式）經玩法 adapter 編成 game-config.json（每個參數帶表編號來源、規格缺口 gaps、§2 驗證目標）；
   ② 產單檔 index.html：PixiJS 轉輪 / 連線 / FG 或 Bonus 演出 + 驗證台（L1 精算對 §2、L2 Web Worker 蒙地卡羅、規格缺口回驗、Go 對照、單局抽表軌跡、seed 重現、情境搜尋）；
   ③ --go-config 規格書 ⇄ Go 快測設定檔逐鍵對照並補規格書缺的值；④ go_parity 以 Go math/rand 逐位元移植與 Go 快測引擎同 seed 逐局對照。
-  內建兩種玩法模型：collect-mult（彌勒佛：基底 + 加分物件 × 乘倍物件）、coin-lock（金幣鎖格 → 相鄰成組 → 翻值連讀、解鎖列、JACKPOT）。
+  內建玩法模型：collect-mult（彌勒佛）、coin-lock（金幣鎖格、JACKPOT）。
+  1.1 起附「正式演出版型」Stage（scripts/stage）：Proto 遊戲包 game.js（數學零修改）→ PixiJS 8 演出 + Pixi HUD，結果只經 GameService 取得
+  （Local 瀏覽器內引擎 / Http 經 slot-bot 接 Go 機率 Server / Replay 重播），SpinResult JSON Schema、整數金額。
   使用此 skill 當提及：機率雛型、slot 雛型、H5 雛型、PixiJS slot、演出驗證機率、規格書做成可玩版本、試玩機率、
-  規格缺口、規格書對 Go 引擎、逐局對照、seed 重現、FG 演出、Bonus 演出、驗證台。
+  規格缺口、規格書對 Go 引擎、逐局對照、seed 重現、FG 演出、Bonus 演出、驗證台、正式演出版型、Stage、試玩改 PixiJS、GameService、SpinResult、接 Go Server。
   不適用於：寫機率規格書本身（→ ark-game-prob）、跑 Go 快測 / 三向 verdict（→ ark-game-quicktest）、正式上線前端或美術、
-  一般網頁 / dashboard（→ ark-html-dashboard）。
+  一般網頁 / dashboard（→ ark-html-dashboard）；Stage 不含帳務 / session（slot-bot server 負責）。
 metadata:
   schema_version: "1.1"
   status: active
   author: paddyyang
   category: executor
-  version: "1.0.0"
-  updated: 2026-10-15
+  version: "1.1.0"
+  updated: 2026-10-16
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }
@@ -58,6 +60,9 @@ metadata:
 | `references/adapter-guide.md` | 寫 adapter / 加玩法模型 / 加 Go trace 的步驟與檢查表 | 新遊戲 |
 | `references/go-parity.md` | 逐局對照原理（RNG 移植、抽值順序、封頂語意）與排錯 | 對照出差異時 |
 | `assets/slot-proto-arch.svg` | 架構圖 | 文件 / 簡報 |
+| `scripts/stage/` | **Stage 正式演出版型（1.1）**：`runtime/`（core / service / slot / features，載入順序見 `runtime/manifest.json`）、`schema/spin-result.schema.json`、`stage_build.py`（資料夾 / `--single` 單檔 / `--serve`）、`tests/`（stage_test.js、test_stage_build.py、mock_server.js、smoke.js）| 做正式演出、遷移 Proto 試玩、接 Server；先讀 `references/stage-architecture.md` |
+| `references/stage-architecture.md`、`stage-game-pack.md`、`stage-api.md` | Stage 分層與檔案、遊戲包契約與遷移指南、slot-bot HTTP 契約 | 對應工作 |
+| `golden/stage-demo/game.js` | Stage 無版權示範遊戲包（Ways + 鎖格重轉、佔位美術）| Stage 回歸基準 |
 | `golden/milefo/`、`golden/tiger-and-dragon/` | 兩種模型的輸入 md、Go 設定檔、parity 記錄、期望 config | 回歸測試基準 |
 
 ## 決策樹
@@ -74,6 +79,18 @@ metadata:
 └─ 舊 md（無 ```strip）→ 先 ark-game-prob ps_run 重產
 ```
 
+### Stage（正式演出版型）
+
+```
+手上有 Proto 試玩模板的 game.js（或新遊戲照 stage-game-pack.md 寫）
+├─ 遷移：複製 game.js → 數學段不動、演出段改 Pixi（features[type].Stage、presentation.stage）
+├─ data/slot/<slug>/game/pixi-client/{game.js, stage.yaml} → python scripts/stage/stage_build.py --slug <slug> [--folder | --serve]
+│   → output/slot/<slug>/game/pixi-client/single/index.html（單檔）＋ data/.../stage-build.json 清冊（佈局契約 v3 ⑦；任意路徑用 --game --out）
+│   └─ 開 index.html：?seed= 重現、?rng=go 用 Go Float64 流；除錯「強制」分頁 = 搜尋真 seed；「服務」分頁錄製 / 重播軌跡
+├─ 驗：node scripts/stage/tests/stage_test.js --game <新> --orig <原>（結果一致 / 契約 / 分層 / Http）；smoke.js 截圖 0 error
+└─ 接 Server：node scripts/stage/tests/mock_server.js --game <game.js> → ?service=http&base=…&game=…&dev=1；契約 references/stage-api.md
+```
+
 ## 守門
 
 | 規則 | 條件 | 嚴重度 |
@@ -85,11 +102,25 @@ metadata:
 | 逐局對照 | mismatch > 0 | exit 1 |
 | 演出不改結果 | 同 seed present / 非 present 結果必一致（core_test）| 測試失敗 |
 
+| Stage 結果一致 | LocalService 與 Proto Logic 同 seed 10 萬局 total 倍數差 ≠ 0 | stage_test 失敗 |
+| Stage 契約 | SpinResult 不過 Schema（含浮點金額、帳不平）| 不播放、不改餘額 |
+| Stage 分層 | 演出層呼叫 slotLogic 抽值函式或 Math.random | stage_test 失敗 |
+| Stage 單檔 | `--single` 超過 `--budget-mb`（預設 15）| exit 3 |
+
 ## 邊界
 
 - **規格書是唯一來源**：Go 設定檔只用來對照、以及補規格書缺的值（標來源 + 記 gap），不覆蓋規格書已有的值。
 - **結果先決、演出後演**：`spin()` 一次算完；演出只讀 SpinResult；「強制情境」= 搜尋真實 seed，不存在改結果的後門。
 - **數學 RNG 與演出 RNG 分流**：假轉分數、聽牌、出場順序、復活這類演出抽選不吃數學流。
 - **抽值順序 = Go 引擎順序**：改順序會破壞逐局對照；新模型照 Go 程式的呼叫順序寫。
-- **不是正式前端**：美術是程式產生的 SVG 佔位圖、無音效、無帳務；不仿任何原廠美術 / 商標。
+- **驗證台不是正式前端**：美術是程式產生的 SVG 佔位圖、無音效、無帳務；不仿任何原廠美術 / 商標。
+- **Stage 是正式演出版型，但不含帳務 / session**：餘額只顯示 GameService 回傳值（Http 模式由 slot-bot server 權威）；美術來自遊戲包素材，競品裁圖只供內部參考、不入 skill 與 data。
+- **Stage 數學零修改**：遊戲包的 `CFG` 與玩法 logic 與來源逐字相同，演出層零抽值；兩者由 `stage_test.js` 的 parity-src 與 layering 兩項檢查把關。
 - **不做 Go 快測**：L2 約 1M 手/秒，千萬手級驗收仍走 ark-game-quicktest。
+
+## 版本
+
+| 版本 | 日期 | 內容 |
+|---|---|---|
+| 1.1.0 | 2026-10-16 | 新增 Stage 正式演出版型（`scripts/stage/`）：PixiJS 8 演出 + Pixi HUD、GameService（Local / Http / Replay / Recorder）、SpinResult Schema `proto-stage-result/1`、`stage_build.py --slug`（佈局契約 v3 ⑦ `game/pixi-client`）、mock slot-bot server、go-rand Float64 數學流；golden `stage-demo`；試點 Huff N' Puff Open House |
+| 1.0.0 | 2026-10-15 | 驗證雛型 skill 化：proto_build、collect-mult / coin-lock、go_parity 逐局對照 |

@@ -1,0 +1,140 @@
+/* [ark-game-proto stage] 核心樣式：沿用 Proto 試玩模板 核心/style.css 與 slot.css 的 INFO 區塊 */
+/* ============================================================
+   核心樣式：版面、工具列、舞台、除錯面板、佔位畫面、動畫
+   ============================================================ */
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: #0d0d10; color: #e8e8ea; overflow: hidden;
+  font-family: "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", sans-serif; }
+button, select, input { font: inherit; }
+
+.proto-app { display: flex; flex-direction: column; height: 100%; }
+.proto-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: #19191e;
+  border-bottom: 1px solid #2c2c33; flex-wrap: wrap; font-size: 13px; }
+.proto-toolbar button, .proto-toolbar select, .proto-debug button, .proto-debug select {
+  background: #26262d; color: #e8e8ea; border: 1px solid #3a3a44; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.proto-toolbar button:hover, .proto-debug button:hover { background: #32323b; }
+.proto-toolbar button.on, .proto-debug button.on { background: #b3261e; border-color: #d33; }
+.proto-title { font-weight: bold; margin-right: 8px; }
+.proto-spacer { flex: 1; }
+
+.proto-main { flex: 1; display: flex; min-height: 0; }
+/* 畫面外圍比畫面本身再暗一點，加上外框和陰影，一眼就看得出遊戲畫面到哪裡 */
+.proto-stage-wrap { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; min-width: 0;
+  background: #060608; padding: 10px; box-sizing: border-box; }
+.proto-stage-frame { position: relative; overflow: hidden; border-radius: 4px;
+  box-shadow: 0 0 0 2px #5a5a68, 0 0 0 5px #17171c, 0 10px 28px rgba(0,0,0,.8); }
+.proto-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; user-select: none; }
+.proto-shaker { position: absolute; inset: 0; }
+.proto-shaker.proto-shaking { animation: proto-shake 0.08s infinite; }
+@keyframes proto-shake {
+  0% { transform: translate(0, 0); } 25% { transform: translate(var(--proto-shake), calc(var(--proto-shake) * -0.5)); }
+  50% { transform: translate(calc(var(--proto-shake) * -1), var(--proto-shake)); } 75% { transform: translate(calc(var(--proto-shake) * 0.5), 0); }
+  100% { transform: translate(0, 0); }
+}
+.proto-layer { position: absolute; inset: 0; pointer-events: none; }
+.proto-layer-ui, .proto-layer-overlay { pointer-events: none; }
+.proto-layer * { pointer-events: none; }
+.proto-layer .proto-clickable, .proto-layer .proto-clickable * { pointer-events: auto; }
+
+.proto-text { white-space: nowrap; font-weight: 900; paint-order: stroke fill; line-height: 1.1; text-align: center; }
+.proto-flash { position: absolute; inset: 0; opacity: 1; }
+/* 背景循環影片（stage.setBgVideo） */
+.proto-bgvideo { pointer-events: none; }
+
+/* 缺檔時的佔位畫面 */
+.proto-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+  border: 3px dashed rgba(255, 255, 255, 0.55); background: repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 14px, rgba(255,255,255,.12) 14px 28px);
+  color: #fff; font-size: 26px; font-weight: bold; text-shadow: 0 2px 4px #000; text-align: center; }
+.proto-ph small { font-size: 18px; font-weight: normal; opacity: 0.85; }
+.proto-ph-video { background: repeating-linear-gradient(45deg, rgba(80,120,255,.18) 0 18px, rgba(80,120,255,.3) 18px 36px); }
+
+/* 進場動畫 */
+.proto-anim-pop { animation: proto-pop var(--proto-anim-dur, .35s) cubic-bezier(.2, 1.6, .4, 1) both; }
+.proto-anim-zoom { animation: proto-zoom var(--proto-anim-dur, .35s) ease-out both; }
+.proto-anim-slideLeft { animation: proto-slide-left var(--proto-anim-dur, .35s) ease-out both; }
+.proto-anim-slideRight { animation: proto-slide-right var(--proto-anim-dur, .35s) ease-out both; }
+.proto-anim-slideTop { animation: proto-slide-top var(--proto-anim-dur, .35s) ease-out both; }
+.proto-anim-slideBottom { animation: proto-slide-bottom var(--proto-anim-dur, .35s) ease-out both; }
+.proto-anim-blink { animation: proto-blink var(--proto-anim-dur, .35s) steps(2) infinite; }
+@keyframes proto-pop { from { transform: var(--proto-base) scale(0.2); opacity: 0; } to { transform: var(--proto-base) scale(1); opacity: 1; } }
+@keyframes proto-zoom { from { transform: var(--proto-base) scale(2.5); opacity: 0; } to { transform: var(--proto-base) scale(1); opacity: 1; } }
+@keyframes proto-slide-left { from { transform: var(--proto-base) translateX(-120vw); } to { transform: var(--proto-base) translateX(0); } }
+@keyframes proto-slide-right { from { transform: var(--proto-base) translateX(120vw); } to { transform: var(--proto-base) translateX(0); } }
+@keyframes proto-slide-top { from { transform: var(--proto-base) translateY(-120vh); } to { transform: var(--proto-base) translateY(0); } }
+@keyframes proto-slide-bottom { from { transform: var(--proto-base) translateY(120vh); } to { transform: var(--proto-base) translateY(0); } }
+@keyframes proto-blink { 50% { opacity: 0; } }
+
+/* 載入／開始畫面 */
+.proto-overlay { position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; background: rgba(8, 8, 12, 0.92); }
+.proto-overlay-title { font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+.proto-overlay-note { font-size: 14px; color: #aaa; max-width: 70%; text-align: center; line-height: 1.6; }
+.proto-progress { width: 50%; height: 8px; background: #2a2a30; border-radius: 4px; overflow: hidden; }
+.proto-progress div { height: 100%; width: 0; background: #d33; transition: width .1s; }
+.proto-start { font-size: 20px; padding: 10px 40px; border: 0; border-radius: 8px; background: #c62828; color: #fff; cursor: pointer; }
+
+/* 除錯面板 */
+.proto-debug { width: 440px; max-width: 45vw; display: flex; flex-direction: column; background: #141418; border-left: 1px solid #2c2c33; font-size: 13px; }
+.proto-tabbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid #2c2c33; }
+.proto-tabbody { flex: 1; overflow: auto; padding: 8px 10px 40px; }
+.proto-tabbody h3 { font-size: 14px; margin: 14px 0 6px; color: #ffb74d; }
+.proto-note { color: #9a9aa5; margin: 6px 0; line-height: 1.5; }
+.proto-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.proto-row label { display: flex; align-items: center; gap: 4px; }
+.proto-debug input[type=number], .proto-debug input[type=text] { background: #1e1e24; color: #eee; border: 1px solid #3a3a44; border-radius: 4px; padding: 3px 6px; }
+.proto-table { border-collapse: collapse; width: 100%; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.proto-table th, .proto-table td { border-bottom: 1px solid #26262d; padding: 3px 6px; text-align: left; vertical-align: top; }
+.proto-table th { color: #9a9aa5; font-weight: normal; position: sticky; top: 0; background: #141418; }
+.proto-good { color: #81c784; }
+.proto-bad { color: #e57373; }
+
+/* 遊戲控制列（工具列下方，遊戲畫面外） */
+.proto-gamebar { display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: #141419; border-bottom: 1px solid #2c2c33;
+  flex-wrap: wrap; font-size: 13px; }
+.proto-gamebar button { background: #26262d; color: #e8e8ea; border: 1px solid #3a3a44; border-radius: 6px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+.proto-gamebar button:hover { background: #32323b; }
+.proto-gamebar button.on { background: #6d4c00; border-color: #ffd740; color: #ffe57f; }
+.proto-gamebar .proto-gamebar-sep { width: 1px; align-self: stretch; background: #34343c; margin: 0 4px; }
+/* 狀態列：遊戲畫面外的數字資訊 */
+.proto-statusbar { display: flex; align-items: center; gap: 18px; padding: 4px 12px; background: #101014; border-bottom: 1px solid #2c2c33;
+  font-size: 13px; color: #b9b9c2; flex: 0 0 auto; flex-wrap: wrap; }
+
+/* --- 來自 slot.css：INFO --- */
+.sl-info { --ip2: #2a2019; --il: #3d2f24; --ig: #e9b949; --ig2: #ffdf8a; --it: #f2e8dc; --im: #a8998a;
+  background: #14100d; color: var(--it); display: flex; flex-direction: column; line-height: 1.6;
+  font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif; opacity: 0; transition: opacity .25s; }
+.sl-info.on { opacity: 1; }
+.sl-info.on, .sl-info.on * { pointer-events: auto; }
+.sl-info:not(.on), .sl-info:not(.on) * { pointer-events: none !important; }
+.sl-info .if-head { display: flex; align-items: center; justify-content: space-between; padding: .7em .8em .45em; border-bottom: 2px solid var(--il);
+  color: var(--ig2); font-size: 1.3em; font-weight: bold; }
+.sl-info .if-x { background: none; border: 0; color: var(--ig2); font-size: 1.1em; cursor: pointer; }
+.sl-info .if-langs { display: flex; flex-wrap: wrap; gap: .3em; padding: .45em .8em; border-bottom: 2px solid var(--il); }
+.sl-info .if-langs button { background: var(--ip2); color: var(--im); border: 2px solid var(--il); border-radius: 999px; padding: .1em .7em; font-size: .8em; cursor: pointer; }
+.sl-info .if-langs button.on { color: #1a120c; background: var(--ig); border-color: var(--ig); font-weight: bold; }
+.sl-info .if-body { flex: 1; overflow-y: auto; padding: .4em 1em 2em; }
+.sl-info h4 { color: var(--ig2); font-size: 1.15em; margin: 1.2em 0 .4em; padding-bottom: .2em; border-bottom: 2px solid var(--il); text-align: center; }
+.sl-info h5 { color: var(--ig); font-size: 1em; margin: .9em 0 .3em; }
+.sl-info p { margin: .3em 0; }
+.sl-info img.inl { height: 2.6em; vertical-align: middle; margin: .1em .15em; }
+.sl-info .inl-ph { color: var(--ig); font-weight: bold; }
+.sl-info .if-odds { display: grid; grid-template-columns: repeat(2, 1fr); gap: .4em .6em; margin: .4em 0; }
+.sl-info .if-oc { display: flex; align-items: center; gap: .4em; background: var(--ip2); border: 2px solid var(--il); border-radius: .4em; padding: .3em .4em; }
+.sl-info .if-oc img, .sl-info .if-ph { width: 3.2em; height: 3.2em; object-fit: contain; flex: 0 0 auto; }
+.sl-info .if-ph { display: flex; align-items: center; justify-content: center; background: #3a2c22; border-radius: .3em; font-size: .7em; }
+.sl-info .if-ol { font-size: .85em; line-height: 1.35; }
+.sl-info .if-ol i { color: var(--ig); font-style: normal; display: inline-block; width: 1.4em; }
+.sl-info .if-slots { display: flex; gap: .5em; margin: .5em 0; }
+.sl-info .if-slot { flex: 1; margin: 0; text-align: center; }
+.sl-info .if-slot img, .sl-info .if-slot .ph { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .3em; border: 2px solid var(--il); }
+.sl-info .if-slot .ph { display: flex; align-items: center; justify-content: center; color: var(--im); background: repeating-linear-gradient(45deg, #221a14 0 12px, #2a2019 12px 24px); }
+.sl-info figcaption { font-size: .7em; color: var(--im); }
+
+/* ============ [ark-game-proto stage] 追加 ============ */
+.proto-stage-frame canvas { display: block; }
+.proto-stage-dom .sl-info.on, .proto-stage-dom .sl-info.on * { pointer-events: auto; }
+.proto-stage-dom .stage-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+  background: rgba(8,8,12,.92); color: #eee; font-size: 34px; line-height: 1.6; padding: 80px; box-sizing: border-box; pointer-events: auto; white-space: pre-wrap; }
+.proto-stage-dom .stage-busy { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); background: rgba(0,0,0,.7); color: #fff;
+  font-size: 40px; padding: 18px 40px; border-radius: 20px; }
+.stage-perf { font: 12px/1.4 monospace; color: #9fd; }
