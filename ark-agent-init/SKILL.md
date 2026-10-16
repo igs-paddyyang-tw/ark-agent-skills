@@ -21,27 +21,31 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.2.0"
-  updated: 2026-10-08
+  version: "2.3.0"
+  updated: 2026-10-16
 ---
 
 # ark-agent-init
 
 根據角色產出完整 agent workspace 配置（`.kiro/` + 多 CLI 入口檔）。
 
-## 🎯 核心目標：打造「個人化成長三引擎」
+## 🎯 核心目標：打造「個人化成長五層」
 
-本 skill 的產物不只是一堆設定檔 —— 它在為每個 agent **裝上三個引擎**，讓 agent 既「個人化」又「會成長」。這是本 skill 一切輸出的設計意圖，實戰設定細節見下方與 `references/`。
+本 skill 的產物不只是一堆設定檔 —— 它在為每個 agent **裝上五層能力**（v2.3.0 起由三引擎擴充；權威定義與目錄對照見 `references/five-layer-architecture.md`），讓 agent 既「個人化」又「會成長」。這是本 skill 一切輸出的設計意圖，實戰設定細節見下方與 `references/`。
 
-| 引擎 | 落點 | 作用 | 本 skill 怎麼配 |
+| 層 | 落點 | 作用 | 本 skill 怎麼配 |
 |------|------|------|----------------|
 | 🧠 **大腦 BRAIN** | `.kiro/steering/`（`SOUL` 人格 · `BRAIN` 判準 · `AGENTS` 規範 · `CODE` · `USER` 畫像），always-on 常駐注入 | **個人化的根** —— 換一組 steering = 換一個 agent（決定它是誰、怎麼判斷、紅線在哪） | 依角色選模板渲染 SOUL；`--profile` 讓根目錄 manager 由指定角色渲染（§--profile） |
 | 📝 **記憶 Memory** | `memory/`（四層：`BRAIN.md` 判準 → `MEMORY.md` 導覽 → `memory.md` 蒸餾 → `daily/`+`archive/` 流水） | **成長的時間軸** —— 記得經歷過什麼、踩過什麼坑 | 產 `memory/daily`+`archive` 骨架與 `memory.md` 四分節；蒸餾走 `memory-distill` 排程（見 `references/memory-architecture.md`，門檻 ark_team_agent ≥ 1.11.0） |
 | 📚 **知識 Knowledge** | `knowledge/`（`raw` → ingest → `wiki` 四層搜尋；五類來源櫃） | **成長的能力庫** —— 查得到領域知識，問一次之後都在 | 依 `team.yaml` `knowledge_sources` 產五櫃骨架 + 自動補 `knowledge_search_order`（見 `references/knowledge-sources-map.md`） |
+| 🖐️ **技能 Skill** | `.kiro/skills/<name>/`（上游 ark-agent-skills 複本）+ 套件內建 | **手腳** —— 跨專案共用的基本必要能力（怎麼做一件標準的事） | 依 `role-skills-map.md` 複製子集；更新走 `sync_skills`／`ark-skills-align` `mirror_sync`；修改只能提案回上游 |
+| 🔌 **腳本 Script** | `scripts/`、bot 的根 `skills/` 業務模組、`mcp.json` 外部工具 | **外接工具** —— 綁本專案資料／主機／帳號的附屬客製能力 | 產 `scripts/` 骨架；被第二個專案需要 → 去寫死值後升格成技能回貢 |
 
-> **一句話**：大腦給 agent「個性」、記憶給它「經歷」、知識庫給它「專業」。三者齊備，才是一個能交到某個團隊手上、越用越像自己人的 agent。這也是 `assets/steering/BRAIN.md`「三層資源」準則的上層視角 —— BRAIN 範本管「agent 執行時怎麼用這三種資源」，本段管「建置時怎麼把三引擎裝起來」。
+> **一句話**：大腦給 agent「個性」、記憶給它「經歷」、知識庫給它「專業」、技能給它「手腳」、腳本給它「外接工具」。這也是 `assets/steering/BRAIN.md`「五層資源」準則的上層視角 —— BRAIN 範本管「agent 執行時怎麼用這五層」，本段管「建置時怎麼把它們裝起來」。
+>
+> **技能 vs 腳本**：換一個專案還用得上 → 技能；綁本專案資料、主機、帳號 → 腳本。skill 目錄底下的 `scripts/` 屬技能層。
 
-> 🟡 **已知對齊缺口（v2.2.0）**：三引擎中 🧠 **大腦的 `BRAIN.md` 判準層目前不由 `build_kiro.py` 自動產出**（grep 零命中），現行 workspace 的 `BRAIN.md` 多為手動補入。`assets/steering/BRAIN.md` 範本已就緒，待後續版本讓 `build_kiro.py` 一併產出（屬 code change，需測不破壞既有 workspace）。新建 workspace 時請留意手動補 `BRAIN.md`。
+> 🟡 **已知對齊缺口（v2.3.0 仍在）**：🧠 **大腦的 `BRAIN.md` 判準層目前不由 `build_kiro.py` 自動產出**（grep 零命中），現行 workspace 的 `BRAIN.md` 多為手動補入。`assets/steering/BRAIN.md` 範本已就緒，待後續版本讓 `build_kiro.py` 一併產出（屬 code change，需測不破壞既有 workspace）。新建 workspace 時請留意手動補 `BRAIN.md`，並把範本的「本 Agent 附註」「品質護欄」換成該角色自己的內容（實例：nana-bot 曾直接複製範本，帶著 leader-agent 私有路徑上線）。
 
 > **更名紀錄**：本 skill 原名 `ark-kiro-init`（v1.x），於 v2.0（2026-09-07）
 > 更名為 `ark-agent-init` —— 因為它產出的不只是 Kiro 的 `.kiro/`，
@@ -807,7 +811,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 | 檔案 | 說明 |
 |------|------|
-| `BRAIN.md` | 記憶與資源使用準則（三層資源分工 + 四層記憶摘要，標 AGENTS.md 為單一權威；inclusion: always） |
+| `BRAIN.md` | 記憶與資源使用準則（五層資源分工 + 技能／腳本分界 + 四層記憶摘要，標 AGENTS.md 為單一權威；inclusion: always） |
 | `CODE.md` | Kiro CLI 行為指南（程式碼規範，fileMatch: *.py） |
 | `MEMORY-template.md` | 記憶**導覽**骨架（記憶住在哪 + 快照 + 里程碑索引 + 待辦；build_kiro 產 MEMORY.md 用它） |
 | `SOUL-root.md` | 根目錄／預設角色：通用 AI 助手 |
@@ -842,6 +846,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 | `weknora-checklist.md` | 🆕 **L5 weknora 接入 checklist**（.env 變數 / agent-chat / 不進 search_order；B5）|
 | `prompt-schema-v1.md` | 🆕 提詞資產 frontmatter 契約（prompts/ 的 ops/work 雙層 + 範例段 + 模板變數）|
 | `defaults/README.md` | 預設角色說明 |
+| `five-layer-architecture.md` | 🆕 **五層架構**（大腦／記憶／知識庫／技能／腳本）定義、技能 vs 腳本分界與升格規則、team／bot 標準目錄對照、檢核清單 |
 | `memory-architecture.md` | 🧠 **記憶架構四層分工**（ark_team_agent ≥ 1.11.0 定版）：新建規範 + 既有部署遷移 SOP（先接 memory-distill 再瘦身 MEMORY.md）+ 驗證 + 風險 —— 改記憶相關範本前必讀 |
 | `architecture-drift-feedback.md` | 🔴 **模板 vs 演化實例的三項缺口回饋**（knowledge/shared 層、memory/ 目錄、artifacts/）—— 維護本 skill 前必讀 |
 

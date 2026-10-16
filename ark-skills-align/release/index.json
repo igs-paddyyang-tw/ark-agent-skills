@@ -758,5 +758,20 @@
     "skill": "ark-weknora-cli",
     "version": "1.0.1",
     "release": "skills-2026.10-r1"
+  },
+  "sha256:625e347b716933e7e98bcfd0d2232a4604e6c61129841efa5744b46ffbbf6239": {
+    "skill": "ark-agent-init",
+    "version": "2.3.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:8100bd42c27a04f84ec498144d0e3d0afbb17f412edb91fdb237060bd7894f38": {
+    "skill": "ark-skills-align",
+    "version": "2.2.0",
+    "release": "skills-2026.10-r1"
+  },
+  "sha256:b3d542e49121c0c40cad61d00c8f8cba6eaebd60f2e285e1fca5e771f196e4d9": {
+    "skill": "ark-superpowers",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r1"
   }
 }
