@@ -52,7 +52,7 @@ items:
     name: free_spin_bonus_multiplier
     order: 160
     prompt: prompts/S06.md
-    kb_tags: [free-spin, bonus, multiplier, respin, hold-win, pick-bonus, jackpot, buy-feature]
+    kb_tags: [free-spin, bonus, multiplier, respin, hold-win, pick-bonus, jackpot, buy-feature, collect, stage-feature]
     claims:
       - {key: free_spin.present, type: bool}
       - {key: free_spin.count_awarded, type: int}
@@ -61,4 +61,28 @@ items:
       - {key: bonus.types_observed, type: list}
       - {key: bonus.buy_feature, type: bool}
       - {key: jackpot.present, type: bool}
+      - {key: hold_spin.present, type: bool}
+      - {key: hold_spin.variants, type: list}
+      - {key: hold_spin.trigger, type: string}
+      - {key: hold_spin.initial_frames, type: int}
+      - {key: hold_spin.respins, type: int}
+      - {key: hold_spin.respin_reset, type: bool}
+      - {key: hold_spin.frame_add_rule, type: string}
+      - {key: hold_spin.max_frames, type: int}
+      - {key: hold_spin.prize_rule, type: string}
+      - {key: stage_feature.present, type: bool}
+      - {key: stage_feature.trigger, type: string}
+      - {key: stage_feature.trigger_count, type: int}
+      - {key: stage_feature.stages, type: list}
+      - {key: stage_feature.spins_per_stage, type: int}
+      - {key: stage_feature.collect_symbol, type: string}
+      - {key: stage_feature.collect_targets, type: list}
+      - {key: stage_feature.carry_over_rule, type: string}
+      - {key: stage_feature.upgrade_rule, type: string}
+      - {key: stage_feature.final_stage_repeat, type: bool}
+      - {key: jackpot.tiers, type: list}
+      - {key: jackpot.tier_count, type: int}
+      - {key: jackpot.progressive_tiers, type: list}
+      - {key: jackpot.fixed_values, type: list}
+      - {key: jackpot.award_mechanism, type: string}
     entity: {type: feature, fields: [id, trigger, reward, exit]}

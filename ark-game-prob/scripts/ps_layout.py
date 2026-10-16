@@ -68,12 +68,13 @@ def check(game: pathlib.Path, mode: str) -> dict:
     slug = game.name
     prob, qt, spec, docs = game / "prob", game / "quicktest", game / "spec", game / "docs"
     analysis, server = game / "analysis", game / "server"
+    gamedir, proto = game / "game", game / "proto"   # 佈局契約 v3：⑥ proto/、⑦ game/{go-server,pixi-client}
 
     # L-DIRS（analysis/①、server/⑥、docs/ 為選配，認識但不強制）
     for d, need in ((prob, True), (qt, True), (spec, mode == "design")):
         if not d.is_dir():
             add("L-DIRS", rel(d), f"缺 {d.name}/", "error" if need else "warning")
-    facts["dirs"] = {d.name: d.is_dir() for d in (prob, qt, spec, analysis, server, docs)}
+    facts["dirs"] = {d.name: d.is_dir() for d in (prob, qt, spec, analysis, proto, gamedir, server, docs)}
     # L-STRAY
     for stray in sorted(game.glob("data/prob/*")) + sorted(game.glob("data/quicktest/*")):
         if stray.is_dir():
@@ -219,7 +220,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
     facts["size"] = {"max_file": max_file[0], "max_bytes": max_file[1], "exe_count": exe_count, "config_versions": len(cfg_jsons)}
 
     # L-SERVER（⑥ 交付守門：server/handoff.md 的來源 sha 必須與現檔一致；只對帳不改 server code）
-    handoff = server / "handoff.md"
+    handoff = gamedir / "handoff.md" if (gamedir / "handoff.md").is_file() else server / "handoff.md"
     if handoff.is_file():
         htxt = handoff.read_text(encoding="utf-8", errors="replace")
         srv_facts: dict = {"handoff": True}
@@ -229,7 +230,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
             declared = fm_get(htxt, key)
             srv_facts[key] = {"declared": declared, "actual": want}
             if declared and want and declared != want:
-                add("L-SERVER", "server/handoff.md", f"{key} 宣告 {declared} ≠ 現檔 {want}：交付件來源已變，重出 handoff")
+                add("L-SERVER", rel(handoff), f"{key} 宣告 {declared} ≠ 現檔 {want}：交付件來源已變，重出 handoff")
         facts["server"] = srv_facts
 
     # L-RTP

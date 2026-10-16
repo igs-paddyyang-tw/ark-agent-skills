@@ -18,8 +18,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.4.0"
-  updated: 2026-10-13
+  version: "2.5.0"
+  updated: 2026-10-16
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -64,6 +64,7 @@ metadata:
 | `scripts/pack/` | `pack_resolve.py`（`--list` / `--domain`）、`pack_lint.py`（`--all`）、`pack_new.py` | 新增 / 修改 domain pack |
 | `_lib/` | `run_common.py`（envelope / run / manifest / pack 載入 / evidence / spec parser / atlas / ffmpeg；四份舊 common 的超集）、`pack_common.py`、`llm_adapter.py`、`guard.py`（注入 regex 唯一一份）、`md_render.py`（content-src 戳記）| 所有 stage import |
 | `domains/` | `_core` / `_template` / `slot-game` / `fish-game` / `fast-game`（原 domain pack 註冊庫原封搬入）；`ARK_GAME_DOMAINS_DIR` 可覆寫（舊 `ARK_GAME_DOMAINS_SKILL` 相容一版）| 契約見 `references/pack-contract.md` |
+| `references/game-layout-contract.md`、`game-layout.yaml` | **遊戲產出佈局契約 v3.1（SSOT）**：`data/slot/<slug>/` 九階段子目錄（analysis／spec／prob／quicktest／proto／game{pixi-client ⑦, go-server ⑧}／docs）與 `output/slot/<slug>/` 工作檯；ps_layout、quicktest、proto 依此讀寫 | 開新遊戲、publish、搬移產物前 |
 | `references/run-contract.md` | run 目錄、evidence、後處理守門、game-analysis / kb-refs / spec md / config-spec / benchmark 契約（自 1.x SKILL.md 原文抽出）| 改任何 stage 腳本前 |
 | `references/pack-contract.md`、`gdd-contract.md`、`atlas-contract.md`、`gdd-template-anatomy.md`、`video-calibration.md` | 各 stage 契約與調參 | 對應 stage |
 | `references/concept-gdd-template.md`、`genre-guides.md`、`concept-example/` | **創作模式**（純提詞）：只有一句話概念時產 10 章 GDD 或 One Pager | 沒有影片也沒有 xlsx 時 |

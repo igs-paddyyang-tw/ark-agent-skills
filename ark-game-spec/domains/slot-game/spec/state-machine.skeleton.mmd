@@ -8,4 +8,11 @@ stateDiagram-v2
     evaluate_win --> settle
     feature_trigger --> free_spin : {{evidence:free_spin.present}}
     free_spin --> settle
+    feature_trigger --> hold_spin : {{evidence:hold_spin.trigger}}
+    hold_spin --> hold_spin : frame added / respin {{evidence:hold_spin.frame_add_rule}}
+    hold_spin --> prize_reveal : respins exhausted
+    prize_reveal --> settle : {{evidence:hold_spin.prize_rule}}
+    feature_trigger --> stage_feature : {{evidence:stage_feature.trigger}}
+    stage_feature --> stage_feature : collect target met / next stage {{evidence:stage_feature.collect_targets}}
+    stage_feature --> settle : target missed or final stage {{evidence:stage_feature.final_stage_repeat}}
     settle --> idle

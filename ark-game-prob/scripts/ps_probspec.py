@@ -152,6 +152,8 @@ def main() -> None:
         cs = resolve(srcs["config_spec"])
         if cs is not None and cs.parent.name == "dev-spec":
             run_dir = cs.parent.parent
+        elif cs is not None and cs.parent.name == "spec" and (cs.parent / "dev-spec").is_dir():   # 佈局契約 v3：data 家 spec/
+            run_dir = cs.parent
     dec_p = resolve(srcs.get("decisions")) or ((run_dir / "decisions.yaml") if run_dir and (run_dir / "decisions.yaml").exists() else None)
     tgt_p = qt / "quicktest.yaml"
     targets = C.yaml_load(tgt_p) if tgt_p.exists() else {}
@@ -160,8 +162,12 @@ def main() -> None:
     sm_p = (run_dir / "dev-spec" / "state-machine.md") if run_dir else None
     sm = sm_p.read_text(encoding="utf-8") if sm_p and sm_p.exists() else None
     kb_p = (run_dir / "kb-refs.yaml") if run_dir else None
+    if kb_p and not kb_p.exists() and (run_dir.parent / "analysis" / "kb-refs.yaml").exists():   # 佈局契約 v3：data 家 spec/ ↔ analysis/
+        kb_p = run_dir.parent / "analysis" / "kb-refs.yaml"
     kb = C.yaml_load(kb_p) if kb_p and kb_p.exists() else None
     ga_p = (run_dir / "game-analysis.yaml") if run_dir else None
+    if ga_p and not ga_p.exists() and (run_dir.parent / "analysis" / "game-analysis.yaml").exists():
+        ga_p = run_dir.parent / "analysis" / "game-analysis.yaml"
     ga = C.yaml_load(ga_p) if ga_p and ga_p.exists() else None
     gdd = C.yaml_load(gdd_dir / "gdd.yaml") if gdd_dir and (gdd_dir / "gdd.yaml").exists() else None
     dec = C.yaml_load(dec_p) if dec_p else None

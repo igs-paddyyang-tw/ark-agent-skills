@@ -60,8 +60,10 @@ def run(cmd: list[str], cwd: Path, timeout: int) -> tuple[int, str, str]:
     import os
     env = {**os.environ, "PYTHONPATH": f"{cwd}{os.pathsep}{cwd / 'src'}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"}
     try:
-        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env)
-        return r.returncode, r.stdout, r.stderr
+        # Windows 預設以 cp950 解碼，子程序輸出 UTF-8（emoji）時讀取執行緒失敗 → stdout 變 None；固定 UTF-8 並容錯
+        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=timeout, env={**env, "PYTHONIOENCODING": "utf-8"})
+        return r.returncode, r.stdout or "", r.stderr or ""
     except subprocess.TimeoutExpired:
         return 124, "", f"timeout after {timeout}s"
     except FileNotFoundError as e:
