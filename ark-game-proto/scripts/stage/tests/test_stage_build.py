@@ -71,3 +71,23 @@ def test_slug_layout(tmp_path):
     man = json.loads((d / "stage-build.json").read_text(encoding="utf-8"))
     assert man["schema"] == "proto-stage-build/1" and man["outputs"]["folder"] is None
     assert not (repo / "output" / "slot" / "demo" / "game" / "pixi-client" / "folder").exists()
+
+
+def test_odds_injected_before_game(tmp_path):
+    """1.1.2：--odds 在 game.js 之前注入 globalThis.HUFF_ODDS（單檔內嵌、資料夾版另產 odds.js）；壞 JSON 擋下。"""
+    odds = tmp_path / "odds.json"
+    odds.write_text(json.dumps({"huff": {"bet_cost": 240}, "extra_odds": {"max_win": 10000}}), encoding="utf-8")
+    rc, d = run("--game", DEMO, "--out", tmp_path / "s", "--single", "--odds", odds)
+    assert rc == 0, d
+    html = (tmp_path / "s" / "index.html").read_text(encoding="utf-8")
+    assert html.index("globalThis.HUFF_ODDS") < html.index("/* game.js */")
+    rc, d = run("--game", DEMO, "--out", tmp_path / "f", "--odds", odds)
+    assert rc == 0, d
+    idx = (tmp_path / "f" / "index.html").read_text(encoding="utf-8")
+    assert (tmp_path / "f" / "odds.js").is_file() and idx.index('src="odds.js"') < idx.index('src="game.js"')
+    rc, d = run("--game", DEMO, "--out", tmp_path / "n", "--single")                # 不給 odds：無注入（與 1.1.1 相同）
+    assert rc == 0 and "HUFF_ODDS" not in (tmp_path / "n" / "index.html").read_text(encoding="utf-8")
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json", encoding="utf-8")
+    rc, d = run("--game", DEMO, "--out", tmp_path / "b", "--single", "--odds", bad)
+    assert rc != 0

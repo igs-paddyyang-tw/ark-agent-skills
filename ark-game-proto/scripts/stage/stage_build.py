@@ -107,11 +107,24 @@ def webp_data_uri(path: pathlib.Path, quality: int, max_side: int) -> tuple[str,
     return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii"), len(raw)
 
 
-def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, single: bool, quality: int, max_side: int) -> dict:
+def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, single: bool, quality: int, max_side: int,
+          odds: pathlib.Path | None = None) -> dict:
+    """odds（1.1.2）：遊戲包的機率設定檔（例 quicktest/odds/odds_<ver>.json）→ 在 game.js 之前注入 globalThis.HUFF_ODDS；
+    遊戲包有 odds 模式時（例 HuffNPuff game.js），瀏覽器內 LocalService 就吃正式機率。None 時輸出與 1.1.1 相同。"""
     if not game.is_file():
         emit({}, False, "BAD_INPUT", f"找不到 {game}")
     if not PIXI.is_file():
         emit({}, False, "MISSING_DEP", f"找不到 {PIXI}")
+    if odds is not None and not odds.is_file():
+        emit({}, False, "BAD_INPUT", f"找不到 odds {odds}")
+    odds_js = None
+    if odds is not None:
+        odds_txt = odds.read_text(encoding="utf-8").strip()
+        try:
+            json.loads(odds_txt)                            # 先驗 JSON 合法，壞檔不進產物
+        except json.JSONDecodeError as e:
+            emit({}, False, "BAD_INPUT", f"odds 不是合法 JSON：{odds.name}（{e}）")
+        odds_js = f"globalThis.HUFF_ODDS = {odds_txt};"
     man = json.loads((RUNTIME / "manifest.json").read_text(encoding="utf-8"))
     cfg = dump_config(game)
     scripts = list(man["scripts"])
@@ -138,6 +151,8 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
         parts.append("<script>window.__STAGE_INLINE=" + json.dumps(inlined, ensure_ascii=False) + ";</script>")
         for s in scripts:
             parts.append(f"<script>/* {rt_url(s)} */\n{rt(s).read_text(encoding='utf-8')}\n</script>")
+        if odds_js:
+            parts.append(f"<script>/* odds: {odds.name} */\n{odds_js}\n</script>")
         parts.append(f"<script>/* game.js */\n{game.read_text(encoding='utf-8')}\n</script>")
         tag_j = "\n".join(p.replace("</script>\n</script>", "<\\/script>\n</script>") for p in parts)
     else:
@@ -151,6 +166,10 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
         (out / "vendor").mkdir(exist_ok=True)
         shutil.copy2(PIXI, out / "vendor" / "pixi.min.js")
         shutil.copy2(game, out / "game.js")
+        if odds_js:
+            (out / "odds.js").write_text(odds_js + "\n", encoding="utf-8")
+        elif (out / "odds.js").exists():
+            (out / "odds.js").unlink()
         root = out.resolve()
         for _kind, src in srcs:
             p = (assets_base / src).resolve()
@@ -168,13 +187,15 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
             copied += 1
         tag_s = "\n".join(f'<link rel="stylesheet" href="runtime/{s}">' for s in man["styles"])
         tag_j = "\n".join(['<script src="vendor/pixi.min.js"></script>'] + (["<script>window.__STAGE_INLINE=" + json.dumps(inlined, ensure_ascii=False) + ";</script>"] if inlined else [])
-                          + [f'<script src="{rt_url(s)}"></script>' for s in scripts] + ['<script src="game.js"></script>'])
+                          + [f'<script src="{rt_url(s)}"></script>' for s in scripts]
+                          + (['<script src="odds.js"></script>'] if odds_js else []) + ['<script src="game.js"></script>'])
     html = TEMPLATE.read_text(encoding="utf-8").replace("__TITLE__", str(cfg.get("name") or "Stage")).replace("__STYLES__", tag_s).replace("__SCRIPTS__", tag_j)
     idx = out / "index.html"
     idx.write_text(html, encoding="utf-8", newline="\n")
     rep = {"out": str(out), "index": str(idx), "mode": "single" if single else "folder", "game": str(game), "name": cfg.get("name"),
            "feature": feat, "scripts": len(scripts), "assets": len(srcs), "copied": copied, "inlined": len(inlined) if single else 0,
-           "missing": missing, "bytes": idx.stat().st_size, "inline_mb": round(inl_bytes / 1e6, 2)}
+           "missing": missing, "bytes": idx.stat().st_size, "inline_mb": round(inl_bytes / 1e6, 2),
+           "odds": str(odds) if odds is not None else None}
     (out / "stage-build.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
     return rep
 
@@ -235,11 +256,14 @@ def slug_build(a) -> None:
     assets = resolve_assets(data, yml.get("assets_base"))
     out = repo / "output" / "slot" / a.slug / "game" / "pixi-client"
     max_side = int(yml.get("max_side", a.max_side) or 0)
-    single = build(game, out / "single", assets, True, int(yml.get("inline_quality", a.inline_quality)), max_side)
+    odds = (data / str(yml["odds"])).resolve() if yml.get("odds") else None   # stage.yaml 的 odds:（相對本目錄；1.1.2）
+    single = build(game, out / "single", assets, True, int(yml.get("inline_quality", a.inline_quality)), max_side, odds)
     if a.folder or a.serve:                                 # 資料夾版（http 服務用）：檔案多，需要時才產
-        build(game, out / "folder", assets, False, a.inline_quality, 0)
+        build(game, out / "folder", assets, False, a.inline_quality, 0, odds)
     man = {"schema": "proto-stage-build/1", "slug": a.slug, "skill": f"ark-game-proto {VERSION} stage", "game": game.relative_to(repo).as_posix(),
-           "game_sha16": hashlib.sha256(game.read_bytes()).hexdigest()[:16], "assets_base": str(assets), "assets": single["assets"], "missing": single["missing"],
+           "game_sha16": hashlib.sha256(game.read_bytes()).hexdigest()[:16],
+           "odds": odds.relative_to(repo).as_posix() if odds else None, "odds_sha16": hashlib.sha256(odds.read_bytes()).hexdigest()[:16] if odds else None,
+           "assets_base": str(assets), "assets": single["assets"], "missing": single["missing"],
            "outputs": {"single": (out / "single" / "index.html").relative_to(repo).as_posix(), "single_bytes": single["bytes"], "folder": (out / "folder").relative_to(repo).as_posix() if (a.folder or a.serve) else None},
            "runtime": "output 為重產物（不入 git）；依 data/slot/_schema/layout.md：data < 1 MB、圖檔不入 data"}
     (data / "stage-build.json").write_text(json.dumps(man, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -260,6 +284,7 @@ def main():
     ap.add_argument("--game")
     ap.add_argument("--out")
     ap.add_argument("--assets-base")
+    ap.add_argument("--odds", help="機率設定檔（odds_<ver>.json）→ 注入 globalThis.HUFF_ODDS（1.1.2）；--slug 時改讀 stage.yaml 的 odds:")
     ap.add_argument("--single", action="store_true")
     ap.add_argument("--inline-quality", type=int, default=82)
     ap.add_argument("--max-side", type=int, default=0)
@@ -274,7 +299,7 @@ def main():
     game = pathlib.Path(a.game).resolve()
     out = pathlib.Path(a.out).resolve()
     base = pathlib.Path(a.assets_base).resolve() if a.assets_base else game.parent
-    rep = build(game, out, base, a.single, a.inline_quality, a.max_side)
+    rep = build(game, out, base, a.single, a.inline_quality, a.max_side, pathlib.Path(a.odds).resolve() if a.odds else None)
     if a.single and rep["bytes"] > a.budget_mb * 1e6:
         emit(rep, False, "GATE_BLOCKED", f"單檔 {rep['bytes'] / 1e6:.1f} MB 超過 {a.budget_mb} MB（調 --inline-quality 或 --max-side）")
     rep["delivery"] = f"{rep['index']}｜{rep['mode']}｜素材 {rep['assets']}（缺 {len(rep['missing'])}）｜{rep['bytes'] / 1e6:.2f} MB"
