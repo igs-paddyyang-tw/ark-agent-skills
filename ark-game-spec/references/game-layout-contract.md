@@ -67,11 +67,11 @@ data/slot/<slug>/
 │   ├── go-server/                ⑧   Go Server 原始碼（雛型或正式）
 │   └── handoff.md                ⑧   工程交付單（設定檔 sha、prob-spec 版本、rtp-report sha、K 卡 → Go 映射）
 ├── review/                       拍板包（v3.3；額度另計 < 5 MB；送審前 review_build 發布）
-│   ├── index.html                     導覽頁：九階段狀態、成品連結＋大小＋sha、驗收結果與截圖牆（自足、離線可開）
+│   ├── index.html                     拍板書（ark-book book_build 產物：封面、書脊目錄、每個待拍板事項一章、附錄；自足、離線可開）
+│   ├── <slug>-decision/               拍板書原稿（ark-book 契約）：book.yaml · 00-preface · 0N-<R-x 章>（人工，含拍板欄）· 99-appendix-artifacts（review_build 每次重產）
 │   ├── play.html                 ⑦   試玩版單檔（= stage_build --single，雙擊可玩）
 │   ├── gdd-overview.html         ②   素材總覽自足版（縮圖內嵌 WebP）
 │   ├── checks/                   ⑥⑦ browser-check.json · stage-smoke.json · 代表截圖 *.webp
-│   ├── REVIEW.md                      送審說明（要拍板什麼；人工區重發布保留）
 │   └── review-manifest.json           來源路徑＋sha16＋大小
 └── docs/
     ├── decisions/                     OQ 清單、決策摘要（type: decision）

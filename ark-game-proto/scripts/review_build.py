@@ -126,6 +126,65 @@ def run_checks(repo: pathlib.Path, out: pathlib.Path) -> list[str]:
     return log
 
 
+def md_inline(t: str) -> str:
+    t = html.escape(t)
+    t = re.sub(r"`([^`]+)`", r"<code>\1</code>", t)
+    return re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", t)
+
+
+def md_to_html(md: str) -> str:
+    """REVIEW.md 的小型渲染（標題 / 清單 / 表格 / 段落 / 行內 code、粗體）；略過 HTML 註解。"""
+    md = re.sub(r"<!--.*?-->", "", md, flags=re.S)
+    out, rows, lst = [], [], None
+    def flush():
+        nonlocal rows, lst
+        if rows:
+            hdr, body = rows[0], [r for r in rows[1:] if not re.fullmatch(r"[\s|:-]+", "|".join(r))]
+            out.append("<table><tr>" + "".join(f"<th>{md_inline(c)}</th>" for c in hdr) + "</tr>" + "".join("<tr>" + "".join(f"<td>{md_inline(c)}</td>" for c in r) + "</tr>" for r in body) + "</table>")
+            rows = []
+        if lst:
+            out.append(f"<{lst[0]}>" + "".join(f"<li>{md_inline(x)}</li>" for x in lst[1]) + f"</{lst[0]}>")
+            lst = None
+    for line in md.splitlines():
+        s_ = line.strip()
+        if s_.startswith("|"):
+            if lst: flush()
+            rows.append([c.strip() for c in s_.strip("|").split("|")]); continue
+        m_ul, m_ol = re.match(r"[-*] (.*)", s_), re.match(r"\d+\. (.*)", s_)
+        if m_ul or m_ol:
+            kind = "ul" if m_ul else "ol"
+            if rows or (lst and lst[0] != kind): flush()
+            lst = lst or (kind, []); lst[1].append((m_ul or m_ol).group(1)); continue
+        flush()
+        m = re.match(r"(#{1,4}) (.*)", s_)
+        if m:
+            lv = min(len(m.group(1)) + 1, 4)
+            out.append(f"<h{lv}>{md_inline(m.group(2))}</h{lv}>")
+        elif s_.startswith(">"):
+            out.append(f"<blockquote>{md_inline(s_.lstrip('> '))}</blockquote>")
+        elif s_:
+            out.append(f"<p>{md_inline(s_)}</p>")
+    flush()
+    return "\n".join(out)
+
+
+def report_links(data: pathlib.Path) -> list[tuple[str, str, str]]:
+    """data/<slug>/docs/reports/*.md：HTML 戳記吻合連 HTML，否則連 md 正本（標明）。"""
+    out = []
+    rd = data / "docs" / "reports"
+    for md in sorted(rd.glob("*.md"), reverse=True) if rd.is_dir() else []:
+        txt = md.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r'^title:\s*"?(.+?)"?\s*$', txt, re.M)
+        title = m.group(1) if m else md.stem
+        verdict = re.search(r"^verdict:\s*(\S+)", txt, re.M)
+        hp = md.with_suffix(".html")
+        ok = hp.is_file() and f"sha256:{sha16(md)}" in hp.read_text(encoding="utf-8", errors="replace")
+        target = hp if ok else md
+        note = ("HTML" if ok else ("md 正本（HTML 未隨 md 更新）" if hp.is_file() else "md")) + (f" · verdict {verdict.group(1)}" if verdict else "") + " · 時點快照"
+        out.append((title, "../" + target.relative_to(data).as_posix(), note))
+    return out
+
+
 def stage_rows(data: pathlib.Path) -> list[tuple[str, str, bool]]:
     rows = []
     for no, name, pats in STAGES:
@@ -143,12 +202,15 @@ main{max-width:1080px;margin:0 auto;padding:24px 16px 64px}h1{margin:0 0 4px;fon
 .card .m{color:var(--ink2);font-size:12px;word-break:break-all}table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 td,th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}th{color:var(--ink2);font-weight:600}
 .ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}.na{color:var(--ink2)}
+.review{margin-top:18px;border-left:5px solid var(--acc)}.review h2{margin:4px 0 8px}.review h3{margin:14px 0 6px;font-size:16px}
+.review table{margin:6px 0}code{font-size:13px;background:var(--line);padding:0 4px;border-radius:4px}blockquote{margin:6px 0;padding:4px 10px;border-left:3px solid var(--line);color:var(--ink2)}
 .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}.shots figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .shots img{width:100%;display:block}.shots figcaption{font-size:12px;color:var(--ink2);padding:4px 8px}
 """
 
 
-def build_index(game: str, slug: str, when: str, rows, arts: list[dict], checks: dict, links: list[tuple[str, str, str]]) -> str:
+def build_index(game: str, slug: str, when: str, rows, arts: list[dict], checks: dict, links: list[tuple[str, str, str]],
+                review_html: str = "", reports: list[tuple[str, str, str]] | None = None) -> str:
     e = html.escape
     st = "".join(f"<tr><td>{no}</td><td>{e(n)}</td><td class=\"{'ok' if ok else 'na'}\">{'✓ 有產出' if ok else '— 尚無'}</td></tr>" for no, n, ok in rows)
     cards = "".join(f"<div class=\"card\"><a href=\"{e(a['href'])}\">{e(a['title'])}</a><div>{e(a['desc'])}</div><div class=\"m\">{e(a['meta'])}</div></div>" for a in arts)
@@ -169,8 +231,10 @@ def build_index(game: str, slug: str, when: str, rows, arts: list[dict], checks:
     return f"""<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(game)} 拍板包</title><style>{INDEX_CSS}</style></head><body><main>
 <h1>{e(game)}　拍板包</h1><div class="sub">{e(slug)} · 發布 {e(when)} · 佈局契約 v3.3 review/ · 本包可整個資料夾傳給人離線開</div>
+{f'<section class="card review">{review_html}</section>' if review_html else ''}
 <h2>可以直接打開的成品</h2><div class="grid">{cards}</div>
 <h2>定版家其他成品（相對連結）</h2><div class="grid">{lk}</div>
+{('<h2>報告（定版家 docs/reports/）</h2><div class="grid">' + "".join(f'<div class="card"><a href="{e(h)}">{e(t)}</a><div class="m">{e(d)}</div></div>' for t, h, d in reports) + '</div>') if reports else ''}
 <h2>九階段狀態</h2><table><tr><th>#</th><th>階段</th><th>定版家</th></tr>{st}</table>
 <h2>真瀏覽器驗收</h2>{ck}
 <p class="sub" style="margin-top:32px">由 ark-game-proto review_build.py 產生；要拍板的事項見 REVIEW.md。</p>
@@ -203,6 +267,102 @@ def write_review_md(p: pathlib.Path, game: str, auto: str) -> None:
     block = f"<!-- auto -->\n{auto.rstrip()}\n<!-- /auto -->"
     txt = re.sub(r"<!-- auto -->.*?<!-- /auto -->", lambda _: block, txt, flags=re.S) if "<!-- auto -->" in txt else block + "\n\n" + txt
     p.write_text(txt, encoding="utf-8")
+
+
+def write_appendix(book_dir: pathlib.Path, game: str, when: str, arts: list[dict], checks: dict, links, reports, rows) -> None:
+    """拍板書附錄（ark-book 章節契約；每次發布重產）：成品、驗收、九階段、報告。路徑相對於書原稿目錄。"""
+    import yaml  # noqa: PLC0415
+    slug = yaml.safe_load((book_dir / "book.yaml").read_text(encoding="utf-8"))["slug"]
+    L = [f"""---
+book: {slug}
+chapter: 99
+slug: appendix-artifacts
+title: "附錄：拍板包成品、驗收紀錄與九階段狀態"
+type: appendix
+level: intermediate
+est_minutes: 5
+punchline: "每個拍板依據都能點開、能重跑、能追到來源。"
+objectives:
+  - 找到拍板包裡每個成品與驗收紀錄
+prerequisites: []
+key_terms: [拍板包, 真瀏覽器驗收]
+tags: [slot, pipeline]
+sources:
+  - ../review-manifest.json
+trust: deterministic
+confidence: high
+status: review
+---
+
+# 附錄：拍板包成品、驗收紀錄與九階段狀態
+
+> 本附錄由 ark-game-proto review_build 於 {when} 產生，重新發布會覆寫；人工內容請寫在前面各章。
+
+## 這章要解決的問題
+
+拍板時常被問：這個結論的依據在哪？是哪一版？能不能自己重跑一次？
+
+## 路線圖
+
+1. 可以直接打開的成品
+2. 真瀏覽器驗收紀錄與截圖
+3. 九階段狀態與定版家報告
+
+## 內文
+
+### 可以直接打開的成品
+
+這個資料夾連同成品與驗收紀錄，叫做 **拍板包**；整包可以離線打開。
+
+| 成品 | 說明 | 大小與指紋 |
+|---|---|---|
+"""]
+    for x in arts:
+        L.append(f"| [{x['title']}](../{x['href']}) | {x['desc']} | {x['meta']} |\n")
+    for t, h, d in links:
+        L.append(f"| [{t}](../{h}) | 定版家成品 | {d} |\n")
+    L.append("\n> [!ASK] 你可能會想說\n> 截圖跟我自己打開看到的不一樣怎麼辦？\n> 截圖是發布當下的 **真瀏覽器驗收** 結果；以自己打開 `play.html` 看到的為準，有差異就重跑 `review_build --run-checks`。\n\n")
+    L.append("### 真瀏覽器驗收\n\n")
+    for label, rep in checks.items():
+        if not rep:
+            L.append(f"**{label}**：尚未驗收（`review_build --run-checks`）\n\n")
+            continue
+        res = rep.get("results") or rep.get("checks") or []
+        L.append(f"**{label}**：{sum(1 for r in res if r.get('ok'))}/{len(res)} PASS · {rep.get('browser', '')}" + (f" · FPS {rep['fps']}" if rep.get("fps") else "") + "\n\n")
+        L.append("| 結果 | 檢查項 |\n|---|---|\n" + "".join(f"| {'✓' if r.get('ok') else '✗'} | {r.get('name', '')} |\n" for r in res) + "\n")
+        for s in rep.get("review_shots", []):
+            L.append(f"![{s}](../checks/{s})\n\n")
+    L.append("### 九階段狀態\n\n| 階段 | 名稱 | 定版家 |\n|---|---|---|\n" + "".join(f"| {no} | {n} | {'✓ 有產出' if ok else '— 尚無'} |\n" for no, n, ok in rows) + "\n")
+    if reports:
+        L.append("### 定版家報告（時點快照）\n\n" + "".join(f"- [{t}](../{h})（{d}）\n" for t, h, d in reports) + "\n")
+    L.append("""## 常見誤解
+
+> [!MYTH] 大家通常會以為
+> 拍板包是每次建置都會更新的工作目錄。但其實拍板包只在送審前發布一次；工作中的中間檔在 output/，拍板包反映的是送審當下的狀態。
+
+## 重點回顧
+
+- 每個拍板依據都能點開、能重跑、能追到來源。
+- 截圖是發布當下的真瀏覽器驗收結果。
+- 拍板包只在送審前發布。
+""")
+    (book_dir / "99-appendix-artifacts.md").write_text("".join(L), encoding="utf-8")
+
+
+def build_book(book_dir: pathlib.Path, out_html: pathlib.Path) -> dict:
+    """ark-book：book_lint（記錄）→ book_build → 路徑從書原稿目錄改成 review/ 根（index.html 在上一層）。"""
+    bs = HERE.parents[1] / "ark-book" / "scripts"
+    lint = subprocess.run([sys.executable, "-X", "utf8", str(bs / "book_lint.py"), str(book_dir)], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    tmp = book_dir.parent / ".book-build.html"
+    b = subprocess.run([sys.executable, "-X", "utf8", str(bs / "book_build.py"), str(book_dir), "--out", str(tmp)], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if b.returncode != 0 or not tmp.is_file():
+        raise SystemExit(f"book_build 失敗：{(b.stderr or b.stdout)[-400:]}")
+    h = tmp.read_text(encoding="utf-8")
+    h = re.sub(r'((?:href|src)=")\.\./', r"\1", h)            # 書原稿在 review/<book>/，index.html 在 review/
+    out_html.write_text(h, encoding="utf-8")
+    tmp.unlink()
+    tail = [ln for ln in lint.stdout.strip().splitlines() if ln.strip()][-1:] or [""]
+    return {"dir": book_dir.name, "lint_exit": lint.returncode, "lint": tail[0][:200]}
 
 
 def main() -> int:
@@ -270,8 +430,23 @@ def main() -> int:
     auto = (f"- 發布：{when}（review_build；契約 v3.3）\n"
             + "".join(f"- {x['title']}：`{x['href']}`（{x['meta']}）\n" for x in arts)
             + "".join(f"- {k}：" + (f"{sum(1 for r in (v.get('results') or v.get('checks') or []) if r.get('ok'))}/{len(v.get('results') or v.get('checks') or [])} PASS\n" if v else "尚未驗收\n") for k, v in checks.items()))
-    write_review_md(rv / "REVIEW.md", game, auto)
-    files.append((rv / "REVIEW.md", "review_build（人工區保留）"))
+    book_dir = next((p.parent for p in sorted(rv.glob("*/book.yaml"))), None)
+    book_info = None
+    if book_dir and (HERE.parents[1] / "ark-book" / "scripts" / "book_build.py").is_file():
+        # 拍板書（ark-book 架構）：人寫的序與 R-x 章保留；附錄每次重產；index.html = book_build 輸出
+        write_appendix(book_dir, game, when, arts, checks, links, report_links(data), stage_rows(data))
+        book_info = build_book(book_dir, rv / "index.html")
+        for f in sorted(book_dir.glob("*")):
+            if f.is_file():
+                files.append((f, "拍板書原稿（附錄由 review_build 產生）" if f.name.startswith("99-") else "拍板書原稿（人工）"))
+        if (rv / "REVIEW.md").is_file():                       # 舊版送審說明已併入拍板書
+            (rv / "REVIEW.md").unlink()
+    else:
+        write_review_md(rv / "REVIEW.md", game, auto)
+        files.append((rv / "REVIEW.md", "review_build（人工區保留）"))
+        # 導覽頁最後寫：內嵌 REVIEW.md（要拍板的事放最上面）＋ 定版家報告連結
+        (rv / "index.html").write_text(build_index(game, a.slug, when, stage_rows(data), arts, checks, links,
+                                                   md_to_html((rv / "REVIEW.md").read_text(encoding="utf-8")), report_links(data)), encoding="utf-8")
     bad = [f.name for f in rv.rglob("*") if f.is_file() and f.suffix.lower() in BAN]
     tot = sum(f.stat().st_size for f in rv.rglob("*") if f.is_file())
     if bad or tot > REVIEW_KB * 1024:
@@ -282,7 +457,7 @@ def main() -> int:
            "total_bytes": tot}
     (rv / "review-manifest.json").write_text(json.dumps(man, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     emit(True, {"review": rv.relative_to(repo).as_posix(), "total_kb": tot // 1024, "files": len(man["files"]) + 2, "gdd_quality": man["gdd_quality"],
-                "checks": {k: (bool(v) and bool(v.get("pass"))) for k, v in checks.items()}, "run_checks": log,
+                "checks": {k: (bool(v) and bool(v.get("pass"))) for k, v in checks.items()}, "run_checks": log, "book": book_info,
                 "delivery": f"review_build {a.slug}｜{kb(tot)} / {REVIEW_KB // 1024} MB｜開 {rv.relative_to(repo).as_posix()}/index.html"})
     return 0
 

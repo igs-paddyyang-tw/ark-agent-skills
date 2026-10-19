@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.4.3"
+  version: "1.4.4"
   updated: 2026-10-19
   outputs:
     - { format: data, audience: ai }
@@ -126,7 +126,7 @@ data/prob/<slug>/
 | ps_layout | L-* 任一 error（restore 模式缺可解析的 config.json → L-SPEC error，屬遊戲未做參數外部化，非 skill 壞）| exit 3（`--strict` 時 warning 也算）|
 | L-SIZE | 遊戲目錄進二進位（exe/dll/bin）或多版本設定檔 → error；單檔 > 500 KB（排除 html）→ warning | ps_layout 子規則 |
 | L-SERVER | `server/handoff.md` 宣告的 config / rtp-report sha ≠ 現檔 → error（只對帳不改 server code）| ps_layout 子規則 |
-| L-REVIEW | `review/` 拍板包總量 > 5 MB 或含二進位／影片 → error；缺 index.html、review-manifest 列的檔過期 → warning；review 內 HTML 不觸發 L-SIZE 500 KB（1.4.3）| ps_layout 子規則 |
+| L-REVIEW | `review/` 拍板包總量 > 5 MB 或含二進位／影片 → error；缺 index.html、review-manifest 列的檔過期 → warning；review 內 HTML 不觸發 L-SIZE 500 KB（1.4.3）；L-STAMP 同時讀檔頭（ps_html）與檔尾（ark-md-report report_pair）戳記（1.4.4）| ps_layout 子規則 |
 
 ## 邊界
 

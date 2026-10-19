@@ -18,7 +18,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.5.3"
+  version: "2.5.4"
   updated: 2026-10-19
   outputs:
     - { format: data, audience: ai }

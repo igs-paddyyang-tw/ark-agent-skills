@@ -17,13 +17,13 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.2.2"
+  version: "1.2.3"
   updated: 2026-10-19
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }
   render: html
-  depends_on: [ark-game-prob, ark-game-quicktest]
+  depends_on: [ark-game-prob, ark-game-quicktest, ark-book, ark-html-report]   # ark-book（拍板書）、ark-html-report（html_images）為 review_build 選配
 ---
 
 # ark-game-proto — 規格書直接編成可玩雛型，同一顆引擎演出給人看、精算給機器驗
@@ -56,7 +56,7 @@ metadata:
 | `scripts/src/app.js`、`art.js`、`template.html` | 驗證台 + PixiJS 演出層；SVG 佔位美術（名稱 = 規格符號代碼，`cfg.art` 選套）| 改演出 / 換美術 |
 | `scripts/go_parity.py` + `scripts/goparity/<model>_trace.go` + `scripts/tests/go_parity.js` | 暫存複本注入 trace → go run → JS 同 seed 逐局比 | 規格書或引擎改版後 |
 | `scripts/tests/` | `test_proto_build.py`（golden、Go 對照、單檔 html、UI 冒煙）、`core_test.js`（決定性 / 演出不改結果 / 模型一致性 / 精算對 §2）、`ui_smoke.js`（DOM / Pixi / Worker 替身跑完整驗證台與每種玩法演出，無瀏覽器也能驗）、`huff_parity.js`（huff-house ⇄ Go `cmd/sim -trace` 逐局）、`browser_check.js`（系統 Chrome / Edge 無頭＋DevTools 協定，真瀏覽器跑驗證台與每種玩法演出、截圖＋JSON 報告，零 npm 相依）、`cdp.js`（共用瀏覽器驅動：Playwright Page 常用子集，browser_check 與 Stage smoke 共用）| 改腳本後；⑥ 交付前跑 `browser_check` |
-| `scripts/review_build.py` | **拍板包**（佈局契約 v3.3）：彙整 ⑦ 試玩單檔 `play.html`、② 素材總覽自足版、⑥⑦ 驗收報告＋代表截圖（WebP）、導覽頁 `index.html`、`REVIEW.md`（人工區保留）、`review-manifest.json` → `data/slot/<slug>/review/`（≤ 5 MB）；`--run-checks` 先跑 browser_check ＋ smoke | 送審／demo 前 |
+| `scripts/review_build.py` | **拍板包**（佈局契約 v3.3）：彙整 ⑦ 試玩單檔 `play.html`、② 素材總覽自足版、⑥⑦ 驗收報告＋代表截圖（WebP）、`review-manifest.json` → `data/slot/<slug>/review/`（≤ 5 MB）；**拍板書**：`review/<slug>-decision/`（ark-book 契約：序＋每個待拍板事項一章＋自動附錄）→ ark-book `book_build` 產生 `index.html`（無 ark-book 時退回 REVIEW.md ＋ 簡易導覽頁）；`--run-checks` 先跑 browser_check ＋ smoke | 送審／demo 前 |
 | `references/architecture.md` | 四層架構、三原則、SpinResult / config 契約、驗證三層 | 第一次用或改架構 |
 | `references/adapter-guide.md` | 寫 adapter / 加玩法模型 / 加 Go trace 的步驟與檢查表 | 新遊戲 |
 | `references/go-parity.md` | 逐局對照原理（RNG 移植、抽值順序、封頂語意）與排錯 | 對照出差異時 |
@@ -123,6 +123,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.2.3 | 2026-10-19 | 拍板書：`review_build` 偵測 `review/<slug>-decision/book.yaml` → 每次重產附錄（成品、驗收、九階段、定版家報告）→ ark-book `book_lint` ＋ `book_build`（style 取 book.yaml，HuffNPuff 用 neon）→ `review/index.html`；人工章節不動、舊 REVIEW.md 併入後移除；導覽頁可列定版家 `docs/reports/`（戳記吻合連 HTML，否則連 md）。golden `review-book/`、test_review_decision_book |
 | 1.2.2 | 2026-10-19 | 拍板包 `review_build.py`（契約 v3.3 `review/`）；共用瀏覽器驅動 `tests/cdp.js`；Stage `smoke.js` 改自動選後端（Playwright 或系統 Chrome / Edge）、`--scenes all`、`--query`、逐情境帳務與玩法檢查、exit 1 on FAIL；pytest：`test_review_build.py`、Stage `test_smoke_real_browser`（SLOTPROTO_BROWSER=1）、`test_stage_build` 子程序加 `-X utf8`（Windows cp950）。HuffNPuff ⑦ 試玩版首次真瀏覽器驗收 9/9、stage-demo 資料夾／單檔／HttpService 皆過 |
 | 1.2.1 | 2026-10-19 | 新增 `tests/browser_check.js`：不需 Playwright，用系統 Chrome / Edge 無頭模式＋DevTools 協定（Node 22 內建 WebSocket）在真瀏覽器載入驗證台 → 面板檢查、每種玩法各演一場逐段截圖、L2、頁面錯誤蒐集，輸出 `browser-check.json`＋截圖；exit 2 = 環境不足。四款 golden 驗證台全過；pytest `SLOTPROTO_BROWSER=1` 才跑 |
 | 1.2.0 | 2026-10-19 | 新玩法模型 `huff-house`（Huff N' Puff Open House）：四建材各擲觸發率（先中先得）＋ ≥6 顆 Open House；House Spin（K-019 漸進封頂）／Open House（四房鑰匙晉級、升級加框、+1 手、宮殿重玩遞減、強盤面池）。模型可設 `C.fdraw` 讓 spin 改用 Float64 抽值（Go `pickW`／`floorIdx` 同語意）→ 可對 Go `math/rand` 逐局對照；L1 觸發率改四維顆數卷積解析。adapter `huffnpuff_open_house`（讀 prob-spec §4 huff 參數表，`go_rules` 40 鍵一致）＋ 美術套；`tests/huff_parity.js` 40 萬局 0 不一致；新增 `tests/ui_smoke.js`。修正：`merge()` 陣列／計數表欄位相加變字串（L2 多 Worker 合併；也影響 house-collect 強度統計）、`generic()` 盤面「3×5（附註）」解析失敗、`proto_build` 傳 `doc["md_path"]` 讓 adapter 不依賴 CWD 找報表；Ways 支援 `board.wild_from_reel` |

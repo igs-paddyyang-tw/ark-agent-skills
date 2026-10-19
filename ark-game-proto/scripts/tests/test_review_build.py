@@ -79,3 +79,25 @@ def test_review_md_human_area_kept(tmp_path):
 def test_bad_slug(tmp_path):
     rc, env = _run(tmp_path)
     assert rc == 2 and not env["success"]
+
+
+@pytest.mark.skipif(not (HERE.parents[2] / "ark-book" / "scripts" / "book_build.py").is_file(), reason="需要 ark-book skill")
+def test_review_decision_book(tmp_path):
+    """拍板書：review/<book>/ 存在 → 附錄重產、人工章節不動、index.html = ark-book book_build 產物、舊 REVIEW.md 移除。"""
+    import hashlib
+    import shutil
+    repo = _repo(tmp_path)
+    rv = repo / "data" / "slot" / "x" / "review"
+    book = rv / "huffnpuff-open-house-decision"
+    shutil.copytree(HERE.parents[1] / "golden" / "review-book", book)
+    (rv / "REVIEW.md").parent.mkdir(parents=True, exist_ok=True)
+    (rv / "REVIEW.md").write_text("舊版", encoding="utf-8")
+    before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in book.glob("0*.md")}
+    rc, env = _run(repo)
+    assert rc == 0 and env["data"]["book"]["lint_exit"] == 0, env
+    assert {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in book.glob("0*.md")} == before, "人工章節被改動"
+    appx = (book / "99-appendix-artifacts.md").read_text(encoding="utf-8")
+    assert "play.html" in appx and "PASS" in appx
+    idx = (rv / "index.html").read_text(encoding="utf-8")
+    assert "book-src" in idx and 'src="checks/' in idx and 'href="../' not in idx.replace('href="../prob', "").replace('href="../proto', "").replace('href="../docs', "").replace('href="../spec', "").replace('href="../quicktest', "").replace('href="../game', "")
+    assert not (rv / "REVIEW.md").exists()

@@ -32,7 +32,7 @@ data_tree:
   quicktest: {files: [quicktest.yaml, qt-config.yaml], optional: [symbols.tsv, lint-report.json], dirs: [odds, engine, qt-report, config, _tuning]}
   proto: {optional: [game-config.json, index.html, "go-parity.*", gaps.md]}
   game: {optional: [handoff.md], dirs: [go-server, pixi-client]}
-  review: {files: [index.html, REVIEW.md, review-manifest.json], optional: [play.html, gdd-overview.html, qt-report.html], dirs: [checks]}
+  review: {files: [index.html, review-manifest.json], optional: [play.html, gdd-overview.html, qt-report.html, REVIEW.md], dirs: [checks, "{slug}-decision"]}   # 拍板書原稿（ark-book）；無 ark-book 時退回 REVIEW.md
   review/checks: {optional: ["*.json", "*.webp", "*.png"]}
   docs: {dirs: [decisions, designs, reports, versions]}
   kb: {files: [spec.md, prob.md, code.md, qt-result.md, versions.md, methods.md], dirs: [xlsx, paramcheck, notes]}

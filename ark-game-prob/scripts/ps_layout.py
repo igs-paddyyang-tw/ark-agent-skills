@@ -113,7 +113,8 @@ def check(game: pathlib.Path, mode: str) -> dict:
         for h in sorted(base.rglob("*.html")):
             if "_retired" in h.parts:
                 continue
-            head = h.read_text(encoding="utf-8", errors="replace")[:4000]
+            txt = h.read_text(encoding="utf-8", errors="replace")
+            head = txt[:4000] + txt[-4000:]          # ps_html 戳記在檔頭；ark-md-report report_pair 戳記在檔尾（1.4.3）
             sib = h.with_suffix(".md")
             stamps = STAMP_RE.findall(head)
             if not sib.exists():
