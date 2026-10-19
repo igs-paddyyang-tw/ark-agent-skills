@@ -1,0 +1,17 @@
+{
+ "seed": 7,
+ "spins": 200000,
+ "fg": 7940,
+ "capped": 0,
+ "mismatch": 0,
+ "byType": {
+  "SK": 1671,
+  "BR": 884,
+  "ST": 5077,
+  "GD": 258,
+  "OH": 50
+ },
+ "rng": "go-math-rand Float64",
+ "model": "huff-house",
+ "first": null
+}

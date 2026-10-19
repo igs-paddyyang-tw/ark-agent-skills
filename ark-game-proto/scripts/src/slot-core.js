@@ -10,6 +10,9 @@
  * 玩法模型（cfg.fg.model）：
  *  - collect-mult（彌勒佛）：FG 贏分 = (基底 + Σ加分物件) × (1 + Σ乘倍物件)
  *  - coin-lock（Tiger and Dragon）：金幣鎖格 → 相鄰成組 → 翻值連讀成數（+ 解鎖列 / JACKPOT）
+ *  - house-collect（吉屋出豬）：SC 落格框升級 → 結算抽草/木/磚屋
+ *  - huff-house（Huff N' Puff Open House）：四建材各擲觸發率 → House Spin 加框 ×4 ／ ≥6 顆 Open House 四房闖關
+ *    數學流只用 Float64（rng.float），與 Go internal/engine/huff 同序（C.fdraw）
  */
 (function (root) {
   'use strict';
@@ -52,6 +55,14 @@
   }
   const mean = (t, f) => t.items.reduce((s, x, i) => s + f(x) * (t.cum[i] - (i ? t.cum[i - 1] : 0)), 0) / t.total;
   const sum = (a) => a.reduce((x, y) => x + y, 0);
+  // Float64 抽值（Go huff 引擎 pickW / floorIdx 同語意：r = f × 總和，逐項扣減）
+  function pickF(rng, w) {
+    let t = 0; for (const x of w) t += x;
+    let r = rng.float() * t;
+    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return i; }
+    return w.length - 1;
+  }
+  const floorF = (rng, n) => Math.floor(rng.float() * n);
 
   // ═════════ compile：config → 執行期結構 ═════════
   function compile(cfg) {
@@ -74,12 +85,17 @@
       const wheel = tr.wheel.map((x, i) => ({ variant: x.variant, type: i + 1, w: x.w }));
       trig = { model: 'house', sc: sid[tr.sc || 'SC'], bs: sid[tr.bs || 'BS'], gate_sc: tr.gate_sc, gate_bs: tr.gate_bs,
         wheel, wheelT: wtable(wheel), min: tr.gate_sc };
+    } else if (tr.model === 'huff') {
+      // 四建材：合計 ≥ min → OH；否則依 order 每顆各擲 rate，先中先得（Go engine.trigger）
+      const mats = tr.materials.map((m) => ({ code: m.code, id: sid[m.sym] }));
+      const midx = {}; mats.forEach((m, i) => (midx[m.id] = i));
+      trig = { model: 'huff', mats, midx, min: tr.open_house_min, order: tr.order.map((c) => mats.findIndex((m) => m.code === c)), rate: mats.map((m) => tr.rate[m.code] || 0) };
     } else {
       trig = { model: 'count', ids: (tr.symbols || ['SC', 'SS']).map((s) => sid[s]), min: tr.min };
     }
     const C = {
       cfg, SYM, sid, R: cfg.board.reels, ROWS: cfg.board.rows, bet: cfg.board.bet, paySyms, pay, sets, reelsets,
-      WILD, WW: WILD, SC: sid.SC, SS: sid.SS,
+      WILD, WW: WILD, SC: sid.SC, SS: sid.SS, wildFrom: Math.max(0, (cfg.board.wild_from_reel || 1) - 1),
       wm: wmc ? { from: sid[wmc.from], to: sid[wmc.to], min: wmc.min, max: wmc.max } : null,
       trig, trigMin: trig.min || trig.gate,
       reelsetT: wtable(reelsets), maxWin: cfg.board.max_win || null,
@@ -117,7 +133,7 @@
       let len = 0;
       for (let r = 0; r < C.R; r++) {
         let a = 0, w = 0, m = 0;
-        for (let y = 0; y < C.ROWS; y++) { const v = grid[r][y]; if (v === s) a++; else if (v === C.WILD) { w++; if (mult) m += mult[r][y]; } }
+        for (let y = 0; y < C.ROWS; y++) { const v = grid[r][y]; if (v === s) a++; else if (v === C.WILD && r >= C.wildFrom) { w++; if (mult) m += mult[r][y]; } }
         if (r === 0 && !a) break;
         if (!(a + w)) break;
         A[r] = a; N[r] = a + w; Ms[r] = m; len++;
@@ -141,6 +157,13 @@
   // ═════════ 觸發 ═════════
   function trigger(C, rng, grid) {
     const T = C.trig;
+    if (T.model === 'huff') {
+      const cnt = T.mats.map(() => 0);
+      for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const k = T.midx[grid[r][y]]; if (k != null) cnt[k]++; }
+      if (sum(cnt) >= T.min) return { cnt, type: T.mats.length, feat: 'OH' };
+      for (const k of T.order) for (let i = 0; i < cnt[k]; i++) if (rng.float() < T.rate[k]) return { cnt, type: k, feat: T.mats[k].code };
+      return { cnt, type: -1 };
+    }
     if (T.model === 'count') {
       const cnt = T.ids.map(() => 0);
       for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const k = T.ids.indexOf(grid[r][y]); if (k >= 0) cnt[k]++; }
@@ -176,10 +199,11 @@
     opts = opts || {};
     const rng = opts.rng || createRng(seed);
     const fx = createRng((seed ^ 0x5bd1e995) >>> 0);
-    const rs = pick(rng, C.reelsetT);
+    // fdraw（huff）：Go SpinGrid 同序——轉輪組只在 >1 組時抽（Float64 pickW），停輪 floor(f × L)
+    const rs = C.fdraw ? (C.reelsets.length > 1 ? C.reelsets[pickF(rng, C.rsW)] : C.reelsets[0]) : pick(rng, C.reelsetT);
     const stops = [], grid = [];
     for (let r = 0; r < C.R; r++) {
-      const strip = rs.reels[r], L = strip.length, st = rng.int(L);
+      const strip = rs.reels[r], L = strip.length, st = C.fdraw ? floorF(rng, L) : rng.int(L);
       stops.push(st);
       const col = [];
       for (let y = 0; y < C.ROWS; y++) col.push(strip[(st + y) % L]);
@@ -205,6 +229,7 @@
     const res = { seed: seed >>> 0, reelset: rs.idx, flags: rs.use, stops, grid, mult, mgWin: mg.win, ways: mg.ways, trig: tg, fg: null, bet: C.bet };
     if (C.model === 'collect-mult') { res.nSC = tg.cnt[0]; res.nSS = tg.cnt[1]; }
     if (C.model === 'house-collect') { res.nSC = tg.cnt[0]; res.nBS = tg.cnt[1]; }
+    if (C.model === 'huff-house') res.nMat = tg.cnt;
     if (tg.type >= 0 && !opts.mgOnly) res.fg = M.play(C, rng, res, !!opts.present);
     // MaxWin：MG + FG 合計封頂（fg.win 保留未封頂自然值）
     const raw = mg.win + (res.fg ? res.fg.win : 0), cap = C.maxWin ? C.maxWin * C.bet : Infinity;
@@ -546,6 +571,160 @@
     return win;
   }
 
+  // ───── huff-house（Huff N' Puff Open House）─────
+  // 逐行移植 Go internal/engine/huff/feature.go（playHS / playOH）；數學流只用 rng.float()，抽值順序與 Go 相同 → 同 Go math/rand seed 逐局一致。
+  // 位置（框落在哪一格）只影響畫面：play 只記邏輯劇本（出帽框、新增框的母框），格位由 present() 用演出流 fx 指派（Go 用 Mulberry32，不納入對帳）。
+  const HUFF_LABEL = { ST: 'Straw Spin', SK: 'Stick Spin', BR: 'Brick Spin', GD: 'Palace Spin', OH: 'Open House' };
+  function huffValue(C, t, rng) {
+    const v = t.v[pickF(rng, t.w)];
+    return typeof v === 'string' ? { d: v, c: C.hf.jp[v] || 0 } : { d: v, c: v };
+  }
+  function huffHS(C, rng, mat, rec) {
+    const H = C.hf.hs, G = H.hat_groups, gw = G.map((g) => g.w), multi = G.length > 1;
+    const groupRate = () => (multi ? G[pickF(rng, gw)].rate : G[0].rate);
+    let n = H.start.v[pickF(rng, H.start.w)];
+    const rates = []; for (let i = 0; i < n; i++) rates.push(groupRate());
+    const n0start = n, hands = rec ? [] : null;
+    let left = H.spins, played = 0, stopped = false;
+    while (left > 0) {
+      left--; played++;
+      const hats = [], add = [], n0 = n;
+      for (let f = 0; f < n0 && !stopped; f++) {
+        if (rng.float() >= rates[f]) continue;
+        hats.push(f);
+        if (n + add.length >= H.max_frames) continue;
+        add.push(f);                                   // 新增框的母框（位置由演出指派）
+        rates.push(groupRate());
+      }
+      if (add.length) left = H.spins;
+      n += add.length;
+      if (hands) hands.push({ hats, add, left });
+      // K-019 漸進封頂：框數達門檻 → 以 p 機率全盤不再出安全帽（之後每手都不出）
+      if (!stopped && H.cap && H.cap.length) {
+        let p = 0; for (const c of H.cap) if (n >= c.frames && c.p > p) p = c.p;
+        if (p > 0 && rng.float() < p) stopped = true;
+      }
+    }
+    let credits = 0; const vals = rec ? [] : null;
+    for (let i = 0; i < n; i++) { const v = huffValue(C, C.hf.values[mat], rng); credits += v.c; if (vals) vals.push(v); }
+    return { model: 'huff-house', type: mat, group: mat, credits, win: credits, spins: played, nFrames: n, capStopped: stopped,
+      ...(rec ? { start: n0start, hands, vals } : {}) };
+  }
+  function huffOH(C, rng, start, rec) {
+    const O = C.hf.oh, mats = C.hf.mats, lvl = C.hf.lvl, top = mats.length - 1, cells = C.hf.cells, P = C.hf.pools;
+    if (!start.length) start = mats.slice();
+    let credits = 0, played = 0, reached = 0, replays = 0, hi = 0, bonusHands = 0;
+    let carry = start.slice(), carryN = start.length;
+    const houses = rec ? [] : null;
+    for (let round = 0; round < O.max_rounds; round++) {
+      const mat = mats[hi], need = O.keys[hi], first = hi === 0, hp = O.hat_p[hi];
+      let kp = O.key_p[hi];
+      if (hi === top && replays > 0 && O.replay_decay) kp = replays >= O.replay_decay.stop_after ? 0 : kp * Math.pow(O.replay_decay.mult, replays);
+      const matsN = []; for (let j = 0; j < carryN; j++) matsN.push(first ? carry[j] : mat);
+      const mat0 = rec ? matsN.slice() : null;
+      let nFrames = carryN, keys = 0;
+      const keyed = new Array(nFrames).fill(false), hands = rec ? [] : null;
+      let left = O.spins;
+      while (left > 0) {
+        const before = left; left--; played++;
+        const keyFrames = [], hats = [], ups = [], n0 = nFrames;
+        for (let f = 0; f < n0; f++) {
+          const r = rng.float();
+          if (r < kp) { if (!keyed[f] && keys < need) { keyed[f] = true; keys++; keyFrames.push(f); } continue; }
+          if (r >= kp + hp) continue;
+          hats.push(f);
+          let t = lvl[matsN[f]] < top ? f : -1;
+          if (t < 0) for (let j = 0; j < nFrames; j++) { const lv = lvl[matsN[j]]; if (lv < top && (t < 0 || lv > lvl[matsN[t]])) t = j; }
+          if (t >= 0) { matsN[t] = mats[lvl[matsN[t]] + 1]; ups.push({ from: f, to: t, mat: matsN[t] }); continue; }
+          if (nFrames >= cells) continue;
+          matsN.push(mat); keyed.push(false); ups.push({ from: f, to: nFrames, mat, add: true }); nFrames++;
+        }
+        const bonus = O.plus_one_hats > 0 && hats.length >= O.plus_one_hats ? 1 : 0;
+        if (bonus) bonusHands++;
+        left += bonus;
+        if (hands) hands.push({ keyFrames, hats, ups, keys, before, left, bonus });
+      }
+      // 結算（P-06；P-11 強盤面池只換宮殿框的金額表）
+      let pool = null, gdT = C.hf.values[mats[top]];
+      if (P) { let nTop = 0; for (const m of matsN) if (m === mats[top]) nTop++; if (nTop >= P.threshold) { pool = pickF(rng, P.w); gdT = P.tables[pool]; } }
+      let sub = 0; const vals = rec ? [] : null;
+      for (const m of matsN) { const v = huffValue(C, m === mats[top] ? gdT : C.hf.values[m], rng); sub += v.c; if (vals) vals.push(v); }
+      const pass = keys >= need;
+      credits += sub; reached = hi + 1;
+      if (houses) houses.push({ mat, need, keys, pass, carryN, mat0, mats: matsN.slice(), keyed: keyed.slice(), hands, vals, sub, cum: credits, replay: hi === top && replays > 0, round: replays, pool, kp });
+      if (!pass) break;
+      if (first) carry = matsN.filter((_, i) => keyed[i]);
+      carryN = keys;
+      if (hi < top) hi++; else replays++;
+    }
+    return { model: 'huff-house', type: 'OH', group: 'OH', credits, win: credits, spins: played, reached, replays, bonusHands, start: start.slice(),
+      ...(rec ? { houses } : {}) };
+  }
+  // 演出流指派格位（Go adjFree / freeCells 同規則；用 proto fx 流，只影響畫面）
+  function huffAdj(C, fx, from, taken) {
+    const R = C.R, r = from % R, row = Math.floor(from / R), pool = [];
+    for (const [a, b] of [[r - 1, row], [r + 1, row], [r, row - 1], [r, row + 1]]) if (a >= 0 && a < R && b >= 0 && b < C.ROWS && !taken[b * R + a]) pool.push(b * R + a);
+    if (!pool.length) for (let i = 0; i < C.R * C.ROWS; i++) if (!taken[i]) pool.push(i);
+    return pool[fx.int(pool.length)];
+  }
+  MODELS['huff-house'] = {
+    compile(cfg, C) {
+      const fg = cfg.fg;
+      C.fdraw = true;
+      C.rsW = C.reelsets.map((r) => r.w);
+      C.hf = { mats: fg.trigger.materials.map((m) => m.code), lvl: Object.fromEntries(fg.trigger.materials.map((m, i) => [m.code, i])),
+        hs: fg.house_spin, oh: fg.open_house, values: fg.values, pools: fg.pools || null, jp: fg.jackpot || {}, scope: fg.max_win_scope || 'total', cells: C.R * C.ROWS };
+    },
+    play(C, rng, res, rec) {
+      const tg = res.trig;
+      let f;
+      if (tg.feat === 'OH') {
+        // 起始框 = 觸發盤面上的建材（列優先掃描：格位 idx = 列 × 軸數 + 軸）；順序決定金額抽值歸屬 → 與 Go triggerFrames 一致
+        const start = [], idx = [];
+        for (let y = 0; y < C.ROWS; y++) for (let r = 0; r < C.R; r++) { const k = C.trig.midx[res.grid[r][y]]; if (k != null) { start.push(C.hf.mats[k]); idx.push(y * C.R + r); } }
+        f = huffOH(C, rng, start, rec);
+        if (rec) f.startIdx = idx;
+      } else f = huffHS(C, rng, tg.feat, rec);
+      f.label = HUFF_LABEL[f.type];
+      if (C.hf.scope === 'feature' && C.maxWin && f.win > C.maxWin * C.bet) { f.raw = f.win; f.win = C.maxWin * C.bet; f.capped = true; }
+      return f;
+    },
+    present(C, fx, res) {
+      const tags = [];
+      for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) { const k = C.trig.midx[res.grid[r][y]]; if (k != null) tags.push({ r, y, sym: C.hf.mats[k] }); }
+      res.tags = tags; res.tease = false;
+      const fg = res.fg; if (!fg) return;
+      const N = C.R * C.ROWS;
+      if (fg.type !== 'OH') {
+        // House Spin：起始框隨機空格（洗牌）；加框落在母框上下左右空格
+        const taken = new Array(N).fill(false), free = [...Array(N).keys()];
+        for (let i = free.length - 1; i > 0; i--) { const j = fx.int(i + 1); [free[i], free[j]] = [free[j], free[i]]; }
+        const pos = free.slice(0, fg.start); pos.forEach((i) => (taken[i] = true));
+        for (const h of fg.hands) h.addIdx = h.add.map((parent) => { const i = huffAdj(C, fx, pos[parent], taken); taken[i] = true; pos.push(i); return i; });
+        fg.pos = pos;
+      } else {
+        let pos = fg.startIdx.slice();
+        for (const H of fg.houses) {
+          const taken = new Array(N).fill(false); pos.forEach((i) => (taken[i] = true));
+          H.pos0 = pos.slice();
+          const cur = pos.slice();
+          for (const h of H.hands) for (const u of h.ups) if (u.add) { const i = huffAdj(C, fx, cur[u.from], taken); taken[i] = true; cur.push(i); u.idx = i; }
+          H.pos = cur;
+          pos = cur.filter((_, i) => H.keyed[i]);
+        }
+      }
+    },
+    statsAdd(g, f) {
+      g.spins = (g.spins || 0) + f.spins;
+      if (f.type === 'OH') { g.reach = g.reach || [0, 0, 0, 0]; for (let i = 0; i < f.reached; i++) g.reach[i]++; g.replays = (g.replays || 0) + f.replays; g.plus1 = (g.plus1 || 0) + f.bonusHands; }
+      else { g.frames = (g.frames || 0) + f.nFrames; g.capStop = (g.capStop || 0) + (f.capStopped ? 1 : 0); g.full = (g.full || 0) + (f.nFrames >= 15 ? 1 : 0); }
+    },
+    groupReport(x) {
+      return x.reach ? { spins: x.spins / x.n, reach: x.reach.map((v) => (100 * v) / x.n), replays: x.replays / x.n, plus1: x.plus1 / x.n }
+        : { spins: x.spins / x.n, frames: x.frames / x.n, cap_stop: (100 * x.capStop) / x.n, full: (100 * x.full) / x.n };
+    },
+  };
+
   // ═════════ 情境搜尋：「強制」= 找出真的會出這個結果的 seed（不改結果）═════════
   function findSeed(C, pred, start, limit) {
     let s = (start >>> 0) || 1;
@@ -590,7 +769,12 @@
   function merge(a, b) {
     for (const k of ['spins', 'mgWin', 'mgWin2', 'mgHit', 'totWin', 'totWin2', 'capN', 'fgN', 'fgWin', 'fgWin2', 'fgBase', 'fgBase2', 'all888N', 'all888Win']) a[k] += b[k] || 0;
     a.mgMax = Math.max(a.mgMax, b.mgMax); a.fgMax = Math.max(a.fgMax, b.fgMax);
-    for (const g in b.group) for (const k in b.group[g]) a.group[g][k] = k === 'max' ? Math.max(a.group[g][k] || 0, b.group[g][k]) : (a.group[g][k] || 0) + b.group[g][k];
+    for (const g in b.group) for (const k in b.group[g]) {
+      const x = a.group[g][k], y = b.group[g][k];
+      if (Array.isArray(y)) a.group[g][k] = y.map((v, i) => ((x && x[i]) || 0) + v);          // 陣列欄位（huff OH 到達各房）逐元素加
+      else if (y && typeof y === 'object') { const o = a.group[g][k] = x || {}; for (const kk in y) o[kk] = (o[kk] || 0) + y[kk]; }   // 計數表（house-collect 強度）
+      else a.group[g][k] = k === 'max' ? Math.max(x || 0, y) : (x || 0) + y;
+    }
     for (const k in b.trig) a.trig[k] = (a.trig[k] || 0) + b.trig[k];
     for (const k in b.entrySC) { const e = a.entrySC[k] || (a.entrySC[k] = { n: 0, win: 0 }); e.n += b.entrySC[k].n; e.win += b.entrySC[k].win; }
     b.reelset.forEach((r, i) => { a.reelset[i].n += r.n; a.reelset[i].mg += r.mg; a.reelset[i].fg += r.fg; });
@@ -638,7 +822,7 @@
   function exact(C, opts) {
     opts = typeof opts === 'string' ? { ssMode: opts } : opts || {};
     const b = C.bet, W = C.reelsetT.total;
-    const isWild = (v) => v === C.WILD || (C.wm && v === C.wm.from);
+    const isWild = (v, ri) => (v === C.WILD && (ri == null || ri >= C.wildFrom)) || (C.wm && v === C.wm.from);
     const mMean = C.wm ? (C.wm.min + C.wm.max) / 2 : 0;
     const conv2 = (A, B) => {
       const out = []; for (let i = 0; i < A.length + B.length - 1; i++) out.push(new Array(A[0].length + B[0].length - 1).fill(0));
@@ -656,7 +840,7 @@
           const L = st.length; let ea = 0, en = 0, em = 0, p0 = 0;
           for (let i = 0; i < L; i++) {
             let a = 0, w = 0;
-            for (let y = 0; y < C.ROWS; y++) { const v = st[(i + y) % L]; if (v === s) a++; else if (isWild(v)) w++; }
+            for (let y = 0; y < C.ROWS; y++) { const v = st[(i + y) % L]; if (v === s) a++; else if (isWild(v, ri)) w++; }
             if (!(a + w)) p0++;
             if (ri === 0 && !a) continue;        // 第一軸須有該符號本身
             ea += a; en += a + w; em += w * mMean;
@@ -673,6 +857,12 @@
           } else { f = 1; for (let i = 0; i < k; i++) f *= EN[i]; }
           mg += C.pay[p][k] * f * (k < C.R ? P0[k] : 1);
         }
+      }
+      if (C.trig.model === 'huff') {
+        const h = huffTrigExact(C, rs, joint, rs.w / W);
+        rsOut.push({ idx: rs.idx, w: rs.w, mg_rtp: (100 * mg) / b, trig: 100 * sum(h), trigs: h.map((x) => 100 * x), spec_mg: null });
+        mgW += (mg * rs.w) / W;
+        continue;
       }
       let D = [[1]];
       for (const st of rs.reels) {
@@ -691,12 +881,40 @@
       rsOut.push({ idx: rs.idx, w: rs.w, mg_rtp: (100 * mg) / b, trig: 100 * sum(pt), trigs: pt.map((x) => 100 * x), spec_mg: rs.spec_total != null ? 100 * (rs.spec_total - rs.spec_fg) : null });
       mgW += (mg * rs.w) / W;
     }
-    const nType = C.trig.model === 'house' ? C.trig.wheel.length + 1 : 3;
+    const nType = C.trig.model === 'huff' ? C.G.length : C.trig.model === 'house' ? C.trig.wheel.length + 1 : 3;
     const trigs = Array.from({ length: nType }, (_, i) => sum(rsOut.map((r) => (r.trigs[i] * r.w) / W)));
     const base = { reelsets: rsOut, rtp_main: (100 * mgW) / b, fg_rate: sum(trigs), trigs };
     const fg = EXACT_FG[C.model](C, joint, base, opts);
     const mainRtp = fg.rtp_main != null ? fg.rtp_main : base.rtp_main;
     return { ...base, ...fg, rtp_main: mainRtp, rtp_total: mainRtp + fg.rtp_free + (fg.rtp_bonus || 0) };
+  }
+  // huff：四建材顆數逐軸卷積（狀態 = 各建材顆數，≤ 16⁴）→ 各玩法觸發機率；OH 狀態（合計 ≥ min）累進 joint 供 OH 抽樣
+  function huffTrigExact(C, rs, joint, wRS) {
+    const T = C.trig, K = T.mats.length, B = 16;
+    const enc = (c) => c.reduce((s, x, i) => s + x * Math.pow(B, i), 0);
+    const dec = (k) => { const c = []; for (let i = 0; i < K; i++) { c.push(k % B); k = Math.floor(k / B); } return c; };
+    let D = new Map([[0, 1]]);
+    for (const st of rs.reels) {
+      const L = st.length, d = new Map();
+      for (let i = 0; i < L; i++) { let k = 0; for (let y = 0; y < C.ROWS; y++) { const m = T.midx[st[(i + y) % L]]; if (m != null) k += Math.pow(B, m); } d.set(k, (d.get(k) || 0) + 1 / L); }
+      const nd = new Map();
+      for (const [a, pa] of D) for (const [c, pc] of d) nd.set(a + c, (nd.get(a + c) || 0) + pa * pc);
+      D = nd;
+    }
+    const out = new Array(K + 1).fill(0);
+    for (const [k, p] of D) {
+      const cnt = dec(k), q = huffTrigProb(T, cnt);
+      for (let i = 0; i <= K; i++) out[i] += p * q[i];
+      if (q[K] > 0) { const key = cnt.join(','); joint[key] = (joint[key] || 0) + p * wRS; }
+    }
+    return out;
+  }
+  function huffTrigProb(T, cnt) {
+    const K = T.mats.length, out = new Array(K + 1).fill(0);
+    if (sum(cnt) >= T.min) { out[K] = 1; return out; }
+    let left = 1;
+    for (const k of T.order) { const miss = Math.pow(1 - T.rate[k], cnt[k]); out[k] = left * (1 - miss); left *= miss; }
+    return out;
   }
   // 觸發機率（給定盤面 (a,c) 顆數）→ [P(type0), P(type1), …]
   function trigProb(C, a, c) {
@@ -720,6 +938,29 @@
     return out;
   }
   const EXACT_FG = {
+    // huff-house：觸發率解析（四維卷積）；House Spin 與盤面無關 → 直接抽樣；OH 依「觸發盤建材組成」條件分布抽樣（固定 seed、附 95% CI）
+    'huff-house'(C, joint, base, opts) {
+      const N = opts.bonusN || 20000, b = C.bet, K = C.hf.mats.length, grp = {};
+      let fgWin = 0;
+      const ohC = Object.keys(joint).map((k) => k.split(',').map(Number)), ohW = Object.keys(joint).map((k) => joint[k]);   // 機率值（≪1）→ 用浮點 pickF，不能用整數權重 pick
+      C.G.forEach((g, t) => {
+        const rng = createRng(0x4f0f + t), isOH = t === K;
+        let s = 0, s2 = 0, sp = 0, fr = 0, cs = 0, full = 0, re = 0;
+        const reach = [0, 0, 0, 0];
+        for (let i = 0; i < N; i++) {
+          let f;
+          if (isOH) { const c = ohC[pickF(rng, ohW)], start = []; c.forEach((n, m) => { for (let j = 0; j < n; j++) start.push(C.hf.mats[m]); }); f = huffOH(C, rng, start, false); for (let j = 0; j < f.reached; j++) reach[j]++; re += f.replays; }
+          else { f = huffHS(C, rng, g, false); fr += f.nFrames; cs += f.capStopped ? 1 : 0; full += f.nFrames >= 15 ? 1 : 0; }
+          s += f.win; s2 += f.win * f.win; sp += f.spins;
+        }
+        const m = s / N, sd = Math.sqrt(Math.max(s2 / N - m * m, 0)), rate = base.trigs[t];
+        grp[g] = { rate, n: N, avg_win: m / b, avg_ci: (1.96 * sd) / Math.sqrt(N) / b, spins: sp / N, rtp: (rate * m) / b,
+          ...(isOH ? { reach: reach.map((v) => (100 * v) / N), replays: re / N } : { frames: fr / N, cap_stop: (100 * cs) / N, full: (100 * full) / N }) };
+        fgWin += (rate / 100) * m;
+      });
+      const tr = base.fg_rate / 100;
+      return { fg_avg: tr ? fgWin / tr / b : 0, rtp_free: (100 * fgWin) / b, groups: grp, bonusN: N };
+    },
     'collect-mult'(C, joint, base, opts) {
       const ssMode = opts.ssMode || C.ssMode, b = C.bet, trigW = base.fg_rate / 100;
       for (const k in joint) { const [a, c] = k.split(',').map(Number); if (a + c < C.trig.min) delete joint[k]; }

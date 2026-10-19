@@ -69,7 +69,8 @@ def src_of(row, head):
 def generic(doc: dict) -> dict:
     brief = walk_tables(doc, "brief")
     kv = {r[0]: r[1] for x in brief if x["t"]["cls"] == "kv" for r in x["t"]["rows"]}
-    rows, reels = (kv.get("盤面", "3x5").lower().split("x") + ["3", "5"])[:2]
+    mb = re.search(r"(\d+)\s*[x×]\s*(\d+)", kv.get("盤面", "3x5").lower())   # 容許「3×5（3 列 5 軸）」這類附註
+    rows, reels = (mb.group(1), mb.group(2)) if mb else ("3", "5")
     bet = int(num(kv.get("基本收費", "1")) or 1)
     pt = next((x["t"] for x in brief if x["t"]["cls"] == "paytable"), {"head": [], "rows": []})   # 沒有就交給 adapter
     ks = [h for h in pt["head"] if re.fullmatch(r"x\d+", h)]

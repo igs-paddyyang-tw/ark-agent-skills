@@ -178,7 +178,52 @@
   TP.MY1 = myTile('my1', '?', '#6b3f8f', '#1f0b33');
   TP.MY2 = myTile('my2', '?', '#1f6f8b', '#06232e');
 
-  const SETS = { milefo: S, tiger_dragon: TD, three_pigs: TP };
+  // ───── Huff N' Puff Open House 套（蓋房主題；程式產生 SVG 佔位，不仿原廠美術）─────
+  const HF = {};
+  const hfTile = (id, c1, c2, body, defs) => tpTile(id, c1, c2, body, defs);
+  const hfPig = (id, c1, c2, extra) => hfTile(id, c1, c2, `<ellipse cx="64" cy="66" rx="18" ry="22" fill="#ffc0cb" stroke="#9b5b63" stroke-width="3"/><ellipse cx="136" cy="66" rx="18" ry="22" fill="#ffc0cb" stroke="#9b5b63" stroke-width="3"/>
+    <circle cx="100" cy="104" r="52" fill="#ffd1dc" stroke="#9b5b63" stroke-width="4"/>
+    <ellipse cx="100" cy="114" rx="26" ry="19" fill="#ffb0c4" stroke="#9b5b63" stroke-width="3"/>
+    <ellipse cx="91" cy="114" rx="5" ry="8" fill="#6b2a35"/><ellipse cx="109" cy="114" rx="5" ry="8" fill="#6b2a35"/>
+    <circle cx="82" cy="90" r="5" fill="#2a1015"/><circle cx="118" cy="90" r="5" fill="#2a1015"/>${extra || ''}`);
+  HF.M1 = hfPig('hm1', '#3b4f8f', '#0d1438', `<path d="M70 150 L100 170 L130 150 L118 186 H82Z" fill="#1d2440" stroke="#0a0f20" stroke-width="3"/><path d="M96 152 L100 176 L104 152Z" fill="#c0392b"/>`);   // 西裝豬
+  HF.M2 = hfPig('hm2', '#8a3b2a', '#330e08', `<path d="M146 120 L176 60" stroke="#6d4c2a" stroke-width="8" stroke-linecap="round"/><path d="M164 52 Q190 60 182 84 L168 74Z" fill="#cfd8dc" stroke="#455a64" stroke-width="3"/>`);   // 斧頭豬
+  HF.M3 = hfPig('hm3', '#b08a2a', '#4a3606', `<path d="M56 54 Q100 22 144 54 L136 62 Q100 40 64 62Z" fill="#e8c86a" stroke="#8a6a1a" stroke-width="3"/>`);   // 稻草豬
+  HF.M4 = hfTile('hm4', '#7a3b1a', '#2a1006', `<rect x="40" y="86" width="120" height="70" rx="8" fill="#c0392b" stroke="#5a1408" stroke-width="4"/>
+    <path d="M76 86 V70 Q76 62 84 62 H116 Q124 62 124 70 V86" fill="none" stroke="#5a1408" stroke-width="7"/>
+    <rect x="40" y="108" width="120" height="8" fill="#8a1a10"/><rect x="92" y="104" width="16" height="16" rx="3" fill="url(#ghm4)"/>`);   // 工具箱
+  HF.M5 = hfTile('hm5', '#2f6b4f', '#0b2a1d', `<circle cx="96" cy="104" r="46" fill="#f5c542" stroke="#8a5a06" stroke-width="5"/><circle cx="96" cy="104" r="14" fill="#5a3a06"/>
+    <path d="M138 112 H176 V130 H138Z" fill="#fff3b0" stroke="#8a5a06" stroke-width="3"/><path d="M146 112 V122 M154 112 V118 M162 112 V122 M170 112 V118" stroke="#5a3a06" stroke-width="2"/>`);   // 捲尺
+  HF.A = card('A', '#2e7d5b', '#0e3326'); HF.K = card('K', '#2b5aa8', '#0c1f45'); HF.Q = card('Q', '#8e3b8e', '#2e0f33');
+  HF.J = card('J', '#9a5a12', '#331c03'); HF.T10 = card('10', '#3a7d7d', '#0e3030'); HF.N9 = card('9', '#7d3a5a', '#300e1f');
+  // WILD 大野狼
+  HF.WILD = hfTile('hfw', '#5b6470', '#1a1e24', `<path d="M52 70 L66 30 L86 62Z M148 70 L134 30 L114 62Z" fill="#8a929c" stroke="#2a2e34" stroke-width="3"/>
+    <ellipse cx="100" cy="98" rx="50" ry="44" fill="#9aa3ad" stroke="#2a2e34" stroke-width="4"/>
+    <path d="M70 108 Q100 150 130 108 Q100 124 70 108Z" fill="#e8ecef" stroke="#2a2e34" stroke-width="3"/>
+    <ellipse cx="100" cy="106" rx="10" ry="7" fill="#1a1e24"/><circle cx="82" cy="86" r="6" fill="#ffd36b"/><circle cx="118" cy="86" r="6" fill="#ffd36b"/>
+    <text x="100" y="178" font-family="Georgia,serif" font-size="34" font-weight="700" text-anchor="middle" fill="#fff6c8" letter-spacing="4">WILD</text>`);
+  // 建材 scatter（稻草 / 木頭 / 磚 / 金條）—— 四色＋字，演出時也當 House Spin 的框
+  const matTile = (id, c1, c2, label, body) => wrap(`<circle cx="100" cy="100" r="86" fill="url(#${id})" stroke="#fff3b0" stroke-width="6"/>${body}
+    <text x="100" y="178" font-family="${FONT}" font-size="26" font-weight="900" text-anchor="middle" fill="#fff" stroke="#2a1a05" stroke-width="2">${label}</text>`,
+    `<radialGradient id="${id}" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>`);
+  HF.SC_STRAW = matTile('hst', '#ffe08a', '#a07a10', '稻草', `<g stroke="#7a5a08" stroke-width="4" stroke-linecap="round"><path d="M70 140 L90 50 M84 140 L98 48 M100 140 L104 46 M116 140 L110 48 M130 140 L116 50"/></g><rect x="66" y="96" width="68" height="12" rx="4" fill="#c0392b"/>`);
+  HF.SC_STICK = matTile('hsk', '#c9a05a', '#5a3a10', '木頭', `<g fill="#a0703a" stroke="#4a2a08" stroke-width="3"><rect x="50" y="108" width="100" height="22" rx="10"/><rect x="60" y="84" width="80" height="22" rx="10"/><rect x="72" y="60" width="56" height="22" rx="10"/></g>`);
+  HF.SC_BRICK = matTile('hbr', '#e07a5a', '#6a200e', '磚頭', `<g fill="#c8543a" stroke="#4a1408" stroke-width="3"><rect x="48" y="112" width="50" height="24"/><rect x="102" y="112" width="50" height="24"/><rect x="74" y="86" width="50" height="24"/><rect x="74" y="60" width="50" height="24"/></g>`);
+  HF.SC_GOLD = matTile('hgd', '#fff3b0', '#b9770e', '金條', `<g fill="#f5c542" stroke="#8a5a06" stroke-width="3"><path d="M50 132 L62 108 H98 L110 132Z"/><path d="M92 132 L104 108 H140 L152 132Z"/><path d="M70 106 L82 82 H118 L130 106Z"/></g>`);
+  // 演出用：房子框（稻草屋 / 木屋 / 磚屋 / 宮殿）、鑰匙、安全帽
+  const house = (id, c1, c2, roof, label) => wrap(`<rect x="8" y="8" width="184" height="184" rx="24" fill="url(#${id})" stroke="#fff3b0" stroke-width="5"/>
+    <path d="M100 34 L168 92 H32Z" fill="${roof}" stroke="#2a1a05" stroke-width="4"/><rect x="50" y="92" width="100" height="70" fill="#00000033" stroke="#2a1a05" stroke-width="3"/>
+    <rect x="88" y="120" width="24" height="42" fill="#2a1a05"/>
+    <text x="100" y="186" font-family="${FONT}" font-size="22" font-weight="900" text-anchor="middle" fill="#fff">${label}</text>`,
+    `<radialGradient id="${id}" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient>`);
+  HF.H_ST = house('hhst', '#ffe08a', '#a07a10', '#e8c86a', '稻草屋');
+  HF.H_SK = house('hhsk', '#c9a05a', '#5a3a10', '#8a5a2a', '木屋');
+  HF.H_BR = house('hhbr', '#e07a5a', '#6a200e', '#a0301a', '磚屋');
+  HF.H_GD = house('hhgd', '#9fd4ff', '#1d4f8a', '#3a7bd5', '宮殿');
+  HF.KEY = wrap(`<circle cx="70" cy="100" r="34" fill="none" stroke="url(#gk)" stroke-width="14"/><path d="M104 100 H176 M150 100 V126 M168 100 V120" stroke="url(#gk)" stroke-width="14" stroke-linecap="round"/>`, goldGrad('gk'));
+  HF.HAT = wrap(`<path d="M30 132 Q100 30 170 132Z" fill="#ffc107" stroke="#7a5a08" stroke-width="5"/><rect x="20" y="128" width="160" height="22" rx="10" fill="#ffb300" stroke="#7a5a08" stroke-width="5"/><rect x="92" y="64" width="16" height="64" fill="#fff3b0" opacity=".6"/>`);
+
+  const SETS = { milefo: S, tiger_dragon: TD, three_pigs: TP, huffnpuff_open_house: HF };
 
   // 背景（廟宇紅金 + 雲紋）
   function background(w, h) {

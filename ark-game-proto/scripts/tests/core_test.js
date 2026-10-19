@@ -8,6 +8,7 @@ let fail = 0;
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fail++; };
 const CL = C.model === 'coin-lock';
 const HC = C.model === 'house-collect';
+const HF = C.model === 'huff-house';
 
 // 1 決定性 + 演出 RNG 分流
 let same = true, n = 0;
@@ -35,6 +36,27 @@ if (CL) {
   ok(leftOk, '每組最左顆不為箭頭（G-TD-5）');
   const g = S.settleGroup({ flip: { ...C.flip, oneT: C.flip.oneT } }, { int: (() => { const q = [0, 0, 20, 8]; let i = 0; return () => q[i++]; })() }, 2);
   ok(g.kinds.join() === 'two,two' && g.value === 1018, `連讀：兩位數 10 · 18 → 1018（實得 ${g.value}）`);
+} else if (HF) {
+  // 2 huff-house：HS 框數 = 位置數且不重複、credits = 逐框金額和；OH 逐房累計 = credits、下一房起始框 = 上一房鑰匙數、到達房數 = 房數
+  const seen = new Set(); let k = 0, hsOk = true, ohOk = true, posOk = true, nOH = 0;
+  for (let s = 1; s < 4e5 && (k < 600 || nOH < 25); s++) {
+    const r = S.spin(C, s); if (!r.fg) continue;
+    k++; seen.add(r.fg.type); if (r.fg.type === 'OH') nOH++;
+    const f = S.spin(C, s, { present: true }).fg;
+    if (f.type !== 'OH') {
+      if (f.vals.reduce((a, v) => a + v.c, 0) !== f.credits || f.vals.length !== f.nFrames) hsOk = false;
+      if (f.pos.length !== f.nFrames || new Set(f.pos).size !== f.nFrames) posOk = false;
+    } else {
+      const H = f.houses;
+      if (H[H.length - 1].cum !== f.credits || H.length !== f.reached + f.replays) ohOk = false;
+      for (let i = 1; i < H.length; i++) if (H[i].carryN !== H[i - 1].keys) ohOk = false;
+      for (const h of H) if (h.pos.length !== h.mats.length || new Set(h.pos).size !== h.pos.length || h.vals.reduce((a, v) => a + v.c, 0) !== h.sub) posOk = false;
+    }
+  }
+  ok(hsOk, `House Spin：逐框金額和 = credits、金額數 = 框數（${k} 場玩法）`);
+  ok(ohOk, `Open House：最後一房累計 = credits、下一房起始框 = 上一房鑰匙數（${nOH} 場）`);
+  ok(posOk, '演出格位：每框一格、不重疊（演出流指派，不改數學）');
+  ok(['ST', 'SK', 'BR', 'GD', 'OH'].every((t) => seen.has(t)), `五種玩法都出現：${[...seen].join('/')}`);
 } else if (HC) {
   // 2 house-collect：FG 贏分拆解 = 線獎 + 房子結算 + 全滿額外；房子棟數 = 標記格 1/2/3 級數；大轉盤三變體與 Free 都會出現
   let k = 0, winOk = true, settleOk = true, countOk = true;
@@ -74,7 +96,17 @@ if (CL) {
 
 // 3 L1 精算對規格（§2 是抽樣值；容許取 max(§2 容許, 0.2)）
 const e = S.exact(C, { bonusN: 60000 }), tol = Math.max(T.tol || 0.2, 0.2);
-if (HC) {
+if (HF) {
+  // huff-house：觸發率解析對快測頻率（≤2%）；均倍抽樣對快測（3×CI + 2%）；MG ±0.3 pp；總 RTP ±1 pp
+  const FT = cfg.targets.feature || {};
+  ok(Math.abs(e.rtp_main - T.rtp_main) < 0.3, `MG RTP 精算 ${e.rtp_main.toFixed(3)} vs ${T.rtp_main}`);
+  for (const g of C.G) {
+    const x = e.groups[g], t = FT[g] || {};
+    ok(t.freq && Math.abs(100 / x.rate / t.freq - 1) < 0.02, `${g} 頻率 1/${(100 / x.rate).toFixed(1)} vs 1/${t.freq}`);
+    ok(t.multi && Math.abs(x.avg_win - t.multi) < 3 * x.avg_ci + 0.02 * t.multi, `${g} 均倍 ${x.avg_win.toFixed(2)} ±${x.avg_ci.toFixed(2)} vs ${t.multi}`);
+  }
+  ok(Math.abs(e.rtp_total - T.rtp_total) < 1, `總 RTP ${e.rtp_total.toFixed(3)} vs ${T.rtp_total} (±1)`);
+} else if (HC) {
   // house-collect：MG 抽樣、FG+Bonus 兩觸發線分開對；總 RTP 對 §2（±tol，§2 的 0.88pp = 95% CI）
   const tolHC = Math.max(T.tol || 0.88, 0.88);
   ok(Math.abs(e.rtp_main - T.rtp_main) < 0.5, `MG RTP 精算 ${e.rtp_main.toFixed(4)} vs ${T.rtp_main}`);

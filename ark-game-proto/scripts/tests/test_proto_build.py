@@ -1,4 +1,4 @@
-"""ark-game-proto 建置測試：兩款 golden（彌勒佛 collect-mult、Tiger and Dragon coin-lock）md → config → html。
+"""ark-game-proto 建置測試：golden（彌勒佛 collect-mult、Tiger and Dragon coin-lock、Huff N' Puff huff-house）md → config → html。
 
 需要 ark-game-prob 1.4+ 的 ps_mdview（ARK_GAME_PROB_SCRIPTS 或 .kiro/skills/ark-game-prob/scripts）。
 node 相關：快速 smoke 預設跑；完整 core_test（約 1 分鐘 / 款）設 SLOTPROTO_SLOW=1 才跑。
@@ -20,6 +20,7 @@ GOLDEN = SCRIPTS.parent / "golden"
 CASES = {
     "milefo": {"adapter": "milefo", "go": "go-config.a-standard.json", "model": "collect-mult", "gaps": 6, "match": 27, "gap": 1},
     "tiger-and-dragon": {"adapter": "tiger_dragon", "go": "go-odds_1.0.0.json", "model": "coin-lock", "gaps": 8, "match": 32, "gap": 0},
+    "huffnpuff-open-house": {"adapter": "huffnpuff_open_house", "go": "go-odds_1.0.0.json", "model": "huff-house", "gaps": 5, "match": 40, "gap": 2},
 }
 
 
@@ -40,12 +41,19 @@ def test_build_config_and_go_check(slug, tmp_path):
     d = build(slug, tmp_path, "--config-only")
     cfg = json.loads((tmp_path / "game-config.json").read_text(encoding="utf-8"))
     assert cfg["schema"] == "slot-proto-config/1" and cfg["fg"]["model"] == c["model"] and cfg["art"] == c["adapter"]
+    assert cfg["art"] in _art_sets(), f"src/art.js 沒有美術套 {cfg['art']}"
     assert len(cfg["gaps"]) == c["gaps"] and all({"id", "what", "spec", "assume", "check"} <= set(g) for g in cfg["gaps"])
     assert d["go_check"]["mismatch"] == 0 and d["go_check"]["match"] == c["match"] and d["go_check"]["gap"] == c["gap"]
     assert cfg["targets"]["summary"]["rtp_total"] > 90
     golden = json.loads((GOLDEN / slug / "game-config.json").read_text(encoding="utf-8"))
     for k in ("board", "paytable", "strips", "reelsets", "mg", "fg", "targets", "gaps"):
         assert cfg[k] == golden[k], f"{k} 與 golden 不一致（改了 adapter 請重產 golden）"
+
+
+def _art_sets() -> set[str]:
+    import re
+    m = re.search(r"const SETS = \{([^}]*)\}", (SCRIPTS / "src" / "art.js").read_text(encoding="utf-8"))
+    return {x.split(":")[0].strip() for x in m.group(1).split(",")}
 
 
 def test_html_single_file_and_parity_embed(tmp_path):
@@ -59,7 +67,7 @@ def test_html_single_file_and_parity_embed(tmp_path):
 def test_old_md_without_strips_fails_clearly(tmp_path):
     md = tmp_path / "prob-spec.md"
     md.write_text((GOLDEN / "milefo" / "prob-spec.md").read_text(encoding="utf-8").split("## 輪帶 Strip（附錄）")[0], encoding="utf-8")
-    r = subprocess.run([sys.executable, str(SCRIPTS / "proto_build.py"), "--md", str(md), "--out", str(tmp_path / "o")], capture_output=True, text=True, encoding="utf-8")
+    r = subprocess.run([sys.executable, "-X", "utf8", str(SCRIPTS / "proto_build.py"), "--md", str(md), "--out", str(tmp_path / "o")], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode != 0 and "strip" in (r.stderr + r.stdout)
 
 
@@ -90,6 +98,27 @@ def test_recorded_go_parity_zero_mismatch(slug):
     for p in (GOLDEN / slug).glob("go-parity.*.json"):
         x = json.loads(p.read_text(encoding="utf-8"))
         assert x["mismatch"] == 0 and x["spins"] >= 200_000, p.name
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="需要 node")
+@pytest.mark.parametrize("slug", sorted(CASES) + ["three-pigs"])
+def test_ui_smoke(slug):
+    """驗證台 UI 無頭冒煙：DOM / Pixi / Worker 替身跑完整 app.js（L1、缺口、Go 對照、L2、每種玩法各演一局含特色遊戲演出）。"""
+    cfg = GOLDEN / slug / "game-config.json"
+    if not cfg.exists():
+        pytest.skip(f"沒有 golden/{slug}")
+    r = subprocess.run(["node", str(HERE / "ui_smoke.js"), str(cfg)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+    assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-800:]
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="需要 node")
+def test_huff_parity_tool_on_recorded_trace(tmp_path):
+    """huff-house：golden 內 Go 對照紀錄 0 差異且涵蓋五種玩法；tests/huff_parity.js 對小 trace 可重跑（tests/fixtures 有時）。"""
+    recs = sorted((GOLDEN / "huffnpuff-open-house").glob("go-parity.*.json"))
+    assert len(recs) >= 2
+    for p in recs:
+        x = json.loads(p.read_text(encoding="utf-8"))
+        assert x["mismatch"] == 0 and x["model"] == "huff-house" and set(x["byType"]) == {"ST", "SK", "BR", "GD", "OH"}, p.name
 
 
 # ───────── three-pigs（house-collect；Python 引擎，無 Go 對照，雙觸發線）─────────

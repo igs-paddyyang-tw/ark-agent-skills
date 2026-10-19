@@ -50,6 +50,7 @@ def build_config(md_p: pathlib.Path, adapter: str) -> dict:
     """md → game-config.json（通用段 + adapter 玩法段 + §2 目標 + 缺口）。"""
     text = md_p.read_text(encoding="utf-8")
     doc = P.M.parse_md(text)
+    doc["md_path"] = str(md_p.resolve())                # adapter 可據此找規格書旁的快測報表（不依賴 CWD）
     g = P.generic(doc)
     cfg = {"schema": "slot-proto-config/1", "game": doc["fm"].get("game"), "slug": doc["fm"].get("slug"),
            "source": {"md": md_p.name, "sha16": hashlib.sha256(text.encode("utf-8")).hexdigest()[:16],
