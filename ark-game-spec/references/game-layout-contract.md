@@ -46,7 +46,7 @@ data/slot/<slug>/
 │       └── competitor-spec-<ver>.md   人工競品規格書（內容不改，只複製）
 ├── spec/                         ②
 │   ├── game-spec.v1.md · decisions.yaml · decisions-applied.json · config-spec.yaml
-│   ├── dev-spec/                      game-spec · feature-spec · state-machine · ui-spec · qa-checklist · config-spec
+│   ├── dev-spec/                      game-spec · feature-spec · state-machine · ui-spec · qa-checklist（config-spec 由 gs_publish 提到 spec/ 根層）
 │   └── gdd/                           gdd.yaml · symbols.yaml · screens.yaml · info.yaml · i18n.csv · rules/*.md
 ├── prob/                         ③⑤
 │   └── prob-spec.md · prob-spec.html · prob-spec.meta.json · [prob-spec.xlsx] · [config-diff.*] · lint-report.json

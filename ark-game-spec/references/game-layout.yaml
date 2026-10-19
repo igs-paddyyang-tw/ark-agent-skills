@@ -23,7 +23,7 @@ data_tree:
   analysis: {files: [game-analysis.yaml, kb-refs.yaml, evidence.jsonl], dirs: [report, source]}
   analysis/source: {files: [manifest.json, "competitor-spec-*.md"]}
   spec: {files: [game-spec.v1.md, decisions.yaml, decisions-applied.json, config-spec.yaml], dirs: [dev-spec, gdd]}
-  spec/dev-spec: {files: [game-spec.md, feature-spec.md, state-machine.md, ui-spec.md, qa-checklist.md, config-spec.yaml]}
+  spec/dev-spec: {files: [game-spec.md, feature-spec.md, state-machine.md, ui-spec.md, qa-checklist.md]}   # config-spec 由 gs_publish 提到 spec/ 根層
   spec/gdd: {files: [gdd.yaml, symbols.yaml, screens.yaml, info.yaml, i18n.csv], dirs: [rules]}
   prob: {files: [prob-spec.md, prob-spec.html, prob-spec.meta.json, lint-report.json], optional: [prob-spec.xlsx, "config-diff.*", prob-data.json]}
   quicktest: {files: [quicktest.yaml, qt-config.yaml], optional: [symbols.tsv, lint-report.json], dirs: [odds, engine, qt-report, config, _tuning]}

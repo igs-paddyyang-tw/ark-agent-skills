@@ -18,8 +18,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.5.0"
-  updated: 2026-10-16
+  version: "2.5.1"
+  updated: 2026-10-19
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
