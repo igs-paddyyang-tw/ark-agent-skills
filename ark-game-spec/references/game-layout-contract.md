@@ -1,10 +1,11 @@
-# 遊戲產出佈局契約（game-layout contract v3.2）
+# 遊戲產出佈局契約（game-layout contract v3.3）
 
 > **單一來源（SSOT）**：一款遊戲從競品到上線的所有產出放哪，以本檔為準；機器可讀版是同目錄的 `game-layout.yaml`。
 > 擁有者：**ark-game-spec**（製程入口）。ark-game-prob（`ps_layout` 守門）、ark-game-quicktest、ark-game-proto 依本契約讀寫路徑。
 > 前版：`docs/designs/2026-10-07-game-pipeline-output-layout.md`（v2，6 階段）、`data/slot/_schema/layout.md`（v1 提案稿）——兩者改為指向本檔。
 > 制定：2026-10-16，aidev-agent（樂奇）／使用者核可目錄規劃（遊戲實作改為 `game/{go-server, pixi-client}`）。
 > v3.1（同日）：階段編號對齊知識庫九階段 SSOT（`knowledge/slot/raw/methodology/slot-pipeline-output-checklist.md`：⑦ 試玩版 Stage、⑧ Game Server、⑨ 上線成效）。
+> v3.3（2026-10-19）：新增定版家 `review/` 拍板包（另計 < 5 MB）——給人拍板／demo 的成品進 data，`output/` 只留中間檔、二進位、大素材（使用者決議；分析見專案 `docs/reports/review/2026-10-19-data-output-review-layout.md`）。
 
 ## 1. 兩個家與判準
 
@@ -15,7 +16,8 @@
 
 🔴 硬規則：定版家目標 **< 1 MB（不含 `game/`）、不得有二進位（exe／影片／大圖）**；單檔 > 500 KB 要說明理由。
 `game/`（⑦ 用戶端、⑧ Server 原始碼）另計額度 **< 1 MB**：1 MB 規則源自 milefo（4.8 MB 中 exe 佔 70%），要擋的是二進位與可重產大檔，不是原始碼；`prob-spec.html` 等受 ps_lint 戳記／空殼守門的 View 仍留定版家（v3.2，2026-10-19）。
-判準一句話：**「刪掉之後能用指令重產」→ 工作檯；「刪掉就要人重做判斷」→ 定版家。**
+`review/`（拍板包）另計額度 **< 5 MB**（v3.3，2026-10-19 使用者決議）：研發產物是給人拍板的，**人會打開、會拿去 demo 的成品**（⑦ 雙擊可玩的試玩單檔、② 素材總覽自足版、⑥⑦ 真瀏覽器驗收報告與代表截圖、導覽頁）即使能重產也進定版家，換機器、傳給人都打得開；仍禁二進位與影片。只在**送審前**用 `review_build` 發布一次，不是每次 build 都更新（控制 git 膨脹）。
+判準一句話：**「刪掉之後能用指令重產」→ 工作檯；「刪掉就要人重做判斷」→ 定版家；「要拿給人拍板／demo」→ 定版家 `review/`。**
 
 ## 2. 九階段 × 子目錄
 
@@ -29,6 +31,7 @@
 | ⑦ | 遊戲試玩版（Stage 正式演出版型） | `game/pixi-client/` | ark-game-proto 1.1（`stage_build`） |
 | ⑧ | Game Server | `game/go-server/` ＋ `game/handoff.md` | 工程（規劃中 skill `ark-game-code`） |
 | ⑨ | 上線成效 | `docs/reports/<date>-perf-review.md` | game_perf_probe ＋ math-reviewer |
+| 拍板 | 送審包（彙整 ②⑤⑥⑦ 成品＋驗收） | `review/` | ark-game-proto（`review_build.py`） |
 | — | 本款專屬文件正本 | `docs/` | 各階段 |
 | — | 逆向知識卡（還原局） | `kb/` | 人工 ＋ `data/slot/_schema/tools/sg_*` |
 
@@ -63,6 +66,13 @@ data/slot/<slug>/
 │   ├── pixi-client/              ⑦   PixiJS 試玩版遊戲包（ark-game-proto Stage：game.js、stage.yaml、stage-build.json、建置腳本）
 │   ├── go-server/                ⑧   Go Server 原始碼（雛型或正式）
 │   └── handoff.md                ⑧   工程交付單（設定檔 sha、prob-spec 版本、rtp-report sha、K 卡 → Go 映射）
+├── review/                       拍板包（v3.3；額度另計 < 5 MB；送審前 review_build 發布）
+│   ├── index.html                     導覽頁：九階段狀態、成品連結＋大小＋sha、驗收結果與截圖牆（自足、離線可開）
+│   ├── play.html                 ⑦   試玩版單檔（= stage_build --single，雙擊可玩）
+│   ├── gdd-overview.html         ②   素材總覽自足版（縮圖內嵌 WebP）
+│   ├── checks/                   ⑥⑦ browser-check.json · stage-smoke.json · 代表截圖 *.webp
+│   ├── REVIEW.md                      送審說明（要拍板什麼；人工區重發布保留）
+│   └── review-manifest.json           來源路徑＋sha16＋大小
 └── docs/
     ├── decisions/                     OQ 清單、決策摘要（type: decision）
     ├── designs/                       機率架構設計、引擎缺口交接單

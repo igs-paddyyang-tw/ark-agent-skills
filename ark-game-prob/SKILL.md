@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.4.2"
+  version: "1.4.3"
   updated: 2026-10-19
   outputs:
     - { format: data, audience: ai }
@@ -60,7 +60,7 @@ metadata:
 | `scripts/ps_mdmeta.py` | md 模式：手寫 `prob-spec.md` → `prob-spec.meta.json`（mode: md、sections、pending、frontmatter sources 的 sha）| `ps_run --md` 自動呼叫 |
 | `scripts/ps_lint.py` | PS-SECTIONS / PS-NUM（md 模式降 warning；```strip 帶面不算數字）/ PS-PROV / PS-STALE / **PS-HTML-EMPTY**（去標籤純文字命中六段標題 < 4 判空殼 error、< 6 warn）/ PS-HUMAN / PS-INJECT → `lint-report.json`；error exit 3 | 任何人手改 md 後必跑 |
 | `scripts/ps_diff.py` | `prob-data.json` ⇄ 設定檔 JSON 逐鍵對照（map：`references/config-map.fasttest.yaml`）→ `config-diff.md/.json`；不一致 exit 3（`--warn-only` 降 0）| 跑快測前、或規格 / 設定檔任一改了 |
-| `scripts/ps_layout.py` | 一款遊戲的產出佈局守門：讀 `--game` 遊戲目錄（`output/games/<slug>` 或已畢業的 `data/slot/<slug>`）的 `{analysis,spec,prob,quicktest,server,docs}/` 實檔比 sha / 數字 → `layout-report.json`（`--write-md` 重寫 LAYOUT.md）；規則 L-DIRS / L-STRAY / L-PROB / L-STAMP / L-SPEC / L-QT / L-DIFF / L-SIZE（擋 exe、>500KB、多設定檔）/ L-SERVER（handoff sha 對帳）/ L-RTP；`--mode restore\|design`；error exit 3 | 畢業前（進 `data/` 前）|
+| `scripts/ps_layout.py` | 一款遊戲的產出佈局守門：讀 `--game` 遊戲目錄（`output/games/<slug>` 或已畢業的 `data/slot/<slug>`）的 `{analysis,spec,prob,quicktest,server,docs}/` 實檔比 sha / 數字 → `layout-report.json`（`--write-md` 重寫 LAYOUT.md）；規則 L-DIRS / L-STRAY / L-PROB / L-STAMP / L-SPEC / L-QT / L-DIFF / L-SIZE（擋 exe、>500KB、多設定檔）/ L-SERVER（handoff sha 對帳）/ L-REVIEW（契約 v3.3 拍板包 review/ 另計 5 MB、禁二進位影片、清冊過期）/ L-RTP；`--mode restore\|design`；error exit 3 | 畢業前（進 `data/` 前）|
 | `scripts/ps_probtable.py` | qt 模式來源 → 公版 `prob-spec.xlsx`（COUNTIF 活公式、`_meta` 戳記）| 要給機率同仁 Excel 版（xlsx 模式本身就是公版表，免跑）|
 | `scripts/ps_common.py` | envelope / sha16 / yaml / atomic_write / `resolve_out`（G-2 落點）/ `slug_of` | 被所有腳本 import |
 | `references/prob-spec-contract.md` | 六段契約、frontmatter、meta.json、人工區、prob-data.json schema、戳記規則、xlsx / qt / md 模式差異、**§表格契約**（表頭 → 表型 → 元件）| 改任何腳本或手寫規格書前 |
@@ -126,6 +126,7 @@ data/prob/<slug>/
 | ps_layout | L-* 任一 error（restore 模式缺可解析的 config.json → L-SPEC error，屬遊戲未做參數外部化，非 skill 壞）| exit 3（`--strict` 時 warning 也算）|
 | L-SIZE | 遊戲目錄進二進位（exe/dll/bin）或多版本設定檔 → error；單檔 > 500 KB（排除 html）→ warning | ps_layout 子規則 |
 | L-SERVER | `server/handoff.md` 宣告的 config / rtp-report sha ≠ 現檔 → error（只對帳不改 server code）| ps_layout 子規則 |
+| L-REVIEW | `review/` 拍板包總量 > 5 MB 或含二進位／影片 → error；缺 index.html、review-manifest 列的檔過期 → warning；review 內 HTML 不觸發 L-SIZE 500 KB（1.4.3）| ps_layout 子規則 |
 
 ## 邊界
 

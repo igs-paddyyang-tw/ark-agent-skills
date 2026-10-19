@@ -1,13 +1,14 @@
 # 遊戲產出佈局契約 v3（機器可讀版）——人讀版：game-layout-contract.md（兩者同步改）
-contract: "3.2"
+contract: "3.3"
 owner: ark-game-spec
-updated: 2026-10-16
+updated: 2026-10-19
 homes:
   data: "data/{domain}/{slug}"        # 定版家，入 git
   output: "output/{domain}/{slug}"    # 工作檯，不入 git
 limits:
   data_total_kb: 1024        # 不含 game/
   game_total_kb: 1024        # game/（⑦ pixi-client ＋ ⑧ go-server 原始碼）另計
+  review_total_kb: 5120      # review/ 拍板包另計（v3.3）：給人看、可 demo 的成品；禁二進位與影片
   single_file_kb: 500
   forbid_suffix: [.exe, .dll, .so, .mp4, .mov, .zip, .7z]
 stages:
@@ -19,6 +20,7 @@ stages:
   "⑦": {dir: game/pixi-client, skill: ark-game-proto}
   "⑧": {dir: game/go-server, skill: engineering}
   "⑨": {dir: docs/reports, skill: [game_perf_probe, math-reviewer]}
+  "拍板": {dir: review, skill: ark-game-proto}   # review_build：彙整 ②⑤⑥⑦ 成品＋驗收，送審前發布
 data_tree:
   root_files: [README.md, LAYOUT.md, layout-report.json, publish-manifest.json]
   analysis: {files: [game-analysis.yaml, kb-refs.yaml, evidence.jsonl], dirs: [report, source]}
@@ -30,11 +32,13 @@ data_tree:
   quicktest: {files: [quicktest.yaml, qt-config.yaml], optional: [symbols.tsv, lint-report.json], dirs: [odds, engine, qt-report, config, _tuning]}
   proto: {optional: [game-config.json, index.html, "go-parity.*", gaps.md]}
   game: {optional: [handoff.md], dirs: [go-server, pixi-client]}
+  review: {files: [index.html, REVIEW.md, review-manifest.json], optional: [play.html, gdd-overview.html, qt-report.html], dirs: [checks]}
+  review/checks: {optional: ["*.json", "*.webp", "*.png"]}
   docs: {dirs: [decisions, designs, reports, versions]}
   kb: {files: [spec.md, prob.md, code.md, qt-result.md, versions.md, methods.md], dirs: [xlsx, paramcheck, notes]}
 output_tree: [runs, analysis, gdd, game/pixi-client, game/go-server, proto, build, qt-runs, sandbox, _retired]
 modes:
-  design: {required: [README.md, analysis, spec, prob, quicktest], optional: [proto, game, docs, kb]}
+  design: {required: [README.md, analysis, spec, prob, quicktest], optional: [proto, game, review, docs, kb]}
   restore: {required: [README.md, kb, quicktest], optional: [prob, spec, docs]}
 legacy:   # 一個版本內仍可讀；新產出一律寫新路徑
   "proto/stage": "game/pixi-client"

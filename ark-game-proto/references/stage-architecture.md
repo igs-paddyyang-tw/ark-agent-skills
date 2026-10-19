@@ -61,7 +61,7 @@ GameService（service/service.js）: LocalService | HttpService | ReplayService 
 |---|---|
 | `node scripts/stage/tests/stage_test.js [--game <game.js> --orig <原檔>]` | 結果一致（LocalService vs Proto Logic 10 萬局 0 差異）、Schema、冪等、Replay、Tween、Stage API、分層、Http（mock）、go-rand、試點邏輯逐字相同 |
 | `pytest scripts/stage/tests/test_stage_build.py` | 資料夾 / 單檔建置、素材複製與缺檔、預算守門 |
-| `node scripts/stage/tests/smoke.js --html <index.html> --scenes '[…]'` | Playwright 開頁 → 強制情境 → 截圖、0 console error、FPS |
+| `node scripts/stage/tests/smoke.js --html <index.html 或資料夾> --scenes all [--query 'seed=7&rng=go']` | 真瀏覽器（有 Playwright 用之，否則系統 Chrome / Edge ＋ `scripts/tests/cdp.js`）開頁 → 一般局 → 全部強制情境 → 截圖、0 頁面錯誤、帳務（餘額 = balanceAfter）、{feat} 玩法相符、FPS；`smoke.json` |
 
 ## 落點（佈局契約 v3：`.kiro/skills/ark-game-spec/references/game-layout-contract.md` ⑦）
 

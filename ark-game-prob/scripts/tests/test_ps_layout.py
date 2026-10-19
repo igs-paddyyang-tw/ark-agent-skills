@@ -154,3 +154,22 @@ def test_layout_accepts_analysis_and_valid_server(game):
     rep = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
     assert rep["facts"]["dirs"]["analysis"] is True and rep["facts"]["dirs"]["server"] is True
     assert rep["facts"]["server"]["handoff"] is True
+
+
+def test_layout_review_pack(game):
+    """契約 v3.3 L-REVIEW：review/ 另計 5 MB、禁影片、清冊過期 warning；review 內大 HTML 不觸發 L-SIZE 500 KB warning。"""
+    rv = game / "review"
+    (rv / "checks").mkdir(parents=True)
+    (rv / "index.html").write_text("<html></html>", encoding="utf-8")
+    (rv / "play.html").write_text("x" * 700_000, encoding="utf-8")             # 700 KB：review 內允許
+    (rv / "review-manifest.json").write_text(json.dumps({"files": [{"path": "play.html", "sha256_16": "0" * 16}]}), encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    vs = r["data"]["violations"]
+    assert not any(v["rule"] == "L-SIZE" and "review" in v["where"] for v in vs)
+    assert any(v["rule"] == "L-REVIEW" and v["severity"] == "warning" and "清冊" in v["message"] for v in vs)
+    assert not any(v["rule"] == "L-REVIEW" and v["severity"] == "error" for v in vs)
+    (rv / "checks" / "demo.mp4").write_bytes(b"\x00" * 10)
+    (rv / "big.html").write_text("x" * (5 * 1024 * 1024 + 10), encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    errs = [v for v in r["data"]["violations"] if v["rule"] == "L-REVIEW" and v["severity"] == "error"]
+    assert r["_rc"] == 3 and any(".mp4" in v["message"] for v in errs) and any("5120" in v["message"] for v in errs)

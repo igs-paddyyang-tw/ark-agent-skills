@@ -17,6 +17,8 @@
              單檔 > 500 KB（排除 *.html View 軌與 _retired/）→ warning；quicktest/config/ 有 > 1 個 *.json（多版本設定檔，違反單一版本原則）→ error
   L-SERVER   server/handoff.md 存在時：frontmatter 的 config_sha256_16 / rtp_report_sha256_16 必須 = 現檔實算 sha
              （不符 → error；只對帳交付件來源，不改 server code）；無 handoff.md → 不報（⑥ 選配）
+  L-REVIEW   review/ 拍板包（契約 v3.3，選配）：總量 > 5 MB → error；二進位／影片 → error；有 review/ 但缺 index.html → warning；
+             review-manifest.json 列的檔案不存在或 sha 不符 → warning（拍板包過期，送審前重跑 review_build）
   L-RTP      docs/ 下（人寫的）md 提到的「Total RTP / 總 RTP」實測數字 ≠ rtp-report（±0.01 個百分點）→ warning（列檔名:行號；數字前後出現 golden／目標／理論／參數表者略過）
 
 用法: python ps_layout.py --game output/games/<slug> [--mode restore|design] [--write-md] [--strict]
@@ -200,8 +202,9 @@ def check(game: pathlib.Path, mode: str) -> dict:
     BIN_EXT = (".exe", ".dll", ".bin")
     SIZE_WARN = 500 * 1024
     max_file, exe_count = ("", 0), 0
+    review = game / "review"
     for f in game.rglob("*"):
-        if not f.is_file() or "_retired" in f.parts:
+        if not f.is_file() or "_retired" in f.parts or review in f.parents:
             continue
         suf = f.suffix.lower()
         if suf in BIN_EXT:
@@ -218,6 +221,32 @@ def check(game: pathlib.Path, mode: str) -> dict:
     if len(cfg_jsons) > 1:
         add("L-SIZE", "quicktest/config/", f"{len(cfg_jsons)} 個設定檔（違反單一版本原則，只收 A 版）：" + ", ".join(p.name for p in cfg_jsons[:6]) + "；其餘移到 output/slot/<slug>/")
     facts["size"] = {"max_file": max_file[0], "max_bytes": max_file[1], "exe_count": exe_count, "config_versions": len(cfg_jsons)}
+
+    # L-REVIEW（契約 v3.3：review/ 拍板包另計 5 MB；給人拍板 / demo 的成品，禁二進位與影片）
+    if review.is_dir():
+        REVIEW_KB, BAN = 5120, (".exe", ".dll", ".bin", ".so", ".mp4", ".mov", ".webm", ".zip", ".7z")
+        files = [f for f in review.rglob("*") if f.is_file()]
+        total = sum(f.stat().st_size for f in files)
+        for f in files:
+            if f.suffix.lower() in BAN:
+                add("L-REVIEW", rel(f), f"拍板包不得放二進位／影片（{f.suffix}）")
+        if total > REVIEW_KB * 1024:
+            add("L-REVIEW", "review/", f"拍板包 {total // 1024} KB > {REVIEW_KB} KB（契約 v3.3）：縮圖品質降一級或精簡 checks/ 截圖")
+        if not (review / "index.html").is_file():
+            add("L-REVIEW", "review/index.html", "拍板包缺導覽頁（ark-game-proto review_build.py 產生）", "warning")
+        man_p, stale = review / "review-manifest.json", []
+        if man_p.is_file():
+            try:
+                man = json.loads(man_p.read_text(encoding="utf-8"))
+                for it in man.get("files", []):
+                    fp = review / it["path"]
+                    if not fp.is_file() or (it.get("sha256_16") and C.sha16(fp) != it["sha256_16"]):
+                        stale.append(it["path"])
+            except (json.JSONDecodeError, KeyError, TypeError):
+                stale.append("review-manifest.json（無法解析）")
+            if stale:
+                add("L-REVIEW", "review/review-manifest.json", f"{len(stale)} 個檔與清冊不符：" + ", ".join(stale[:5]) + "（送審前重跑 review_build）", "warning")
+        facts["review"] = {"files": len(files), "total_kb": total // 1024, "stale": len(stale)}
 
     # L-SERVER（⑥ 交付守門：server/handoff.md 的來源 sha 必須與現檔一致；只對帳不改 server code）
     handoff = gamedir / "handoff.md" if (gamedir / "handoff.md").is_file() else server / "handoff.md"

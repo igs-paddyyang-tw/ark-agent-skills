@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="需要 nod
 
 
 def run(*args):
-    r = subprocess.run([sys.executable, str(STAGE / "stage_build.py"), *map(str, args)], capture_output=True, text=True, encoding="utf-8")
+    r = subprocess.run([sys.executable, "-X", "utf8", str(STAGE / "stage_build.py"), *map(str, args)], capture_output=True, text=True, encoding="utf-8")
     return r.returncode, json.loads(r.stdout.strip().splitlines()[-1])
 
 
@@ -91,3 +91,18 @@ def test_odds_injected_before_game(tmp_path):
     bad.write_text("{not json", encoding="utf-8")
     rc, d = run("--game", DEMO, "--out", tmp_path / "b", "--single", "--odds", bad)
     assert rc != 0
+
+
+@pytest.mark.skipif(not os.environ.get("SLOTPROTO_BROWSER"), reason="SLOTPROTO_BROWSER=1 才跑（真瀏覽器）")
+@pytest.mark.parametrize("single", [False, True])
+def test_smoke_real_browser(tmp_path, single):
+    """真瀏覽器冒煙：smoke.js（Playwright 或系統 Chrome / Edge）跑 stage-demo 一般局＋全部情境，0 頁面錯誤、帳務一致。"""
+    rc, d = run("--game", DEMO, "--out", tmp_path / "o", *(["--single"] if single else []))
+    assert rc == 0, d
+    r = subprocess.run(["node", str(HERE / "smoke.js"), "--html", str(tmp_path / "o"), "--scenes", "all", "--out", str(tmp_path / "shots"), "--strict"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
+    if r.returncode == 2:
+        pytest.skip("沒有可用瀏覽器：" + r.stdout.strip()[-200:])
+    assert r.returncode == 0, r.stdout[-1500:]
+    rep = json.loads((tmp_path / "shots" / "smoke.json").read_text(encoding="utf-8"))
+    assert rep["pass"] and not rep["errors"]
