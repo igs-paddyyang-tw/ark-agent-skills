@@ -133,6 +133,10 @@ def main() -> None:
     odds = json.loads(odds_p.read_text(encoding="utf-8"))
     eo = odds.get("extra_odds") or {}
     prov = cfg.get("provenance") or {}
+    # 1.4.2 huff 模式：odds 頂層有 huff 區塊（客製 Go 引擎，例 HuffNPuff engine/huff）→ §4 改印 huff 參數（P-03～P-12），
+    # 範本 FG 欄位與非線賠符號標「不適用」不計入待決議；沒有 huff 區塊時輸出與 1.4.1 相同
+    huff = odds.get("huff") if isinstance(odds.get("huff"), dict) else None
+    NA = "不適用"
     srcs = cfg.get("sources") or {}
     slug = a.slug or C.slug_of(qt)
     if not re.match(r"^[a-z][a-z0-9-]{1,48}$", slug):
@@ -301,6 +305,10 @@ def main() -> None:
         sid = str(s.get("sym_id"))
         arr = (eo.get("odds") or {}).get(sid)
         src = prov.get(f"extra_odds.odds.{sid}") or prov.get("extra_odds.odds")
+        if arr is None and huff and s.get("group") in ("special", "fg"):
+            L.append(f"| {s.get('code')} | {sid} | {s.get('name') or ''} | {s.get('group') or ''} | " + " | ".join([NA] * ncol)
+                     + " | 非線賠符號（WILD／Scatter／框／鑰匙不連線；huff.pay_order 未列） |")
+            continue
         if arr is None:
             pending += 1
             cells = [PENDING] * ncol
@@ -309,10 +317,17 @@ def main() -> None:
         L.append(f"| {s.get('code')} | {sid} | {s.get('name') or ''} | {s.get('group') or ''} | " + " | ".join(cells) + f" | {src or ('—' if arr is None else '**UNKNOWN**')} |")
     L += ["", "### 觸發與上限參數", "", "| 參數 | 值 | 來源 |", "|---|---|---|"]
     for key, label, unit in SCALAR_PARAMS:
+        if huff and eo.get(key) is None and key not in ("max_win",):
+            L.append(f"| {label} | {NA} | huff 引擎無此範本欄位（Free Games 另依決議；特色參數見下方 huff 表） |")
+            continue
         L.append(prow(label, eo.get(key), f"extra_odds.{key}", (" " + unit) if unit and eo.get(key) is not None else ""))
     jm, ja = eo.get("jackpot_multiple"), eo.get("jackpot_acc_rate")
-    L.append(prow("Jackpot 基底倍數（MINI→GRAND）", ", ".join(map(str, jm)) if isinstance(jm, list) else None, "extra_odds.jackpot_multiple"))
-    L.append(prow("Jackpot 累積率", ", ".join(map(str, ja)) if isinstance(ja, list) else None, "extra_odds.jackpot_acc_rate"))
+    if huff:
+        jp = huff.get("jackpot") or {}
+        L.append(prow("Jackpot（credits，押 bet_cost 時）", ", ".join(f"{k} {v}" for k, v in jp.items()) if jp else None, "huff.jackpot"))
+    else:
+        L.append(prow("Jackpot 基底倍數（MINI→GRAND）", ", ".join(map(str, jm)) if isinstance(jm, list) else None, "extra_odds.jackpot_multiple"))
+        L.append(prow("Jackpot 累積率", ", ".join(map(str, ja)) if isinstance(ja, list) else None, "extra_odds.jackpot_acc_rate"))
     L += ["", "### 輪帶組與權重（K-022 輪帶組權重混合）", ""]
 
     def idx_table(title: str, iset, wt, key: str) -> None:
@@ -332,17 +347,31 @@ def main() -> None:
             L.append(f"| {i} | " + " | ".join(str(c) for c in combo) + " | " + (str(w) if w is not None else PENDING) + f" | {prov.get(key + '_weight') or prov.get(key.replace('index_set', 'set_weight')) or '—'} |")
         L.append("")
 
-    idx_table("主遊戲", eo.get("main_game_reel_index_set"), eo.get("main_game_reel_set_weight"), "extra_odds.main_game_reel_index_set")
-    idx_table("免費遊戲（權重欄 = 超強/強/中/弱 四型）", eo.get("free_game_reel_index_set"), eo.get("free_game_reel_set_weight"), "extra_odds.free_game_reel_index_set")
-    ftw = eo.get("free_game_type_weight")
-    L.append(f"- 免費遊戲四型權重（超強/強/中/弱）：{', '.join(map(str, ftw)) if isinstance(ftw, list) else PENDING}；來源 {prov.get('extra_odds.free_game_type_weight') or '—'}")
-    if not isinstance(ftw, list):
-        pending += 1
-    L.append("")
+    if huff and isinstance(odds.get("main_game_reel_data"), list) and odds["main_game_reel_data"]:
+        # huff：一組＝5 軸各一條帶（不用 index_set），權重 main_game_reel_set_weight
+        wts = eo.get("main_game_reel_set_weight") or []
+        L += ["**主遊戲**", "", "| 組 | 權重 | 來源 |", "|---|---|---|"]
+        for gi in range(len(odds["main_game_reel_data"])):
+            w = wts[gi] if gi < len(wts) else None
+            if w is None:
+                pending += 1
+            L.append(f"| {gi} | {w if w is not None else PENDING} | {prov.get('extra_odds.main_game_reel_set_weight') or '—'} |")
+        L += ["", f"- 免費遊戲輪帶組：{NA}（{prov.get('free_game_reel_data') or 'huff 引擎無 FG 輪帶組'}）", ""]
+    else:
+        idx_table("主遊戲", eo.get("main_game_reel_index_set"), eo.get("main_game_reel_set_weight"), "extra_odds.main_game_reel_index_set")
+        idx_table("免費遊戲（權重欄 = 超強/強/中/弱 四型）", eo.get("free_game_reel_index_set"), eo.get("free_game_reel_set_weight"), "extra_odds.free_game_reel_index_set")
+        ftw = eo.get("free_game_type_weight")
+        L.append(f"- 免費遊戲四型權重（超強/強/中/弱）：{', '.join(map(str, ftw)) if isinstance(ftw, list) else PENDING}；來源 {prov.get('extra_odds.free_game_type_weight') or '—'}")
+        if not isinstance(ftw, list):
+            pending += 1
+        L.append("")
     L += ["### 輪帶符號顆數（Strip 統計；完整輪帶見 odds.json）", ""]
     sym_order = [str(s.get("sym_id")) for s in symbols]
     for label, key in (("主遊戲", "main_game_reel_data"), ("免費遊戲", "free_game_reel_data")):
         data = odds.get(key)
+        if huff and key == "free_game_reel_data" and isinstance(data, list) and not data:
+            L += [f"- {label}：{NA}（{prov.get(key) or '空陣列＝本款無 FG 輪帶'}）", ""]
+            continue
         if not isinstance(data, list) or not data:
             L += [f"- {label}：{PENDING}（{key} 為 null）", ""]
             pending += 1
@@ -352,6 +381,46 @@ def main() -> None:
             for ri, reel in enumerate(grp or []):
                 cnt = strip_counts(reel or [], sym_order)
                 L.append(f"| {gi} | R{ri + 1} | {dv(str(len(reel or [])), f'len({key}[{gi}][{ri}])')} | " + " | ".join(dv(str(cnt.get(s, 0)), f'count({key}[{gi}][{ri}],{s})') for s in sym_order) + " |")
+        L.append("")
+    # ── 1.4.2 huff 特色玩法參數（odds.huff；值照 odds 原文，PS-NUM 由 odds 來源檔允許；來源 = qt-config provenance huff.*）──
+    if huff:
+        def hj(v) -> str:
+            return json.dumps(v, ensure_ascii=False).replace("|", "／")
+
+        def hrow(label: str, val, key: str) -> str:
+            nonlocal pending
+            src = prov.get(key)
+            if val is None or val == [] or val == {}:
+                pending += 1
+                return f"| {label} | {PENDING} | {src or '—'} |"
+            return f"| {label} | {hj(val) if not isinstance(val, (int, float, str)) else val} | {src or '**UNKNOWN** 無 provenance'} |"
+
+        T, HS, OH = huff.get("trigger") or {}, huff.get("house_spin") or {}, huff.get("open_house") or {}
+        L += ["### 特色玩法參數（huff 引擎，P-03～P-12）", "",
+              "> 來源 `odds/odds_" + ver + ".json` 的 `huff` 區塊；參數編號對應機率架構設計（P-03 觸發率 … P-12 彩金）。", "",
+              "| 參數 | 值 | 來源 |", "|---|---|---|"]
+        L.append(hrow("押注基準（bet_cost）", huff.get("bet_cost"), "huff.bet_cost") if prov.get("huff.bet_cost") else f"| 押注基準（bet_cost） | {huff.get('bet_cost')} | qt-config.structure.bet_cost |")
+        L.append(hrow("Open House 觸發顆數（≥）", T.get("open_house_min"), "huff.trigger.rate") if T.get("open_house_min") is not None else hrow("Open House 觸發顆數（≥）", None, "huff.trigger.open_house_min"))
+        L.append(hrow("單顆建材觸發判定順序", T.get("order"), "huff.trigger.rate"))
+        for m, r in (T.get("rate") or {}).items():
+            L.append(hrow(f"P-03 單顆觸發率 {m}", r, "huff.trigger.rate"))
+        L.append(hrow("P-04 House Spin 起始框數 v／w", HS.get("start"), "huff.house_spin.start"))
+        L.append(hrow("House Spin 重轉次數", HS.get("spins"), "huff.house_spin.start"))
+        L.append(hrow("P-05 安全帽率組別（rate／w）", HS.get("hat_groups"), "huff.house_spin.hat_groups"))
+        L.append(hrow("D-21 K-019 漸進封頂（frames／p）", HS.get("cap"), "huff.house_spin.cap"))
+        L.append(hrow("框數實體上限", HS.get("max_frames"), "huff.house_spin.cap"))
+        for m, t in (huff.get("values") or {}).items():
+            L.append(hrow(f"P-06／P-10 房子金額表 {m}（v／w，字串＝彩金）", t, "huff.values"))
+        L.append(hrow("Open House 每房次數", OH.get("spins"), "huff.open_house.key_p"))
+        L.append(hrow("Open House 鑰匙需求（四房）", OH.get("keys"), "huff.open_house.key_p"))
+        L.append(hrow("P-07 每房出鑰匙率", OH.get("key_p"), "huff.open_house.key_p"))
+        L.append(hrow("P-08 每房出安全帽率", OH.get("hat_p"), "huff.open_house.hat_p"))
+        L.append(hrow("+1 手門檻（同手安全帽 ≥）", OH.get("plus_one_hats"), "huff.open_house.hat_p"))
+        L.append(hrow("P-09 宮殿重玩遞減（mult／stop_after）", OH.get("replay_decay"), "huff.open_house.replay_decay"))
+        L.append(hrow("宮殿重玩防呆輪數", OH.get("max_rounds"), "huff.open_house.replay_decay"))
+        L.append(hrow("P-11 強盤面獎項池（threshold／w／tables）", huff.get("pools"), "huff.pools"))
+        L.append(hrow("P-12 彩金（credits）", huff.get("jackpot"), "huff.jackpot"))
+        L.append(hrow("Max Win 範圍", huff.get("max_win_scope"), "extra_odds.max_win"))
         L.append("")
     # ── 客製玩法欄位 generic 渲染（範本 schema 以外的 extra_odds 鍵，如金幣鎖格 tiger_dragon）──
     # 治本：qt 模式原本只渲染範本固定欄位，客製巢狀欄位會被漏印（見差距分析報告）。
