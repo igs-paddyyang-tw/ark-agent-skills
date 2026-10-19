@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.1.0"
+  version: "1.1.1"
   updated: 2026-10-16
   outputs:
     - { format: data, audience: ai }
@@ -122,5 +122,6 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.1.1 | 2026-10-16 | 修正 `?rng=go` 數學流：Go `Float64()` 是 `float64(Int63())/2^63`（1.1.0 誤用低 53 位元，與真 Go 不同流）；gorand 測試改用 Go 實跑黃金值；stage-api 補 Go Server 雛型 |
 | 1.1.0 | 2026-10-16 | 新增 Stage 正式演出版型（`scripts/stage/`）：PixiJS 8 演出 + Pixi HUD、GameService（Local / Http / Replay / Recorder）、SpinResult Schema `proto-stage-result/1`、`stage_build.py --slug`（佈局契約 v3 ⑦ `game/pixi-client`）、mock slot-bot server、go-rand Float64 數學流；golden `stage-demo`；試點 Huff N' Puff Open House |
 | 1.0.0 | 2026-10-15 | 驗證雛型 skill 化：proto_build、collect-mult / coin-lock、go_parity 逐局對照 |

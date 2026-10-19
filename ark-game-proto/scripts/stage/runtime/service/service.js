@@ -26,14 +26,16 @@
 
   const u32 = (rng) => Math.floor(rng() * 4294967296) >>> 0;
 
-  // Go math/rand 的 Float64() 數學流（go1.20+：float64(Int63n(1<<53)) / (1<<53)），需載入 ark-game-proto scripts/src/go-rand.js
-  // 用途：遊戲引擎與 Go 快測都以 Float64 依同順序抽值時，可同 seed 逐局對帳（P4 / go_parity）
-  const M53 = (1n << 53n) - 1n;
+  // Go math/rand 的 Float64() 數學流，需載入 ark-game-proto scripts/src/go-rand.js
+  //   Go 1 值流（math/rand rand.go）：float64(Int63()) / (1 << 63)，結果為 1.0 時重抽
+  //   ⚠️ 1.1.0 誤用 Int63n(1<<53)/2^53（取低 53 位元）＝ Go 原始碼註解裡的「較簡單寫法」，Go 實際沒採用 → 1.1.1 修正
+  // 用途：遊戲引擎與 Go Server / Go 快測都以 Float64 依同順序抽值時，同 seed 逐局對帳
+  const TWO63 = 9223372036854775808;
   function goFloatRng(seed) {
     const G = root.GoRand || null;
     if (!G) throw new ServiceError('MISSING_DEP', '需要 go-rand.js（GoRand）');
     const g = G.create(Number(seed));
-    const f = () => Number(g.int63() & M53) / 9007199254740992;
+    const f = () => { for (;;) { const v = Number(g.int63()) / TWO63; if (v < 1) return v; } };
     f.int = (n) => g.int(n);
     f.go = g;
     return f;

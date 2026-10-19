@@ -229,7 +229,10 @@ async function run() {
     const g = P.GoRand.create(1);
     eq(String(g.int63()), '5577006791947779410', 'Go rand.NewSource(1).Int63() 第一個值');
     const f = P.svc.goFloatRng(1);
-    eq(f(), Number(5577006791947779410n & ((1n << 53n) - 1n)) / 2 ** 53, 'Float64 = Int63n(1<<53) / 2^53');
+    // 黃金值 = Go 1.24 實跑 rand.New(rand.NewSource(seed)).Float64()（外部真值，不是自我比對）
+    const GOLD = { 1: [0.60466028797961957, 0.94050908804501243, 0.66456005321849043], 42: [0.37302836104663262, 0.06600049679351791, 0.60409385155864204], 20261016: [0.21415471026081598, 0.34402538198128674, 0.77418565505817716] };
+    eq(f(), GOLD[1][0], 'Float64 = float64(Int63()) / 2^63（Go 1 值流）');
+    for (const [sd, vals] of Object.entries(GOLD)) { const r = P.svc.goFloatRng(Number(sd)); vals.forEach((v, i) => eq(r(), v, `seed ${sd} 第 ${i + 1} 個 Float64`)); }
     const svc = new P.svc.LocalService(P.config.spec, { seed: 42, rng: 'go', balance: 1e9 });
     eq((await svc.init()).rng, 'go');
     const svc2 = new P.svc.LocalService(P.config.spec, { seed: 42, rng: 'go', balance: 1e9 });

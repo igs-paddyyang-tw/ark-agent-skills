@@ -25,4 +25,9 @@
 
 ## 與 Go 對帳
 
-LocalService `rng: 'go'`（網址 `&rng=go`）改用 Go `math/rand` Float64 數學流（go-rand.js 逐位元移植；`Float64 = Int63n(1<<53) / 2^53`）。當 Go 引擎與 JS 引擎以相同順序、相同方式（Float64）抽值時，同 seed 結果逐局相同；ReplayService 可直接重播 Go Server 錄下的 SpinResult 軌跡。
+LocalService `rng: 'go'`（網址 `&rng=go`）改用 Go `math/rand` Float64 數學流（go-rand.js 逐位元移植；`Float64 = float64(Int63()) / 2^63`，=1.0 重抽——Go 1 值流；1.1.0 誤寫為 `Int63n(1<<53)/2^53`，1.1.1 修正）。當 Go 引擎與 JS 引擎以相同順序、相同方式（Float64）抽值時，同 seed 結果逐局相同；ReplayService 可直接重播 Go Server 錄下的 SpinResult 軌跡。
+
+## Go Server 雛型（試點）
+
+`data/slot/huffnpuff-open-house/game/go-server/`：ark-go 網路層（WebSocket wire 協定）＋ 上表 HTTP 契約 ＋ `/internal/v1/play`（給 slot-bot server 的純算結果端點）。引擎讀 odds JSON（quicktest 範本欄位 ＋ `huff` 區塊）；`tools/parity.js` 驗 Go 引擎與用戶端 `?rng=go` 同 seed 整份 SpinResult 逐局相同。
+
