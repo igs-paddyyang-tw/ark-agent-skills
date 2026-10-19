@@ -1,12 +1,13 @@
 # 遊戲產出佈局契約 v3（機器可讀版）——人讀版：game-layout-contract.md（兩者同步改）
-contract: "3.1"
+contract: "3.2"
 owner: ark-game-spec
 updated: 2026-10-16
 homes:
   data: "data/{domain}/{slug}"        # 定版家，入 git
   output: "output/{domain}/{slug}"    # 工作檯，不入 git
 limits:
-  data_total_kb: 1024
+  data_total_kb: 1024        # 不含 game/
+  game_total_kb: 1024        # game/（⑦ pixi-client ＋ ⑧ go-server 原始碼）另計
   single_file_kb: 500
   forbid_suffix: [.exe, .dll, .so, .mp4, .mov, .zip, .7z]
 stages:

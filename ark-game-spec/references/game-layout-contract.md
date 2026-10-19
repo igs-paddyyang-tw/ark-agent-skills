@@ -1,4 +1,4 @@
-# 遊戲產出佈局契約（game-layout contract v3.1）
+# 遊戲產出佈局契約（game-layout contract v3.2）
 
 > **單一來源（SSOT）**：一款遊戲從競品到上線的所有產出放哪，以本檔為準；機器可讀版是同目錄的 `game-layout.yaml`。
 > 擁有者：**ark-game-spec**（製程入口）。ark-game-prob（`ps_layout` 守門）、ark-game-quicktest、ark-game-proto 依本契約讀寫路徑。
@@ -13,7 +13,8 @@
 | 定版家 | `data/<domain>/<slug>/`（slot 為 `data/slot/<slug>/`） | ✅ | 人工決議過的定版件、定版數字與來源、原始碼現行版、正本報告、sha 清冊 |
 | 工作檯 | `output/<domain>/<slug>/` | ❌ | 能重產的中繼與 View、二進位、大檔、影片與抽幀、試跑、舊版 |
 
-🔴 硬規則：定版家目標 **< 1 MB、不得有二進位（exe／影片／大圖）**；單檔 > 500 KB 要說明理由。
+🔴 硬規則：定版家目標 **< 1 MB（不含 `game/`）、不得有二進位（exe／影片／大圖）**；單檔 > 500 KB 要說明理由。
+`game/`（⑦ 用戶端、⑧ Server 原始碼）另計額度 **< 1 MB**：1 MB 規則源自 milefo（4.8 MB 中 exe 佔 70%），要擋的是二進位與可重產大檔，不是原始碼；`prob-spec.html` 等受 ps_lint 戳記／空殼守門的 View 仍留定版家（v3.2，2026-10-19）。
 判準一句話：**「刪掉之後能用指令重產」→ 工作檯；「刪掉就要人重做判斷」→ 定版家。**
 
 ## 2. 九階段 × 子目錄
