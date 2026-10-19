@@ -21,8 +21,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.3.0"
-  updated: 2026-10-16
+  version: "2.3.1"
+  updated: 2026-10-19
 ---
 
 # ark-agent-init

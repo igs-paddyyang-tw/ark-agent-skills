@@ -47,13 +47,15 @@
 | 📚 產品／github／weknora | `knowledge/<product>/`、`$ARK_GITHUB_ROOT`、外部 RAG | 選配 | 🤖 排程 | 🔸 |
 | 🖐️ 技能（共用） | `.kiro/skills/<name>/`（複本，非 symlink） | 同左 | 上游 | 🔸 按需 |
 | 🖐️ 技能（套件內建） | `ark_team_agent` 內建工具 | `ark_bot_agent.skills.internal` | 套件 | — |
-| 🔌 腳本（業務） | `scripts/`、專案自己的模組 | `skills/`（`run_bot(skills=["skills"])` 掃描） | 本專案 | — |
+| 🔌 腳本（業務） | `scripts/`、專案自己的模組 | `skills/` 裡綁本專案的插件（見下方註） | 本專案 | — |
 | 🔌 腳本（維運） | `scripts/` | 同左 | 本專案 | — |
 | 🔌 外部工具 | `.kiro/settings/mcp.json`（daemon 產）／`.mcp.json` | 同左 | ✋／daemon | — |
 | 產出 | `artifacts/{reports,sim,perf,triage}/` | `output/{reports,replies,images,exports,drafts}/` | 🤖／✋ | ❌ |
 
-> ⚠️ bot 的根 `skills/` **名字叫 skills、本質是腳本層**（綁本專案 config/templates 的業務模組），
-> 和 `.kiro/skills`（技能層）同名 —— 文件與 BRAIN.md 要標明，避免被當成技能同步。
+> ⚠️ bot 的根 `skills/` 是 ark_bot_agent 的 **`BaseSkill` 插件包**（`run_bot(skills=["skills"])` 掃描），
+> **目錄名是套件慣例，不要改名**。它屬哪一層看**內容**，不看目錄名：插件通用、換專案還用得上 → 技能
+> （該升格回貢）；綁本專案 config／templates／資料 → 腳本。和 `.kiro/skills`（SKILL.md 技能）同名但不同機制，
+> BRAIN.md 寫明本專案 `skills/` 的定位即可，不需同步。（2.3.1 更正：2.3.0 曾寫「本質是腳本層」，太武斷）
 
 ## 4. 紅線（五層之間）
 
