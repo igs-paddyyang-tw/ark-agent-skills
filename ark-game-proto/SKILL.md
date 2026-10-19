@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.2.0"
+  version: "1.2.1"
   updated: 2026-10-19
   outputs:
     - { format: data, audience: ai }
@@ -55,7 +55,7 @@ metadata:
 | `scripts/src/go-rand.js` | Go math/rand（rngSource + Intn）逐位元移植 | 逐局對照 |
 | `scripts/src/app.js`、`art.js`、`template.html` | 驗證台 + PixiJS 演出層；SVG 佔位美術（名稱 = 規格符號代碼，`cfg.art` 選套）| 改演出 / 換美術 |
 | `scripts/go_parity.py` + `scripts/goparity/<model>_trace.go` + `scripts/tests/go_parity.js` | 暫存複本注入 trace → go run → JS 同 seed 逐局比 | 規格書或引擎改版後 |
-| `scripts/tests/` | `test_proto_build.py`（golden、Go 對照、單檔 html、UI 冒煙）、`core_test.js`（決定性 / 演出不改結果 / 模型一致性 / 精算對 §2）、`ui_smoke.js`（DOM / Pixi / Worker 替身跑完整驗證台與每種玩法演出，無瀏覽器也能驗）、`huff_parity.js`（huff-house ⇄ Go `cmd/sim -trace` 逐局）| 改腳本後 |
+| `scripts/tests/` | `test_proto_build.py`（golden、Go 對照、單檔 html、UI 冒煙）、`core_test.js`（決定性 / 演出不改結果 / 模型一致性 / 精算對 §2）、`ui_smoke.js`（DOM / Pixi / Worker 替身跑完整驗證台與每種玩法演出，無瀏覽器也能驗）、`huff_parity.js`（huff-house ⇄ Go `cmd/sim -trace` 逐局）、`browser_check.js`（系統 Chrome / Edge 無頭＋DevTools 協定，真瀏覽器跑驗證台與每種玩法演出、截圖＋JSON 報告，零 npm 相依）| 改腳本後；⑥ 交付前跑 `browser_check` |
 | `references/architecture.md` | 四層架構、三原則、SpinResult / config 契約、驗證三層 | 第一次用或改架構 |
 | `references/adapter-guide.md` | 寫 adapter / 加玩法模型 / 加 Go trace 的步驟與檢查表 | 新遊戲 |
 | `references/go-parity.md` | 逐局對照原理（RNG 移植、抽值順序、封頂語意）與排錯 | 對照出差異時 |
@@ -122,6 +122,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.2.1 | 2026-10-19 | 新增 `tests/browser_check.js`：不需 Playwright，用系統 Chrome / Edge 無頭模式＋DevTools 協定（Node 22 內建 WebSocket）在真瀏覽器載入驗證台 → 面板檢查、每種玩法各演一場逐段截圖、L2、頁面錯誤蒐集，輸出 `browser-check.json`＋截圖；exit 2 = 環境不足。四款 golden 驗證台全過；pytest `SLOTPROTO_BROWSER=1` 才跑 |
 | 1.2.0 | 2026-10-19 | 新玩法模型 `huff-house`（Huff N' Puff Open House）：四建材各擲觸發率（先中先得）＋ ≥6 顆 Open House；House Spin（K-019 漸進封頂）／Open House（四房鑰匙晉級、升級加框、+1 手、宮殿重玩遞減、強盤面池）。模型可設 `C.fdraw` 讓 spin 改用 Float64 抽值（Go `pickW`／`floorIdx` 同語意）→ 可對 Go `math/rand` 逐局對照；L1 觸發率改四維顆數卷積解析。adapter `huffnpuff_open_house`（讀 prob-spec §4 huff 參數表，`go_rules` 40 鍵一致）＋ 美術套；`tests/huff_parity.js` 40 萬局 0 不一致；新增 `tests/ui_smoke.js`。修正：`merge()` 陣列／計數表欄位相加變字串（L2 多 Worker 合併；也影響 house-collect 強度統計）、`generic()` 盤面「3×5（附註）」解析失敗、`proto_build` 傳 `doc["md_path"]` 讓 adapter 不依賴 CWD 找報表；Ways 支援 `board.wild_from_reel` |
 | 1.1.2 | 2026-10-19 | stage_build 支援機率設定檔：`stage.yaml` 的 `odds:`（或 `--odds`）→ 在 game.js 前注入 `globalThis.HUFF_ODDS`（單檔內嵌／資料夾 odds.js；壞 JSON 擋下；清冊記 odds sha16）；stage-game-pack 補遊戲包 odds 模式寫法。試點 HuffNPuff 交付物 index.html 與 Go 引擎同 seed 2 萬局 0 不一致 |
 | 1.1.1 | 2026-10-16 | 修正 `?rng=go` 數學流：Go `Float64()` 是 `float64(Int63())/2^63`（1.1.0 誤用低 53 位元，與真 Go 不同流）；gorand 測試改用 Go 實跑黃金值；stage-api 補 Go Server 雛型 |

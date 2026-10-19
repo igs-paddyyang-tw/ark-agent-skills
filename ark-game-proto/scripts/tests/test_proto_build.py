@@ -111,6 +111,23 @@ def test_ui_smoke(slug):
     assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-800:]
 
 
+@pytest.mark.skipif(not (shutil.which("node") and os.environ.get("SLOTPROTO_BROWSER")), reason="SLOTPROTO_BROWSER=1 才跑（真瀏覽器，每款 1～2 分鐘）")
+@pytest.mark.parametrize("slug", sorted(CASES) + ["three-pigs"])
+def test_browser_check(slug, tmp_path):
+    """真瀏覽器驗收：系統 Chrome / Edge 無頭模式跑驗證台與每種玩法演出（tests/browser_check.js；找不到瀏覽器 → skip）。"""
+    sys.path.insert(0, str(SCRIPTS))
+    import proto_build as B
+    cfg_p = GOLDEN / slug / "game-config.json"
+    if not cfg_p.exists():
+        pytest.skip(f"沒有 golden/{slug}")
+    B.build_html(json.loads(cfg_p.read_text(encoding="utf-8")), tmp_path, False)
+    r = subprocess.run(["node", str(HERE / "browser_check.js"), str(tmp_path), "--turbo", "--l2", "50000"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+    if r.returncode == 2:
+        pytest.skip("找不到瀏覽器：" + r.stderr.strip()[-200:])
+    assert r.returncode == 0, r.stdout[-1500:]
+
+
 @pytest.mark.skipif(not shutil.which("node"), reason="需要 node")
 def test_huff_parity_tool_on_recorded_trace(tmp_path):
     """huff-house：golden 內 Go 對照紀錄 0 差異且涵蓋五種玩法；tests/huff_parity.js 對小 trace 可重跑（tests/fixtures 有時）。"""

@@ -62,3 +62,4 @@ EXACT_FG['<model>'] = (C, joint, base, opts) => ({ fg_avg, rtp_free, groups }); 
 - 演出位置（框落格）只影響畫面：`play` 記邏輯劇本（母框索引），格位在 `present()` 用 fx 指派，數學流不動。
 - 統計欄位若是陣列或計數表，`merge()` 已支援逐元素／逐鍵相加；新欄位型別要確認 L2 多 Worker 合併正確（`tests/ui_smoke.js` 會抓到）。
 - 改完跑 `node tests/ui_smoke.js golden/<slug>/game-config.json`：無瀏覽器也能確認 L1／L2／單局軌跡／每種玩法演出跑得完、面板無 undefined／NaN。
+- 交付前跑 `node tests/browser_check.js <proto_build --out 的資料夾> [--turbo]`：真瀏覽器（系統 Chrome / Edge）看得到版面、貼圖、WebGL 問題，截圖留在 `<資料夾>/browser-check/`。
