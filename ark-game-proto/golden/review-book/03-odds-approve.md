@@ -1,6 +1,6 @@
 ---
 book: huffnpuff-open-house-decision
-chapter: 2
+chapter: 3
 slug: odds-approve
 title: "R-2 定版：正式機率 kb-v1 能不能從 candidate 升為 approved"
 type: chapter
@@ -68,7 +68,7 @@ Huff N' Puff Open House 的正式機率設定檔 `odds_1.0.0.json`，目前標�
 
 ## 動手做
 
-1. 打開 `../proto/index.html`（驗證台），看「L1 精算」分頁的五種玩法表
+1. 打開 [⑥ 驗證台 ↗](../proto.html)，看「L1 精算」分頁的五種玩法表
 2. 切到「Go 對照」分頁，確認兩個 seed 各 20 萬局不一致都是 0
 3. R-1 體感通過後，在拍板欄寫「kb-v1 升 approved」；工程端把 `odds_1.0.0.json` 的 `_meta.status` 改為 approved
 

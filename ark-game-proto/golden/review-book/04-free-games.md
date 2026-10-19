@@ -1,6 +1,6 @@
 ---
 book: huffnpuff-open-house-decision
-chapter: 3
+chapter: 4
 slug: free-games
 title: "R-3 範圍：Free Games（6 頂安全帽）要不要進 v1"
 type: chapter
@@ -70,7 +70,7 @@ Free Games 要進來，就要從現有的某一塊切一部分給它。切誰、
 
 ## 動手做
 
-1. 打開 `../spec/game-spec.v1.md`，搜尋 `D012`，看三個 deferred 決議的原文
+1. 打開定版家的 `spec/game-spec.v1.md`（拍板包外，工程端提供），搜尋 `D012`，看三個 deferred 決議的原文
 2. 判斷現有五種特色遊戲（第 1 章）是否已經撐得起特色遊戲體驗
 3. 在拍板欄寫下決定；若要進 v1，另開需求從遊戲規格書重跑
 

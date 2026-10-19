@@ -269,23 +269,235 @@ def write_review_md(p: pathlib.Path, game: str, auto: str) -> None:
     p.write_text(txt, encoding="utf-8")
 
 
-def write_appendix(book_dir: pathlib.Path, game: str, when: str, arts: list[dict], checks: dict, links, reports, rows) -> None:
-    """拍板書附錄（ark-book 章節契約；每次發布重產）：成品、驗收、九階段、報告。路徑相對於書原稿目錄。"""
+DOC_CSS = """body{margin:0;background:#F6EEDC;color:#3B2A1A;font:16px/1.75 "Noto Sans TC","Microsoft JhengHei",sans-serif}
+.bar{position:sticky;top:0;background:#6B4423;color:#F6D77A;padding:10px 18px;display:flex;gap:14px;align-items:center;border-bottom:3px solid #4A2E16;z-index:2}
+.bar a{color:#FFF6E0;font-weight:900;text-decoration:none;background:#C8543A;border:2px solid #4A2E16;border-radius:10px;padding:4px 12px}
+.bar span{font-size:13px;opacity:.9}main{max-width:860px;margin:24px auto;padding:24px 28px;background:#FFFBF2;border:2.5px solid #4A3018;border-radius:18px}
+table{border-collapse:collapse;width:100%;margin:10px 0}th,td{border:1px solid #D9C8A6;padding:6px 9px;text-align:left;font-size:14px;vertical-align:top}th{background:#C8543A;color:#FFFBF2}
+pre{background:#3B2A1A;color:#F6EEDC;padding:12px;border-radius:10px;overflow:auto}code{background:#F7E3D8;color:#8E3A24;padding:0 4px;border-radius:4px}pre code{background:none;color:inherit}
+h1,h2,h3{font-family:"Zen Maru Gothic","Noto Sans TC",sans-serif}h2{border-bottom:3px dashed #E3B33E;padding-bottom:4px}blockquote{border-left:6px solid #A0703A;margin:8px 0;padding:4px 12px;background:#FBF2DE}"""
+BACK_JS = "if(window.opener){window.close();return false}"   # 從拍板書開的新分頁 → 關掉分頁即回到書；直接開檔 → 連回 index.html
+
+
+BACK_FAB = ('<a href="{href}" onclick="' + BACK_JS + '" style="position:fixed;right:18px;bottom:18px;z-index:2147483647;background:#C8543A;color:#FFFBF2;'
+            "font:900 15px/1 'Noto Sans TC','Microsoft JhengHei',sans-serif;padding:11px 16px;border:2.5px solid #4A2E16;border-radius:12px;"
+            'box-shadow:3px 4px 0 #4A2E16;text-decoration:none">← 回拍板書</a>')
+
+
+def add_back(p: pathlib.Path, href: str = "index.html") -> None:
+    """複製進拍板包的 HTML（試玩版除外）加浮動「← 回拍板書」：新分頁開的 → 關分頁；直接開檔 → 回 index.html。"""
+    t = p.read_text(encoding="utf-8", errors="replace")
+    fab = BACK_FAB.replace("{href}", href)
+    t = t.replace("</body>", fab + "</body>", 1) if "</body>" in t else t + fab
+    p.write_text(t, encoding="utf-8")
+
+
+def doc_page(title: str, body: str, src: str) -> str:
+    e = html.escape
+    return (f'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f"<title>{e(title)}</title><style>{DOC_CSS}</style></head><body>"
+            f'<div class="bar"><a href="../index.html" onclick="{BACK_JS}">← 回拍板書</a><span>{e(title)}</span><span style="margin-left:auto">來源 {e(src)}</span></div>'
+            f"<main>{body}</main></body></html>")
+
+
+def md_file_to_html(md_p: pathlib.Path) -> str:
+    import markdown  # noqa: PLC0415
+    txt = md_p.read_text(encoding="utf-8", errors="replace")
+    txt = re.sub(r"\A---\n.*?\n---\n", "", txt, flags=re.S)
+    return markdown.markdown(txt, extensions=["tables", "fenced_code"])
+
+
+def copy_linked(data: pathlib.Path, rv: pathlib.Path, files: list) -> list[dict]:
+    """把拍板書會連到的定版家成品全部收進 review/（整包可傳、可離線）：HTML 成品直接複製，md 轉成可讀頁（頁首「← 回拍板書」）。"""
+    docs = rv / "docs"
+    if docs.is_dir():
+        shutil.rmtree(docs)
+    docs.mkdir()
+    items: list[dict] = []
+
+    def add(dst: pathlib.Path, src: pathlib.Path, title: str, desc: str, kind: str) -> None:
+        files.append((dst, src.relative_to(data.parents[2]).as_posix()))
+        items.append({"href": dst.relative_to(rv).as_posix(), "title": title, "desc": desc, "kind": kind,
+                      "meta": f"{kb(dst.stat().st_size)} · sha {sha16(dst)}"})
+
+    for src, name, title, desc in ((data / "prob" / "prob-spec.html", "prob-spec.html", "⑤ 機率規格書", "參數表、§2 快測數據、流程圖"),
+                                   (data / "proto" / "index.html", "proto.html", "⑥ 機率驗證台", "L1 精算 / L2 蒙地卡羅 / Go 逐局對照 / 演出（演出需網路載入 PixiJS）")):
+        if src.is_file():
+            shutil.copyfile(src, rv / name)
+            add_back(rv / name)
+            add(rv / name, src, title, desc, "app")
+    qt = next(iter(sorted((data / "quicktest" / "qt-report").glob("*.md"))), None) if (data / "quicktest" / "qt-report").is_dir() else None
+    for src, name, title, desc in ((qt, "qt-report.html", "④ 快測報告", "2,000 萬局三向判定"), (data / "game" / "handoff.md", "handoff.html", "⑧ 工程交付單", "設定檔 sha、K 卡 → Go 映射")):
+        if src and src.is_file():
+            (docs / name).write_text(doc_page(title, md_file_to_html(src), src.relative_to(data).as_posix()), encoding="utf-8")
+            add(docs / name, src, title, desc, "doc")
+    rd = data / "docs" / "reports"
+    for md in sorted(rd.glob("*.md"), reverse=True) if rd.is_dir() else []:
+        txt = md.read_text(encoding="utf-8", errors="replace")
+        m = re.search(r'^title:\s*"?(.+?)"?\s*$', txt, re.M)
+        title = m.group(1) if m else md.stem
+        vd = re.search(r"^verdict:\s*(\S+)", txt, re.M)
+        hp = md.with_suffix(".html")
+        dst = docs / f"{md.stem}.html"
+        if hp.is_file() and f"sha256:{sha16(md)}" in hp.read_text(encoding="utf-8", errors="replace"):
+            shutil.copyfile(hp, dst)
+            add_back(dst, "../index.html")
+            src_p = hp
+        else:
+            dst.write_text(doc_page(title, md_file_to_html(md), md.relative_to(data).as_posix()), encoding="utf-8")
+            src_p = md
+        add(dst, src_p, title, "報告（時點快照）" + (f" · verdict {vd.group(1)}" if vd else ""), "report")
+    return items
+
+
+def decision_rows(book_dir: pathlib.Path) -> list[dict]:
+    """讀各 R-x 章的「拍板欄」表：| R-x 項目 | 決議 | 拍板人 | 日期 |。決議以「（待拍板」開頭 → 待拍板。"""
+    out = []
+    for md in sorted(book_dir.glob("[0-8][0-9]-*.md")):
+        txt = md.read_text(encoding="utf-8")
+        ch = re.search(r"^chapter:\s*(\d+)", txt, re.M)
+        title = re.search(r'^title:\s*"?(.+?)"?\s*$', txt, re.M)
+        sec = txt.split("### 拍板欄", 1)
+        if len(sec) < 2 or not ch:
+            continue
+        row = next((r for r in sec[1].splitlines() if re.match(r"\|\s*R-\d", r)), None)
+        if not row:
+            continue
+        c = [x.strip() for x in row.strip().strip("|").split("|")] + ["", "", ""]
+        pending = c[1].startswith("（待拍板") or not c[1]
+        sug = re.search(r"建議([^）]*)", c[1])
+        out.append({"id": c[0].split()[0], "item": c[0], "title": title.group(1) if title else md.stem, "chapter": int(ch.group(1)),
+                    "pending": pending, "decision": c[1], "suggest": sug.group(1).lstrip("：") if sug else "", "by": c[2], "date": c[3]})
+    return out
+
+
+def write_status(book_dir: pathlib.Path, game: str, when: str, arts: list[dict], checks: dict, rows, data: pathlib.Path) -> None:
+    """拍板書第 1 章「現況：一頁看完」（每次發布重產）：結論、四件拍板事項狀態、成品（新分頁）、驗收、九階段。"""
     import yaml  # noqa: PLC0415
     slug = yaml.safe_load((book_dir / "book.yaml").read_text(encoding="utf-8"))["slug"]
+    rr = data / "quicktest" / "qt-report" / "rtp-report.json"
+    g = json.loads(rr.read_text(encoding="utf-8")).get("games", {}) if rr.is_file() else {}
+    rep = json.loads(rr.read_text(encoding="utf-8")) if rr.is_file() else {}
+    lr = data / "layout-report.json"
+    verdict = (json.loads(lr.read_text(encoding="utf-8")).get("facts", {}).get("rtp_report", {}) or {}).get("verdict") if lr.is_file() else None
+    pc = lambda k: f"{100 * g[k]['rtp']:.2f}%" if g.get(k, {}).get("rtp") is not None else "—"  # noqa: E731
+    done = sum(len(no) for no, _, ok in rows if ok)          # ③⑤ 同一列 = 兩個階段
+    dec = decision_rows(book_dir)
+    npend = sum(1 for d in dec if d["pending"])
+    L = [f"""---
+book: {slug}
+chapter: 1
+slug: status
+title: "現況：一頁看完 {game} 走到哪裡"
+type: chapter
+level: intermediate
+est_minutes: 5
+punchline: "研發全綠，只剩 {len(dec)} 件事要人拍板。"
+objectives:
+  - 一頁看懂九階段進度、驗收結果與待拍板事項
+  - 從本章直接打開每一個成品
+prerequisites: [preface]
+key_terms: [拍板包, 真瀏覽器驗收]
+tags: [slot, pipeline]
+sources:
+  - ../review-manifest.json
+  - ../../quicktest/qt-report/rtp-report.json
+trust: deterministic
+confidence: high
+status: review
+---
+
+# 現況：一頁看完 {game} 走到哪裡
+
+> 本章由 ark-game-proto review_build 於 {when} 依實際檔案產生，重新發布會覆寫；成品連結都會開新分頁，看完關掉分頁就回到這本書。
+
+## 這章要解決的問題
+
+送審時第一個問題總是：現在到底做到哪了？哪些已經驗證、哪些還要人決定？成品在哪裡打開？
+
+## 路線圖
+
+1. 一句話結論與關鍵數字
+2. 要拍板的 {len(dec)} 件事與目前狀態
+3. 可以直接打開的成品與驗收結果
+
+## 內文
+
+### 一句話結論
+
+九階段完成 {done} 個（⑨ 上線成效要上線後才有）。Go 快測 {int(rep.get('spins') or 0):,} 局總 RTP {pc('Total')}（主遊戲 {pc('MainGame')}、特色遊戲 {pc('SpecialGameTotal')}），三向判定 **{verdict or '—'}**；目前 **{npend} 件待拍板**。
+
+### 要拍板的 {len(dec)} 件事
+
+| # | 要決定的事 | 建議 | 狀態 | 詳見 |
+|---|---|---|---|---|
+"""]
+    for d in dec:
+        st = "⏳ 待拍板" if d["pending"] else f"✅ {d['decision']}（{d['by']} {d['date']}）"
+        L.append(f"| {d['id']} | {d['item'].split(' ', 1)[-1]} | {d['suggest'] or '—'} | {st} | 第 {d['chapter']} 章 |\n")
+    L.append("\n> [!ASK] 你可能會想說\n> 這麼多成品，先看哪一個？\n> 先玩 **⑦ 試玩版**（第 2 章 R-1 的依據）；數學細節再看 ⑥ 驗證台。每個成品都開新分頁，不會把這本書蓋掉。\n\n")
+    L.append("### 可以直接打開的成品（↗ 新分頁）\n\n這個資料夾連同成品與驗收紀錄，叫做 **拍板包**；整包可以直接傳給人、離線打開。\n\n| 成品 | 用途 | 大小 |\n|---|---|---|\n")
+    for x in arts:
+        if x.get("kind") == "report":
+            continue
+        L.append(f"| [{x['title']} ↗](../{x['href']}) | {x['desc']} | {x['meta'].split(' · ')[0]} |\n")
+    L.append("\n### 驗收結果（**真瀏覽器驗收**：系統 Chrome 無頭模式實跑）\n\n| 驗收 | 結果 | 瀏覽器 |\n|---|---|---|\n")
+    for label, r in checks.items():
+        if not r:
+            L.append(f"| {label} | 尚未驗收 | — |\n")
+            continue
+        res = r.get("results") or r.get("checks") or []
+        L.append(f"| {label} | {'✅' if r.get('pass') else '❌'} {sum(1 for x in res if x.get('ok'))}/{len(res)} PASS{(' · FPS ' + str(r['fps'])) if r.get('fps') else ''} | {r.get('browser', '')} |\n")
+    L.append("\n截圖與逐項檢查見附錄。\n\n### 九階段\n\n| 階段 | 名稱 | 定版家 |\n|---|---|---|\n" + "".join(f"| {no} | {n} | {'✅ 有產出' if ok else '— 尚無'} |\n" for no, n, ok in rows))
+    L.append(f"""
+## 常見誤解
+
+> [!MYTH] 大家通常會以為
+> 驗收全部 PASS 就代表可以上線。但其實 PASS 證明的是「規則一致、數字達標、畫面跑得完」；好不好玩、要不要定版、要不要加功能、美術怎麼換，是本書後面 {len(dec)} 章要人拍板的事。
+
+## 動手做
+
+1. 在「可以直接打開的成品」點 ⑦ 試玩版，玩 30 轉後關掉分頁回到本書
+2. 依「要拍板的事」表格，從第 2 章開始逐章閱讀並在拍板欄填寫決議
+3. 填完重新發布：`py -X utf8 .kiro/skills/ark-game-proto/scripts/review_build.py --slug <slug>`
+
+你應該看到：重新發布後，本章表格的「狀態」欄從「⏳ 待拍板」變成你填的決議。
+
+## 重點回顧
+
+- 研發全綠，只剩 {len(dec)} 件事要人拍板。
+- 成品都開新分頁，關掉分頁就回到書。
+- 拍板欄填完重新發布，本章狀態自動更新。
+
+## 下一章
+
+下一章從最需要親手體驗的 R-1 體感開始。
+""")
+    (book_dir / "01-status.md").write_text("".join(L), encoding="utf-8")
+
+
+def write_appendix(book_dir: pathlib.Path, game: str, when: str, arts: list[dict], checks: dict, links, reports, rows) -> None:
+    """拍板書附錄（每次發布重產）：網頁地圖、驗收逐項與截圖、報告。路徑相對於書原稿目錄。"""
+    import yaml  # noqa: PLC0415
+    slug = yaml.safe_load((book_dir / "book.yaml").read_text(encoding="utf-8"))["slug"]
+    KIND = {"app": "↗ 新分頁（應用）", "doc": "↗ 新分頁（文件頁，頁首「← 回拍板書」）", "report": "↗ 新分頁（報告）"}
+    tree = ["review/index.html   拍板書（本書；章節在同一分頁切換）"]
+    for x in arts:
+        tree.append(f"├─↗ {x['href']:<28s} {x['title']}")
+    tree.append("└── checks/                      驗收截圖（書內嵌圖）")
     L = [f"""---
 book: {slug}
 chapter: 99
 slug: appendix-artifacts
-title: "附錄：拍板包成品、驗收紀錄與九階段狀態"
+title: "附錄：網頁地圖、驗收紀錄與報告"
 type: appendix
 level: intermediate
 est_minutes: 5
 punchline: "每個拍板依據都能點開、能重跑、能追到來源。"
 objectives:
-  - 找到拍板包裡每個成品與驗收紀錄
+  - 找到拍板包裡每個成品、驗收紀錄與報告
 prerequisites: []
-key_terms: [拍板包, 真瀏覽器驗收]
+key_terms: [網頁地圖, 真瀏覽器驗收]
 tags: [slot, pipeline]
 sources:
   - ../review-manifest.json
@@ -294,35 +506,39 @@ confidence: high
 status: review
 ---
 
-# 附錄：拍板包成品、驗收紀錄與九階段狀態
+# 附錄：網頁地圖、驗收紀錄與報告
 
 > 本附錄由 ark-game-proto review_build 於 {when} 產生，重新發布會覆寫；人工內容請寫在前面各章。
 
 ## 這章要解決的問題
 
-拍板時常被問：這個結論的依據在哪？是哪一版？能不能自己重跑一次？
+拍板時常被問：這個結論的依據在哪？打開之後怎麼回來？能不能自己重跑一次？
 
 ## 路線圖
 
-1. 可以直接打開的成品
-2. 真瀏覽器驗收紀錄與截圖
-3. 九階段狀態與定版家報告
+1. 網頁地圖：拍板包裡每一頁在哪、怎麼開、怎麼回來
+2. 真瀏覽器驗收的逐項結果與截圖
+3. 定版家報告
 
 ## 內文
 
-### 可以直接打開的成品
+### 網頁地圖
 
-這個資料夾連同成品與驗收紀錄，叫做 **拍板包**；整包可以離線打開。
+拍板包所有頁面與它們的開法，整理成 **網頁地圖**。整包只連到 review/ 內部，傳給人也打得開。
 
-| 成品 | 說明 | 大小與指紋 |
+```
+""" + "\n".join(tree) + """
+```
+
+| 頁面 | 開法 | 怎麼回到書 |
 |---|---|---|
+| 本書章節 | 同分頁（左側目錄） | 左側目錄、上一章／下一章 |
 """]
     for x in arts:
-        L.append(f"| [{x['title']}](../{x['href']}) | {x['desc']} | {x['meta']} |\n")
-    for t, h, d in links:
-        L.append(f"| [{t}](../{h}) | 定版家成品 | {d} |\n")
-    L.append("\n> [!ASK] 你可能會想說\n> 截圖跟我自己打開看到的不一樣怎麼辦？\n> 截圖是發布當下的 **真瀏覽器驗收** 結果；以自己打開 `play.html` 看到的為準，有差異就重跑 `review_build --run-checks`。\n\n")
-    L.append("### 真瀏覽器驗收\n\n")
+        back = "關掉分頁" if x["kind"] != "doc" and x["kind"] != "report" else "頁首「← 回拍板書」或關掉分頁"
+        L.append(f"| [{x['title']}](../{x['href']}) | {KIND.get(x.get('kind'), '↗ 新分頁')} | {back} |\n")
+    L.append("\n> [!ASK] 你可能會想說\n> 截圖跟我自己打開看到的不一樣怎麼辦？\n> 截圖是發布當下的 **真瀏覽器驗收** 結果；以自己打開看到的為準，有差異就重跑 `review_build --run-checks`。\n\n")
+    L.append("### 真瀏覽器驗收（逐項）\n\n")
     for label, rep in checks.items():
         if not rep:
             L.append(f"**{label}**：尚未驗收（`review_build --run-checks`）\n\n")
@@ -332,9 +548,9 @@ status: review
         L.append("| 結果 | 檢查項 |\n|---|---|\n" + "".join(f"| {'✓' if r.get('ok') else '✗'} | {r.get('name', '')} |\n" for r in res) + "\n")
         for s in rep.get("review_shots", []):
             L.append(f"![{s}](../checks/{s})\n\n")
-    L.append("### 九階段狀態\n\n| 階段 | 名稱 | 定版家 |\n|---|---|---|\n" + "".join(f"| {no} | {n} | {'✓ 有產出' if ok else '— 尚無'} |\n" for no, n, ok in rows) + "\n")
-    if reports:
-        L.append("### 定版家報告（時點快照）\n\n" + "".join(f"- [{t}](../{h})（{d}）\n" for t, h, d in reports) + "\n")
+    reps = [x for x in arts if x.get("kind") == "report"]
+    if reps:
+        L.append("### 定版家報告（時點快照）\n\n" + "".join(f"- [{x['title']} ↗](../{x['href']})（{x['desc']}）\n" for x in reps) + "\n")
     L.append("""## 常見誤解
 
 > [!MYTH] 大家通常會以為
@@ -343,7 +559,7 @@ status: review
 ## 重點回顧
 
 - 每個拍板依據都能點開、能重跑、能追到來源。
-- 截圖是發布當下的真瀏覽器驗收結果。
+- 成品開新分頁，關掉就回到書；文件頁有「← 回拍板書」。
 - 拍板包只在送審前發布。
 """)
     (book_dir / "99-appendix-artifacts.md").write_text("".join(L), encoding="utf-8")
@@ -359,6 +575,8 @@ def build_book(book_dir: pathlib.Path, out_html: pathlib.Path) -> dict:
         raise SystemExit(f"book_build 失敗：{(b.stderr or b.stdout)[-400:]}")
     h = tmp.read_text(encoding="utf-8")
     h = re.sub(r'((?:href|src)=")\.\./', r"\1", h)            # 書原稿在 review/<book>/，index.html 在 review/
+    # 成品一律開新分頁：書留在原分頁，關掉分頁即返回（章節內 #hash 跳轉維持同分頁）
+    h = re.sub(r'<a (?![^>]*\btarget=)([^>]*\bhref="(?!#)[^"]+")', r'<a target="_blank" rel="noopener" \1', h)
     out_html.write_text(h, encoding="utf-8")
     tmp.unlink()
     tail = [ln for ln in lint.stdout.strip().splitlines() if ln.strip()][-1:] or [""]
@@ -403,6 +621,7 @@ def main() -> int:
     quality = "standard" if a.quality in ("auto", "standard") else "lite"
     if gdd_src:
         (rv / "gdd-overview.html").write_text(gdd_selfcontained(gdd_src, quality), encoding="utf-8")
+        add_back(rv / "gdd-overview.html")
         files.append((rv / "gdd-overview.html", gdd_src.relative_to(repo).as_posix()))
     # ⑥⑦ 驗收
     checks = {"⑥ 驗證台（browser_check）": collect_check(out / "proto" / "browser-check" / "browser-check.json", "proto", rv, files),
@@ -412,18 +631,15 @@ def main() -> int:
     if total() > REVIEW_KB * 1024 and gdd_src and a.quality == "auto" and quality == "standard":
         quality = "lite"
         (rv / "gdd-overview.html").write_text(gdd_selfcontained(gdd_src, quality), encoding="utf-8")
+        add_back(rv / "gdd-overview.html")
     if gdd_src:
         g = rv / "gdd-overview.html"
         arts.insert(0, {"href": "gdd-overview.html", "title": "② 素材總覽（圖文規格）", "desc": f"縮圖內嵌自足版（{quality}）",
                         "meta": f"{kb(g.stat().st_size)} · sha {sha16(g)}"})
+    for x in arts:
+        x["kind"] = "app"
+    arts += copy_linked(data, rv, files)                        # review/ 自足：外部成品複製進來、md 轉可讀頁
     links = []
-    for t, rel_, d in (("⑤ 機率規格書", "prob/prob-spec.html", "prob-spec.html（ps_lint 戳記）"), ("⑥ 機率驗證台", "proto/index.html", "L1 精算 / L2 蒙地卡羅 / Go 對照 / 演出"),
-                       ("④ 快測報告", None, "quicktest/qt-report/"), ("⑧ 工程交付單", "game/handoff.md", "handoff.md")):
-        if rel_ is None:
-            hit = next(iter(sorted((data / "quicktest" / "qt-report").glob("*.md"))), None) if (data / "quicktest" / "qt-report").is_dir() else None
-            rel_ = hit.relative_to(data).as_posix() if hit else None
-        if rel_ and (data / rel_).is_file():
-            links.append((t, "../" + rel_, f"{d} · {kb((data / rel_).stat().st_size)}"))
     when = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     (rv / "index.html").write_text(build_index(game, a.slug, when, stage_rows(data), arts, checks, links), encoding="utf-8")
     files.append((rv / "index.html", "review_build"))
@@ -434,7 +650,8 @@ def main() -> int:
     book_info = None
     if book_dir and (HERE.parents[1] / "ark-book" / "scripts" / "book_build.py").is_file():
         # 拍板書（ark-book 架構）：人寫的序與 R-x 章保留；附錄每次重產；index.html = book_build 輸出
-        write_appendix(book_dir, game, when, arts, checks, links, report_links(data), stage_rows(data))
+        write_status(book_dir, game, when, arts, checks, stage_rows(data), data)
+        write_appendix(book_dir, game, when, arts, checks, links, [], stage_rows(data))
         book_info = build_book(book_dir, rv / "index.html")
         for f in sorted(book_dir.glob("*")):
             if f.is_file():

@@ -1,6 +1,6 @@
 ---
 book: huffnpuff-open-house-decision
-chapter: 1
+chapter: 2
 slug: feel-check
 title: "R-1 體感：五種特色遊戲多久來一次、來了多爽"
 type: chapter
@@ -10,7 +10,7 @@ punchline: "RTP 對了不代表好玩；頻率和倍數要親手玩過才算數�
 objectives:
   - 用 play.html 的強制情境親手玩完五種特色遊戲
   - 對照體感一覽表判斷每種特色遊戲是否符合定位
-prerequisites: [preface]
+prerequisites: [status]
 key_terms: [點綴, 主菜, 強制情境]
 tags: [slot, probability]
 sources:
@@ -35,7 +35,7 @@ Huff N' Puff Open House 的快測 RTP 是 95.99%，目標 96.0%，誤差在 ±0.
 ## 路線圖
 
 1. 先看五種特色遊戲的頻率與倍數，認識「點綴」與「主菜」兩種定位
-2. 再打開 `play.html`，用強制情境把五種特色遊戲各玩一次
+2. 再打開 [play.html ↗](../play.html)，用強制情境把五種特色遊戲各玩一次
 3. 最後在拍板欄寫下：哪一種到位、哪一種要調
 
 ## 內文
@@ -60,7 +60,7 @@ Huff N' Puff Open House 的特色遊戲分兩類。有一類常常出現、每�
 
 ### 用強制情境直接看
 
-`play.html` 是試玩版單檔，雙擊就能玩。右上角「除錯」裡有 **強制情境**：它會沿著真實的機率流往後找，直到自然轉出你要的那一局，不是改結果，所以看到的就是玩家會看到的。
+[play.html ↗](../play.html) 是試玩版單檔，雙擊就能玩，會開在新分頁，看完關掉就回到這本書。右上角「除錯」裡有 **強制情境**：它會沿著真實的機率流往後找，直到自然轉出你要的那一局，不是改結果，所以看到的就是玩家會看到的。
 
 ![Brick Spin 結算](../checks/stage-04-end.webp)
 
@@ -73,7 +73,7 @@ Huff N' Puff Open House 的特色遊戲分兩類。有一類常常出現、每�
 
 | 項目 | 決議 | 拍板人 | 日期 |
 |---|---|---|---|
-| R-1 體感是否到位 | （待拍板：到位／要調哪一種） | | |
+| R-1 體感是否到位 | （待拍板：建議先玩五個情境再決定；不到位就回機率規格書調頻率或均倍） | | |
 
 ## 常見誤解
 
@@ -85,7 +85,7 @@ Huff N' Puff Open House 的特色遊戲分兩類。有一類常常出現、每�
 
 ## 動手做
 
-1. 雙擊拍板包裡的 `play.html`，先正常轉 30～50 次，感受主遊戲節奏
+1. 打開 [play.html ↗](../play.html)，先正常轉 30～50 次，感受主遊戲節奏
 2. 右上「除錯」→「強制情境」，依序點 Straw Spin、Stick Spin、Brick Spin、Palace Spin、Open House
 3. 再點「Open House 到宮殿」與「Open House 含 +1 手」，看最難得的兩種畫面
 4. 在本章拍板欄寫下哪一種到位、哪一種要調

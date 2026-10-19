@@ -26,13 +26,14 @@ sources:
   - ../../docs/reports/2026-10-19-huffnpuff-pipeline-closeout.md
 chapters:
   - 00-preface
-  - 01-feel-check
-  - 02-odds-approve
-  - 03-free-games
-  - 04-art-swap
+  - 01-status
+  - 02-feel-check
+  - 03-odds-approve
+  - 04-free-games
+  - 05-art-swap
   - 99-appendix-artifacts
 shelf: game-decision
-style: neon
+style: storybook
 cover:
   spine_color: wine
   emoji: "🐷"

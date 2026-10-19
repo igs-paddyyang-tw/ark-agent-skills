@@ -1,0 +1,87 @@
+/* storybook — 繪本：米色紙本、手繪粗線框、三隻小豬的房子色（稻草黃 / 木棕 / 磚紅 / 宮殿藍）＋大野狼灰。
+   母題：書脊目錄是一排房子門牌，當前章是推開的門；punchline 是釘在木頭上的告示牌。 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#F6EEDC; --surface:#FFFBF2; --surface-2:#F3E6C8; --border:rgba(74,48,24,.22);
+  --text:#3B2A1A; --text-2:#6A5238; --text-3:#9C8466;
+  --accent:#C8543A; --accent-soft:rgba(200,84,58,.12);
+  --ok:#5E9A3A; --warn:#E3A22B; --danger:#B8402A; --info:#3A7BD5;
+  --c1:#E3B33E; --c2:#A0703A; --c3:#C8543A; --c4:#3A7BD5; --c5:#5E9A3A; --c6:#5B6470;
+  --font-display:"Zen Maru Gothic","Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --font-body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+  --font-mono:"JetBrains Mono","Noto Sans TC",monospace;
+  --radius:16px; --radius-sm:10px;
+  --shadow:0 0 0 2.5px #4A3018, 6px 7px 0 rgba(74,48,24,.18);
+  --maxw:840px;
+  --oak:#6B4423; --oak-dark:#4A2E16; --brass:#E3B33E; --brass-2:#F6D77A;
+}
+/* 紙張纖維與草稈點綴 */
+body[data-style="storybook"]{background-color:#F6EEDC;
+  background-image:repeating-linear-gradient(115deg,rgba(227,179,62,.10) 0 2px,transparent 2px 46px),
+                   radial-gradient(rgba(107,68,35,.06) 1px,transparent 1.2px);background-size:auto,6px 6px}
+body[data-style="storybook"] .page{border:2.5px solid #4A3018;border-radius:20px 26px 18px 24px;box-shadow:6px 8px 0 rgba(74,48,24,.16);background:#FFFBF2}
+body[data-style="storybook"] .page::before{display:none}
+/* 書架 = 木板牆 */
+body[data-style="storybook"] .shelf{background:repeating-linear-gradient(90deg,#7A4E2A 0 34px,#6B4423 34px 36px),linear-gradient(#6B4423,#4A2E16);border-right:3px solid #4A2E16}
+body[data-style="storybook"] .shelf .book-title{color:#F6D77A;font-family:var(--font-display);font-weight:900;text-shadow:0 2px 0 #4A2E16}
+body[data-style="storybook"] .shelf .board{height:8px;background:repeating-linear-gradient(90deg,#E3B33E 0 10px,#C9962A 10px 12px);box-shadow:none;border-radius:4px}
+/* 書脊 = 房子門牌：依序稻草 / 木 / 磚 / 宮殿循環 */
+body[data-style="storybook"] .spine{background:#FFFBF2;color:#3B2A1A;border:2.5px solid #4A3018;border-radius:14px 14px 6px 6px;box-shadow:3px 4px 0 rgba(0,0,0,.25);font-weight:700;border-top-width:7px}
+body[data-style="storybook"] .spine:nth-of-type(4n+1){border-top-color:#E3B33E}
+body[data-style="storybook"] .spine:nth-of-type(4n+2){border-top-color:#A0703A}
+body[data-style="storybook"] .spine:nth-of-type(4n+3){border-top-color:#C8543A}
+body[data-style="storybook"] .spine:nth-of-type(4n){border-top-color:#3A7BD5}
+body[data-style="storybook"] .spine .n{opacity:1;color:#C8543A;font-weight:900;font-family:var(--font-display)}
+body[data-style="storybook"] .spine[aria-current="true"]{background:#FFF1C9;transform:translateX(8px) rotate(-1deg);box-shadow:4px 5px 0 #4A3018}
+body[data-style="storybook"] .spine[aria-current="true"]::before{display:none}
+/* 章首：屋頂形狀的章號徽章 */
+body[data-style="storybook"] .ch-head .badge{background:#C8543A;color:#FFFBF2;border-radius:6px;padding:3px 12px 3px;clip-path:polygon(0 35%,50% 0,100% 35%,100% 100%,0 100%);padding-top:9px;font-weight:900}
+body[data-style="storybook"] .ch-head h1{font-family:var(--font-display);font-weight:900;color:#3B2A1A;letter-spacing:.5px}
+/* punchline = 木頭告示牌（釘子） */
+body[data-style="storybook"] .punchline{position:relative;border:3px solid #4A2E16;border-radius:10px;padding:22px 30px;font-family:var(--font-display);font-weight:900;color:#FFF6E0;
+  background:repeating-linear-gradient(0deg,#9C6A3A 0 12px,#8E5E31 12px 14px,#A3713F 14px 26px);box-shadow:0 6px 0 #4A2E16;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+body[data-style="storybook"] .punchline::before,body[data-style="storybook"] .punchline::after{content:"";position:absolute;top:10px;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E8E2D6,#7D7468)}
+body[data-style="storybook"] .punchline::before{left:12px}
+body[data-style="storybook"] .punchline::after{right:12px}
+body[data-style="storybook"] .punchline small{color:#F6D77A}
+/* 章節標題：草稈底線 */
+body[data-style="storybook"] .section>h2{border-bottom:0;font-family:var(--font-display);font-weight:900;color:#4A3018;padding-bottom:6px;
+  background:repeating-linear-gradient(90deg,#E3B33E 0 14px,transparent 14px 18px) left bottom/100% 4px no-repeat}
+body[data-style="storybook"] .section h3{color:#C8543A;font-family:var(--font-display);font-weight:900}
+body[data-style="storybook"] .section.roadmap ol li::before{background:#A0703A;color:#FFFBF2;font-family:var(--font-display);border-radius:6px}
+/* callout：便條紙 */
+body[data-style="storybook"] .callout{background:#FFFBF2;border:2.5px solid #4A3018;border-left-width:10px;border-radius:12px;box-shadow:4px 5px 0 rgba(74,48,24,.18)}
+body[data-style="storybook"] .callout .ct{font-family:var(--font-display);font-weight:900}
+body[data-style="storybook"] .callout.ask{border-left-color:#3A7BD5}
+body[data-style="storybook"] .callout.ask .ct{color:#2F63AD}
+body[data-style="storybook"] .callout.tip{border-left-color:#E3B33E;background:#FFF8E2}
+body[data-style="storybook"] .callout.tip .ct{color:#9A7012}
+body[data-style="storybook"] .callout.myth{border-left-color:#5B6470;background:#F0F1F3}
+body[data-style="storybook"] .callout.myth .ct{color:#454C55}
+body[data-style="storybook"] .callout.myth .ct::before{content:"🐺 "}
+body[data-style="storybook"] .callout.try{border-left-color:#5E9A3A;background:#F2F8EC}
+body[data-style="storybook"] .callout.try .ct{color:#467A28}
+body[data-style="storybook"] .callout.warning{border-left-color:#C8543A;background:#FCEFEA}
+body[data-style="storybook"] pre{background:#3B2A1A;border-radius:12px;border:2.5px solid #4A2E16}
+body[data-style="storybook"] :not(pre)>code{color:#8E3A24;background:#F7E3D8;border-radius:5px}
+/* 表格：磚牆表頭 */
+body[data-style="storybook"] table{border:2.5px solid #4A3018;border-radius:12px;overflow:hidden;background:#FFFBF2}
+body[data-style="storybook"] th{background:repeating-linear-gradient(0deg,#C8543A 0 15px,#B24A32 15px 17px);color:#FFFBF2;font-family:var(--font-display)}
+body[data-style="storybook"] tr:nth-child(even) td{background:#FBF2DE}
+body[data-style="storybook"] img{border:2.5px solid #4A3018;border-radius:12px;box-shadow:4px 5px 0 rgba(74,48,24,.18);max-width:100%}
+body[data-style="storybook"] a{color:#B8402A;text-decoration-thickness:2px;text-underline-offset:3px}
+/* 回顧 = 三間房子 */
+body[data-style="storybook"] .section.recap li{background:#FFFBF2;border:2.5px solid #4A3018;border-radius:12px;box-shadow:3px 4px 0 rgba(74,48,24,.2);border-top-width:8px}
+body[data-style="storybook"] .section.recap li:nth-child(1){border-top-color:#E3B33E}
+body[data-style="storybook"] .section.recap li:nth-child(2){border-top-color:#A0703A}
+body[data-style="storybook"] .section.recap li:nth-child(3){border-top-color:#C8543A}
+body[data-style="storybook"] .section.recap li::before{background:#4A3018}
+body[data-style="storybook"] .section.recap li:first-child::after{content:"🐷 punchline";color:#C8543A}
+body[data-style="storybook"] .nav button{background:#C8543A;color:#FFFBF2;border:2.5px solid #4A2E16;border-radius:12px;font-weight:900;box-shadow:3px 4px 0 #4A2E16;font-family:var(--font-display)}
+body[data-style="storybook"] .progress i{background:linear-gradient(90deg,#E3B33E,#A0703A,#C8543A,#3A7BD5)}
+body[data-style="storybook"] .cover h1{font-family:var(--font-display);font-weight:900;color:#3B2A1A}
+body[data-style="storybook"] .cover .plate{border-radius:8px;border:2.5px solid #4A2E16;background:#E3B33E;color:#3B2A1A;font-weight:900}
+body[data-style="storybook"] .cover .toc li{border:2.5px solid #4A3018;border-radius:12px;background:#FFFBF2;box-shadow:3px 4px 0 rgba(74,48,24,.16)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) body[data-style="storybook"]{filter:none}
+}

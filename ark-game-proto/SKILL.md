@@ -17,7 +17,7 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "1.2.3"
+  version: "1.2.4"
   updated: 2026-10-19
   outputs:
     - { format: data, audience: ai }
@@ -123,6 +123,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.2.4 | 2026-10-19 | 拍板包導覽修正（依網頁地圖分析）：外部成品（prob-spec、驗證台、快測報告、交付單、報告）全部複製進 `review/`、md 轉可讀頁（`review/docs/`，頁首「← 回拍板書」），整包可傳可離線；書內成品連結一律開新分頁（書留原分頁），複製進來的 HTML（試玩版除外）加浮動「← 回拍板書」（新分頁 → 關分頁；直接開檔 → 回書）；拍板書新增自動第 1 章「現況：一頁看完」（結論、各章拍板欄狀態、成品、驗收、九階段）；附錄改為網頁地圖＋驗收逐項＋報告；HuffNPuff 改用 ark-book 1.1 `storybook` 風格 |
 | 1.2.3 | 2026-10-19 | 拍板書：`review_build` 偵測 `review/<slug>-decision/book.yaml` → 每次重產附錄（成品、驗收、九階段、定版家報告）→ ark-book `book_lint` ＋ `book_build`（style 取 book.yaml，HuffNPuff 用 neon）→ `review/index.html`；人工章節不動、舊 REVIEW.md 併入後移除；導覽頁可列定版家 `docs/reports/`（戳記吻合連 HTML，否則連 md）。golden `review-book/`、test_review_decision_book |
 | 1.2.2 | 2026-10-19 | 拍板包 `review_build.py`（契約 v3.3 `review/`）；共用瀏覽器驅動 `tests/cdp.js`；Stage `smoke.js` 改自動選後端（Playwright 或系統 Chrome / Edge）、`--scenes all`、`--query`、逐情境帳務與玩法檢查、exit 1 on FAIL；pytest：`test_review_build.py`、Stage `test_smoke_real_browser`（SLOTPROTO_BROWSER=1）、`test_stage_build` 子程序加 `-X utf8`（Windows cp950）。HuffNPuff ⑦ 試玩版首次真瀏覽器驗收 9/9、stage-demo 資料夾／單檔／HttpService 皆過 |
 | 1.2.1 | 2026-10-19 | 新增 `tests/browser_check.js`：不需 Playwright，用系統 Chrome / Edge 無頭模式＋DevTools 協定（Node 22 內建 WebSocket）在真瀏覽器載入驗證台 → 面板檢查、每種玩法各演一場逐段截圖、L2、頁面錯誤蒐集，輸出 `browser-check.json`＋截圖；exit 2 = 環境不足。四款 golden 驗證台全過；pytest `SLOTPROTO_BROWSER=1` 才跑 |

@@ -1,6 +1,6 @@
 ---
 book: huffnpuff-open-house-decision
-chapter: 4
+chapter: 5
 slug: art-swap
 title: "R-4 美術：把競品素材換成正式美術"
 type: chapter
@@ -47,13 +47,13 @@ status: review
 
 ### 要畫哪些東西
 
-要畫的清單在 **素材總覽**（拍板包裡的 `gdd-overview.html`）：一般圖騰、建材、房子框、彩金、各畫面版位，都有編號與說明，美術可以直接照單製作。
+要畫的清單在 **素材總覽**（拍板包裡的 [gdd-overview.html ↗](../gdd-overview.html)）：一般圖騰、建材、房子框、彩金、各畫面版位，都有編號與說明，美術可以直接照單製作。
 
 ### 拍板欄
 
 | 項目 | 決議 | 拍板人 | 日期 |
 |---|---|---|---|
-| R-4 正式美術時程 | （待拍板：交付日期與負責人） | | |
+| R-4 正式美術時程 | （待拍板：建議排正式美術；換圖只改 assets_base，填交付日期與負責人） | | |
 
 ## 常見誤解
 
@@ -62,7 +62,7 @@ status: review
 
 ## 動手做
 
-1. 打開拍板包裡的 `gdd-overview.html`，瀏覽要製作的圖騰與畫面清單
+1. 打開 [素材總覽 ↗](../gdd-overview.html)，瀏覽要製作的圖騰與畫面清單
 2. 和美術確認交付日期，寫進本章拍板欄
 3. 新圖到位後：改 `game/pixi-client/stage.yaml` 的 assets_base → 重新建置試玩版 → 跑 smoke.js 冒煙 → 重新發布拍板包
 

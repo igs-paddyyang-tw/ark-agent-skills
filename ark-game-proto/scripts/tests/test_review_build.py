@@ -61,7 +61,7 @@ def test_review_pack(tmp_path):
     bc = json.loads((rv / "checks" / "proto-browser-check.json").read_text(encoding="utf-8"))
     assert bc["url"] == "index.html", "本機絕對路徑未去除"
     idx = (rv / "index.html").read_text(encoding="utf-8")
-    assert "../prob/prob-spec.html" in idx and "../proto/index.html" in idx and "play.html" in idx
+    assert 'href="prob-spec.html"' in idx and 'href="proto.html"' in idx and "play.html" in idx and 'href="../' not in idx   # 外部成品已複製進 review/
     man = json.loads((rv / "review-manifest.json").read_text(encoding="utf-8"))
     assert man["contract"] == "3.3" and {f["path"] for f in man["files"]} >= {"play.html", "gdd-overview.html", "index.html"}
 
@@ -92,12 +92,20 @@ def test_review_decision_book(tmp_path):
     shutil.copytree(HERE.parents[1] / "golden" / "review-book", book)
     (rv / "REVIEW.md").parent.mkdir(parents=True, exist_ok=True)
     (rv / "REVIEW.md").write_text("舊版", encoding="utf-8")
-    before = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in book.glob("0*.md")}
+    human = lambda: {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in book.glob("0*.md") if p.name != "01-status.md"}  # noqa: E731
+    before = human()
     rc, env = _run(repo)
     assert rc == 0 and env["data"]["book"]["lint_exit"] == 0, env
-    assert {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in book.glob("0*.md")} == before, "人工章節被改動"
+    assert human() == before, "人工章節被改動"
     appx = (book / "99-appendix-artifacts.md").read_text(encoding="utf-8")
     assert "play.html" in appx and "PASS" in appx
     idx = (rv / "index.html").read_text(encoding="utf-8")
-    assert "book-src" in idx and 'src="checks/' in idx and 'href="../' not in idx.replace('href="../prob', "").replace('href="../proto', "").replace('href="../docs', "").replace('href="../spec', "").replace('href="../quicktest', "").replace('href="../game', "")
+    assert "book-src" in idx and 'src="checks/' in idx and 'href="../' not in idx, "連結必須都在 review/ 內"
     assert not (rv / "REVIEW.md").exists()
+    st = (book / "01-status.md").read_text(encoding="utf-8")
+    assert "⏳ 待拍板" in st and "R-1" in st, "現況章要列出各章拍板欄狀態"
+    import re
+    ext = [m for m in re.findall(r"<a\b([^>]*)>", idx) if re.search(r'href="(?!#)', m)]
+    assert ext and all('target="_blank"' in m for m in ext), "成品連結要開新分頁"
+    assert (rv / "prob-spec.html").is_file() and (rv / "proto.html").is_file(), "外部成品要複製進 review/"
+    assert "回拍板書" in (rv / "prob-spec.html").read_text(encoding="utf-8") and "回拍板書" not in (rv / "play.html").read_text(encoding="utf-8")
