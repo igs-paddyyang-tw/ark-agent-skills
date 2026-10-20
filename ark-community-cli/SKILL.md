@@ -13,7 +13,7 @@ description: |
 metadata:
   author: paddyyang
   schema_version: "1.2"
-  version: "1.1.3"
+  version: "1.1.4"
   category: pipeline
   form: executor
   domain: game
@@ -22,7 +22,9 @@ metadata:
     - { format: data, audience: ai }
     - { format: md, audience: ai }
   render: none
-  depends_on: [ark-md-report, ark-wiki-engine]
+  depends_on:
+    - { name: ark-md-report, version: "^1.0.0" }
+    - { name: ark-wiki-engine, version: "^3.0.0" }
   status: active
 ---
 

@@ -19,13 +19,16 @@ metadata:
   category: process
   form: executor
   domain: game
-  version: "2.1.3"
+  version: "2.1.4"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }
   render: none
-  depends_on: [ark-game-spec, ark-game-prob, ark-md-report]
+  depends_on:
+    - { name: ark-game-spec, version: "^2.0.0" }
+    - { name: ark-game-prob, version: "^1.0.0" }
+    - { name: ark-md-report, version: "^1.0.0" }
 ---
 
 # ark-game-quicktest — 規格 ↔ 快測範本 ↔ 驗證報告

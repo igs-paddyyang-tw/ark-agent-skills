@@ -21,12 +21,13 @@ metadata:
   category: scaffolder
   form: instruction
   domain: general
-  depends_on: [ark-agent-init]
+  depends_on:
+    - { name: ark-agent-init, version: "^2.0.0" }
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.1.1"
+  version: "3.1.2"
   updated: 2026-10-20
 ---
 

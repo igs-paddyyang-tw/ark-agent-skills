@@ -20,14 +20,16 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "0.2.3"
+  version: "0.2.4"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
     - { format: html, audience: human }
   render: html
-  depends_on: [ark-db-query, ark-wiki-engine]
+  depends_on:
+    - { name: ark-db-query, version: "^3.0.0" }
+    - { name: ark-wiki-engine, version: "^3.0.0" }
 ---
 
 # ark-game-report — 老虎機上線成效報告

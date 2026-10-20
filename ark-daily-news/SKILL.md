@@ -13,7 +13,7 @@ metadata:
   category: document
   form: instruction
   domain: general
-  version: "2.1.1"
+  version: "2.1.2"
   updated: 2026-10-20
   outputs:
     - { format: md, audience: ai }
@@ -21,7 +21,10 @@ metadata:
   render: html
   status: active
   # ark-wiki-engine：news_md_writer.py 實際執行 wiki_guard.py（不是「相關」而是真的呼叫）
-  depends_on: [ark-md-report, ark-html-report, ark-wiki-engine]
+  depends_on:
+    - { name: ark-md-report, version: "^1.0.0" }
+    - { name: ark-html-report, version: "^1.0.0" }
+    - { name: ark-wiki-engine, version: "^3.0.0" }
 ---
 
 # ark-daily-news

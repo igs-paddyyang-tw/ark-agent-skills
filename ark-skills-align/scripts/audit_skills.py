@@ -31,6 +31,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import semver  # noqa: E402  同目錄（align_sync 同法）
+
 # schema v1.2（2026-10-20）：分類三軸 —— 規格 docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md
 #   category＝產出什麼（職能）、form＝agent 怎麼用、domain＝屬於哪個業務；產出格式沿用 outputs。
 # 本檔是受控詞彙的**程式權威**；gen_readme.py／prompt_lint.py／backfill_metadata.py 各有複本
@@ -102,6 +105,52 @@ def parse_frontmatter(text: str):
         return None
 
 
+def dep_name(ref) -> str:
+    """depends_on 項目的 skill 名稱 —— 字串形式（舊）或 {name, version} 物件（v2）皆可。
+
+    🔴 不可用 `str(ref)`：物件會變成 "{'name': ...}"，不是 `ark-` 開頭 →
+    依賴斷鏈檢查與反向依賴推導都會**靜默跳過**（2026-10-20 改物件格式前修正）。
+    """
+    if isinstance(ref, dict):
+        return str(ref.get("name", "")).strip()
+    return str(ref).split(".")[0].strip()
+
+
+def dep_range(ref) -> str:
+    """depends_on 項目的版本範圍；字串形式視為任意版本 `*`。"""
+    return str(ref.get("version", "*")).strip() if isinstance(ref, dict) else "*"
+
+
+#: semver.py 支援的單一子句（`^1.4.0`、`>=2.0`、`<3`）；satisfies() 對亂寫的範圍不報錯、只回 False，
+#: 不先驗語法會把「寫錯」誤報成 P0「上游不滿足」
+_RANGE_CLAUSE = re.compile(r"^(>=|<=|==|=|>|<|\^|~)?\d+(\.\d+){0,2}$")
+
+
+def valid_range(rng: str) -> bool:
+    rng = (rng or "").strip()
+    return rng in ("", "*") or all(_RANGE_CLAUSE.match(c) for c in rng.split())
+
+
+def find_dep_cycles(graph: dict[str, list[str]]) -> list[list[str]]:
+    """回傳 depends_on 圖中的所有環（以排序後的成員去重）。"""
+    cycles, seen = [], set()
+
+    def dfs(node, path):
+        for nxt in graph.get(node, []):
+            if nxt in path:
+                cyc = path[path.index(nxt):]
+                key = tuple(sorted(cyc))
+                if key not in seen:
+                    seen.add(key)
+                    cycles.append(cyc + [nxt])
+            elif nxt in graph:
+                dfs(nxt, path + [nxt])
+
+    for n in sorted(graph):
+        dfs(n, [n])
+    return cycles
+
+
 def normalize(s: str) -> str:
     return re.sub(r"\s+", "", s or "").lower()
 
@@ -141,6 +190,7 @@ def audit(repo: Path, triggers: dict):
         "orphan-asset": "AL-019", "referenced-test-missing": "AL-020",
         "missing-schema-version": "AL-021", "missing-updated": "AL-022",
         "deprecated-field": "AL-023", "legacy-category": "AL-024",
+        "depends-on-cycle": "AL-030", "invalid-dep-range": "AL-031",
         "category-axis-mixed": "AL-025", "missing-form": "AL-026", "invalid-form": "AL-027",
         "missing-domain": "AL-028", "invalid-domain": "AL-029",
         # 版本系列（W1）
@@ -281,7 +331,7 @@ def audit(repo: Path, triggers: dict):
         # 守門在守一個沒人維護的欄位，比沒有守門更誤導（會讓人以為依賴關係有被管理）。
         # 反向關係改由 depends_on **單向真相推導**（見 reverse_deps）。
         for ref in (meta.get("depends_on") or []):
-            base = str(ref).split(".")[0].strip()
+            base = dep_name(ref)
             if base.startswith("ark-") and base not in all_names:
                 add("P1", "dangling-skill-ref", name,
                     f"depends_on 指向不存在的 skill：{ref}（依賴斷鏈）")
@@ -305,6 +355,29 @@ def audit(repo: Path, triggers: dict):
             add("P2", "missing-schema-version", name,
                 f"metadata.schema_version 應為 {sorted(SCHEMA_VERSIONS)} 之一，"
                 f"實際為 {meta.get('schema_version')!r}")
+
+    # AL-105 上游 depends_on 範圍不可滿足（P0，發版前置守門；v2 規格 AC-07／AC-08，2026-10-20 補實作）
+    #   範圍語法見 semver.py；目標版本取同 repo 該 skill 的 metadata.version
+    versions = {n: str(((i["fm"] or {}).get("metadata") or {}).get("version", "")).strip('"')
+                for n, i in active.items()}
+    graph: dict[str, list[str]] = {}
+    for name, info in active.items():
+        refs = ((info["fm"] or {}).get("metadata") or {}).get("depends_on") or []
+        graph[name] = [dep_name(r) for r in refs if dep_name(r) in active]
+        for ref in refs:
+            target, rng = dep_name(ref), dep_range(ref)
+            if target not in versions or rng == "*":
+                continue
+            if not valid_range(rng):
+                add("P1", "invalid-dep-range", name,
+                    f"depends_on {target} 的範圍 {rng!r} 無法解析；語法見 semver.py（例 ^1.4.0、>=2.0 <3）")
+                continue
+            if not semver.satisfies(versions[target], rng):
+                add("P0", "upstream-dep-unsatisfiable", name,
+                    f"depends_on {target} 要求 {rng}，但上游現為 {versions[target]}")
+    # AL-030 依賴環：同步／安裝順序無解，也代表兩邊職責沒切乾淨（2026-10-20 game-prob ⇄ game-quicktest）
+    for cyc in find_dep_cycles(graph):
+        add("P1", "depends-on-cycle", cyc[0], "depends_on 成環：" + " → ".join(cyc))
 
     # 3.5 description **文字內容**裡的 ark-* 必須存在
     #
@@ -481,8 +554,7 @@ def audit(repo: Path, triggers: dict):
     reverse_deps: dict[str, list[str]] = {}
     for name, info in active.items():
         for ref in ((info["fm"] or {}).get("metadata") or {}).get("depends_on") or []:
-            base = str(ref).split(".")[0].strip()
-            reverse_deps.setdefault(base, []).append(name)
+            reverse_deps.setdefault(dep_name(ref), []).append(name)
     reverse_deps = {k: sorted(v) for k, v in sorted(reverse_deps.items())}
 
     # 14. referenced-test-missing：SKILL.md / scripts 註解引用的測試檔必須存在（抓 F-11 類漂移）

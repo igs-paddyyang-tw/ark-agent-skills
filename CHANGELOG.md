@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-10-20 (depends_on 帶版本範圍 + AL-105／依賴環守門)
+
+### 資料（20 個 skill、38 條依賴）
+- `depends_on` 全部由字串改為 `{ name, version }`：範圍預設 `^<上游主版號>.0.0`；文件寫明最低版本的兩條用該版本
+  （game-proto → game-prob `^1.4.0`、game-spec → html-report `^1.2.0`）
+- **拆 ark-game-prob ⇄ ark-game-quicktest 依賴環**：game-prob 只讀 quicktest 的產出檔（qt 模式的 rtp-report），
+  不呼叫其程式 → 移除 prob → quicktest；quicktest → prob（`--probspec` 呼叫 `ps_run.py`）保留
+- 版號：上述 20 個升 patch；ark-skills-align 2.4.0（守門規則）
+
+### 守門（audit_skills.py）
+- 🔴 修：斷鏈檢查與反向依賴原本用 `str(ref)` 取名稱 —— 物件格式會變成 `"{'name': ...}"` 而**靜默跳過**。改用 `dep_name()`
+- 補實作 **AL-105**（P0，v2 規格 AC-07 只登記代號）：上游現行版本不滿足範圍
+- 新增 AL-030 依賴環（P1）、AL-031 範圍無法解析（P1）—— `semver.satisfies()` 對亂寫的範圍只回 False，不先驗語法會誤報成 P0
+- 新增 `scripts/tests/test_depends_on.py`（8 項：含物件格式斷鏈回歸、P0／P1 分流、環偵測、全庫可滿足且無環）
+
+### 結果
+audit P2 41 → **3**（剩 tested_against 2、孤兒 asset 1）；manifest `skills-2026.10-r4`
+
+---
+
 ## 2026-10-20 (分類三軸化：category × form × domain，schema 1.2)
 
 規格：`docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md`。

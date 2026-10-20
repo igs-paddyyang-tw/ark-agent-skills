@@ -19,7 +19,7 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "1.4.5"
+  version: "1.4.6"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
@@ -27,7 +27,10 @@ metadata:
     - { format: html, audience: human }
     - { format: office, audience: human }
   render: html
-  depends_on: [ark-game-quicktest, ark-game-spec, ark-md-report]
+  depends_on:
+    # ark-game-quicktest 不列：本 skill 只讀它的產出（data/quicktest/<slug>/，qt 模式），不呼叫它的程式；列入會與 quicktest → prob 成環
+    - { name: ark-game-spec, version: "^2.0.0" }
+    - { name: ark-md-report, version: "^1.0.0" }
 ---
 
 # ark-game-prob — 機率規格書：xlsx → md → html ⇄ 設定檔，md 是唯一的 View 來源

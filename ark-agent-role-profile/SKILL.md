@@ -25,9 +25,10 @@ metadata:
     - format: md
       audience: both
   render: none
-  depends_on: [ark-grill-me]
+  depends_on:
+    - { name: ark-grill-me, version: "^1.0.0" }
   author: paddyyang
-  version: "1.3.2"
+  version: "1.3.3"
   updated: 2026-10-20
 ---
 

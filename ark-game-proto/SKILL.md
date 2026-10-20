@@ -19,13 +19,17 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "1.2.6"
+  version: "1.2.7"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }
   render: html
-  depends_on: [ark-game-prob, ark-game-quicktest, ark-book, ark-html-report]   # ark-book（拍板書）、ark-html-report（html_images）為 review_build 選配
+  depends_on:   # ark-book（拍板書）、ark-html-report（html_images）為 review_build 選配
+    - { name: ark-game-prob, version: "^1.4.0" }
+    - { name: ark-game-quicktest, version: "^2.0.0" }
+    - { name: ark-book, version: "^1.0.0" }
+    - { name: ark-html-report, version: "^1.0.0" }
 ---
 
 # ark-game-proto — 規格書直接編成可玩雛型，同一顆引擎演出給人看、精算給機器驗

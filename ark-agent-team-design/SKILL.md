@@ -24,9 +24,11 @@ metadata:
     - format: code
       audience: both
   render: none
-  depends_on: [ark-agent-role-profile, ark-grill-me]
+  depends_on:
+    - { name: ark-agent-role-profile, version: "^1.0.0" }
+    - { name: ark-grill-me, version: "^1.0.0" }
   author: paddyyang
-  version: "1.2.1"
+  version: "1.2.2"
   updated: 2026-10-20
 ---
 

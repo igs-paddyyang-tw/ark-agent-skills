@@ -92,7 +92,11 @@ def _semver_fill(v) -> str:
 
 
 def backfill_versions_one(path: Path, dry: bool) -> str:
-    """--versions：version 補成 semver、depends_on 字串→物件（範圍 *）。文字層外科手術。"""
+    """--versions：version 補成 semver。文字層外科手術。
+
+    ⚠️ 原規格（v2 AC-02）的「depends_on 字串→物件」從未實作；2026-10-20 已全庫手動改物件格式並帶範圍，
+    範圍需人判（見 references/metadata-schema.md「depends_on」），不由本腳本自動填 `*`。
+    """
     text = path.read_text(encoding="utf-8")
     m = FM_RE.match(text)
     if not m:
@@ -183,7 +187,7 @@ def main():
     ap.add_argument("--repo", required=True)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--versions", action="store_true",
-                    help="回填 version 為 semver（x.y→x.y.0、缺者 1.0.0），depends_on 字串→物件")
+                    help="回填 version 為 semver（x.y→x.y.0、缺者 1.0.0）")
     args = ap.parse_args()
     repo = Path(args.repo)
     for d in sorted(repo.iterdir()):

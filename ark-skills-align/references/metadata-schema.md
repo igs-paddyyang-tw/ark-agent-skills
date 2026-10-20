@@ -40,6 +40,18 @@ metadata:
 
 舊 schema 的消費端複本：缺 form／domain 報 P3、category 為 executor／domain 報 P2，過渡期不擋。
 
+### depends_on（v2 物件格式）
+
+```yaml
+  depends_on:
+    - { name: ark-game-prob, version: "^1.4.0" }   # 範圍語法見 scripts/semver.py
+```
+
+- **只列程式依賴**：會呼叫對方的腳本、或要求對方同層安裝。只讀對方**產出檔**的資料上下游不列
+  （實例：ark-game-prob 讀 quicktest 的 rtp-report，列入會與 quicktest → prob 成環）
+- 範圍預設 `^<上游主版號>.0.0`；文件寫明最低版本時（如「需 ark-game-prob 1.4+」）用那個版本
+- 守門：字串形式 → P2 AL-104；範圍寫錯 → P1 AL-031；上游現行版本不滿足 → **P0 AL-105**（發版前置）；成環 → P1 AL-030
+
 ### 版號規則
 
 - **內容變了就升版**：tree_hash（`gen_manifest.py`，排除 `__pycache__`、`.pyc`、頂層 `release/`）變動即應升 version，

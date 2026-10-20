@@ -17,12 +17,13 @@ metadata:
   category: scaffolder
   form: instruction
   domain: general
-  depends_on: [ark-telegram-sender]
+  depends_on:
+    - { name: ark-telegram-sender, version: "^2.0.0" }
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.0.1"
+  version: "2.0.2"
   updated: 2026-10-20
 ---
 

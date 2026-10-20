@@ -20,14 +20,19 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "2.5.6"
+  version: "2.5.7"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
     - { format: html, audience: human }
   render: html
-  depends_on: [ark-grill-me, ark-md-report, ark-wiki-engine, ark-llm-tools, ark-html-report]
+  depends_on:
+    - { name: ark-grill-me, version: "^1.0.0" }
+    - { name: ark-md-report, version: "^1.0.0" }
+    - { name: ark-wiki-engine, version: "^3.0.0" }
+    - { name: ark-llm-tools, version: "^1.0.0" }
+    - { name: ark-html-report, version: "^1.2.0" }
 ---
 
 # ark-game-spec 2.x — 從競品／構想到正式遊戲規格書，一個 skill、十個 stage

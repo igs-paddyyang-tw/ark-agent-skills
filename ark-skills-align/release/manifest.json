@@ -1,16 +1,19 @@
 {
-  "release": "skills-2026.10-r3",
-  "commit": "e5d2572",
-  "generated_at": "2026-10-20T16:12:58+08:00",
+  "release": "skills-2026.10-r4",
+  "commit": "c413dad",
+  "generated_at": "2026-10-20T16:55:58+08:00",
   "skills": {
     "ark-agent-bot-builder": {
-      "version": "3.1.2",
-      "tree_hash": "sha256:9eb2d0f555e08d359ba7210b0a7366b01a7fad824233412685911d9dd02cc175",
+      "version": "3.1.3",
+      "tree_hash": "sha256:6990b4f68d22b41dec674a1da359cd7f90d40bc16a356f02794a30ef875d24f1",
       "contract_hash": "sha256:c8cd1cdd12e88c42f3599485e9137983528b9b5249c1838e929d258a68b00b62",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [
-        "ark-agent-init"
+        {
+          "name": "ark-agent-init",
+          "version": "^2.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -38,38 +41,50 @@
       "updated": "2026-10-20"
     },
     "ark-agent-role-profile": {
-      "version": "1.3.2",
-      "tree_hash": "sha256:900ce3f31f43034ae5ebb46c3324f5b488a2a022dc83e686e95fefabfec88eb6",
+      "version": "1.3.3",
+      "tree_hash": "sha256:6d34542e1eba5a4928205c3eff3b0e4868da81a86f02fcc9f6f2084aa9be1821",
       "contract_hash": "sha256:891fe04c017d6e04e7f124b2b9846b3c037b276acf6ac47ab114b23fc0e801b5",
       "status": "active",
       "category": "process",
       "depends_on": [
-        "ark-grill-me"
+        {
+          "name": "ark-grill-me",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-agent-team-builder": {
-      "version": "3.1.1",
-      "tree_hash": "sha256:84495923a064e6beb33882d00e125342b07fa1f8ce66f97006a3b871fedeb9cd",
+      "version": "3.1.2",
+      "tree_hash": "sha256:f60499af19538e668e650d9e82dccabd764f4d225019536ce421b60fe98baa4f",
       "contract_hash": "sha256:0c7bdc2ba491094fffe8ff99adb45c2722015cd131dc18999b2b41a53eb5bca9",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [
-        "ark-agent-init"
+        {
+          "name": "ark-agent-init",
+          "version": "^2.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-agent-team-design": {
-      "version": "1.2.1",
-      "tree_hash": "sha256:ab0c37157a57ee4498dcb485b457723031b42952f3f88b97fe013d83702035d1",
+      "version": "1.2.2",
+      "tree_hash": "sha256:df7a1bd611ccb9b27e10b76c1584163ec73948542dd805d890487842f36d031d",
       "contract_hash": "sha256:f21f2706980b83766af2cb70d35d129e40a68a98ab84e7b3cc87c77251265651",
       "status": "active",
       "category": "process",
       "depends_on": [
-        "ark-agent-role-profile",
-        "ark-grill-me"
+        {
+          "name": "ark-agent-role-profile",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-grill-me",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -85,14 +100,20 @@
       "updated": "2026-10-20"
     },
     "ark-book": {
-      "version": "1.1.1",
-      "tree_hash": "sha256:2ddb6080f785cc42218b5854c83409f11cc34280b4bc6912952f498ecf0dc18d",
+      "version": "1.1.2",
+      "tree_hash": "sha256:fc3d5f211d7bca06eaeea869103601cc5f684a28cbf1b63fa95dae8e6cce43df",
       "contract_hash": "sha256:d868d668395cb2f59c21aef989660908afce7ab4f004d07390b1a8f5845aed92",
       "status": "active",
       "category": "document",
       "depends_on": [
-        "ark-html-report",
-        "ark-wiki-engine"
+        {
+          "name": "ark-html-report",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-wiki-engine",
+          "version": "^3.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -140,14 +161,20 @@
       "updated": "2026-10-20"
     },
     "ark-community-cli": {
-      "version": "1.1.3",
-      "tree_hash": "sha256:ebd01c4fd5afe7b7874ac7ebfde8590ca735ff2a9abd9555e076b575c1836580",
+      "version": "1.1.4",
+      "tree_hash": "sha256:1241dcca87f61af4788ebabd5f3bb29c6ce3e54614fad2e810ecb9699253f7bf",
       "contract_hash": "sha256:91e9608744be812332d0ad0ac613e130fc0c21e6b44b2ced8aa32518ca57d32d",
       "status": "active",
       "category": "pipeline",
       "depends_on": [
-        "ark-md-report",
-        "ark-wiki-engine"
+        {
+          "name": "ark-md-report",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-wiki-engine",
+          "version": "^3.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -163,15 +190,24 @@
       "updated": "2026-10-20"
     },
     "ark-daily-news": {
-      "version": "2.1.1",
-      "tree_hash": "sha256:1b9b318fb8482d0381487347d1e855000ed304f9c437a4a6c7958218bcb27f0e",
+      "version": "2.1.2",
+      "tree_hash": "sha256:8096ccc7b5f1ea645d531452c8b9e4884815847c4438158947a2850274f89b2d",
       "contract_hash": "sha256:00be5ca35adcb17efa711c522a13a18ffdf8cb1729ab086064194a530c997345",
       "status": "active",
       "category": "document",
       "depends_on": [
-        "ark-md-report",
-        "ark-html-report",
-        "ark-wiki-engine"
+        {
+          "name": "ark-md-report",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-html-report",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-wiki-engine",
+          "version": "^3.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -274,72 +310,116 @@
       "updated": "2026-10-20"
     },
     "ark-game-prob": {
-      "version": "1.4.5",
-      "tree_hash": "sha256:d502ead28b15fce3d144052fc36c486ca1384988b061ee383edd2867e67571cb",
+      "version": "1.4.6",
+      "tree_hash": "sha256:b6f88d786ee3101435f70d827a5ddf5755a896e0fe47023c5adc6acb4ceeca4d",
       "contract_hash": "sha256:0b7ea18e4530b23146df40a90fbd856a5e41475f049e464c5c6a7f36fc969abe",
       "status": "active",
       "category": "document",
       "depends_on": [
-        "ark-game-quicktest",
-        "ark-game-spec",
-        "ark-md-report"
+        {
+          "name": "ark-game-spec",
+          "version": "^2.0.0"
+        },
+        {
+          "name": "ark-md-report",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-game-proto": {
-      "version": "1.2.6",
-      "tree_hash": "sha256:d5b7048edafc02a7bfb5a7582f39acfb324d3b7865decfa130d6d9ecb0eced0d",
+      "version": "1.2.7",
+      "tree_hash": "sha256:4ae4cb0e585f397f845bc47e05a58f9f07bdbc670d9842292439d1ccf56e7ccb",
       "contract_hash": "sha256:a1a6bb8a7a48b2f995e6f4986eb613af26e53bf0a2f53017ff649ccf99701796",
       "status": "active",
       "category": "view",
       "depends_on": [
-        "ark-game-prob",
-        "ark-game-quicktest",
-        "ark-book",
-        "ark-html-report"
+        {
+          "name": "ark-game-prob",
+          "version": "^1.4.0"
+        },
+        {
+          "name": "ark-game-quicktest",
+          "version": "^2.0.0"
+        },
+        {
+          "name": "ark-book",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-html-report",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-game-quicktest": {
-      "version": "2.1.3",
-      "tree_hash": "sha256:f73e163f8def2ce0d47ea9f07f3cc4943880330e41f4343594d02165288efb81",
+      "version": "2.1.4",
+      "tree_hash": "sha256:6e5b2a4cb6169dd5ef05ec57b9a19ab61293b89989f5eb4039ff0b65a732b620",
       "contract_hash": "sha256:4f1668f481156b62f352045a1b0237adfb03bc552ffa66b609e504b3010bebcf",
       "status": "active",
       "category": "process",
       "depends_on": [
-        "ark-game-spec",
-        "ark-game-prob",
-        "ark-md-report"
+        {
+          "name": "ark-game-spec",
+          "version": "^2.0.0"
+        },
+        {
+          "name": "ark-game-prob",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-md-report",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-game-spec": {
-      "version": "2.5.6",
-      "tree_hash": "sha256:edaf559232716a1f2d0f36319f96f11f8fe034c33bd0643cb92bdddcbd1c7521",
+      "version": "2.5.7",
+      "tree_hash": "sha256:bf4983786ce3cf0a85ec7b99696a252383de20996c7c9ba6eb46843093d25196",
       "contract_hash": "sha256:7eef31607e32f154bfffd02da2610bd145f59c898f3d62d5b30d32c6467a70f3",
       "status": "active",
       "category": "document",
       "depends_on": [
-        "ark-grill-me",
-        "ark-md-report",
-        "ark-wiki-engine",
-        "ark-llm-tools",
-        "ark-html-report"
+        {
+          "name": "ark-grill-me",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-md-report",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-wiki-engine",
+          "version": "^3.0.0"
+        },
+        {
+          "name": "ark-llm-tools",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-html-report",
+          "version": "^1.2.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-github-cli": {
-      "version": "0.2.2",
-      "tree_hash": "sha256:c624b8990fe7278840a453f59207658a52f3d5ed3d091f345371583660f63fc7",
+      "version": "0.2.3",
+      "tree_hash": "sha256:e476d2871bd0b2203c6f43105516462ceb292e2ae69586b6152e1cd482cdbf75",
       "contract_hash": "sha256:e0883506e8bb22ca4eda95a22f4d0bcdb78357ce5415371398351a7d4463f4bc",
       "status": "active",
       "category": "ops",
       "depends_on": [
-        "ark-wiki-engine"
+        {
+          "name": "ark-wiki-engine",
+          "version": "^3.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -365,13 +445,16 @@
       "updated": "2026-10-20"
     },
     "ark-html-dashboard": {
-      "version": "1.0.1",
-      "tree_hash": "sha256:f8217a5a924536189b400a762568a4a28818f61a2f34fb52524b0f8fbf20c153",
+      "version": "1.0.2",
+      "tree_hash": "sha256:d4046526f3f8f67cc414409b2dce15c77df08775fdb224070f84ac5358fa8c3d",
       "contract_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "active",
       "category": "view",
       "depends_on": [
-        "ark-html-report"
+        {
+          "name": "ark-html-report",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -427,13 +510,16 @@
       "updated": "2026-10-20"
     },
     "ark-md-report": {
-      "version": "1.0.1",
-      "tree_hash": "sha256:e25dab47fc945620e9692c532410b7bc6c2c0aa3462dd2d2e8cc8eff39228695",
+      "version": "1.0.2",
+      "tree_hash": "sha256:c6fe777aaeefea32ece9c171967d310d0c2fe8bc7cc73d9102cdcbd77ab79e6b",
       "contract_hash": "sha256:6d122f4b499aa84d549d9e4fdf91093bf74c1cdc7ed8f923863190baf6283d06",
       "status": "active",
       "category": "document",
       "depends_on": [
-        "ark-html-report"
+        {
+          "name": "ark-html-report",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -489,13 +575,16 @@
       "updated": "2026-10-20"
     },
     "ark-prompt-spec-validator": {
-      "version": "1.1.0",
-      "tree_hash": "sha256:d6d87797b2ebf436ab98733246c21bbcc83a47b220c37d7b46c2761c9765855e",
+      "version": "1.1.1",
+      "tree_hash": "sha256:2696fa0db4ca3d28506c5587b816ecb213157ee39562af400d7ce4eaf9839b3a",
       "contract_hash": "sha256:67f84e73f89e8ddee0fde9ba0d9b3107b6109c9cdf9a5c24d14054175a098119",
       "status": "active",
       "category": "process",
       "depends_on": [
-        "ark-md-report"
+        {
+          "name": "ark-md-report",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
@@ -541,33 +630,42 @@
       "updated": "2026-10-20"
     },
     "ark-skills-align": {
-      "version": "2.3.0",
-      "tree_hash": "sha256:0e96bcb5f642e9e3b0d17944d4da189dc5baa74ca1bea214932a550c99692308",
-      "contract_hash": "sha256:08bbad0fabf2c48504d424201ef87a5cb9bc971fc8d9e8d48507777641ae6995",
+      "version": "2.4.0",
+      "tree_hash": "sha256:8e94bf033ef38dd1942f0b311fe55b4d0e5a4f32bf656c065e1c9c188aa7e649",
+      "contract_hash": "sha256:55962d61605fd4b5d11aa3b93c97723394cc46512d18e1bd0e45f10d9e053a28",
       "status": "active",
       "category": "ops",
       "depends_on": [
-        "ark-md-report"
+        {
+          "name": "ark-md-report",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-spec-executor": {
-      "version": "2.0.2",
-      "tree_hash": "sha256:2eafc9f8358c960986c269e8da32f07f90658f8c7b542104266b58f29ab6998d",
+      "version": "2.0.3",
+      "tree_hash": "sha256:c0352d0d62bb03779789df6424bfafa703acf2bbd7df02431d4220db038bbae8",
       "contract_hash": "sha256:3f29d3e9f1880561660a3ff0db463bc3de8188ebdb069ba1f0317c3296a969be",
       "status": "active",
       "category": "process",
       "depends_on": [
-        "ark-superpowers",
-        "ark-code-spec-validator"
+        {
+          "name": "ark-superpowers",
+          "version": "^1.0.0"
+        },
+        {
+          "name": "ark-code-spec-validator",
+          "version": "^1.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-superpowers": {
       "version": "1.0.2",
-      "tree_hash": "sha256:7fbba3cb92f6218a4847e0c800cb5252da228cfde7ccee9813469baa5be9b107",
+      "tree_hash": "sha256:d86c71f612fe5de8e9ec16db1e41198a44f0f1c9aeee1ff9ef7cf12c42e9d7ff",
       "contract_hash": "sha256:d2949417f15bdba47cab73db6f557dbb6627f1faf35f8107c29eec09f3c280f6",
       "status": "active",
       "category": "process",
@@ -626,33 +724,39 @@
       "updated": "2026-10-20"
     },
     "ark-webapp-generator": {
-      "version": "2.0.1",
-      "tree_hash": "sha256:565940ff05c92d251b26d347140a8aeb49c501318870daca3dc8c6e18fd8c560",
+      "version": "2.0.2",
+      "tree_hash": "sha256:71cf4178329f7774be691f5376908096e191c2090971427ac6858e242a3036c5",
       "contract_hash": "sha256:34db9463eed016daacab74ccae9fc97000bdd8cca338e1481e535b452d6e2348",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [
-        "ark-telegram-sender"
+        {
+          "name": "ark-telegram-sender",
+          "version": "^2.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-weknora-cli": {
-      "version": "1.0.2",
-      "tree_hash": "sha256:1275fc4c669195535ae3cd7ef9a165b3a201302e989075521e4041da48fe127c",
+      "version": "1.0.3",
+      "tree_hash": "sha256:ee85d991b811590609202208aeb129d8e00978400f49b8e8796bb59c0f746ce1",
       "contract_hash": "sha256:af3edc938d4ba85a4a722c28476d59954435b9b3be86783776d50ce3e9cd6df2",
       "status": "active",
       "category": "ops",
       "depends_on": [
-        "ark-db-query"
+        {
+          "name": "ark-db-query",
+          "version": "^3.0.0"
+        }
       ],
       "replaces": [],
       "updated": "2026-10-20"
     },
     "ark-wiki-engine": {
       "version": "3.0.2",
-      "tree_hash": "sha256:3e302167d5ea89c9ec9dc38b3f32e83d44cbd8fb0ec3b16a2d59b1fb77d90540",
-      "contract_hash": "sha256:3ccd79d22673a28e4b5906535ce612de26b38f342bdd2a41c5a6fab6bc773020",
+      "tree_hash": "sha256:7363ac796da75bd3c40a7f8f05e2e0f295a146814dbd86ea2ef7e680dacf4573",
+      "contract_hash": "sha256:f769d24116234096d9996064e65874ca2859bab63b1bcf0e47ad09f2a4ecafdd",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],

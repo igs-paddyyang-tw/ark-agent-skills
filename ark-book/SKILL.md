@@ -14,7 +14,7 @@ description: |
 metadata:
   author: paddyyang
   schema_version: "1.2"
-  version: "1.1.1"
+  version: "1.1.2"
   updated: 2026-10-20
   category: document
   form: instruction
@@ -24,7 +24,9 @@ metadata:
     - { format: html, audience: human }
     - { format: data, audience: ai }
   render: self
-  depends_on: [ark-html-report, ark-wiki-engine]
+  depends_on:
+    - { name: ark-html-report, version: "^1.0.0" }
+    - { name: ark-wiki-engine, version: "^3.0.0" }
   status: active
 ---
 

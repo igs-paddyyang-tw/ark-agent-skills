@@ -22,9 +22,10 @@ metadata:
     - { format: md, audience: both }
     - { format: data, audience: ai }
   render: none
-  depends_on: [ark-md-report]
+  depends_on:
+    - { name: ark-md-report, version: "^1.0.0" }
   status: active
-  version: "1.1.0"
+  version: "1.1.1"
   updated: 2026-10-20
 ---
 
