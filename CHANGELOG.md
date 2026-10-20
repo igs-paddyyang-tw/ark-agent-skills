@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-10-20 (佈局契約 v3.5：拍板包不與各階段產出重疊)
+
+規格：aidev `docs/specs/2026-10-20-review-pack-dedup-spec.md`；分析：`docs/reports/review/2026-10-20-huffnpuff-review-overlap-analysis.md`。
+
+### ark-game-proto 1.3.0（review_build）
+- `publish_docs`：定版家 md 旁產同名 html（`content-src` 戳記、冪等、不覆寫他工具的成對 html）
+- `clean_review`：白名單外舊檔清掉（1.2.4 起複製進來的 docs/、prob-spec.html、proto.html 與孤兒檔）
+- 成品改 `../<stage>/…` 相對連結，不複製；清冊多 `links`、來源改相對 repo 路徑；結案報告不進送審包
+- `--export <資料夾>` 產可帶走的完整包（拒寫 data/）；輸出 `broken_links` 檢查人工章節寫死的舊路徑
+
+### ark-game-prob 1.4.7（ps_layout）
+- L-STAMP 掃描擴到 analysis/report、spec、quicktest/qt-report、game；L-REVIEW 同時驗清冊 `links`
+
+### ark-game-spec 2.6.0（佈局契約 v3.5）
+- review/ 只放拍板書、checks/、定版家放不下的自足單檔；spec／game 允許 md 旁的 html
+
+### ark-superpowers 1.0.3（doc_lint）
+- 🔴 修：SP-001 把 frontmatter（`type: spec`、`language: zh-TW`）、章節標題、表格標題列／分隔列、粗體標籤行當成模板殘留 → **每份文件都 P0**。結構行改為豁免
+- SP-002：行內 code 裡的 `{slug}` 等字面路徑不算 placeholder；測試子程序加 `-X utf8`（Windows cp950）
+
+### 結果
+HuffNPuff 拍板包 5,004 KB → 4,433 KB、與定版家重複 0、斷連結 0；ps_layout L-STAMP／L-REVIEW 0 error
+
 ## 2026-10-20 (depends_on 帶版本範圍 + AL-105／依賴環守門)
 
 ### 資料（20 個 skill、38 條依賴）

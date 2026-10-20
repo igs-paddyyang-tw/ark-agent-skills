@@ -68,7 +68,7 @@ Huff N' Puff Open House 的正式機率設定檔 `odds_1.0.0.json`，目前標�
 
 ## 動手做
 
-1. 打開 [⑥ 驗證台 ↗](../proto.html)，看「L1 精算」分頁的五種玩法表
+1. 打開 [⑥ 驗證台 ↗](../../proto/index.html)，看「L1 精算」分頁的五種玩法表
 2. 切到「Go 對照」分頁，確認兩個 seed 各 20 萬局不一致都是 0
 3. R-1 體感通過後，在拍板欄寫「kb-v1 升 approved」；工程端把 `odds_1.0.0.json` 的 `_meta.status` 改為 approved
 

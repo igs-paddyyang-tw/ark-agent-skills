@@ -1,7 +1,7 @@
 # 遊戲產出佈局契約 v3（機器可讀版）——人讀版：game-layout-contract.md（兩者同步改）
-contract: "3.4"
+contract: "3.5"
 owner: ark-game-spec
-updated: 2026-10-19
+updated: 2026-10-20
 homes:
   data: "data/{domain}/{slug}"        # 定版家，入 git
   output: "output/{domain}/{slug}"    # 工作檯，不入 git
@@ -25,14 +25,14 @@ data_tree:
   root_files: [README.md, LAYOUT.md, layout-report.json, publish-manifest.json]
   analysis: {files: [game-analysis.yaml, kb-refs.yaml, evidence.jsonl], dirs: [report, source]}
   analysis/source: {files: [manifest.json, "competitor-spec-*.md"]}
-  spec: {files: [game-spec.v1.md, decisions.yaml, decisions-applied.json, config-spec.yaml], dirs: [dev-spec, gdd]}
+  spec: {files: [game-spec.v1.md, decisions.yaml, decisions-applied.json, config-spec.yaml], optional: [game-spec.v1.html], dirs: [dev-spec, gdd]}   # v3.5：md 旁的 html 由 review_build publish_docs 產
   spec/dev-spec: {files: [game-spec.md, feature-spec.md, state-machine.md, ui-spec.md, qa-checklist.md]}   # config-spec 由 gs_publish 提到 spec/ 根層
   spec/gdd: {files: [gdd.yaml, symbols.yaml, screens.yaml, info.yaml, i18n.csv], dirs: [rules]}
   prob: {files: [prob-spec.md, prob-spec.html, prob-spec.meta.json, lint-report.json], optional: [prob-spec.xlsx, "config-diff.*", prob-data.json]}
   quicktest: {files: [quicktest.yaml, qt-config.yaml], optional: [symbols.tsv, lint-report.json], dirs: [odds, engine, qt-report, config, _tuning]}
   proto: {optional: [game-config.json, index.html, "go-parity.*", gaps.md]}
-  game: {optional: [handoff.md], dirs: [go-server, pixi-client]}
-  review: {files: [index.html, review-manifest.json], optional: [play.html, gdd-overview.html, qt-report.html, REVIEW.md], dirs: [checks, "{slug}-decision"]}   # 拍板書原稿（ark-book）；無 ark-book 時退回 REVIEW.md
+  game: {optional: [handoff.md, handoff.html], dirs: [go-server, pixi-client]}
+  review: {files: [index.html, review-manifest.json], optional: [play.html, gdd-overview.html, REVIEW.md], dirs: [checks, "{slug}-decision"]}   # v3.5：只放拍板書＋定版家放不下的自足單檔；其餘成品以 ../<stage>/… 相對連結，不複製（白名單外組包時清掉）
   review/checks: {optional: ["*.json", "*.webp", "*.png"]}
   docs: {dirs: [decisions, designs, reports, versions]}
   kb: {files: [spec.md, prob.md, code.md, qt-result.md, versions.md, methods.md], dirs: [xlsx, paramcheck, notes]}

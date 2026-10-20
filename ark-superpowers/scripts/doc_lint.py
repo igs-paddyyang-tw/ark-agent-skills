@@ -180,11 +180,29 @@ def lint(path: Path, fp: dict, sections: dict | None = None) -> list[dict]:
             findings.append({"id": "SP-050", "severity": "P0", "line": 1,
                              "msg": f"status={status} 但仍有 [NEEDS CLARIFICATION]"})
 
-    for i, raw in enumerate(prose.splitlines(), 1):
-        # SP-002 placeholder（正文，不含 fenced code）
-        for m in PLACEHOLDER_RE.finditer(raw):
+    plines = prose.splitlines()
+    # 結構行不算模板殘留：frontmatter（type: spec、language: zh-TW 必然與模板相同）與
+    # 表格標題列（plan 7 欄表頭是契約規定，必須照抄）。2026-10-20：舊版讓每份文件都 P0。
+    structural: set[int] = set()
+    if plines and plines[0].strip() == "---":
+        for j in range(1, len(plines)):
+            structural.add(j)
+            if plines[j].strip() == "---":
+                structural.update((0, j))
+                break
+    sep_re = re.compile(r"^\s*\|[\s:\-|]+\|\s*$")
+    for j, ln in enumerate(plines):
+        if (sep_re.match(ln) or re.match(r"^\s*#{1,6}\s", ln)               # 分隔列、章節標題（必要章節本來就要同名）
+                or re.match(r"^\s*\*\*[^*]+\*\*\s*[:：]?\s*$", ln)           # 粗體標籤行（如「**目標**」）
+                or (j + 1 < len(plines) and ln.lstrip().startswith("|") and sep_re.match(plines[j + 1]))):
+            structural.add(j)
+    for i, raw in enumerate(plines, 1):
+        # SP-002 placeholder（正文，不含 fenced code；行內 `code` 是字面路徑樣式，如 `data/{slug}`，不算）
+        for m in PLACEHOLDER_RE.finditer(re.sub(r"`[^`]*`", "", raw)):
             findings.append({"id": "SP-002", "severity": "P0", "line": i,
                              "msg": f"未替換 placeholder：{m.group()}"})
+        if i - 1 in structural:
+            continue
         # SP-001 template_residue（整行）
         n = normalize(raw)
         if len(n) >= _MIN_LEN and "{" not in n and _sha(n) in line_set:

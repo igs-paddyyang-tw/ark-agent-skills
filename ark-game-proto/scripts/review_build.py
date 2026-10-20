@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""review_build — 發布拍板包 data/<domain>/<slug>/review/（佈局契約 v3.4 ⑨ 送審拍板；給人拍板、可 demo 的研發產物）。
+"""review_build — 發布拍板包 data/<domain>/<slug>/review/（佈局契約 v3.5 ⑨ 送審拍板；給人拍板、可 demo 的研發產物）。
 
 彙整工作檯 output/<domain>/<slug>/ 的成品進定版家（送審前跑一次，不是每次 build）：
   play.html            ⑦ 試玩版單檔（output/…/game/pixi-client/single/index.html，雙擊可玩）
   gdd-overview.html    ② 素材總覽自足版（output/…/gdd/*.html 外連圖 → ark-html-report html_images 縮圖 WebP 內嵌）
   checks/              ⑥ browser-check.json、⑦ stage-smoke.json ＋ 每種玩法 / 情境的代表截圖（WebP）
-  index.html           導覽頁：十階段狀態、成品連結＋大小＋sha16、驗收結果與截圖牆（自足、離線可開）
+  index.html           導覽頁／拍板書：十階段狀態、成品連結＋大小＋sha16、驗收結果與截圖牆
+v3.5 不重疊原則：定版家擁有每份文件的 md＋html（publish_docs 在 md 旁產同名 html，帶 content-src 戳記）；
+  review/ 只放拍板書、checks/、定版家放不下的自足單檔（play.html、gdd-overview.html），其餘成品用相對連結
+  ../<stage>/…，不複製；白名單外的舊檔組包時清掉。要整包傳給人：--export <資料夾>（複製 review/＋被連到的檔）。
   REVIEW.md            送審說明（首次產骨架；之後只更新 <!-- auto --> 區段，人工區保留）
   review-manifest.json 每個檔的來源＋sha16＋大小（ps_layout L-REVIEW 據此判拍板包是否過期）
 ⑤ prob/prob-spec.html、⑥ proto/index.html 留原位（受 ps_lint／proto_build 綁定），導覽頁用相對連結。
 
 用法：py scripts/review_build.py --slug <slug> [--repo .] [--domain slot] [--quality auto|standard|lite] [--run-checks]
   --run-checks：先跑 tests/browser_check.js（⑥）與 stage/tests/smoke.js --scenes all（⑦）再收集
+  --export DIR：另產可帶走的完整拍板包（不得寫進 data/）
 exit：0 成功 / 1 超過 5 MB 或含禁止檔 / 2 BAD_INPUT
 規格：專案 docs/specs/2026-10-19-review-pack-spec.md
 """
@@ -23,6 +27,7 @@ import hashlib
 import html
 import io
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -174,6 +179,8 @@ def report_links(data: pathlib.Path) -> list[tuple[str, str, str]]:
     out = []
     rd = data / "docs" / "reports"
     for md in sorted(rd.glob("*.md"), reverse=True) if rd.is_dir() else []:
+        if "closeout" in md.stem:                                  # 結案報告在 ⑩ 之後，不屬於送審
+            continue
         txt = md.read_text(encoding="utf-8", errors="replace")
         m = re.search(r'^title:\s*"?(.+?)"?\s*$', txt, re.M)
         title = m.group(1) if m else md.stem
@@ -228,7 +235,7 @@ def build_index(game: str, slug: str, when: str, rows, arts: list[dict], checks:
                 review_html: str = "", reports: list[tuple[str, str, str]] | None = None) -> str:
     e = html.escape
     st = "".join(f"<tr><td>{no}</td><td>{e(n)}</td><td class=\"{'ok' if ok is True else 'na'}\">{stage_label(ok)}</td></tr>" for no, n, ok in rows)
-    cards = "".join(f"<div class=\"card\"><a href=\"{e(a['href'])}\">{e(a['title'])}</a><div>{e(a['desc'])}</div><div class=\"m\">{e(a['meta'])}</div></div>" for a in arts)
+    cards = "".join(f"<div class=\"card\"><a href=\"{e(a['href'])}\">{e(a['title'])}</a><div>{e(a['desc'])}</div><div class=\"m\">{e(a['meta'])}</div></div>" for a in arts if a.get("kind") != "report")
     lk = "".join(f"<div class=\"card\"><a href=\"{e(h)}\">{e(t)}</a><div class=\"m\">{e(d)}</div></div>" for t, h, d in links)
     ck = ""
     for label, rep in checks.items():
@@ -245,7 +252,7 @@ def build_index(game: str, slug: str, when: str, rows, arts: list[dict], checks:
                    f"<figure><a href=\"checks/{e(s)}\"><img loading=\"lazy\" src=\"checks/{e(s)}\" alt=\"{e(s)}\"></a><figcaption>{e(s)}</figcaption></figure>" for s in rep.get("review_shots", [])) + "</div>")
     return f"""<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(game)} 拍板包</title><style>{INDEX_CSS}</style></head><body><main>
-<h1>{e(game)}　拍板包</h1><div class="sub">{e(slug)} · 發布 {e(when)} · 佈局契約 v3.4 ⑨ review/ · 本包可整個資料夾傳給人離線開</div>
+<h1>{e(game)}　拍板包</h1><div class="sub">{e(slug)} · 發布 {e(when)} · 佈局契約 v3.5 ⑨ review/ · 成品連到定版家；要傳給人請用 review_build --export</div>
 {f'<section class="card review">{review_html}</section>' if review_html else ''}
 <h2>可以直接打開的成品</h2><div class="grid">{cards}</div>
 <h2>定版家其他成品（相對連結）</h2><div class="grid">{lk}</div>
@@ -307,12 +314,33 @@ def add_back(p: pathlib.Path, href: str = "index.html") -> None:
     p.write_text(t, encoding="utf-8")
 
 
-def doc_page(title: str, body: str, src: str) -> str:
+GEN_META = '<meta name="generator" content="review_build">'
+DOC_GLOBS = (  # (定版家 md 樣式, 標籤, kind)；md 旁產同名 html（契約 v3.5：定版家擁有 md＋html，拍板書只連結）
+    ("analysis/report/*.md", "① 競品分析報告", "doc"),
+    ("spec/game-spec.v1.md", "② 遊戲規格書", "doc"),
+    ("docs/decisions/*.md", "② 決議紀錄", "doc"),
+    ("docs/designs/*.md", "設計文件", "doc"),
+    ("quicktest/qt-report/*.md", "④ 快測報告", "doc"),
+    ("game/handoff.md", "⑧ 工程交付單", "doc"),
+    ("docs/reports/*.md", "報告", "report"),
+)
+REVIEW_KEEP = {"index.html", "review-manifest.json", "play.html", "gdd-overview.html", "REVIEW.md"}
+SINGLE_FILE_KB = 500
+
+
+def md_title(md: pathlib.Path) -> str:
+    txt = md.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r'^title:\s*"?(.+?)"?\s*$', txt, re.M) or re.search(r"^#\s+(.+)$", txt, re.M)
+    return m.group(1).strip() if m else md.stem
+
+
+def stage_doc_page(title: str, body: str, src: str, stamp: str) -> str:
+    """定版家文件頁（md 旁的 View 軌）：不依賴拍板書；尾端 content-src 戳記供 ps_layout L-STAMP 驗。"""
     e = html.escape
     return (f'<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f"<title>{e(title)}</title><style>{DOC_CSS}</style></head><body>"
-            f'<div class="bar"><a href="../index.html" onclick="{BACK_JS}">← 回拍板書</a><span>{e(title)}</span><span style="margin-left:auto">來源 {e(src)}</span></div>'
-            f"<main>{body}</main></body></html>")
+            f"{GEN_META}<title>{e(title)}</title><style>{DOC_CSS}</style></head><body>"
+            f'<div class="bar"><span><b>{e(title)}</b></span><span style="margin-left:auto">來源 {e(src)}（md 為正本）</span></div>'
+            f"<main>{body}</main></body></html>\n<!-- content-src: {stamp} -->\n")
 
 
 def md_file_to_html(md_p: pathlib.Path) -> str:
@@ -322,47 +350,106 @@ def md_file_to_html(md_p: pathlib.Path) -> str:
     return markdown.markdown(txt, extensions=["tables", "fenced_code"])
 
 
-def copy_linked(data: pathlib.Path, rv: pathlib.Path, files: list) -> list[dict]:
-    """把拍板書會連到的定版家成品全部收進 review/（整包可傳、可離線）：HTML 成品直接複製，md 轉成可讀頁（頁首「← 回拍板書」）。"""
-    docs = rv / "docs"
-    if docs.is_dir():
-        shutil.rmtree(docs)
-    docs.mkdir()
+def publish_docs(data: pathlib.Path) -> dict:
+    """定版家 md → 同目錄同名 html（帶戳記）。戳記相符或不是本工具產的 html 一律不動（冪等、不蓋別人的成對檔）。"""
+    res: dict[str, list[str]] = {"published": [], "skipped": [], "failed": []}
+    for pat, _, _ in DOC_GLOBS:
+        for md in sorted(data.glob(pat)):
+            hp, rel = md.with_suffix(".html"), md.relative_to(data).as_posix()
+            stamp = f"{md.name} sha256:{sha16(md)}"
+            if hp.is_file():
+                t = hp.read_text(encoding="utf-8", errors="replace")
+                if stamp in t:
+                    res["skipped"].append(rel)
+                    continue
+                if GEN_META not in t:
+                    res["skipped"].append(f"{rel}（他工具產的 html，不覆寫）")
+                    continue
+            try:
+                page = stage_doc_page(md_title(md), md_file_to_html(md), rel, stamp)
+            except ImportError:
+                res["failed"].append(f"{rel}：缺 markdown 套件")
+                continue
+            if len(page.encode("utf-8")) > SINGLE_FILE_KB * 1024:
+                res["failed"].append(f"{rel}：html 超過單檔 {SINGLE_FILE_KB} KB")
+                continue
+            hp.write_text(page, encoding="utf-8")
+            res["published"].append(rel)
+    return res
+
+
+def clean_review(rv: pathlib.Path) -> list[str]:
+    """拍板包白名單外的檔一律清掉（v0.3 的複製品 docs/、prob-spec.html、proto.html 與孤兒檔）；保留 checks/ 與拍板書原稿。"""
+    removed = []
+    for p in sorted(rv.iterdir()) if rv.is_dir() else []:
+        if p.is_dir():
+            if p.name == "checks" or (p / "book.yaml").is_file():
+                continue
+            shutil.rmtree(p)
+            removed.append(p.name + "/")
+        elif p.name not in REVIEW_KEEP:
+            p.unlink()
+            removed.append(p.name)
+    return removed
+
+
+def linked_items(data: pathlib.Path, rv: pathlib.Path) -> tuple[list[dict], list[dict]]:
+    """拍板書要連的定版家成品：相對連結（../<stage>/…），不複製。回傳（卡片清單, 清冊 links）。"""
     items: list[dict] = []
+    links: list[dict] = []
 
-    def add(dst: pathlib.Path, src: pathlib.Path, title: str, desc: str, kind: str) -> None:
-        files.append((dst, src.relative_to(data.parents[2]).as_posix()))
-        items.append({"href": dst.relative_to(rv).as_posix(), "title": title, "desc": desc, "kind": kind,
-                      "meta": f"{kb(dst.stat().st_size)} · sha {sha16(dst)}"})
+    def add(p: pathlib.Path, title: str, desc: str, kind: str) -> None:
+        href = pathlib.Path(os.path.relpath(p, rv)).as_posix()
+        items.append({"href": href, "title": title, "desc": desc, "kind": kind, "meta": f"{kb(p.stat().st_size)} · sha {sha16(p)}"})
+        links.append({"path": href, "sha256_16": sha16(p), "bytes": p.stat().st_size, "source": p.relative_to(data).as_posix()})
 
-    for src, name, title, desc in ((data / "prob" / "prob-spec.html", "prob-spec.html", "⑤ 機率規格書", "參數表、§2 快測數據、流程圖"),
-                                   (data / "proto" / "index.html", "proto.html", "⑥ 機率驗證台", "L1 精算 / L2 蒙地卡羅 / Go 逐局對照 / 演出（演出需網路載入 PixiJS）")):
-        if src.is_file():
-            shutil.copyfile(src, rv / name)
-            add_back(rv / name)
-            add(rv / name, src, title, desc, "app")
-    qt = next(iter(sorted((data / "quicktest" / "qt-report").glob("*.md"))), None) if (data / "quicktest" / "qt-report").is_dir() else None
-    for src, name, title, desc in ((qt, "qt-report.html", "④ 快測報告", "2,000 萬局三向判定"), (data / "game" / "handoff.md", "handoff.html", "⑧ 工程交付單", "設定檔 sha、K 卡 → Go 映射")):
-        if src and src.is_file():
-            (docs / name).write_text(doc_page(title, md_file_to_html(src), src.relative_to(data).as_posix()), encoding="utf-8")
-            add(docs / name, src, title, desc, "doc")
-    rd = data / "docs" / "reports"
-    for md in sorted(rd.glob("*.md"), reverse=True) if rd.is_dir() else []:
-        txt = md.read_text(encoding="utf-8", errors="replace")
-        m = re.search(r'^title:\s*"?(.+?)"?\s*$', txt, re.M)
-        title = m.group(1) if m else md.stem
-        vd = re.search(r"^verdict:\s*(\S+)", txt, re.M)
-        hp = md.with_suffix(".html")
-        dst = docs / f"{md.stem}.html"
-        if hp.is_file() and f"sha256:{sha16(md)}" in hp.read_text(encoding="utf-8", errors="replace"):
-            shutil.copyfile(hp, dst)
-            add_back(dst, "../index.html")
-            src_p = hp
-        else:
-            dst.write_text(doc_page(title, md_file_to_html(md), md.relative_to(data).as_posix()), encoding="utf-8")
-            src_p = md
-        add(dst, src_p, title, "報告（時點快照）" + (f" · verdict {vd.group(1)}" if vd else ""), "report")
-    return items
+    for p, title, desc in ((data / "prob" / "prob-spec.html", "⑤ 機率規格書", "參數表、§2 快測數據、流程圖"),
+                           (data / "proto" / "index.html", "⑥ 機率驗證台", "L1 精算 / L2 蒙地卡羅 / Go 逐局對照 / 演出（演出需網路載入 PixiJS）")):
+        if p.is_file():
+            add(p, title, desc, "app")
+    for pat, label, kind in DOC_GLOBS:
+        for md in sorted(data.glob(pat), reverse=kind == "report"):
+            if kind == "report" and "closeout" in md.stem:          # 結案報告在 ⑩ 之後，不屬於送審
+                continue
+            hp = md.with_suffix(".html")
+            target = hp if hp.is_file() and f"{md.name} sha256:{sha16(md)}" in hp.read_text(encoding="utf-8", errors="replace") else md
+            if kind == "report":
+                vd = re.search(r"^verdict:\s*(\S+)", md.read_text(encoding="utf-8", errors="replace"), re.M)
+                add(target, md_title(md), "報告（時點快照）" + (f" · verdict {vd.group(1)}" if vd else ""), "report")
+            else:
+                add(target, label if "*" not in pat else f"{label}：{md_title(md)}", f"定版家 {md.relative_to(data).as_posix()}", "doc")
+    return items, links
+
+
+def rel_src(s: str, repo: pathlib.Path) -> str:
+    """清冊來源一律寫相對 repo 的路徑；別環境的絕對路徑（如 /sessions/…）退成 output/ 以下的相對段。"""
+    pth = pathlib.Path(s)
+    if not pth.is_absolute():
+        return s
+    try:
+        return pth.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        parts = pth.as_posix().split("/output/", 1)
+        return "output/" + parts[1] if len(parts) == 2 else pth.name
+
+
+def export_pack(repo: pathlib.Path, data: pathlib.Path, rv: pathlib.Path, links: list[dict], dest: pathlib.Path) -> dict:
+    """可帶走的拍板包：review/ ＋ 被連到的定版家檔案，保留 <slug>/ 底下的相對結構，連結照樣能開。不准寫回 data/。"""
+    dest = dest.resolve()
+    droot = (repo / "data").resolve()
+    if dest == droot or droot in dest.parents:
+        raise ValueError(f"--export 不可寫進 data/（{dest}）：複製品不該回到定版家")
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(rv, dest / "review", ignore=shutil.ignore_patterns(".book-build.html"))
+    n = 0
+    for lk in links:
+        src = (rv / lk["path"]).resolve()
+        dst = dest / src.relative_to(data.resolve())
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        n += 1
+    return {"dir": dest.as_posix(), "linked_files": n, "total_kb": sum(f.stat().st_size for f in dest.rglob("*") if f.is_file()) // 1024}
 
 
 def decision_rows(book_dir: pathlib.Path) -> list[dict]:
@@ -451,7 +538,7 @@ status: review
         st = "⏳ 待拍板" if d["pending"] else f"✅ {d['decision']}（{d['by']} {d['date']}）"
         L.append(f"| {d['id']} | {d['item'].split(' ', 1)[-1]} | {d['suggest'] or '—'} | {st} | 第 {d['chapter']} 章 |\n")
     L.append("\n> [!ASK] 你可能會想說\n> 這麼多成品，先看哪一個？\n> 先玩 **⑦ 試玩版**（第 2 章 R-1 的依據）；數學細節再看 ⑥ 驗證台。每個成品都開新分頁，不會把這本書蓋掉。\n\n")
-    L.append("### 可以直接打開的成品（↗ 新分頁）\n\n這個資料夾連同成品與驗收紀錄，叫做 **拍板包**；整包可以直接傳給人、離線打開。\n\n| 成品 | 用途 | 大小 |\n|---|---|---|\n")
+    L.append("### 可以直接打開的成品（↗ 新分頁）\n\nreview/ 資料夾連同驗收紀錄，叫做 **拍板包**；成品都連到定版家各階段目錄（不複製，看到的永遠是現行版）。要整包傳給人，用 `review_build --export <資料夾>`。\n\n| 成品 | 用途 | 大小 |\n|---|---|---|\n")
     for x in arts:
         if x.get("kind") == "report":
             continue
@@ -495,7 +582,7 @@ def write_appendix(book_dir: pathlib.Path, game: str, when: str, arts: list[dict
     """拍板書附錄（每次發布重產）：網頁地圖、驗收逐項與截圖、報告。路徑相對於書原稿目錄。"""
     import yaml  # noqa: PLC0415
     slug = yaml.safe_load((book_dir / "book.yaml").read_text(encoding="utf-8"))["slug"]
-    KIND = {"app": "↗ 新分頁（應用）", "doc": "↗ 新分頁（文件頁，頁首「← 回拍板書」）", "report": "↗ 新分頁（報告）"}
+    KIND = {"app": "↗ 新分頁（應用）", "doc": "↗ 新分頁（定版家文件）", "report": "↗ 新分頁（定版家報告）"}
     tree = ["review/index.html   拍板書（本書；章節在同一分頁切換）"]
     for x in arts:
         tree.append(f"├─↗ {x['href']:<28s} {x['title']}")
@@ -539,7 +626,7 @@ status: review
 
 ### 網頁地圖
 
-拍板包所有頁面與它們的開法，整理成 **網頁地圖**。整包只連到 review/ 內部，傳給人也打得開。
+拍板包所有頁面與它們的開法，整理成 **網頁地圖**。`../` 開頭的是定版家各階段目錄的成品（相對連結，不複製）；要傳給人請用 `review_build --export`。
 
 ```
 """ + "\n".join(tree) + """
@@ -550,7 +637,7 @@ status: review
 | 本書章節 | 同分頁（左側目錄） | 左側目錄、上一章／下一章 |
 """]
     for x in arts:
-        back = "關掉分頁" if x["kind"] != "doc" and x["kind"] != "report" else "頁首「← 回拍板書」或關掉分頁"
+        back = "關掉分頁"
         L.append(f"| [{x['title']}](../{x['href']}) | {KIND.get(x.get('kind'), '↗ 新分頁')} | {back} |\n")
     L.append("\n> [!ASK] 你可能會想說\n> 截圖跟我自己打開看到的不一樣怎麼辦？\n> 截圖是發布當下的 **真瀏覽器驗收** 結果；以自己打開看到的為準，有差異就重跑 `review_build --run-checks`。\n\n")
     L.append("### 真瀏覽器驗收（逐項）\n\n")
@@ -574,7 +661,7 @@ status: review
 ## 重點回顧
 
 - 每個拍板依據都能點開、能重跑、能追到來源。
-- 成品開新分頁，關掉就回到書；文件頁有「← 回拍板書」。
+- 成品開新分頁，關掉就回到書；成品都在定版家，拍板包不複製。
 - 拍板包只在送審前發布。
 """)
     (book_dir / "99-appendix-artifacts.md").write_text("".join(L), encoding="utf-8")
@@ -605,6 +692,7 @@ def main() -> int:
     ap.add_argument("--domain", default="slot")
     ap.add_argument("--quality", default="auto", choices=["auto", "standard", "lite"])
     ap.add_argument("--run-checks", action="store_true")
+    ap.add_argument("--export", default=None, help="另產可帶走的完整拍板包到此資料夾（不得在 data/ 內）")
     a = ap.parse_args()
     repo = pathlib.Path(a.repo).resolve()
     data, out = repo / "data" / a.domain / a.slug, repo / "output" / a.domain / a.slug
@@ -613,6 +701,8 @@ def main() -> int:
         return 2
     log = run_checks(repo, out) if a.run_checks else []
     rv = data / "review"
+    docs_res = publish_docs(data)                              # v3.5：文件 html 寫回定版家（md 旁）
+    removed = clean_review(rv)                                 # v3.5：白名單外舊檔（含 v0.3 複製品）清掉
     (rv / "checks").mkdir(parents=True, exist_ok=True)
     for old in (rv / "checks").glob("*"):
         old.unlink()
@@ -653,12 +743,13 @@ def main() -> int:
                         "meta": f"{kb(g.stat().st_size)} · sha {sha16(g)}"})
     for x in arts:
         x["kind"] = "app"
-    arts += copy_linked(data, rv, files)                        # review/ 自足：外部成品複製進來、md 轉可讀頁
+    linked, link_rows = linked_items(data, rv)                  # v3.5：定版家成品走相對連結，不複製
+    arts += linked
     links = []
     when = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     (rv / "index.html").write_text(build_index(game, a.slug, when, stage_rows(data), arts, checks, links), encoding="utf-8")
     files.append((rv / "index.html", "review_build"))
-    auto = (f"- 發布：{when}（review_build；契約 v3.4）\n"
+    auto = (f"- 發布：{when}（review_build；契約 v3.5）\n"
             + "".join(f"- {x['title']}：`{x['href']}`（{x['meta']}）\n" for x in arts)
             + "".join(f"- {k}：" + (f"{sum(1 for r in (v.get('results') or v.get('checks') or []) if r.get('ok'))}/{len(v.get('results') or v.get('checks') or [])} PASS\n" if v else "尚未驗收\n") for k, v in checks.items()))
     book_dir = next((p.parent for p in sorted(rv.glob("*/book.yaml"))), None)
@@ -679,16 +770,27 @@ def main() -> int:
         # 導覽頁最後寫：內嵌 REVIEW.md（要拍板的事放最上面）＋ 定版家報告連結
         (rv / "index.html").write_text(build_index(game, a.slug, when, stage_rows(data), arts, checks, links,
                                                    md_to_html((rv / "REVIEW.md").read_text(encoding="utf-8")), report_links(data)), encoding="utf-8")
+    idx_txt = (rv / "index.html").read_text(encoding="utf-8", errors="replace")
+    broken = sorted({h for h in re.findall(r'(?:href|src)="([^"#:?]+)"', idx_txt) if not (rv / h).resolve().is_file()})   # 人工章節寫死舊路徑也抓得到
     bad = [f.name for f in rv.rglob("*") if f.is_file() and f.suffix.lower() in BAN]
     tot = sum(f.stat().st_size for f in rv.rglob("*") if f.is_file())
     if bad or tot > REVIEW_KB * 1024:
         emit(False, {"total_kb": tot // 1024, "banned": bad}, {"code": "GATE_BLOCKED", "message": f"拍板包 {tot // 1024} KB（上限 {REVIEW_KB}）或含禁止檔 {bad}"})
         return 1
-    man = {"schema": "review-manifest/1", "contract": "3.4", "slug": a.slug, "game": game, "generated_at": when, "gdd_quality": quality if gdd_src else None,
-           "files": [{"path": f.relative_to(rv).as_posix(), "sha256_16": sha16(f), "bytes": f.stat().st_size, "source": s} for f, s in files if f.name != "REVIEW.md"],
-           "total_bytes": tot}
+    man = {"schema": "review-manifest/1", "contract": "3.5", "slug": a.slug, "game": game, "generated_at": when, "gdd_quality": quality if gdd_src else None,
+           "files": [{"path": f.relative_to(rv).as_posix(), "sha256_16": sha16(f), "bytes": f.stat().st_size, "source": rel_src(s, repo)} for f, s in files if f.name != "REVIEW.md"],
+           "links": link_rows, "total_bytes": tot}
     (rv / "review-manifest.json").write_text(json.dumps(man, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    exported = None
+    if a.export:
+        try:
+            exported = export_pack(repo, data, rv, link_rows, pathlib.Path(a.export))
+        except ValueError as ex:
+            emit(False, error={"code": "BAD_INPUT", "message": str(ex)})
+            return 2
     emit(True, {"review": rv.relative_to(repo).as_posix(), "total_kb": tot // 1024, "files": len(man["files"]) + 2, "gdd_quality": man["gdd_quality"],
+                "links": len(link_rows), "docs_published": docs_res["published"], "docs_skipped": len(docs_res["skipped"]),
+                "docs_failed": docs_res["failed"], "removed": removed, "export": exported, "broken_links": broken,
                 "checks": {k: (bool(v) and bool(v.get("pass"))) for k, v in checks.items()}, "run_checks": log, "book": book_info,
                 "delivery": f"review_build {a.slug}｜{kb(tot)} / {REVIEW_KB // 1024} MB｜開 {rv.relative_to(repo).as_posix()}/index.html"})
     return 0

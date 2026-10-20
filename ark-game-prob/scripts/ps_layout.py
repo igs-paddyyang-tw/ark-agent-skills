@@ -9,7 +9,7 @@
   L-STRAY    出現 data/prob/<slug>/ 這類多一層的舊佈局 → error（請用 ps_run --dest <game>/prob 重產後移除）
   L-PROB     prob/ 需有 prob-spec.md / .meta.json / .html / lint-report.json；md frontmatter source_skill 必須是 ark-game-prob
              （非 skill 產物 → error）；ps_lint 重跑 0 error
-  L-STAMP    prob/、docs/ 下每個 .html：同名 .md 存在時，content-src 戳記的 sha 必須 = 該 md 的 sha16（綁錯對象 / 過期 → error；無戳記 → warning）
+  L-STAMP    prob/、docs/、analysis/report/、spec/、quicktest/qt-report/、game/（契約 v3.5：定版家 md 旁的 html）下每個 .html：同名 .md 存在時，content-src 戳記的 sha 必須 = 該 md 的 sha16（綁錯對象 / 過期 → error；無戳記 → warning）
   L-SPEC     config-spec.yaml：<game>/spec/ 為規範位置（只在 quicktest/ → warning）；mode restore-live 時 $ref 全可解析、設定檔 sha 一致、鍵全覆蓋
   L-QT       quicktest/quicktest.yaml 需有 target_rtp；qt-report/rtp-report.json 存在；gate.verdict confirmed（rejected → error、inconclusive → warning）
   L-DIFF     prob/config-diff.json：mismatch > 0 → error；沒有 → warning（還原模式建議跑 ps_run --config）
@@ -18,7 +18,7 @@
   L-SERVER   server/handoff.md 存在時：frontmatter 的 config_sha256_16 / rtp_report_sha256_16 必須 = 現檔實算 sha
              （不符 → error；只對帳交付件來源，不改 server code）；無 handoff.md → 不報（⑥ 選配）
   L-REVIEW   review/ 拍板包（契約 v3.3，選配）：總量 > 5 MB → error；二進位／影片 → error；有 review/ 但缺 index.html → warning；
-             review-manifest.json 列的檔案不存在或 sha 不符 → warning（拍板包過期，送審前重跑 review_build）
+             review-manifest.json 列的檔案（files）與連到的定版家成品（links，v3.5）不存在或 sha 不符 → warning（拍板包過期，送審前重跑 review_build）
   L-RTP      docs/ 下（人寫的）md 提到的「Total RTP / 總 RTP」實測數字 ≠ rtp-report（±0.01 個百分點）→ warning（列檔名:行號；數字前後出現 golden／目標／理論／參數表者略過）
 
 用法: python ps_layout.py --game output/games/<slug> [--mode restore|design] [--write-md] [--strict]
@@ -107,7 +107,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
                 add("L-PROB", "prob/", f"ps_lint 例外：{e}")
 
     # L-STAMP
-    for base in (prob, docs):
+    for base in (prob, docs, game / "analysis" / "report", spec, qt / "qt-report", game / "game"):
         if not base.is_dir():
             continue
         for h in sorted(base.rglob("*.html")):
@@ -239,7 +239,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
         if man_p.is_file():
             try:
                 man = json.loads(man_p.read_text(encoding="utf-8"))
-                for it in man.get("files", []):
+                for it in man.get("files", []) + man.get("links", []):   # v3.5：links＝拍板書連到的定版家成品
                     fp = review / it["path"]
                     if not fp.is_file() or (it.get("sha256_16") and C.sha16(fp) != it["sha256_16"]):
                         stale.append(it["path"])

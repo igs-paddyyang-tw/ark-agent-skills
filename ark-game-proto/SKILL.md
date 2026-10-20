@@ -19,7 +19,7 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "1.2.7"
+  version: "1.3.0"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
@@ -129,6 +129,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.3.0 | 2026-10-20 | 佈局契約 v3.5「拍板包不與各階段產出重疊」：`review_build` 新增 `publish_docs`（定版家 md 旁產同名 html＋`content-src` 戳記，冪等、不覆寫他工具的成對 html）、`clean_review`（白名單外舊檔清掉，含 v1.2.4 的 docs/、prob-spec.html、proto.html 複製品）、`linked_items`（成品改 `../<stage>/…` 相對連結，不複製）、清冊多 `links`、來源改相對 repo 路徑、`--export <資料夾>` 產可帶走包（拒寫 data/）、結案報告不進送審包、`broken_links` 斷連結檢查；golden 拍板書 03 章連結改指定版家 |
 | 1.2.5 | 2026-10-19 | 佈局契約 v3.4 十階段：`review_build` 階段表改為 ⑨ 送審拍板（拍板書各章拍板欄全部填完才算完成，否則顯示「⏳ 送審中」）＋ ⑩ 上線成效（偵測 ark-game-report `docs/reports/*-d<N>.html／.json`，相容舊 `perf-review`）；導覽頁、拍板書第 1 章與附錄文字「九階段」→「十階段」；golden `review-book/` 同步 |
 | 1.2.4 | 2026-10-19 | 拍板包導覽修正（依網頁地圖分析）：外部成品（prob-spec、驗證台、快測報告、交付單、報告）全部複製進 `review/`、md 轉可讀頁（`review/docs/`，頁首「← 回拍板書」），整包可傳可離線；書內成品連結一律開新分頁（書留原分頁），複製進來的 HTML（試玩版除外）加浮動「← 回拍板書」（新分頁 → 關分頁；直接開檔 → 回書）；拍板書新增自動第 1 章「現況：一頁看完」（結論、各章拍板欄狀態、成品、驗收、九階段）；附錄改為網頁地圖＋驗收逐項＋報告；HuffNPuff 改用 ark-book 1.1 `storybook` 風格 |
 | 1.2.3 | 2026-10-19 | 拍板書：`review_build` 偵測 `review/<slug>-decision/book.yaml` → 每次重產附錄（成品、驗收、九階段、定版家報告）→ ark-book `book_lint` ＋ `book_build`（style 取 book.yaml，HuffNPuff 用 neon）→ `review/index.html`；人工章節不動、舊 REVIEW.md 併入後移除；導覽頁可列定版家 `docs/reports/`（戳記吻合連 HTML，否則連 md）。golden `review-book/`、test_review_decision_book |

@@ -1,4 +1,4 @@
-"""review_build 拍板包（佈局契約 v3.3）：成品收集、gdd 自足化、截圖精選、REVIEW.md 人工區保留、5 MB 額度。"""
+"""review_build 拍板包（佈局契約 v3.5）：成品走相對連結不複製、文件 html 回寫定版家、清舊檔、--export、gdd 自足化、截圖精選、REVIEW.md 人工區保留。"""
 from __future__ import annotations
 
 import json
@@ -61,9 +61,12 @@ def test_review_pack(tmp_path):
     bc = json.loads((rv / "checks" / "proto-browser-check.json").read_text(encoding="utf-8"))
     assert bc["url"] == "index.html", "本機絕對路徑未去除"
     idx = (rv / "index.html").read_text(encoding="utf-8")
-    assert 'href="prob-spec.html"' in idx and 'href="proto.html"' in idx and "play.html" in idx and 'href="../' not in idx   # 外部成品已複製進 review/
+    assert 'href="../prob/prob-spec.html"' in idx and 'href="../proto/index.html"' in idx and "play.html" in idx   # v3.5：相對連結指向定版家
+    assert not (rv / "prob-spec.html").exists() and not (rv / "proto.html").exists() and not (rv / "docs").exists(), "定版家成品不可複製進 review/"
     man = json.loads((rv / "review-manifest.json").read_text(encoding="utf-8"))
-    assert man["contract"] == "3.4" and {f["path"] for f in man["files"]} >= {"play.html", "gdd-overview.html", "index.html"}
+    assert man["contract"] == "3.5" and {f["path"] for f in man["files"]} >= {"play.html", "gdd-overview.html", "index.html"}
+    assert {lk["path"] for lk in man["links"]} >= {"../prob/prob-spec.html", "../proto/index.html"}
+    assert all(not pathlib.Path(f["source"]).is_absolute() for f in man["files"] if f["source"] != "review_build"), "清冊來源要相對 repo"
 
 
 def test_review_md_human_area_kept(tmp_path):
@@ -100,12 +103,58 @@ def test_review_decision_book(tmp_path):
     appx = (book / "99-appendix-artifacts.md").read_text(encoding="utf-8")
     assert "play.html" in appx and "PASS" in appx
     idx = (rv / "index.html").read_text(encoding="utf-8")
-    assert "book-src" in idx and 'src="checks/' in idx and 'href="../' not in idx, "連結必須都在 review/ 內"
+    assert "book-src" in idx and 'src="checks/' in idx
+    import re as _re
+    for h in _re.findall(r'href="(\.\./[^"#]+)"', idx):
+        assert (rv / h).resolve().is_file(), f"拍板書連到不存在的定版家檔：{h}"
     assert not (rv / "REVIEW.md").exists()
     st = (book / "01-status.md").read_text(encoding="utf-8")
     assert "⏳ 待拍板" in st and "R-1" in st, "現況章要列出各章拍板欄狀態"
     import re
     ext = [m for m in re.findall(r"<a\b([^>]*)>", idx) if re.search(r'href="(?!#)', m)]
     assert ext and all('target="_blank"' in m for m in ext), "成品連結要開新分頁"
-    assert (rv / "prob-spec.html").is_file() and (rv / "proto.html").is_file(), "外部成品要複製進 review/"
-    assert "回拍板書" in (rv / "prob-spec.html").read_text(encoding="utf-8") and "回拍板書" not in (rv / "play.html").read_text(encoding="utf-8")
+    assert not (rv / "prob-spec.html").exists() and not (rv / "proto.html").exists(), "定版家成品不可複製進 review/"
+    assert "回拍板書" not in (repo / "data" / "slot" / "x" / "prob" / "prob-spec.html").read_text(encoding="utf-8"), "定版家檔不可被注入拍板書按鈕"
+
+
+def test_publish_docs_and_clean(tmp_path):
+    """AC-101／AC-102：md 旁產 html（戳記、冪等）、他工具成對 html 不覆寫、白名單外舊檔清掉、closeout 不進送審包。"""
+    repo = _repo(tmp_path)
+    d = repo / "data" / "slot" / "x"
+    (d / "quicktest" / "qt-report").mkdir(parents=True)
+    (d / "quicktest" / "qt-report" / "r.md").write_text("---\ntitle: 快測\n---\n# 快測\n\n| a | b |\n|---|---|\n| 1 | 2 |\n", encoding="utf-8")
+    (d / "docs" / "reports").mkdir(parents=True)
+    (d / "docs" / "reports" / "s.md").write_text("---\ntitle: 盤點\n---\n# 盤點\n", encoding="utf-8")
+    (d / "docs" / "reports" / "s.html").write_text("<html>人工版<!-- content-src: s.md sha256:0000000000000000 --></html>", encoding="utf-8")
+    (d / "docs" / "reports" / "z-closeout.md").write_text("---\ntitle: 結案\n---\n# 結案\n", encoding="utf-8")
+    rv = d / "review"
+    (rv / "docs").mkdir(parents=True)
+    (rv / "docs" / "old.html").write_text("orphan", encoding="utf-8")
+    (rv / "prob-spec.html").write_text("copy", encoding="utf-8")
+    rc, env = _run(repo)
+    assert rc == 0, env
+    h = (d / "quicktest" / "qt-report" / "r.html").read_text(encoding="utf-8")
+    assert "content-src: r.md sha256:" in h and "<table>" in h
+    assert (d / "docs" / "reports" / "s.html").read_text(encoding="utf-8").startswith("<html>人工版"), "他工具產的 html 不可覆寫"
+    assert not (rv / "docs").exists() and not (rv / "prob-spec.html").exists()
+    assert set(env["data"]["removed"]) >= {"docs/", "prob-spec.html"}
+    assert "z-closeout" not in (rv / "index.html").read_text(encoding="utf-8"), "結案報告不屬於送審包"
+    rc2, env2 = _run(repo)
+    assert rc2 == 0 and env2["data"]["docs_published"] == [], "重跑應冪等"
+
+
+def test_export(tmp_path):
+    """AC-103：--export 產可帶走的完整包，相對連結目標都在；寫進 data/ 要拒絕。"""
+    import re
+    repo = _repo(tmp_path)
+    dest = tmp_path / "out-pack"
+    r = subprocess.run([sys.executable, "-X", "utf8", str(TOOL), "--slug", "x", "--repo", str(repo), "--export", str(dest)],
+                       capture_output=True, text=True, encoding="utf-8")
+    env = json.loads(r.stdout.strip().splitlines()[-1])
+    assert r.returncode == 0 and env["data"]["export"]["linked_files"] >= 2, env
+    idx = (dest / "review" / "index.html").read_text(encoding="utf-8")
+    for h in re.findall(r'href="(\.\./[^"#]+)"', idx):
+        assert (dest / "review" / h).resolve().is_file(), h
+    bad = subprocess.run([sys.executable, "-X", "utf8", str(TOOL), "--slug", "x", "--repo", str(repo), "--export", str(repo / "data" / "pack")],
+                         capture_output=True, text=True, encoding="utf-8")
+    assert bad.returncode == 2

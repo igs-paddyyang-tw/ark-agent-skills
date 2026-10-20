@@ -173,3 +173,20 @@ def test_layout_review_pack(game):
     r = run("ps_layout.py", "--game", str(game))
     errs = [v for v in r["data"]["violations"] if v["rule"] == "L-REVIEW" and v["severity"] == "error"]
     assert r["_rc"] == 3 and any(".mp4" in v["message"] for v in errs) and any("5120" in v["message"] for v in errs)
+
+
+def test_layout_v35_stage_html_stamp_and_review_links(game):
+    """契約 v3.5：定版家各階段 md 旁的 html 也驗 L-STAMP；review 清冊 links（連到的定版家成品）sha 不符 → L-REVIEW warning。"""
+    qr = game / "quicktest" / "qt-report"
+    qr.mkdir(parents=True, exist_ok=True)
+    (qr / "r.md").write_text("# 快測\n", encoding="utf-8")
+    (qr / "r.html").write_text("<html></html>\n<!-- content-src: r.md sha256:0000000000000000 -->\n", encoding="utf-8")
+    rv = game / "review"
+    rv.mkdir(exist_ok=True)
+    (rv / "index.html").write_text("<html></html>", encoding="utf-8")
+    (rv / "review-manifest.json").write_text(json.dumps({"files": [], "links": [{"path": "../quicktest/qt-report/r.html", "sha256_16": "0" * 16}]}), encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    vs = r["data"]["violations"]
+    assert any(v["rule"] == "L-STAMP" and "r.html" in v["where"] and v["severity"] == "error" for v in vs), vs
+    assert any(v["rule"] == "L-REVIEW" and "../quicktest/qt-report/r.html" in v["message"] for v in vs), vs
+

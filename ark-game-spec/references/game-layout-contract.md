@@ -1,4 +1,4 @@
-# 遊戲產出佈局契約（game-layout contract v3.4）
+# 遊戲產出佈局契約（game-layout contract v3.5）
 
 > **單一來源（SSOT）**：一款遊戲從競品到上線的所有產出放哪，以本檔為準；機器可讀版是同目錄的 `game-layout.yaml`。
 > 擁有者：**ark-game-spec**（製程入口）。ark-game-prob（`ps_layout` 守門）、ark-game-quicktest、ark-game-proto 依本契約讀寫路徑。
@@ -6,6 +6,7 @@
 > 制定：2026-10-16，aidev-agent（樂奇）／使用者核可目錄規劃（遊戲實作改為 `game/{go-server, pixi-client}`）。
 > v3.1（同日）：階段編號對齊知識庫九階段 SSOT（`knowledge/slot/raw/methodology/slot-pipeline-output-checklist.md`：⑦ 試玩版 Stage、⑧ Game Server、⑨ 上線成效）。
 > v3.3（2026-10-19）：新增定版家 `review/` 拍板包（另計 < 5 MB）——給人拍板／demo 的成品進 data，`output/` 只留中間檔、二進位、大素材（使用者決議；分析見專案 `docs/reports/review/2026-10-19-data-output-review-layout.md`）。
+> v3.5（2026-10-20）：**拍板包不與各階段產出重疊**（使用者決議）：每份文件的 md＋html 都放在它自己階段的目錄（review_build `publish_docs` 在 md 旁產同名 html，帶 `content-src` 戳記，ps_layout L-STAMP 驗）；`review/` 只放拍板書、`checks/` 與定版家放不下的自足單檔（`play.html`、`gdd-overview.html`），其餘成品以相對連結 `../<stage>/…` 指向定版家，不複製；清冊多一欄 `links`；要整包傳給人用 `review_build --export <資料夾>`。結案報告（`*closeout*`）不進送審包。設計見專案 `docs/designs/2026-10-20-review-pack-dedup-design.md`。
 > v3.4（2026-10-19）：閉環 **九→十階段**（使用者決議「送審＝上線前」）：`review/` 拍板包正式編為 **⑨ 送審拍板（上線前）**，原 ⑨ 上線成效改為 **⑩**（路徑與 skill 不變，仍為 ark-game-report）；stages 鍵 `拍板` → `⑨`、`⑨` → `⑩`。設計見專案 `docs/designs/2026-10-19-slot-pipeline-workflow-final-design.md`。
 
 ## 1. 兩個家與判準
@@ -59,21 +60,21 @@ data/slot/<slug>/
 │   ├── quicktest.yaml · qt-config.yaml · symbols.tsv · lint-report.json
 │   ├── odds/odds_<ver>.json · [config/<A版>.json]
 │   ├── engine/                        Go 快測原始碼快照（含 MANIFEST.json）
-│   ├── qt-report/                     rtp-report.json · <date>-quicktest-<slug>.md
+│   ├── qt-report/                     rtp-report.json · <date>-quicktest-<slug>.md＋.html（v3.5）
 │   └── _tuning/                       本款專屬推導／調參腳本（不上游）
 ├── proto/                        ⑥
 │   └── game-config.json · index.html · go-parity.* · gaps.md
 ├── game/                         ⑦⑧
 │   ├── pixi-client/              ⑦   PixiJS 試玩版遊戲包（ark-game-proto Stage：game.js、stage.yaml、stage-build.json、建置腳本）
 │   ├── go-server/                ⑧   Go Server 原始碼（雛型或正式）
-│   └── handoff.md                ⑧   工程交付單（設定檔 sha、prob-spec 版本、rtp-report sha、K 卡 → Go 映射）
+│   └── handoff.md＋.html         ⑧   工程交付單（設定檔 sha、prob-spec 版本、rtp-report sha、K 卡 → Go 映射；html 為 v3.5 View 軌）
 ├── review/                       ⑨ 送審拍板包（v3.3；額度另計 < 5 MB；送審前 review_build 發布）
-│   ├── index.html                     拍板書（ark-book book_build 產物：封面、書脊目錄、每個待拍板事項一章、附錄；自足、離線可開）
+│   ├── index.html                     拍板書（ark-book book_build 產物：封面、書脊目錄、每個待拍板事項一章、附錄；成品以 ../<stage>/… 相對連結指向定版家，v3.5）
 │   ├── <slug>-decision/               拍板書原稿（ark-book 契約）：book.yaml · 00-preface · 0N-<R-x 章>（人工，含拍板欄）· 99-appendix-artifacts（review_build 每次重產）
 │   ├── play.html                 ⑦   試玩版單檔（= stage_build --single，雙擊可玩）
 │   ├── gdd-overview.html         ②   素材總覽自足版（縮圖內嵌 WebP）
 │   ├── checks/                   ⑥⑦ browser-check.json · stage-smoke.json · 代表截圖 *.webp
-│   └── review-manifest.json           來源路徑＋sha16＋大小
+│   └── review-manifest.json           files（review 內：來源相對 repo＋sha16＋大小）＋ links（連到的定版家成品＋sha16，v3.5）
 └── docs/
     ├── decisions/                     OQ 清單、決策摘要（type: decision）
     ├── designs/                       機率架構設計、引擎缺口交接單
