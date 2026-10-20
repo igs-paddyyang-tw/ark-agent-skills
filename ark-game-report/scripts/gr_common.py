@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import json
+import os
 import pathlib
 import re
 import sys
@@ -14,7 +15,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
 ASSETS = SKILL_DIR / "assets"
 SKILLS_ROOT = SKILL_DIR.parent
-DB_QUERY = SKILLS_ROOT / "ark-db-query" / "scripts"
+# 測試可用 ARK_DB_QUERY_DIR 換成假的 bq_export
+DB_QUERY = pathlib.Path(os.environ.get("ARK_DB_QUERY_DIR") or SKILLS_ROOT / "ark-db-query" / "scripts")
 WIKI = SKILLS_ROOT / "ark-wiki-engine" / "scripts"
 
 # 標準資料集（gr_query 產出、gr_build 讀取）；欄位名是契約，見 references/data-contract.md

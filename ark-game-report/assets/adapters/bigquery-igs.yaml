@@ -6,6 +6,7 @@ engine: bigquery
 project: rd7-data-big-query
 dataset: preprocessed_bklog
 max_bytes_billed: 20000000000       # 單一查詢掃描上限（bq_export 預設 1 GB 會擋 30 日全虎機查詢）；約 0.11 USD
+parallel: 4                         # 同時執行的查詢數（gr_query --workers 可覆寫；1＝循序）
 tables:
   game: DailyUserGameMetrics        # 玩家 × GID × 日：BQDate UserID Country CountryDetail VipLV GID CoinBet CoinWin CoinJPWin CoinBetTimes
   user: DailyUserInfoSnapshot       # 玩家 × 日 屬性快照（含暱稱 / Email 等個資欄位：SQL 只選下列分層欄位）

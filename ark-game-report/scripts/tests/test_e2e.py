@@ -11,9 +11,9 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent
 FIX = SCRIPTS / "tests" / "make_fixture.py"
 
 
-def run(stage, *args, cwd):
+def run(stage, *args, cwd, env=None):
     r = subprocess.run([sys.executable, "-X", "utf8", str(SCRIPTS / "gr_run.py"), stage, *map(str, args)], cwd=cwd,
-                       capture_output=True, text=True, encoding="utf-8")
+                       capture_output=True, text=True, encoding="utf-8", env=env)
     lines = [l for l in r.stdout.strip().splitlines() if l.startswith("{")]
     d = json.loads(lines[-1]) if lines else {}
     d["rc"] = r.returncode
@@ -176,3 +176,34 @@ def test_closeout_report():
         subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
         assert "人工：本機成功" in md_p.read_text(encoding="utf-8")
         assert (d / "docs" / "reports" / "2026-01-08-x-closeout.html").is_file()
+
+
+def test_query_parallel_export():
+    """匯出並行：假 bq_export 每支睡 3 秒，13 支在 --workers 4 下應遠低於循序的 39 秒（Windows 起 Python 每支約 1 秒，睡久一點讓並行效果蓋過啟動成本）。"""
+    import os
+    import time
+    import yaml
+    with tempfile.TemporaryDirectory() as t:
+        tmp = pathlib.Path(t)
+        setup(tmp)
+        fake = tmp / "fakedb"
+        fake.mkdir()
+        (fake / "bq_export.py").write_text(
+            "import sys, time, pathlib\n"
+            "a = sys.argv; out = pathlib.Path(a[a.index('--out') + 1])\n"
+            "time.sleep(3); out.parent.mkdir(parents=True, exist_ok=True); out.write_text('x\\n1\\n')\n",
+            encoding="utf-8")
+        cfg = yaml.safe_load((tmp / "report.yaml").read_text(encoding="utf-8"))
+        ad = yaml.safe_load((SCRIPTS.parent / "assets" / "adapters" / "bigquery-igs.yaml").read_text(encoding="utf-8"))
+        (tmp / "ad.yaml").write_text(yaml.safe_dump(ad, allow_unicode=True), encoding="utf-8")
+        cfg["adapter"] = str(tmp / "ad.yaml")
+        cfg["benchmark_games"] = [{"name": f"B{i}", "ids": [str(i)], "launch_date": "2026-09-01"} for i in range(3)]
+        (tmp / "report.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+        env = dict(os.environ, ARK_DB_QUERY_DIR=str(fake))
+        t0 = time.time()
+        q = run("query", "--config", "report.yaml", "--run", "--bench", "--workers", "4", cwd=tmp, env=env)
+        el = time.time() - t0
+        n = sum(len(j["export"]) for j in q["data"]["jobs"])
+        assert q["rc"] == 0 and q["data"]["workers"] == 4 and n == 13, q
+        assert all(v["rc"] == 0 for j in q["data"]["jobs"] for v in j["export"].values())
+        assert el < n * 3 * 0.6, f"並行無效：{n} 支耗時 {el:.1f}s"

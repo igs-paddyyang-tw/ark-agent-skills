@@ -18,8 +18,8 @@ metadata:
   status: experimental
   author: paddyyang
   category: executor
-  version: "0.2.0"
-  updated: 2026-10-19
+  version: "0.2.1"
+  updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -49,7 +49,7 @@ metadata:
 |------|------|---------|
 | `scripts/gr_run.py` | 單一入口：init / query / probe / build / insight / render / all | 一律從這裡呼叫 |
 | `scripts/gr_init.py` | 產 `report.yaml`（樣板 `assets/report.yaml.tmpl`）| 新報告 |
-| `scripts/gr_query.py` | 依 adapter 產 5 個資料集的 SQL；`--run` 交 ark-db-query 匯出 CSV；`--bench` 為歷史新機產基準資料 | 要撈資料 |
+| `scripts/gr_query.py` | 依 adapter 產 5 個資料集的 SQL；`--run` 交 ark-db-query 匯出 CSV；`--bench` 為歷史新機產基準資料；查詢並行（`--workers`，預設 4） | 要撈資料 |
 | `scripts/gr_probe.py` | 盤點資料集與欄位 → `capability.json`（每節 ok / partial / skip 與原因），列出 adapter 的 TODO 欄位 | 每次撈完資料、改設定後 |
 | `scripts/gr_build.py` | 資料集 → `report.json`（報告契約）＋ `metrics.json`（給 insight）；計算歷史分位數與燈號 | 算指標 |
 | `scripts/gr_insight.py` | metrics × `assets/playbook.yaml` → `insights.md`、結論草稿；查知識庫 | 寫分析 |
@@ -129,6 +129,7 @@ data/slot/<slug>/docs/reports/<資料日>-<slug>-d7.html／.json     定版報�
 
 | 版本 | 日期 | 變更 |
 |------|------|------|
+| 0.2.1 | 2026-10-20 | `query` 匯出並行：跨機台、跨資料集用執行緒池同時跑（`--workers`，預設 adapter `parallel`，否則 4；1＝循序），保留每支逾時 300 秒與重試；`ARK_DB_QUERY_DIR` 可換假 bq_export 供測試；新增 `test_query_parallel_export` |
 | 0.2.0 | 2026-10-20 | 新增 `closeout`：十階段結案報告（工作流最後產出，ark-md-report 契約雙軌）；Q5 暫定基準：spec 無目標 RTP 時改用同期新機實際 RTP P10～P90（燈號最高「觀察」、圖例與註記標「暫定」）；健康觀察門檻改同期 P80（`lights.h_bench_q`，無基準時才用固定值），playbook CONCENTRATION／INTENSE_PLAYERS 同步改比 `h_top1_cut`／`h_intense_cut` |
 | 0.1.1 | 2026-10-19 | 首次實戰（吉屋出豬 617／618 D+7、D+30，同期新機 12 款基準）：bigquery-igs adapter 實查回填（UserID／CoinBet／CoinBetTimes／CoinWin／Country／CreateDate；查無觸發次數與時段表）、加 `max_bytes_billed`；`slot_users` 改取期間內最後一筆快照（只取期末那天會讓約 59% 玩家分層欄位空白）；匯出逾時 300 秒＋重試 2 次（bq_export 偶發卡住）；D+30 的同期 P50 改與 P30／P60 同窗口（最後 7 日）；子程序加 `-X utf8`（Windows cp950）；樣板 out_dir 改 `docs/reports/`（佈局契約 ⑩） |
 | 0.1.0 | 2026-10-19 | 初版 |

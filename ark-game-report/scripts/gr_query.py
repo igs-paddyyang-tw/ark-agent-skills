@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures as cf
 import datetime as dt
 import pathlib
 import subprocess
@@ -222,6 +223,7 @@ def main() -> None:
     ap.add_argument("--run", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--bench", action="store_true", help="為 benchmark_games 產 bench/<名稱>/ 資料集")
+    ap.add_argument("--workers", type=int, default=None, help="同時執行的查詢數（預設 adapter parallel，否則 4；1＝循序）")
     a = ap.parse_args()
     cfg = C.load_config(a.config)
     ap_ = C.adapter_path(cfg)
@@ -239,17 +241,29 @@ def main() -> None:
     if a.bench:
         for b in cfg.get("benchmark_games") or []:
             jobs.append((b["name"], b["ids"], C.to_date(b["launch_date"]), dd / "bench" / b["name"], ["game_user_daily", "slot_daily", "slot_users"]))
-    report = []
+    report, tasks = [], []
     for name, ids, ld, out_dir, only in jobs:
         files, skipped = build_all(ad, cfg, ids, ld, int(cfg["stage"]), out_dir, only)
         res = {"job": name, "sql": {k: str(v) for k, v in files.items()}, "skipped": skipped}
         if a.run or a.dry_run:
-            res["export"] = {k: run_export(v, out_dir / f"{k}.csv", a.dry_run, ad["project"], ad.get("max_bytes_billed")) for k, v in files.items()}
+            res["export"] = {}
+            tasks += [(res, k, v, out_dir / f"{k}.csv") for k, v in files.items()]
         report.append(res)
+    # 查詢彼此獨立 → 跨機台、跨資料集並行（2026-10-20：13 款 × 3 資料集循序約 30 分鐘，目標 < 10 分鐘）
+    workers = max(1, a.workers or int(ad.get("parallel") or 4))
+    with cf.ThreadPoolExecutor(max_workers=workers) as pool:
+        futs = {pool.submit(run_export, v, out, a.dry_run, ad["project"], ad.get("max_bytes_billed")): (res, k)
+                for res, k, v, out in tasks}
+        for f in cf.as_completed(futs):
+            res, k = futs[f]
+            res["export"][k] = f.result()
+    for res in report:
+        if "export" in res:
+            res["export"] = dict(sorted(res["export"].items()))
     failed = [j["job"] + ":" + k for j in report for k, v in (j.get("export") or {}).items() if v["rc"] != 0]
     if failed:
         C.fail("QUERY_FAILED", f"{len(failed)} 個查詢失敗", "看 data.jobs[].export 的 tail", {"jobs": report})
-    C.emit({"jobs": report, "next": f"gr_run.py probe --config {a.config}"}, {"stage": "query"})
+    C.emit({"jobs": report, "workers": workers, "next": f"gr_run.py probe --config {a.config}"}, {"stage": "query"})
 
 
 if __name__ == "__main__":
