@@ -1,0 +1,36 @@
+# 平台對接：本公司 BigQuery（rd7-data-big-query.preprocessed_bklog）
+# 「TODO:」開頭的值代表欄位名稱還沒確認：gr_probe 會列出來，gr_query 會略過需要它的資料集或欄位。
+# 2026-10-19 以 ark-db-query bq_schema.py 實查回填（DailyUserGameMetrics 10 欄、DailyUserInfoSnapshot 107 欄）。
+name: bigquery-igs
+engine: bigquery
+project: rd7-data-big-query
+dataset: preprocessed_bklog
+max_bytes_billed: 20000000000       # 單一查詢掃描上限（bq_export 預設 1 GB 會擋 30 日全虎機查詢）；約 0.11 USD
+tables:
+  game: DailyUserGameMetrics        # 玩家 × GID × 日：BQDate UserID Country CountryDetail VipLV GID CoinBet CoinWin CoinJPWin CoinBetTimes
+  user: DailyUserInfoSnapshot       # 玩家 × 日 屬性快照（含暱稱 / Email 等個資欄位：SQL 只選下列分層欄位）
+  hours: "TODO: 時段押量表"          # 2026-10-19 查無玩家 × 機台 × 時段表；維持 TODO，健康觀察時段圖顯示尚無資料
+columns:
+  date: BQDate                      # 分區欄位（REQUIRED）：所有查詢都要帶條件
+  uid: UserID
+  gid: GID                          # 值的格式見 gid_format
+  bet: CoinBet
+  spins: CoinBetTimes
+  win: CoinWin                      # 不含 CoinJPWin（JP 另計）；實際 RTP = CoinWin ÷ CoinBet，V5 請機率人員確認 JP 是否要加回
+  vip: VipLV
+  market: Country                   # 取自 user 快照表（game 表也有同名欄位）
+  reg_date: CreateDate              # user 快照表；reg_days = 資料日 − CreateDate
+triggers: {}                        # 2026-10-19 查無觸發次數欄位（UserFeatureHistory／SlotSRTPMonitorTableau 都沒有）→ Q5 觸發率對帳略過
+hour_columns: {}                    # hours 表：{bucket: 欄位, bet: 欄位}
+gid_format: "Slot_{id}"             # report.yaml game.ids 轉成 GID 的格式
+slot_filter: "GID LIKE 'Slot_%'"    # 全虎機的篩選條件（分母排除魚機）
+lookups:                            # 找機台 ID 與上線日用（不進報告 SQL）
+  game_name: slot_multi_language_game_name   # ID、GameName_CHT / EN / JP …
+  online_date: NewSlotOnlineDate             # GameID、StageType（0 一般館 / 1 高分館）、Country、BQDate（上線日，各國一列）
+notes:
+  - 一般館、高分館是不同 GID（StageType 0 / 1），report.yaml 的 game.ids 要全部列出；launch_date 取兩館較早者
+  - 同名新舊機台 ID 不同（例：吉屋出豬 2020 舊機 213、2026 新機 617／618），找 ID 一律以 NewSlotOnlineDate 的上線日判斷
+  - DailyUserGameMetrics 約保留到 2025 年以後；2020 年的資料已不在表內
+  - 資料約在隔日 00:20 前到齊，排程建議 01:00
+  - 公司網路有 TLS 攔截，Python 要先執行 truststore.inject_into_ssl()（ark-db-query 已處理）
+  - ark-db-query 唯讀守門會把 SQL 函式 REPLACE() 當寫入攔下，改用 SUBSTR／REGEXP_EXTRACT
