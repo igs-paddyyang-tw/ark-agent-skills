@@ -6,11 +6,13 @@ description: |
   使用此 Skill 當使用者提及成本追蹤、API 費用、token 使用量、
   cost tracking、或任何需要監控 LLM 呼叫成本的場景。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai

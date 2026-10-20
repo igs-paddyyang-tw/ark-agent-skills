@@ -8,11 +8,13 @@ description: |
   或在實作前想確認設計完整性、釐清需求、避免 AI 自行腦補的場景。
   不適用於：產出規格/design/plan 請用 ark-superpowers。本 skill 只負責拷問設計。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both

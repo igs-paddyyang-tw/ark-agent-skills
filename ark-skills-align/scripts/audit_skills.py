@@ -31,21 +31,29 @@ from pathlib import Path
 
 import yaml
 
-# schema v1.1：受控詞彙 canonical 為全名；舊縮寫過渡期容忍（P3 警告）
-# 'executor'（2026-09-04 補登記）：捆綁可執行 scripts/、agent 直接以 bash 呼叫的 skill
-# （非「產碼食譜」）。新增 category 必須同時登記到 scripts/gen_readme.py 的 SECTIONS，
-# 否則該 skill 會落到 README 的「⚠️ 未分類」一節。
-CATEGORY_CODES = {"process", "scaffolder", "pipeline", "view", "document", "domain", "ops",
-                  "executor"}
+# schema v1.2（2026-10-20）：分類三軸 —— 規格 docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md
+#   category＝產出什麼（職能）、form＝agent 怎麼用、domain＝屬於哪個業務；產出格式沿用 outputs。
+# 本檔是受控詞彙的**程式權威**；gen_readme.py／prompt_lint.py／backfill_metadata.py 各有複本
+# （跨 skill 不互相 import），一致性由 repo 根的 test_taxonomy_vocab.py（根 scripts/tests 下）守住。
+# 新增 category 必須同時登記到 scripts/gen_readme.py 的 SECTIONS，否則會落到「⚠️ 未分類」。
+CATEGORY_CODES = {"process", "scaffolder", "pipeline", "view", "document", "ops"}
+#: 1.1 時代把「形態」「領域」塞進 category 的舊值 —— 一個舊值對應多個新值，不設自動別名；
+#: 報 P2 提示改用 form／domain（舊複本過渡期不擋）
+MIXED_AXIS_CATEGORIES = {"executor": "form: executor", "domain": "domain: <業務>"}
+#: executor＝主要產出由自帶 scripts/ 決定性產生；instruction＝主要產出由 LLM 依指示產生
+FORM_CODES = {"executor", "instruction"}
+DOMAIN_CODES = {"general", "game"}
 LEGACY_CATEGORY_ALIASES = {  # 舊值 → canonical（觸發 P3 legacy-category）
     "proc": "process", "scaffold": "scaffolder", "present": "view",
-    "doc": "document", "sop": "domain",
+    "doc": "document", "sop": "document",  # schema 1.2：domain 已非 category，SOP 類產出文件
     "presentation-content": "document",  # md-report 舊值，語意歸 Content 軌文件
 }
 # 注意：'deprecated' 不是合法 category —— 它是 status，出現時報 P1 要求轉 stub 格式
 OUTPUT_FORMATS = {"md", "html", "png", "pdf", "code", "data", "office"}
 #: 合法 schema_version（字串比對 —— frontmatter 寫 1 是 int、1.1 會被 YAML 讀成 str）
-SCHEMA_VERSIONS = {"1", "1.1"}
+SCHEMA_VERSIONS = {"1", "1.1", "1.2"}
+#: 自此版起 form／domain 必填
+THREE_AXIS_SCHEMA = "1.2"
 AUDIENCES = {"ai", "human", "both"}
 
 # 預設觸發詞衝突矩陣：獨占詞 → owner skill（可被 --config 覆寫/擴充）
@@ -133,6 +141,8 @@ def audit(repo: Path, triggers: dict):
         "orphan-asset": "AL-019", "referenced-test-missing": "AL-020",
         "missing-schema-version": "AL-021", "missing-updated": "AL-022",
         "deprecated-field": "AL-023", "legacy-category": "AL-024",
+        "category-axis-mixed": "AL-025", "missing-form": "AL-026", "invalid-form": "AL-027",
+        "missing-domain": "AL-028", "invalid-domain": "AL-029",
         # 版本系列（W1）
         "version-missing": "AL-101", "contract-changed-no-bump": "AL-102",
         "major-no-breaking": "AL-103", "depends-on-no-range": "AL-104",
@@ -206,6 +216,10 @@ def audit(repo: Path, triggers: dict):
         elif cat in LEGACY_CATEGORY_ALIASES:
             add("P3", "legacy-category", name,
                 f"category='{cat}' 為舊詞彙，請改 canonical '{LEGACY_CATEGORY_ALIASES[cat]}'（過渡期容忍）")
+        elif cat in MIXED_AXIS_CATEGORIES:
+            add("P2", "category-axis-mixed", name,
+                f"category='{cat}' 把形態／領域當職能（schema 1.2 已移除）：改用 "
+                f"{MIXED_AXIS_CATEGORIES[cat]}，category 依產出物改為 {sorted(CATEGORY_CODES)} 之一")
         elif cat not in CATEGORY_CODES:
             add("P1", "invalid-category", name,
                 f"category='{cat}' 不在受控詞彙 {sorted(CATEGORY_CODES)}")
@@ -275,6 +289,17 @@ def audit(repo: Path, triggers: dict):
             add("P3", "deprecated-field", name,
                 "metadata.consumed_by 已廢除（2026-09-14）：反向關係由 depends_on 推導，"
                 "請改在下游 skill 宣告 depends_on")
+
+        # 三軸（schema 1.2）：1.2 起缺 form／domain 擋 P1；舊 schema 的複本過渡期 P3
+        three_axis = str(meta.get("schema_version")) == THREE_AXIS_SCHEMA
+        for field, codes in (("form", FORM_CODES), ("domain", DOMAIN_CODES)):
+            val = meta.get(field)
+            if val is None:
+                add("P1" if three_axis else "P3", f"missing-{field}", name,
+                    f"缺 metadata.{field}（{'|'.join(sorted(codes))}；schema 1.2 必填）")
+            elif val not in codes:
+                add("P1", f"invalid-{field}", name,
+                    f"metadata.{field}='{val}' 不在受控詞彙 {sorted(codes)}")
 
         if str(meta.get("schema_version")) not in SCHEMA_VERSIONS:
             add("P2", "missing-schema-version", name,

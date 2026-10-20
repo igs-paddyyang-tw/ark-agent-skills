@@ -13,10 +13,12 @@ description: |
   分析報告（時點快照、有 verdict）請用 ark-md-report；單頁報告網頁請用 ark-html-report；本 skill 管「會被反覆閱讀與教學」的長期內容。
 metadata:
   author: paddyyang
-  schema_version: 1
-  version: 1.1.0
-  updated: 2026-09-17
+  schema_version: "1.2"
+  version: "1.1.1"
+  updated: 2026-10-20
   category: document
+  form: instruction
+  domain: general
   outputs:
     - { format: md, audience: ai }
     - { format: html, audience: human }

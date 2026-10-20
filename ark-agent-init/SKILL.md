@@ -14,15 +14,17 @@ description: |
   也是 ark-agent-bot-builder／ark-agent-team-builder 的**下一步**：骨架產完後由本 skill 補人格。
   不適用於：bot 骨架請用 ark-agent-bot-builder；team daemon 骨架請用 ark-agent-team-builder。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: scaffolder
+  form: instruction
+  domain: general
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.3.1"
-  updated: 2026-10-19
+  version: "2.3.2"
+  updated: 2026-10-20
 ---
 
 # ark-agent-init

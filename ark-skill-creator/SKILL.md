@@ -9,11 +9,13 @@ description: |
   提詞與 AI 內文的規格驗證請用 ark-prompt-spec-validator；
   code vs spec 一致性請用 ark-code-spec-validator。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
-  updated: 2026-09-14
-  version: "2.0.0"
+  updated: 2026-10-20
+  version: "2.0.1"
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both

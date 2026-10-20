@@ -14,11 +14,13 @@ description: |
   不適用於：機率規格書／參數表／隱性規則（→ ark-game-prob）、Go 快測／RTP 模擬／odds.json（→ ark-game-quicktest）、
   決議拷問流程本身（→ ark-grill-me）、教學書（→ ark-book）、單頁報告（→ ark-html-report）、工程 Spec／ADR（→ ark-superpowers）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: active
   author: paddyyang
-  category: executor
-  version: "2.5.5"
+  category: document
+  form: executor
+  domain: game
+  version: "2.5.6"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }

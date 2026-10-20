@@ -13,18 +13,20 @@ description: |
   不適用於：① 單 bot → ark-agent-bot-builder（ark_bot_agent）；
   ② 非套件獨立 web 應用 → ark-webapp-generator；③ steering 人格 → ark-agent-init。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   # 實測來源：SKILL.md「實測 1.8.4」（2026-09-11 實跑 market-team-agent）
   tested_against:
     ark_team_agent: "1.8.4"
   status: active
   category: scaffolder
+  form: instruction
+  domain: general
   depends_on: [ark-agent-init]
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.1.0"
+  version: "3.1.1"
   updated: 2026-10-20
 ---
 

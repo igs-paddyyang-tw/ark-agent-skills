@@ -22,7 +22,8 @@ from pathlib import Path
 
 import yaml
 
-# 新 skill 的 category 起始推薦（**非權威**）——
+# 新 skill 的 category 起始推薦（**非權威**）—— form／domain 不推薦（需人判，見三軸規格）
+#
 # 權威是各 skill 自己的 frontmatter。此表只在 category 完全缺失時參考。
 FALLBACK_CATEGORY_MAP = {
     "process": ["ark-grill-me", "ark-superpowers", "ark-spec-executor",
@@ -42,8 +43,8 @@ FALLBACK_CATEGORY_MAP = {
                 "ark-theme-factory", "ark-html-report"],
     "document": ["ark-report-template", "ark-markdown-formatter",
             "ark-uml-generator", "ark-docx-tool",
-            "ark-pptx-tool", "ark-xlsx-tool", "ark-pdf-tool", "ark-md-report"],
-    "domain": ["ark-marketing", "ark-retention-analysis"],
+            "ark-pptx-tool", "ark-xlsx-tool", "ark-pdf-tool", "ark-md-report",
+            "ark-marketing", "ark-retention-analysis"],   # schema 1.2：domain 不再是 category
     "ops": ["ark-env-doctor", "ark-dashboard-health", "ark-skills-align"],
 }
 SKILL_TO_CAT = {s: c for c, lst in FALLBACK_CATEGORY_MAP.items() for s in lst}
@@ -54,7 +55,6 @@ DEFAULT_OUTPUTS = {
     "pipeline": [{"format": "data", "audience": "ai"}],
     "view": [{"format": "html", "audience": "human"}],
     "document": [{"format": "md", "audience": "both"}],
-    "domain": [{"format": "md", "audience": "both"}],
     "ops": [{"format": "md", "audience": "ai"}],
 }
 OUTPUT_OVERRIDES = {

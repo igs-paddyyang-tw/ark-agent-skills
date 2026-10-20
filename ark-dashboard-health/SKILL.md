@@ -8,15 +8,17 @@ description: |
   或任何需要驗證 Web Dashboard 是否正常運作的場景。
   不適用於：本機環境跑不起來（缺套件／venv／版本）請用 ark-env-doctor（本 skill 測的是已部署服務的端點）。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: ops
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai
   author: paddyyang
-  version: "1.0.0"
-  updated: 2026-06-07
+  version: "1.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-dashboard-health

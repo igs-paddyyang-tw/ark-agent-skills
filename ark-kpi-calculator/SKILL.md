@@ -8,15 +8,17 @@ description: |
   或任何需要產出標準化指標計算邏輯的場景。
   不適用於：指標算出來之後的異常偵測與告警請用 ark-anomaly-detector；留存與 LTV 的深入分析請用 ark-retention-analysis（本 skill 只負責「怎麼算」）。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai
   author: paddyyang
-  version: "1.0.0"
-  updated: 2026-05-18
+  version: "1.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-kpi-calculator

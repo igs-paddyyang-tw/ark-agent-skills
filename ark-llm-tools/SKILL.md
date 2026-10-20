@@ -8,11 +8,13 @@ description: |
   專責 LLM 工具函式與 provider 抽象。
   不適用於：CLI 整合/閘道開發請用 ark-agent-cli。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai

@@ -7,15 +7,17 @@ description: |
   Dockerfile、部署腳本、containerize、打包部署、
   或任何需要將專案容器化的場景。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: scaffolder
+  form: instruction
+  domain: general
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "1.0.0"
-  updated: 2026-05-18
+  version: "1.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-docker-deploy

@@ -12,10 +12,12 @@ description: |
   X 發文／回覆／DM、玩家分群；產報告請用 ark-md-report、寫 wiki 請用 ark-wiki-engine。
 metadata:
   author: paddyyang
-  schema_version: 1
-  version: 1.1.2
+  schema_version: "1.2"
+  version: "1.1.3"
   category: pipeline
-  updated: 2026-09-29
+  form: executor
+  domain: game
+  updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }

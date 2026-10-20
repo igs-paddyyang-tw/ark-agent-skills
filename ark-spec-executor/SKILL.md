@@ -10,11 +10,13 @@ description: |
   不適用於：plan 還沒寫請先用 ark-superpowers；需求釐清請用 ark-grill-me；跑完後的 code↔docs
   一致性請用 ark-code-spec-validator（本 skill 只驗「任務有沒有做完」，不驗「文件有沒有對齊」）。
 metadata:
-  version: "2.0.1"
-  schema_version: 1
+  version: "2.0.2"
+  schema_version: "1.2"
   status: active
-  updated: 2026-10-16
+  updated: 2026-10-20
   category: process
+  form: executor
+  domain: general
   outputs:
     - format: md
       audience: both

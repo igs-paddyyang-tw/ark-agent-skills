@@ -6,14 +6,16 @@ description: |
   使用此 Skill 當使用者或 agent 提及：系統監控、Grafana、dashboard、alert、
   metrics、日誌查詢、服務狀態、CPU/Memory/Disk、或任何需要從 Grafana 取得監控資料的場景。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: active
-  category: executor
+  category: ops
+  form: executor
+  domain: general
   outputs:
     - { format: data, audience: ai }
   render: none
-  version: "1.0.0"
-  updated: 2026-09-16
+  version: "1.0.1"
+  updated: 2026-10-20
   author: paddyyang
 ---
 

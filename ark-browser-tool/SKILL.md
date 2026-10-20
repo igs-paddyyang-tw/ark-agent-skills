@@ -13,15 +13,17 @@ description: |
   專責瀏覽器互動自動化、測試、截圖。大規模網頁抓取/反擷取請用 ark-web-scraper。
   不適用於：網頁內容抓取/網頁擷取/web scraping 請用 ark-web-scraper；網頁自動化測試請用 ark-test-runner。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai
   author: paddyyang
-  version: "3.0.0"
-  updated: 2026-05-31
+  version: "3.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-browser-tool

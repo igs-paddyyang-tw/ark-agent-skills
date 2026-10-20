@@ -14,9 +14,11 @@ description: |
   不適用於：產出 .kiro/ 目錄與 workspace 檔案（請用 ark-agent-init）；
   拷問設計方案（請用 ark-grill-me，本 skill 的 deep 模式會呼叫它）。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: data
       audience: ai
@@ -25,7 +27,7 @@ metadata:
   render: none
   depends_on: [ark-grill-me]
   author: paddyyang
-  version: "1.3.1"
+  version: "1.3.2"
   updated: 2026-10-20
 ---
 

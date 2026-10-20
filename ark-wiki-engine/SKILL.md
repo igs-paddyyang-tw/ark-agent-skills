@@ -11,19 +11,19 @@ description: |
   即使只是「知識庫有沒有 XXX」也應呼叫本 skill 的 wiki_query.py，而非 team MCP 內建的。
   不適用於：分析結論的 Markdown 產出請用 ark-md-report；人類視圖請用 ark-html-report；一般程式碼安全審計請用 ark-security-audit（本 skill 的 guard 只管入庫內容）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: active
   author: paddyyang
-  category: executor
-  version: "3.0.1"
-  updated: 2026-10-15
+  category: pipeline
+  form: executor
+  domain: general
+  version: "3.0.2"
+  updated: 2026-10-20
   outputs:
-    # wiki_query / wiki_context 的 JSON 契約歸受控詞彙 data
-    # （`json` 不是合法 format 值，與 ark-db-query 同一判準：不為單一 skill 放寬守門）
+    # wiki_query／wiki_context 的 JSON 契約歸 data（`json` 非合法 format，同 ark-db-query：不為單一 skill 放寬守門）
     - { format: data, audience: ai }
     - { format: md, audience: both }
   render: none
-  # consumed_by 已於 2026-09-14 廢除（全庫只有本檔填過）；反向關係由 depends_on 推導
   depends_on: []
   # 只取代 query —— 內建的 wiki_ingest 有可信的 role gate（見「ingest 的授權邊界」），
   # bash 腳本無法複製那個管控，故不宣稱取代它

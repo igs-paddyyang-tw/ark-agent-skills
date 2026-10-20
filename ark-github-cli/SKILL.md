@@ -14,11 +14,13 @@ description: |
   不適用於：知識蒸餾入 wiki 請用 ark-wiki-engine（本 skill 不寫 wiki/）；產 changelog 請用
   ark-release-notes；自家業務數字口徑查詢請用 ark-db-query。
 metadata:
-  version: "0.2.1"
-  schema_version: 1
+  version: "0.2.2"
+  schema_version: "1.2"
   status: active
   updated: 2026-10-20
-  category: executor
+  category: ops
+  form: executor
+  domain: general
   outputs:
     - format: md
       audience: both

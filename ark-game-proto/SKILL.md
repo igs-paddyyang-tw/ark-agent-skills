@@ -13,12 +13,14 @@ description: |
   不適用於：寫機率規格書本身（→ ark-game-prob）、跑 Go 快測 / 三向 verdict（→ ark-game-quicktest）、正式上線前端或美術、
   一般網頁 / dashboard（→ ark-html-dashboard）；Stage 不含帳務 / session（slot-bot server 負責）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: active
   author: paddyyang
-  category: executor
-  version: "1.2.5"
-  updated: 2026-10-19
+  category: view
+  form: executor
+  domain: game
+  version: "1.2.6"
+  updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }

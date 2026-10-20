@@ -7,11 +7,13 @@ description: |
   當使用者提及 .pdf 檔案或要求產出 PDF 時，使用此 Skill。
   官方 Claude 環境已內建同名 skill 時優先用內建版；本鏡像供自架/Kiro 環境使用。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-09-11
+  updated: 2026-10-20
   category: document
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both

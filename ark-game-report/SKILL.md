@@ -14,11 +14,13 @@ description: |
   不適用於：每日大螢幕觀測看板（現行 live-dashboard）、上線前的機率規格書（→ ark-game-prob）、
   Go 快測與 RTP 模擬（→ ark-game-quicktest）、任意 SQL 查詢（→ ark-db-query）、一般 HTML 報告排版（→ ark-html-report）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: experimental
   author: paddyyang
-  category: executor
-  version: "0.2.2"
+  category: document
+  form: executor
+  domain: game
+  version: "0.2.3"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }

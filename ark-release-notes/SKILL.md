@@ -2,12 +2,14 @@
 name: ark-release-notes
 description: "當使用者需要從 git log 產出結構化 changelog 或版本說明時使用此技能。觸發條件包括：提及「changelog」「release notes」「版本說明」「變更日誌」，或要求整理近期 commit 為可讀的變更摘要。產出可作為日報素材或 GitHub Release 說明。不適用於完整 spec/design 文件撰寫——該場景請用 ark-superpowers。"
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   author: paddyyang
   category: document
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both

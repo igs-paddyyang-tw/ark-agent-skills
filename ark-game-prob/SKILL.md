@@ -13,12 +13,14 @@ description: |
   不適用於：跑 Go 快測／odds.json 骨架／三向 verdict（→ ark-game-quicktest）、遊戲規格書／gdd-pack／競品影片分析（→ ark-game-spec）、
   機率架構設計與 K 卡取捨本身（人／agent 的判斷，本 skill 只組不寫）、一般 HTML 報告（→ ark-html-report）、決議 Open Questions（→ ark-grill-me）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: active
   author: paddyyang
-  category: executor
-  version: "1.4.4"
-  updated: 2026-10-19
+  category: document
+  form: executor
+  domain: game
+  version: "1.4.5"
+  updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }

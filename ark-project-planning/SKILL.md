@@ -7,15 +7,17 @@ description: |
   觸發條件：新功能、新需求、派工、拆任務、專案規劃、project plan。
   不適用於：規格與 ADR 文件本身請用 ark-superpowers；照既有 plan 自動執行請用 ark-spec-executor；跨 session 的任務狀態持久化請用 ark-planning-with-files。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both
   author: paddyyang
-  version: "2.0.0"
-  updated: 2026-08-19
+  version: "2.0.1"
+  updated: 2026-10-20
 ---
 
 # 專案計畫 v2.0

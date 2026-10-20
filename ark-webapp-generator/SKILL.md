@@ -12,16 +12,18 @@ description: |
   不適用於：① ark_bot_agent / ark_team_agent 的**消費端**（那用 ark-agent-bot-builder /
   ark-agent-team-builder，套件已內建 web/TG/排程）；② 純 TG 推播請用 ark-telegram-sender。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: scaffolder
+  form: instruction
+  domain: general
   depends_on: [ark-telegram-sender]
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.0.0"
-  updated: 2026-09-08
+  version: "2.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-webapp-generator

@@ -10,11 +10,13 @@ description: |
   專責大規模網頁抓取、反爬處理。瀏覽器互動自動化/畫面擷取請用 ark-browser-tool。
   不適用於：瀏覽器自動化操作請用 ark-browser-tool；測試自動化請用 ark-test-runner。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-09-11
+  updated: 2026-10-20
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai

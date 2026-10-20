@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-10-20 (分類三軸化：category × form × domain，schema 1.2)
+
+規格：`docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md`。
+1.1 把「形態」（`executor`）與「領域」（`domain`）塞進 `category`，違反 taxonomy.md 自己的
+「判準是產出物而非手段」；受控詞彙 4 份複本、規格文件 3 份互相矛盾。
+
+### 欄位（全庫 61 個 SKILL.md）
+- 新增 `form`（executor 17／instruction 44）、`domain`（game 9／general 52）；`schema_version` 全部升 `"1.2"`
+- `category` 移除 `executor`、`domain`，12 個依產出物重歸類：db-query／wiki-engine → pipeline；
+  grafana-query／github-cli／mobile-adb → ops；game-spec／game-prob／game-report／marketing／retention-analysis → document；
+  game-proto → view；game-quicktest → process
+- 版號：metadata 變動 → 全部升 patch；ark-skills-align 2.3.0、ark-prompt-spec-validator 1.1.0（守門規則變更）
+
+### 守門
+- `audit_skills.py`：`FORM_CODES`／`DOMAIN_CODES`；1.2 缺 form／domain → P1，舊 schema → P3；
+  category 為 executor／domain → P2 `category-axis-mixed`（AL-025~029）；舊別名 `sop` 改指 `document`（原指向已移除的 domain）
+- `prompt_lint.py` PL-010、`quick_validate.py`、`backfill_metadata.py` 同步新詞彙
+- 新增 `scripts/tests/test_taxonomy_vocab.py`：四份詞彙複本一致、全庫三軸齊全、舊別名不懸空
+
+### 文件
+- `references/metadata-schema.md` 為欄位唯一權威（補 schema_version 表、版號規則、status: experimental、upstream 等實際在用的欄位）
+- `references/taxonomy.md` 補 form／domain 判準；`docs/skill-metadata-schema.md` 改指路頁
+- README 每列顯示形態／領域；manifest 重產 `skills-2026.10-r3`
+
+---
+
 ## 2026-10-20 (版號治理：manifest 自我參照、漏升版、列車 r2)
 
 起點是全庫盤點：manifest 落後 SKILL.md 4 個 skill、9 個 skill 升版後仍有修改未升版、

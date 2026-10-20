@@ -12,18 +12,20 @@ description: |
   不適用於：① 多 agent 團隊 daemon → ark-agent-team-builder（ark_team_agent）；
   ② 非套件的獨立 FastAPI 應用 → ark-webapp-generator；③ steering 人格 → ark-agent-init。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   # 實測來源：SKILL.md「實測 ark_bot_agent 1.0.15」（2026-09-11 建 slot-bot）
   tested_against:
     ark_bot_agent: "1.0.15"
   status: active
   category: scaffolder
+  form: instruction
+  domain: general
   depends_on: [ark-agent-init]
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.1.1"
+  version: "3.1.2"
   updated: 2026-10-20
 ---
 

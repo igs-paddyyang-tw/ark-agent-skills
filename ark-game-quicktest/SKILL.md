@@ -13,12 +13,14 @@ description: |
   改 game_process.go 的玩法邏輯（人／工程師）、決議 Open Questions（→ ark-grill-me）、
   產 config-spec（→ ark-game-spec gs_dev）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: active
   author: paddyyang
-  category: executor
-  version: "2.1.2"
-  updated: 2026-10-13
+  category: process
+  form: executor
+  domain: game
+  version: "2.1.3"
+  updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }

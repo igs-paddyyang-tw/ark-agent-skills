@@ -9,10 +9,12 @@ description: |
   不適用於：一般分析報告請用 ark-md-report／ark-html-report（本 skill 專責新聞素材的日報流程）。
 metadata:
   author: paddyyang
-  schema_version: 1
+  schema_version: "1.2"
   category: document
-  version: "2.1.0"
-  updated: 2026-08-13
+  form: instruction
+  domain: general
+  version: "2.1.1"
+  updated: 2026-10-20
   outputs:
     - { format: md, audience: ai }
     - { format: html, audience: human }
