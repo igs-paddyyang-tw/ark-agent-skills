@@ -13,7 +13,7 @@ description: |
   或任何需要批次修改、驗證、重組 ark-agent-skills repo 的場景。
   單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
 metadata:
-  version: "2.2.0"
+  version: "2.2.1"
   author: paddyyang
   schema_version: 1
   category: ops
@@ -23,7 +23,7 @@ metadata:
   render: none
   depends_on: [ark-md-report]
   status: active
-  updated: 2026-10-15
+  updated: 2026-10-20
 ---
 
 # ark-skills-align

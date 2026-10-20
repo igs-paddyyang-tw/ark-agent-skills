@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **61 個 Skill**，兩層分類（職能角色 × 受眾）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -138,15 +138,15 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑧ 執行器 Executor
 
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜9 個
+> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜10 個
 
 | Skill | 定位 |
 |-------|------|
 | `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
 | `ark-game-prob` | 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、 ark-game-quicktest（Go 快測）… |
 | `ark-game-proto` | 機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：遊戲開發製程 C 段的「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。 |
-| `ark-game-report` | Slot 新機上線成效報告 executor：D+7／D+14／D+30 標準報告（六問＋健康觀察、同期新機基準、燈號），工作流最後以 closeout 產十階段結案報告。 |
 | `ark-game-quicktest` | C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， determin… |
+| `ark-game-report` | Slot 新機上線成效報告 executor：把一款新機的上線表現做成標準格式報告（D+7 上線初判 / D+14 檢查點 / D+30 穩態定調）， 並帶出分析思維與策略方向。 |
 | `ark-game-spec` | 遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill， 與 ark-game-prob（機率規格書）、ark-game-quicktest（Go… |
 | `ark-github-cli` | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
 | `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |

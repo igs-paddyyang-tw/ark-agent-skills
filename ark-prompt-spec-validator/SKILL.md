@@ -22,8 +22,8 @@ metadata:
   render: none
   depends_on: [ark-md-report]
   status: active
-  version: "1.0.0"
-  updated: 2026-09-11
+  version: "1.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-prompt-spec-validator

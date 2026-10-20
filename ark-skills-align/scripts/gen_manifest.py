@@ -4,7 +4,7 @@
 manifest = 這班列車每個 active skill 的 version/tree_hash/contract_hash/depends_on/status。
 index = 累積的 tree_hash → {skill, version, release}，供消費端把「不知道哪來的複本」反查成版本。
 
-tree_hash：sha256 於排序後的檔案清單（相對路徑 + 內容），排除 __pycache__/.pyc。
+tree_hash：sha256 於排序後的檔案清單（相對路徑 + 內容），排除 __pycache__/.pyc 與頂層 release/。
 contract_hash：只對 contract_files（預設 scripts/** schemas/** references/*contract*.md
                references/*schema*.md assets/hooks/**）算 —— 契約變了才算破壞性。
 
@@ -31,10 +31,19 @@ DEFAULT_CONTRACT_GLOBS = [
 FM_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
+#: 不計入 tree_hash 的頂層目錄 —— `release/` 是本工具產的列車資料（manifest／index），
+#: 計入的話每次重產都會讓 ark-skills-align 自己的 tree_hash 變動、卻沒有升版（自我參照）。
+#: align_sync._tree_hash 必須同步排除，否則兩邊算出的 hash 不一致。
+HASH_EXCLUDE_DIRS = ("release",)
+
+
 def _iter_files(skill_dir: Path):
     for p in sorted(skill_dir.rglob("*")):
-        if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc":
-            yield p
+        if not p.is_file() or "__pycache__" in p.parts or p.suffix == ".pyc":
+            continue
+        if p.relative_to(skill_dir).parts[0] in HASH_EXCLUDE_DIRS:
+            continue
+        yield p
 
 
 def _hash_files(skill_dir: Path, files) -> str:

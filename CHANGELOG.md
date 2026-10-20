@@ -4,6 +4,106 @@
 
 ---
 
+## 2026-10-20 (版號治理：manifest 自我參照、漏升版、列車 r2)
+
+起點是全庫盤點：manifest 落後 SKILL.md 4 個 skill、9 個 skill 升版後仍有修改未升版、
+本檔停在 09-04（一個半月未登錄）。
+
+### 守門
+- `gen_manifest.py`／`align_sync.py`：tree_hash **排除頂層 `release/`**（`HASH_EXCLUDE_DIRS`）——
+  manifest 放在 `ark-skills-align/release/`，原本每次重產都讓 ark-skills-align 自己的 tree_hash 變動卻沒升版（自我參照）。兩支腳本同規則，已驗證 hash 一致、改 release/ 不影響 hash
+
+### 補升版（升版後仍有修改的 9 個）
+| skill | 版本 | 原因 |
+|---|---|---|
+| ark-agent-team-builder | 3.0.0 → **3.1.0** | validate_team 新檢查（a99036e）+ tested_against |
+| ark-agent-team-design | 1.1.0 → **1.2.0** | gen_team 新功能（a99036e）+ r2 對齊 |
+| ark-agent-role-profile | 1.3.0 → 1.3.1 | 改引用的 skill 舊名 |
+| ark-superpowers | 1.0.0 → 1.0.1 | 改引用的 skill 舊名 |
+| ark-prompt-spec-validator | 1.0.0 → 1.0.1 | ignore 指令被 HTML 註解尾吃掉（7e0c72c） |
+| ark-agent-bot-builder | 3.1.0 → 3.1.1 | tested_against |
+| ark-db-query | 3.0.0 → 3.0.1 | tested_against；category 行內註解移到獨立行（逐行解析的工具會誤讀） |
+| ark-github-cli | 0.2.0 → 0.2.1 | 測試檔改唯一檔名 |
+| ark-skills-align | 2.2.0 → 2.2.1 | 本次 tree_hash 修正 |
+
+### 資料
+- manifest 重產為 **`skills-2026.10-r2`**（60 個 active；experimental 的 ark-game-report 依規則不收），SKILL.md ↔ manifest 版本 0 不一致
+- README 重產（`gen_readme --check` 原為紅）
+
+### 已知未修
+- `scripts/tests/test_cli_contract.py`：`ark-game-report/gr_run.py --help` 回 2（origin 既有，非本次引入）
+- audit P2=41（38 個 depends_on 無版本範圍、2 個缺 tested_against、1 個孤兒 asset）
+- category 混用三軸（形態／產出／領域）—— 另案出規格
+
+### 09-05 ~ 10-20 未登錄期間的版本快照
+> 本檔 09-04 後未更新；以下為各 skill 現行版本與最後一次修改，作為補登基準（逐筆沿革見 git log）。
+
+| skill | 現行版本 | status | 09-05 後 commit 數 | 最後一次 |
+|---|---|---|---:|---|
+| `ark-agent-bot-builder` | 3.1.1 | active | 8 | 2026-09-18 `652f21a` feat(metadata): 補 3 個消費端型 skill 的 tested_against + 定義該欄位形狀 |
+| `ark-agent-cli` | 1.0.0 | active | 4 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-agent-init` | 2.3.1 | active | 41 | 2026-10-19 `468b6d2` fix(ark-agent-init): 2.3.1 bot 根 skills/ 是 BaseSkill 插件包慣例，分 |
+| `ark-agent-role-profile` | 1.3.1 | active | 10 | 2026-10-07 `2a5de92` feat(ark-game-spec): v2.0.0 五合一整併（遊戲製程 skill 7→3 Phase B） |
+| `ark-agent-team-builder` | 3.1.0 | active | 24 | 2026-09-18 `652f21a` feat(metadata): 補 3 個消費端型 skill 的 tested_against + 定義該欄位形狀 |
+| `ark-agent-team-design` | 1.2.0 | active | 6 | 2026-09-30 `23fd7ca` chore(ark-skills-align): 全庫版號對齊 release train r2 + 修 gen_man |
+| `ark-anomaly-detector` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-book` | 1.1.0 | active | 2 | 2026-10-19 `6d4bcc5` feat(review): 拍板包導覽修正＋三隻小豬繪本風格（ark-game-proto 1.2.4、ark-book |
+| `ark-browser-tool` | 3.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-chart-generator` | 1.0.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-code-review` | 1.0.0 | active | 4 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-code-spec-validator` | 1.0.0 | active | 6 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-community-cli` | 1.1.2 | active | 5 | 2026-09-29 `0abf4ee` fix(ark-community-cli): digest 跨窗 cluster_rep 加 default 回退，修 |
+| `ark-cost-tracker` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-daily-news` | 2.1.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-dashboard-health` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-data-contract` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-db-query` | 3.0.1 | active | 10 | 2026-09-18 `652f21a` feat(metadata): 補 3 個消費端型 skill 的 tested_against + 定義該欄位形狀 |
+| `ark-doc-coauthoring` | 1.0.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-docker-deploy` | 1.0.0 | active | 1 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-docx-tool` | 1.0.0 | active | 4 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-env-doctor` | 1.0.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-etl-pipeline` | 1.0.0 | active | 5 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-frontend-design` | 1.0.0 | active | 5 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-game-prob` | 1.4.4 | active | 18 | 2026-10-19 `5c6c3e6` feat(game-pipeline): 拍板書——review/ 導覽頁改用 ark-book 架構 |
+| `ark-game-proto` | 1.2.5 | active | 10 | 2026-10-20 `a990c3e` feat(game-pipeline): 佈局契約 v3.4 十階段（ark-game-spec 2.5.5、ark-g |
+| `ark-game-quicktest` | 2.1.2 | active | 8 | 2026-10-13 `be318fe` feat(ark-game-*): G-1 gs_run --stage publish + G-2 ARK_GAME_ |
+| `ark-game-report` | 0.2.2 | experimental | 3 | 2026-10-20 `4bdd2b6` feat(ark-game-report): 0.2.2——預設快速版（只撈本機，D+7 初判）＋同期分析快取 |
+| `ark-game-spec` | 2.5.5 | active | 15 | 2026-10-20 `a990c3e` feat(game-pipeline): 佈局契約 v3.4 十階段（ark-game-spec 2.5.5、ark-g |
+| `ark-github-cli` | 0.2.1 | active | 2 | 2026-10-08 `81f4e5d` fix: gdd_export 擋路徑越界檔名 + 測試檔重名改唯一檔名 |
+| `ark-grafana-query` | 1.0.0 | active | 1 | 2026-09-17 `7d2ff1b` feat: add ark-grafana-query skill (executor 型 Grafana 監控查詢) |
+| `ark-grill-me` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-html-dashboard` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-html-report` | 1.3.0 | active | 6 | 2026-10-15 `0067f75` feat: 消費端本地修改回貢 + mirror_sync --accept-upstream |
+| `ark-kpi-calculator` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-llm-tools` | 1.0.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-marketing` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-mcp-builder` | 1.0.0 | active | 6 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-md-report` | 1.0.0 | active | 6 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-mobile-adb` | 2.4.0 | active | 11 | 2026-10-15 `dba7acb` feat(ark-mobile-adb): 2.3.0 → 2.4.0 gamepack 校準資料解耦（--pack-d |
+| `ark-pdf-tool` | 1.0.0 | active | 5 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-planning-with-files` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-pptx-tool` | 1.0.0 | active | 5 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-project-planning` | 2.0.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-prompt-spec-validator` | 1.0.1 | active | 9 | 2026-10-12 `7e0c72c` fix(prompt-spec-validator): ignore 指令被 HTML 註解尾 -- 吃掉導致失效 |
+| `ark-release-notes` | 1.0.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-retention-analysis` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-security-audit` | 1.0.0 | active | 3 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-skill-creator` | 2.0.0 | active | 7 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-skills-align` | 2.2.1 | active | 53 | 2026-10-19 `468b6d2` fix(ark-agent-init): 2.3.1 bot 根 skills/ 是 BaseSkill 插件包慣例，分 |
+| `ark-spec-executor` | 2.0.1 | active | 6 | 2026-10-16 `ae62318` feat(ark-game-spec): 2.4.0 to 2.5.0 slot-game pack 1.1 + 遊戲產 |
+| `ark-superpowers` | 1.0.1 | active | 12 | 2026-10-07 `2a5de92` feat(ark-game-spec): v2.0.0 五合一整併（遊戲製程 skill 7→3 Phase B） |
+| `ark-telegram-sender` | 2.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-test-runner` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-translator` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-uml-generator` | 1.0.0 | active | 2 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-web-scraper` | 1.0.0 | active | 4 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-webapp-generator` | 2.0.0 | active | 6 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+| `ark-weknora-cli` | 1.0.1 | active | 8 | 2026-10-15 `0067f75` feat: 消費端本地修改回貢 + mirror_sync --accept-upstream |
+| `ark-wiki-engine` | 3.0.1 | active | 22 | 2026-10-15 `4c4eb72` fix(ark-wiki-engine): ingest 沿用 raw frontmatter 的 title / re |
+| `ark-xlsx-tool` | 1.0.0 | active | 4 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
+
+---
+
 ## 2026-09-04 (executor 分類補登記 + 兩道守門對齊)
 
 起點是一次全庫盤點：`audit_skills.py --repo .` 回 **P1=1 / P2=3，四條全在

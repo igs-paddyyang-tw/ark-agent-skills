@@ -19,7 +19,8 @@ metadata:
   tested_against:
     python-sqlite3: "3.12.3 stdlib"
   status: active
-  category: executor        # v1 誤標 pipeline、實為 scaffolder；v2 起為可直接執行工具箱
+  # category 沿革：v1 誤標 pipeline、實為 scaffolder；v2 起為可直接執行工具箱
+  category: executor
   outputs:
     # stdout 統一 JSON 契約 rows/count/truncated/out_file + meta；
     # bq_export.py --out 落盤為 jsonl / csv —— 兩者皆歸受控詞彙 data
@@ -29,8 +30,8 @@ metadata:
   depends_on: []
   replaces: [bq-mcp-server]
   author: paddyyang
-  version: "3.0.0"
-  updated: 2026-09-16
+  version: "3.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-db-query v2.0

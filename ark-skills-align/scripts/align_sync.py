@@ -36,8 +36,10 @@ except ImportError:
 
 def _tree_hash(skill_dir: Path) -> str:
     h = hashlib.sha256()
+    # 與 gen_manifest._iter_files 同規則：排除 __pycache__/.pyc 與頂層 release/（列車資料，不算內容）
     files = sorted((p for p in skill_dir.rglob("*")
-                    if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"),
+                    if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"
+                    and p.relative_to(skill_dir).parts[0] != "release"),
                    key=lambda x: str(x.relative_to(skill_dir)))
     for p in files:
         h.update(str(p.relative_to(skill_dir)).encode("utf-8") + b"\0")
