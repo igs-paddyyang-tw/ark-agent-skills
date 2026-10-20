@@ -16,7 +16,7 @@ prerequisites: []
 scope_out:
   - 機率參數怎麼由知識庫推導（見 docs/designs/2026-10-16-prob-arch-design.md）
   - Go Server 的程式細節與部署
-  - 上線後的成效（⑨，遊戲上線後才會有）
+  - 上線後的成效（⑩，遊戲上線後才會有）
 tags: [slot, probability, pipeline]
 sources:
   - ../../quicktest/qt-report/rtp-report.json

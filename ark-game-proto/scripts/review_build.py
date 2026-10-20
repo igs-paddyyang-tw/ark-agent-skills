@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""review_build — 發布拍板包 data/<domain>/<slug>/review/（佈局契約 v3.3；給人拍板、可 demo 的研發產物）。
+"""review_build — 發布拍板包 data/<domain>/<slug>/review/（佈局契約 v3.4 ⑨ 送審拍板；給人拍板、可 demo 的研發產物）。
 
 彙整工作檯 output/<domain>/<slug>/ 的成品進定版家（送審前跑一次，不是每次 build）：
   play.html            ⑦ 試玩版單檔（output/…/game/pixi-client/single/index.html，雙擊可玩）
   gdd-overview.html    ② 素材總覽自足版（output/…/gdd/*.html 外連圖 → ark-html-report html_images 縮圖 WebP 內嵌）
   checks/              ⑥ browser-check.json、⑦ stage-smoke.json ＋ 每種玩法 / 情境的代表截圖（WebP）
-  index.html           導覽頁：九階段狀態、成品連結＋大小＋sha16、驗收結果與截圖牆（自足、離線可開）
+  index.html           導覽頁：十階段狀態、成品連結＋大小＋sha16、驗收結果與截圖牆（自足、離線可開）
   REVIEW.md            送審說明（首次產骨架；之後只更新 <!-- auto --> 區段，人工區保留）
   review-manifest.json 每個檔的來源＋sha16＋大小（ps_layout L-REVIEW 據此判拍板包是否過期）
 ⑤ prob/prob-spec.html、⑥ proto/index.html 留原位（受 ps_lint／proto_build 綁定），導覽頁用相對連結。
@@ -40,7 +40,8 @@ STAGES = [  # (編號, 名稱, 定版家判定檔（任一存在即有）)
     ("⑥", "機率可視化驗證", ["proto/index.html"]),
     ("⑦", "遊戲試玩版", ["game/pixi-client/game.js"]),
     ("⑧", "Game Server", ["game/handoff.md", "game/go-server/go.mod"]),
-    ("⑨", "上線成效", ["docs/reports/*perf-review*.md"]),
+    ("⑨", "送審拍板", None),  # 特判：拍板書各章拍板欄全部填完才算完成（_review_state）
+    ("⑩", "上線成效", ["docs/reports/*-d[0-9]*.html", "docs/reports/*-d[0-9]*.json", "docs/reports/*perf-review*.md"]),
 ]
 
 
@@ -185,10 +186,24 @@ def report_links(data: pathlib.Path) -> list[tuple[str, str, str]]:
     return out
 
 
-def stage_rows(data: pathlib.Path) -> list[tuple[str, str, bool]]:
+def _review_state(data: pathlib.Path):
+    """⑨ 送審拍板：無拍板書 → False；有拍板書但仍有待拍板 → "pending"；全部拍板 → True。"""
+    for b in sorted(data.glob("review/*-decision/book.yaml")):
+        dec = decision_rows(b.parent)
+        return True if dec and not any(d["pending"] for d in dec) else "pending"
+    return False
+
+
+def stage_label(ok, md: bool = False) -> str:
+    if ok == "pending":
+        return "⏳ 送審中"
+    return ("✅ 有產出" if md else "✓ 有產出") if ok else "— 尚無"
+
+
+def stage_rows(data: pathlib.Path) -> list[tuple[str, str, object]]:
     rows = []
     for no, name, pats in STAGES:
-        rows.append((no, name, any(list(data.glob(p)) for p in pats)))
+        rows.append((no, name, _review_state(data) if pats is None else any(list(data.glob(p)) for p in pats)))
     return rows
 
 
@@ -212,7 +227,7 @@ td,th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;font-
 def build_index(game: str, slug: str, when: str, rows, arts: list[dict], checks: dict, links: list[tuple[str, str, str]],
                 review_html: str = "", reports: list[tuple[str, str, str]] | None = None) -> str:
     e = html.escape
-    st = "".join(f"<tr><td>{no}</td><td>{e(n)}</td><td class=\"{'ok' if ok else 'na'}\">{'✓ 有產出' if ok else '— 尚無'}</td></tr>" for no, n, ok in rows)
+    st = "".join(f"<tr><td>{no}</td><td>{e(n)}</td><td class=\"{'ok' if ok is True else 'na'}\">{stage_label(ok)}</td></tr>" for no, n, ok in rows)
     cards = "".join(f"<div class=\"card\"><a href=\"{e(a['href'])}\">{e(a['title'])}</a><div>{e(a['desc'])}</div><div class=\"m\">{e(a['meta'])}</div></div>" for a in arts)
     lk = "".join(f"<div class=\"card\"><a href=\"{e(h)}\">{e(t)}</a><div class=\"m\">{e(d)}</div></div>" for t, h, d in links)
     ck = ""
@@ -230,12 +245,12 @@ def build_index(game: str, slug: str, when: str, rows, arts: list[dict], checks:
                    f"<figure><a href=\"checks/{e(s)}\"><img loading=\"lazy\" src=\"checks/{e(s)}\" alt=\"{e(s)}\"></a><figcaption>{e(s)}</figcaption></figure>" for s in rep.get("review_shots", [])) + "</div>")
     return f"""<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(game)} 拍板包</title><style>{INDEX_CSS}</style></head><body><main>
-<h1>{e(game)}　拍板包</h1><div class="sub">{e(slug)} · 發布 {e(when)} · 佈局契約 v3.3 review/ · 本包可整個資料夾傳給人離線開</div>
+<h1>{e(game)}　拍板包</h1><div class="sub">{e(slug)} · 發布 {e(when)} · 佈局契約 v3.4 ⑨ review/ · 本包可整個資料夾傳給人離線開</div>
 {f'<section class="card review">{review_html}</section>' if review_html else ''}
 <h2>可以直接打開的成品</h2><div class="grid">{cards}</div>
 <h2>定版家其他成品（相對連結）</h2><div class="grid">{lk}</div>
 {('<h2>報告（定版家 docs/reports/）</h2><div class="grid">' + "".join(f'<div class="card"><a href="{e(h)}">{e(t)}</a><div class="m">{e(d)}</div></div>' for t, h, d in reports) + '</div>') if reports else ''}
-<h2>九階段狀態</h2><table><tr><th>#</th><th>階段</th><th>定版家</th></tr>{st}</table>
+<h2>十階段狀態</h2><table><tr><th>#</th><th>階段</th><th>定版家</th></tr>{st}</table>
 <h2>真瀏覽器驗收</h2>{ck}
 <p class="sub" style="margin-top:32px">由 ark-game-proto review_build.py 產生；要拍板的事項見 REVIEW.md。</p>
 </main></body></html>
@@ -253,7 +268,7 @@ REVIEW_SKELETON = """# {game} 拍板包說明
 
 ## 怎麼看
 
-1. 打開 `index.html`：成品入口、九階段狀態、驗收結果。
+1. 打開 `index.html`：成品入口、十階段狀態、驗收結果。
 2. `play.html` 雙擊可玩（右上「除錯」→ 強制情境可直接看各特色遊戲）。
 
 ## 未決議
@@ -372,7 +387,7 @@ def decision_rows(book_dir: pathlib.Path) -> list[dict]:
 
 
 def write_status(book_dir: pathlib.Path, game: str, when: str, arts: list[dict], checks: dict, rows, data: pathlib.Path) -> None:
-    """拍板書第 1 章「現況：一頁看完」（每次發布重產）：結論、四件拍板事項狀態、成品（新分頁）、驗收、九階段。"""
+    """拍板書第 1 章「現況：一頁看完」（每次發布重產）：結論、四件拍板事項狀態、成品（新分頁）、驗收、十階段。"""
     import yaml  # noqa: PLC0415
     slug = yaml.safe_load((book_dir / "book.yaml").read_text(encoding="utf-8"))["slug"]
     rr = data / "quicktest" / "qt-report" / "rtp-report.json"
@@ -381,7 +396,7 @@ def write_status(book_dir: pathlib.Path, game: str, when: str, arts: list[dict],
     lr = data / "layout-report.json"
     verdict = (json.loads(lr.read_text(encoding="utf-8")).get("facts", {}).get("rtp_report", {}) or {}).get("verdict") if lr.is_file() else None
     pc = lambda k: f"{100 * g[k]['rtp']:.2f}%" if g.get(k, {}).get("rtp") is not None else "—"  # noqa: E731
-    done = sum(len(no) for no, _, ok in rows if ok)          # ③⑤ 同一列 = 兩個階段
+    done = sum(len(no) for no, _, ok in rows if ok is True)          # ③⑤ 同一列 = 兩個階段
     dec = decision_rows(book_dir)
     npend = sum(1 for d in dec if d["pending"])
     L = [f"""---
@@ -394,7 +409,7 @@ level: intermediate
 est_minutes: 5
 punchline: "研發全綠，只剩 {len(dec)} 件事要人拍板。"
 objectives:
-  - 一頁看懂九階段進度、驗收結果與待拍板事項
+  - 一頁看懂十階段進度、驗收結果與待拍板事項
   - 從本章直接打開每一個成品
 prerequisites: [preface]
 key_terms: [拍板包, 真瀏覽器驗收]
@@ -425,7 +440,7 @@ status: review
 
 ### 一句話結論
 
-九階段完成 {done} 個（⑨ 上線成效要上線後才有）。Go 快測 {int(rep.get('spins') or 0):,} 局總 RTP {pc('Total')}（主遊戲 {pc('MainGame')}、特色遊戲 {pc('SpecialGameTotal')}），三向判定 **{verdict or '—'}**；目前 **{npend} 件待拍板**。
+十階段完成 {done} 個（{'⑩ 上線成效要上線後才有' if npend == 0 else '⑨ 送審拍板等本書拍板、⑩ 上線成效要上線後才有'}）。Go 快測 {int(rep.get('spins') or 0):,} 局總 RTP {pc('Total')}（主遊戲 {pc('MainGame')}、特色遊戲 {pc('SpecialGameTotal')}），三向判定 **{verdict or '—'}**；目前 **{npend} 件待拍板**。
 
 ### 要拍板的 {len(dec)} 件事
 
@@ -448,7 +463,7 @@ status: review
             continue
         res = r.get("results") or r.get("checks") or []
         L.append(f"| {label} | {'✅' if r.get('pass') else '❌'} {sum(1 for x in res if x.get('ok'))}/{len(res)} PASS{(' · FPS ' + str(r['fps'])) if r.get('fps') else ''} | {r.get('browser', '')} |\n")
-    L.append("\n截圖與逐項檢查見附錄。\n\n### 九階段\n\n| 階段 | 名稱 | 定版家 |\n|---|---|---|\n" + "".join(f"| {no} | {n} | {'✅ 有產出' if ok else '— 尚無'} |\n" for no, n, ok in rows))
+    L.append("\n截圖與逐項檢查見附錄。\n\n### 十階段\n\n| 階段 | 名稱 | 定版家 |\n|---|---|---|\n" + "".join(f"| {no} | {n} | {stage_label(ok, md=True)} |\n" for no, n, ok in rows))
     L.append(f"""
 ## 常見誤解
 
@@ -643,7 +658,7 @@ def main() -> int:
     when = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     (rv / "index.html").write_text(build_index(game, a.slug, when, stage_rows(data), arts, checks, links), encoding="utf-8")
     files.append((rv / "index.html", "review_build"))
-    auto = (f"- 發布：{when}（review_build；契約 v3.3）\n"
+    auto = (f"- 發布：{when}（review_build；契約 v3.4）\n"
             + "".join(f"- {x['title']}：`{x['href']}`（{x['meta']}）\n" for x in arts)
             + "".join(f"- {k}：" + (f"{sum(1 for r in (v.get('results') or v.get('checks') or []) if r.get('ok'))}/{len(v.get('results') or v.get('checks') or [])} PASS\n" if v else "尚未驗收\n") for k, v in checks.items()))
     book_dir = next((p.parent for p in sorted(rv.glob("*/book.yaml"))), None)
@@ -669,7 +684,7 @@ def main() -> int:
     if bad or tot > REVIEW_KB * 1024:
         emit(False, {"total_kb": tot // 1024, "banned": bad}, {"code": "GATE_BLOCKED", "message": f"拍板包 {tot // 1024} KB（上限 {REVIEW_KB}）或含禁止檔 {bad}"})
         return 1
-    man = {"schema": "review-manifest/1", "contract": "3.3", "slug": a.slug, "game": game, "generated_at": when, "gdd_quality": quality if gdd_src else None,
+    man = {"schema": "review-manifest/1", "contract": "3.4", "slug": a.slug, "game": game, "generated_at": when, "gdd_quality": quality if gdd_src else None,
            "files": [{"path": f.relative_to(rv).as_posix(), "sha256_16": sha16(f), "bytes": f.stat().st_size, "source": s} for f, s in files if f.name != "REVIEW.md"],
            "total_bytes": tot}
     (rv / "review-manifest.json").write_text(json.dumps(man, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

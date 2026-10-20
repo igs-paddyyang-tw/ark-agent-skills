@@ -1,5 +1,5 @@
 # 遊戲產出佈局契約 v3（機器可讀版）——人讀版：game-layout-contract.md（兩者同步改）
-contract: "3.3"
+contract: "3.4"
 owner: ark-game-spec
 updated: 2026-10-19
 homes:
@@ -19,8 +19,8 @@ stages:
   "⑥": {dir: proto, skill: ark-game-proto}
   "⑦": {dir: game/pixi-client, skill: ark-game-proto}
   "⑧": {dir: game/go-server, skill: engineering}
-  "⑨": {dir: docs/reports, skill: [game_perf_probe, math-reviewer]}
-  "拍板": {dir: review, skill: ark-game-proto}   # review_build：彙整 ②⑤⑥⑦ 成品＋驗收，送審前發布
+  "⑨": {dir: review, skill: [ark-game-proto, ark-book]}   # 送審拍板（上線前；v3.4）：review_build 彙整 ②⑤⑥⑦⑧ 成品＋驗收＋拍板書
+  "⑩": {dir: docs/reports, config: report, skill: [ark-game-report, math-reviewer]}   # report/report-d<N>.yaml；中間檔 output/{domain}/{slug}/report-data/d<N>/
 data_tree:
   root_files: [README.md, LAYOUT.md, layout-report.json, publish-manifest.json]
   analysis: {files: [game-analysis.yaml, kb-refs.yaml, evidence.jsonl], dirs: [report, source]}

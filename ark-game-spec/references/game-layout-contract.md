@@ -1,4 +1,4 @@
-# 遊戲產出佈局契約（game-layout contract v3.3）
+# 遊戲產出佈局契約（game-layout contract v3.4）
 
 > **單一來源（SSOT）**：一款遊戲從競品到上線的所有產出放哪，以本檔為準；機器可讀版是同目錄的 `game-layout.yaml`。
 > 擁有者：**ark-game-spec**（製程入口）。ark-game-prob（`ps_layout` 守門）、ark-game-quicktest、ark-game-proto 依本契約讀寫路徑。
@@ -6,6 +6,7 @@
 > 制定：2026-10-16，aidev-agent（樂奇）／使用者核可目錄規劃（遊戲實作改為 `game/{go-server, pixi-client}`）。
 > v3.1（同日）：階段編號對齊知識庫九階段 SSOT（`knowledge/slot/raw/methodology/slot-pipeline-output-checklist.md`：⑦ 試玩版 Stage、⑧ Game Server、⑨ 上線成效）。
 > v3.3（2026-10-19）：新增定版家 `review/` 拍板包（另計 < 5 MB）——給人拍板／demo 的成品進 data，`output/` 只留中間檔、二進位、大素材（使用者決議；分析見專案 `docs/reports/review/2026-10-19-data-output-review-layout.md`）。
+> v3.4（2026-10-19）：閉環 **九→十階段**（使用者決議「送審＝上線前」）：`review/` 拍板包正式編為 **⑨ 送審拍板（上線前）**，原 ⑨ 上線成效改為 **⑩**（路徑與 skill 不變，仍為 ark-game-report）；stages 鍵 `拍板` → `⑨`、`⑨` → `⑩`。設計見專案 `docs/designs/2026-10-19-slot-pipeline-workflow-final-design.md`。
 
 ## 1. 兩個家與判準
 
@@ -19,7 +20,7 @@
 `review/`（拍板包）另計額度 **< 5 MB**（v3.3，2026-10-19 使用者決議）：研發產物是給人拍板的，**人會打開、會拿去 demo 的成品**（⑦ 雙擊可玩的試玩單檔、② 素材總覽自足版、⑥⑦ 真瀏覽器驗收報告與代表截圖、導覽頁）即使能重產也進定版家，換機器、傳給人都打得開；仍禁二進位與影片。只在**送審前**用 `review_build` 發布一次，不是每次 build 都更新（控制 git 膨脹）。
 判準一句話：**「刪掉之後能用指令重產」→ 工作檯；「刪掉就要人重做判斷」→ 定版家；「要拿給人拍板／demo」→ 定版家 `review/`。**
 
-## 2. 九階段 × 子目錄
+## 2. 十階段 × 子目錄
 
 | # | 階段 | 子目錄 | 負責 skill |
 |---|---|---|---|
@@ -30,8 +31,8 @@
 | ⑥ | 機率可視化驗證 | `proto/` | ark-game-proto（驗證台） |
 | ⑦ | 遊戲試玩版（Stage 正式演出版型） | `game/pixi-client/` | ark-game-proto 1.1（`stage_build`） |
 | ⑧ | Game Server | `game/go-server/` ＋ `game/handoff.md` | 工程（規劃中 skill `ark-game-code`） |
-| ⑨ | 上線成效 | `docs/reports/<date>-perf-review.md` | game_perf_probe ＋ math-reviewer |
-| 拍板 | 送審包（彙整 ②⑤⑥⑦ 成品＋驗收） | `review/` | ark-game-proto（`review_build.py`） |
+| ⑨ | 送審拍板（上線前；彙整 ②⑤⑥⑦⑧ 成品＋驗收＋拍板書） | `review/` | ark-game-proto（`review_build.py`）＋ ark-book（拍板書） |
+| ⑩ | 上線成效 | `report/report-d<N>.yaml`（設定）＋ `docs/reports/<資料日>-<slug>-d<N>.html／.json`（定版報告） | ark-game-report（D+7／D+14／D+30；結論由人確認）＋ math-reviewer |
 | — | 本款專屬文件正本 | `docs/` | 各階段 |
 | — | 逆向知識卡（還原局） | `kb/` | 人工 ＋ `data/slot/_schema/tools/sg_*` |
 
@@ -39,7 +40,7 @@
 
 ```
 data/slot/<slug>/
-├── README.md                          遊戲卡（doc_role: index；模式、版本、①~⑧ 狀態）
+├── README.md                          遊戲卡（doc_role: index；模式、版本、①～⑩ 狀態）
 ├── LAYOUT.md · layout-report.json     ps_layout 產物（勿手改）
 ├── publish-manifest.json              gs_publish 的 sha 清冊
 ├── analysis/                     ①
@@ -66,7 +67,7 @@ data/slot/<slug>/
 │   ├── pixi-client/              ⑦   PixiJS 試玩版遊戲包（ark-game-proto Stage：game.js、stage.yaml、stage-build.json、建置腳本）
 │   ├── go-server/                ⑧   Go Server 原始碼（雛型或正式）
 │   └── handoff.md                ⑧   工程交付單（設定檔 sha、prob-spec 版本、rtp-report sha、K 卡 → Go 映射）
-├── review/                       拍板包（v3.3；額度另計 < 5 MB；送審前 review_build 發布）
+├── review/                       ⑨ 送審拍板包（v3.3；額度另計 < 5 MB；送審前 review_build 發布）
 │   ├── index.html                     拍板書（ark-book book_build 產物：封面、書脊目錄、每個待拍板事項一章、附錄；自足、離線可開）
 │   ├── <slug>-decision/               拍板書原稿（ark-book 契約）：book.yaml · 00-preface · 0N-<R-x 章>（人工，含拍板欄）· 99-appendix-artifacts（review_build 每次重產）
 │   ├── play.html                 ⑦   試玩版單檔（= stage_build --single，雙擊可玩）
@@ -76,7 +77,7 @@ data/slot/<slug>/
 └── docs/
     ├── decisions/                     OQ 清單、決策摘要（type: decision）
     ├── designs/                       機率架構設計、引擎缺口交接單
-    ├── reports/                       交叉比對、快測審核、試玩紀錄、⑨ perf-review
+    ├── reports/                       交叉比對、快測審核、試玩紀錄、⑩ 上線成效報告（ark-game-report）
     └── versions/                      版本沿革
 ```
 

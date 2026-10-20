@@ -63,7 +63,7 @@ def test_review_pack(tmp_path):
     idx = (rv / "index.html").read_text(encoding="utf-8")
     assert 'href="prob-spec.html"' in idx and 'href="proto.html"' in idx and "play.html" in idx and 'href="../' not in idx   # 外部成品已複製進 review/
     man = json.loads((rv / "review-manifest.json").read_text(encoding="utf-8"))
-    assert man["contract"] == "3.3" and {f["path"] for f in man["files"]} >= {"play.html", "gdd-overview.html", "index.html"}
+    assert man["contract"] == "3.4" and {f["path"] for f in man["files"]} >= {"play.html", "gdd-overview.html", "index.html"}
 
 
 def test_review_md_human_area_kept(tmp_path):
