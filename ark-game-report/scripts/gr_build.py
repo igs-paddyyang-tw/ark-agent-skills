@@ -452,6 +452,8 @@ def build(cfg: dict) -> tuple:
     if not views_out:
         C.fail("GATE_BLOCKED", "所有切分都沒有資料", "檢查 views 設定與 game_user_daily 欄位", {"notes": notes})
     first = next(iter(views_out.values()))
+    if not next(iter(metrics_out.values())).get("bench_games"):
+        notes.insert(0, "快速版：未含同期新機比較（query 加 --bench 才做同期分析），燈號多為資料不足，只適合 D+7 上線初判")
     data_through = max(r["d"] for r in rows_all)
     report = {
         "meta": {"game_name": g["name"], "game_id": g.get("id"), "launch_date": str(launch), "data_through": str(data_through),

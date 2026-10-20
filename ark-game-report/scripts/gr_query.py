@@ -222,7 +222,9 @@ def main() -> None:
     ap.add_argument("--config", required=True)
     ap.add_argument("--run", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--bench", action="store_true", help="為 benchmark_games 產 bench/<名稱>/ 資料集")
+    ap.add_argument("--bench", action="store_true",
+                    help="同期分析：為 benchmark_games 產 bench/<名稱>/ 資料集（預設不做＝快速版，只撈本機）")
+    ap.add_argument("--refresh", action="store_true", help="同期資料已有 CSV 也重撈（預設沿用快取，舊機資料不會變）")
     ap.add_argument("--workers", type=int, default=None, help="同時執行的查詢數（預設 adapter parallel，否則 4；1＝循序）")
     a = ap.parse_args()
     cfg = C.load_config(a.config)
@@ -247,7 +249,13 @@ def main() -> None:
         res = {"job": name, "sql": {k: str(v) for k, v in files.items()}, "skipped": skipped}
         if a.run or a.dry_run:
             res["export"] = {}
-            tasks += [(res, k, v, out_dir / f"{k}.csv") for k, v in files.items()]
+            for k, v in files.items():
+                out = out_dir / f"{k}.csv"
+                # 同期新機已上線、資料不再變 → 有 CSV 就沿用（佔掃描量 92%，2026-10-20 dry-run 8.8／9.6 GB）
+                if name != "target" and a.run and not a.refresh and out.is_file() and out.stat().st_size > 0:
+                    res["export"][k] = {"rc": 0, "tail": "cached", "tries": 0}
+                else:
+                    tasks.append((res, k, v, out))
         report.append(res)
     # 查詢彼此獨立 → 跨機台、跨資料集並行（2026-10-20：13 款 × 3 資料集循序約 30 分鐘，目標 < 10 分鐘）
     workers = max(1, a.workers or int(ad.get("parallel") or 4))

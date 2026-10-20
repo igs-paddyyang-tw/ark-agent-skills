@@ -2,12 +2,12 @@
 """gr_run — ark-game-report 單一入口。
 
   gr_run.py init    --slug <slug> --name <名稱> --game-id <id> --launch-date YYYY-MM-DD --stage 7 [--adapter bigquery-igs]
-  gr_run.py query   --config report.yaml [--run] [--dry-run] [--bench]
+  gr_run.py query   --config report.yaml [--run] [--dry-run] [--bench [--refresh]] [--workers N]
   gr_run.py probe   --config report.yaml
   gr_run.py build   --config report.yaml
   gr_run.py insight --config report.yaml [--no-kb] [--overwrite] [--playbook x.yaml]
   gr_run.py render  --config report.yaml [--check]
-  gr_run.py all     --config report.yaml [--run]      # query → probe → build → insight → render
+  gr_run.py all     --config report.yaml [--run] [--bench]  # query → probe → build → insight → render；預設快速版（只撈本機）
   gr_run.py closeout --slug <slug> [--date YYYY-MM-DD] # 十階段結案報告（工作流最後產出；讀定版家檔案）
 """
 from __future__ import annotations
@@ -40,7 +40,8 @@ def main() -> None:
     if not cfg:
         print(json.dumps({"success": False, "error": {"code": "BAD_INPUT", "message": "all 需要 --config"}}, ensure_ascii=False))
         sys.exit(2)
-    plan = [("query", ["--config", cfg] + (["--run"] if "--run" in rest else [])), ("probe", ["--config", cfg]),
+    qflags = [f for f in ("--run", "--bench", "--refresh") if f in rest]
+    plan = [("query", ["--config", cfg] + qflags), ("probe", ["--config", cfg]),
             ("build", ["--config", cfg]), ("insight", ["--config", cfg] + (["--no-kb"] if "--no-kb" in rest else [])),
             ("render", ["--config", cfg])]
     for st, args in plan:

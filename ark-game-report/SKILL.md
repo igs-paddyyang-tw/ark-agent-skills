@@ -18,7 +18,7 @@ metadata:
   status: experimental
   author: paddyyang
   category: executor
-  version: "0.2.1"
+  version: "0.2.2"
   updated: 2026-10-20
   outputs:
     - { format: data, audience: ai }
@@ -70,7 +70,9 @@ metadata:
 ├─ 1. gr_run.py init --slug <slug> --name <名稱> --game-id <id> --launch-date <日> --stage 7 --adapter bigquery-igs
 │     └─ 編輯 report.yaml：game.ids（所有子 ID）、spec（目標 RTP、σ、觸發 1/Freq）、views、composition、benchmark_games
 ├─ 2. 撈資料
-│     ├─ 有 BigQuery：gr_run.py query --config <yaml> --dry-run → 看掃描量 → --run（--bench 一併撈歷史新機）
+│     ├─ 有 BigQuery：gr_run.py query --config <yaml> --dry-run → 看掃描量 → --run
+│     │     ├─ 預設快速版：只撈本機 4 支（約 0.8 GB、< US$0.01、2～3 分鐘），無同期比較 → 只適合 D+7 上線初判
+│     │     └─ 要同期分析（使用者決定）：加 --bench；同期新機已有 CSV 會沿用快取，--refresh 才重撈（全撈約 9.6 GB、US$0.06）
 │     └─ 沒有：照 references/data-contract.md 準備 CSV 放進 data_dir（最少 game_user_daily.csv）
 ├─ 3. gr_run.py probe：看每節 ok / partial / skip
 │     ├─ skip 或 partial 的原因是 adapter TODO → 用 ark-db-query bq_schema.py 查欄位，回填 adapter 後重撈
@@ -129,6 +131,7 @@ data/slot/<slug>/docs/reports/<資料日>-<slug>-d7.html／.json     定版報�
 
 | 版本 | 日期 | 變更 |
 |------|------|------|
+| 0.2.2 | 2026-10-20 | 預設快速版：`query`／`all` 不加 `--bench` 只撈本機，build 在無同期資料時於註記標「快速版，只適合 D+7 上線初判」；同期分析由使用者加 `--bench` 決定，同期新機 CSV 已存在就沿用快取（`--refresh` 重撈）；`all` 轉傳 `--bench`／`--refresh`；新增 `test_quick_mode_note`、快取測試 |
 | 0.2.1 | 2026-10-20 | `query` 匯出並行：跨機台、跨資料集用執行緒池同時跑（`--workers`，預設 adapter `parallel`，否則 4；1＝循序），保留每支逾時 300 秒與重試；`ARK_DB_QUERY_DIR` 可換假 bq_export 供測試；新增 `test_query_parallel_export` |
 | 0.2.0 | 2026-10-20 | 新增 `closeout`：十階段結案報告（工作流最後產出，ark-md-report 契約雙軌）；Q5 暫定基準：spec 無目標 RTP 時改用同期新機實際 RTP P10～P90（燈號最高「觀察」、圖例與註記標「暫定」）；健康觀察門檻改同期 P80（`lights.h_bench_q`，無基準時才用固定值），playbook CONCENTRATION／INTENSE_PLAYERS 同步改比 `h_top1_cut`／`h_intense_cut` |
 | 0.1.1 | 2026-10-19 | 首次實戰（吉屋出豬 617／618 D+7、D+30，同期新機 12 款基準）：bigquery-igs adapter 實查回填（UserID／CoinBet／CoinBetTimes／CoinWin／Country／CreateDate；查無觸發次數與時段表）、加 `max_bytes_billed`；`slot_users` 改取期間內最後一筆快照（只取期末那天會讓約 59% 玩家分層欄位空白）；匯出逾時 300 秒＋重試 2 次（bq_export 偶發卡住）；D+30 的同期 P50 改與 P30／P60 同窗口（最後 7 日）；子程序加 `-X utf8`（Windows cp950）；樣板 out_dir 改 `docs/reports/`（佈局契約 ⑩） |

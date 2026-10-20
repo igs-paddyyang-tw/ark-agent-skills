@@ -207,3 +207,24 @@ def test_query_parallel_export():
         assert q["rc"] == 0 and q["data"]["workers"] == 4 and n == 13, q
         assert all(v["rc"] == 0 for j in q["data"]["jobs"] for v in j["export"].values())
         assert el < n * 3 * 0.6, f"並行無效：{n} 支耗時 {el:.1f}s"
+        # 同期資料已有 CSV → 沿用快取，只重撈本機 4 支；--refresh 才全部重撈
+        src = (fake / "bq_export.py").read_text(encoding="utf-8").replace("time.sleep(3)", "time.sleep(0)")
+        (fake / "bq_export.py").write_text(src, encoding="utf-8")
+        q = run("query", "--config", "report.yaml", "--run", "--bench", cwd=tmp, env=env)
+        tails = [v["tail"] for j in q["data"]["jobs"] for v in j["export"].values()]
+        assert q["rc"] == 0 and tails.count("cached") == 9, tails
+        q = run("query", "--config", "report.yaml", "--run", "--bench", "--refresh", cwd=tmp, env=env)
+        assert "cached" not in [v["tail"] for j in q["data"]["jobs"] for v in j["export"].values()]
+
+
+def test_quick_mode_note():
+    """預設快速版（沒有同期資料）→ 報告註記標明只適合 D+7 初判。"""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = pathlib.Path(t)
+        setup(tmp, drop=("bench", "benchmark.csv"))
+        dd = tmp / "data"
+        assert run("probe", "--config", "report.yaml", cwd=tmp)["rc"] == 0
+        b = run("build", "--config", "report.yaml", cwd=tmp)
+        assert b["rc"] == 0, b
+        r = json.loads((dd / "report.json").read_text(encoding="utf-8"))
+        assert r["footnote"].startswith("快速版"), r["footnote"]
