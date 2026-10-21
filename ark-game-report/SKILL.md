@@ -20,8 +20,8 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "0.2.4"
-  updated: 2026-10-20
+  version: "0.2.5"
+  updated: 2026-10-21
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -135,6 +135,9 @@ data/slot/<slug>/docs/reports/<資料日>-<slug>-d7.html／.json     定版報�
 
 | 版本 | 日期 | 變更 |
 |------|------|------|
+| 0.2.5 | 2026-10-21 | `gr_run.py --help`／`-h` 印用法後 exit 0（原本 exit 2，CLI 契約測試 `test_help_is_safe_and_works` 失敗）；沒給或給錯 stage 仍為 2 |
+| 0.2.4 | 2026-10-20 | metadata：depends_on 改 `{name, version}` 帶範圍（全庫治理，無行為變更） |
+| 0.2.3 | 2026-10-20 | metadata：schema 1.2 三軸（category `document`、form `executor`、domain `game`；全庫治理，無行為變更） |
 | 0.2.2 | 2026-10-20 | 預設快速版：`query`／`all` 不加 `--bench` 只撈本機，build 在無同期資料時於註記標「快速版，只適合 D+7 上線初判」；同期分析由使用者加 `--bench` 決定，同期新機 CSV 已存在就沿用快取（`--refresh` 重撈）；`all` 轉傳 `--bench`／`--refresh`；新增 `test_quick_mode_note`、快取測試 |
 | 0.2.1 | 2026-10-20 | `query` 匯出並行：跨機台、跨資料集用執行緒池同時跑（`--workers`，預設 adapter `parallel`，否則 4；1＝循序），保留每支逾時 300 秒與重試；`ARK_DB_QUERY_DIR` 可換假 bq_export 供測試；新增 `test_query_parallel_export` |
 | 0.2.0 | 2026-10-20 | 新增 `closeout`：十階段結案報告（工作流最後產出，ark-md-report 契約雙軌）；Q5 暫定基準：spec 無目標 RTP 時改用同期新機實際 RTP P10～P90（燈號最高「觀察」、圖例與註記標「暫定」）；健康觀察門檻改同期 P80（`lights.h_bench_q`，無基準時才用固定值），playbook CONCENTRATION／INTENSE_PLAYERS 同步改比 `h_top1_cut`／`h_intense_cut` |

@@ -30,6 +30,10 @@ def call(stage: str, args: list) -> int:
 
 
 def main() -> None:
+    # --help 是正常請求 → exit 0（CLI 契約：scripts/tests/test_cli_contract.py）；沒給或給錯 stage 才是用法錯誤 → 2
+    if len(sys.argv) == 2 and sys.argv[1] in ("-h", "--help"):
+        print(__doc__)
+        sys.exit(0)
     if len(sys.argv) < 2 or sys.argv[1] not in (*STAGES, "all"):
         print(__doc__)
         sys.exit(2)
