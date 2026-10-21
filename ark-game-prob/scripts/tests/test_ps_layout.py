@@ -190,3 +190,17 @@ def test_layout_v35_stage_html_stamp_and_review_links(game):
     assert any(v["rule"] == "L-STAMP" and "r.html" in v["where"] and v["severity"] == "error" for v in vs), vs
     assert any(v["rule"] == "L-REVIEW" and "../quicktest/qt-report/r.html" in v["message"] for v in vs), vs
 
+
+def test_layout_data_budget_excludes_html(game):
+    """契約 v3.5：定版家 1 MB 額度不計 *.html View 軌（比照單檔上限）；非 html 超過才 warning。"""
+    d = game / "docs" / "reports"
+    d.mkdir(parents=True, exist_ok=True)
+    for i in range(3):
+        (d / f"big{i}.html").write_text("x" * 400_000, encoding="utf-8")      # 1.2 MB html：不計
+    r = run("ps_layout.py", "--game", str(game))
+    assert not any(v["rule"] == "L-SIZE" and v["where"] == "./" for v in r["data"]["violations"])
+    for i in range(3):
+        (d / f"big{i}.md").write_text("x" * 400_000, encoding="utf-8")        # 1.2 MB md：計入
+    r = run("ps_layout.py", "--game", str(game))
+    assert any(v["rule"] == "L-SIZE" and v["where"] == "./" and v["severity"] == "warning" for v in r["data"]["violations"])
+

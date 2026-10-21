@@ -14,6 +14,7 @@
   L-QT       quicktest/quicktest.yaml 需有 target_rtp；qt-report/rtp-report.json 存在；gate.verdict confirmed（rejected → error、inconclusive → warning）
   L-DIFF     prob/config-diff.json：mismatch > 0 → error；沒有 → warning（還原模式建議跑 ps_run --config）
   L-SIZE     體積守門（設計文件 §2，data/slot/<slug> 目標 < 1 MB）：*.exe/*.dll/*.bin 進 game → error；
+             定版家總量（不含 game/、review/、*.html View 軌、_retired/；契約 v3.5）> 1 MB → warning；
              單檔 > 500 KB（排除 *.html View 軌與 _retired/）→ warning；quicktest/config/ 有 > 1 個 *.json（多版本設定檔，違反單一版本原則）→ error
   L-SERVER   server/handoff.md 存在時：frontmatter 的 config_sha256_16 / rtp_report_sha256_16 必須 = 現檔實算 sha
              （不符 → error；只對帳交付件來源，不改 server code）；無 handoff.md → 不報（⑥ 選配）
@@ -202,8 +203,10 @@ def check(game: pathlib.Path, mode: str) -> dict:
     # L-SIZE（體積守門：設計文件 §2，data/slot/<slug> 目標 < 1 MB、禁二進位、單一版本原則）
     BIN_EXT = (".exe", ".dll", ".bin")
     SIZE_WARN = 500 * 1024
-    max_file, exe_count = ("", 0), 0
+    DATA_KB = 1024
+    max_file, exe_count, data_bytes = ("", 0), 0, 0
     review = game / "review"
+    gdir = game / "game"
     for f in game.rglob("*"):
         if not f.is_file() or "_retired" in f.parts or review in f.parents:
             continue
@@ -215,13 +218,18 @@ def check(game: pathlib.Path, mode: str) -> dict:
         sz = f.stat().st_size
         if sz > max_file[1]:
             max_file = (rel(f), sz)
+        if suf != ".html" and gdir not in f.parents:        # 契約 v3.5：1 MB 額度不計 html View 軌（比照單檔上限）、game/ 另計
+            data_bytes += sz
         if sz > SIZE_WARN and suf != ".html":  # html View 軌允許較大
             add("L-SIZE", rel(f), f"單檔 {sz // 1024} KB > 500 KB：可重產大檔請移到 output/slot/<slug>/", "warning")
     cfg_dir = qt / "config"
     cfg_jsons = sorted(cfg_dir.glob("*.json")) if cfg_dir.is_dir() else []
     if len(cfg_jsons) > 1:
         add("L-SIZE", "quicktest/config/", f"{len(cfg_jsons)} 個設定檔（違反單一版本原則，只收 A 版）：" + ", ".join(p.name for p in cfg_jsons[:6]) + "；其餘移到 output/slot/<slug>/")
-    facts["size"] = {"max_file": max_file[0], "max_bytes": max_file[1], "exe_count": exe_count, "config_versions": len(cfg_jsons)}
+    if data_bytes > DATA_KB * 1024:
+        add("L-SIZE", "./", f"定版家 {data_bytes // 1024} KB > {DATA_KB} KB（不含 game/、review/、*.html）：可重產的中間檔移到 output/slot/<slug>/", "warning")
+    facts["size"] = {"max_file": max_file[0], "max_bytes": max_file[1], "exe_count": exe_count, "config_versions": len(cfg_jsons),
+                     "data_kb": data_bytes // 1024, "data_limit_kb": DATA_KB}
 
     # L-REVIEW（契約 v3.3：review/ 拍板包另計 5 MB；給人拍板 / demo 的成品，禁二進位與影片）
     if review.is_dir():

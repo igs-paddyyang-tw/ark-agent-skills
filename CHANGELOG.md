@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-21 (佈局契約 v3.5 補充：1 MB 額度不計 html)
+
+- ark-game-spec 2.6.1：`data_total_kb` 1 MB 額度不含 `game/`、`review/` 與 `*.html` View 軌（使用者決議，比照 `single_file_kb` 排除 html）
+- ark-game-prob 1.4.8：`ps_layout` L-SIZE 新增定版家總量檢查（依上述口徑，超過 → warning），`facts.size` 多 `data_kb`／`data_limit_kb`；測試 `test_layout_data_budget_excludes_html`
+- 實測 HuffNPuff：含 html 1,242 KB → 依新口徑 633 KB
+
+---
+
 ## 2026-10-20 (佈局契約 v3.5：拍板包不與各階段產出重疊)
 
 規格：aidev `docs/specs/2026-10-20-review-pack-dedup-spec.md`；分析：`docs/reports/review/2026-10-20-huffnpuff-review-overlap-analysis.md`。
