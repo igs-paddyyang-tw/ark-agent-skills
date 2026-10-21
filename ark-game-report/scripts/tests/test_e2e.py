@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
 
 def test_closeout_report():
-    """closeout：十階段狀態、⑩ 紅燈 → P1／needs-work、⑨ 待拍板 → P2、人工區重產保留（合成資料）。"""
+    """closeout（0.2.7 樣板版型）：⑨ 待拍板 → 送審中且不算完成、⑩ 紅燈 → P1／needs-work、人工區重產保留、HTML 用樣板元件（合成資料）。"""
     with tempfile.TemporaryDirectory() as t:
         repo = pathlib.Path(t)
         d = repo / "data" / "slot" / "x"
@@ -169,13 +169,17 @@ def test_closeout_report():
         assert any(f.startswith("P1 ⑩ D+7 未達標") for f in out["data"]["findings"]) and any(f.startswith("P2 ⑨ 送審拍板") for f in out["data"]["findings"])
         md_p = d / "docs" / "reports" / "2026-01-08-x-closeout.md"
         md = md_p.read_text(encoding="utf-8")
-        for sec in ("## Verdict", "## 十階段完成度", "## ⑨ 送審拍板", "## ⑩ 上線成效", "## Findings", "## Evidence", "## Actions", "## 邊界聲明"):
+        for sec in ("## 摘要", "## Verdict", "## 01 十階段完成度", "### ⑨ 送審拍板（送審中）", "### ⑩ 上線成效", "## 10 結案後還要決定的事",
+                    "## Findings", "## Evidence", "## Actions", "## 邊界聲明"):
             assert sec in md, sec
         assert "### E-1（支持 F-1）" in md and "findings: { p0: 0, p1: 1, p2: 1, p3: 0 }" in md
-        md_p.write_text(md.replace("（人工填寫：案例敘事、技術亮點、結案後還要決定的事；重產時保留本區）", "人工：本機成功"), encoding="utf-8")
+        assert out["data"]["stages"]["⑨"] == "review" and "| ⑨ | E 送審 | 送審拍板（上線前） | 送審中 |" in md, "拍板欄未填完不可算完成"
+        import re
+        md_p.write_text(re.sub(r"(<!-- human:blueprint -->\n).*?(<!-- /human -->)", r"\1人工：本機成功\n\2", md, flags=re.S), encoding="utf-8")
         subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
         assert "人工：本機成功" in md_p.read_text(encoding="utf-8")
-        assert (d / "docs" / "reports" / "2026-01-08-x-closeout.html").is_file()
+        h = (d / "docs" / "reports" / "2026-01-08-x-closeout.html").read_text(encoding="utf-8")
+        assert 'class="report-header"' in h and 'class="kpi-grid"' in h and "人工：本機成功" in h and "fonts.googleapis" not in h
 
 
 def test_query_parallel_export():

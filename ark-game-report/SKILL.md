@@ -20,7 +20,7 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "0.2.6"
+  version: "0.2.7"
   updated: 2026-10-21
   outputs:
     - { format: data, audience: ai }
@@ -58,7 +58,7 @@ metadata:
 | `scripts/gr_build.py` | 資料集 → `report.json`（報告契約）＋ `metrics.json`（給 insight）；計算歷史分位數與燈號 | 算指標 |
 | `scripts/gr_insight.py` | metrics × `assets/playbook.yaml` → `insights.md`、結論草稿；查知識庫 | 寫分析 |
 | `scripts/gr_render.py` | `report.json` → 單檔 HTML；`--check` 驗一致性 | 出報告 |
-| `scripts/gr_closeout.py` | **十階段結案報告**（工作流最後產出）：定版家檔案 → ①～⑩ 狀態、④ 快測、⑥ 對帳、⑨ 拍板欄、⑩ 各 D+N verdict → `docs/reports/<日>-<slug>-closeout.md／.html`；Findings 規則判定、verdict 草擬；`<!-- human:notes -->` 重產保留；自動 report_lint ＋ report_pair stamp | ⑩ 定版後、送審或結案時 |
+| `scripts/gr_closeout.py` | **十階段結案報告**（工作流最後產出；版型照樣板「樂奇 aidev 結案報告」，CSS `assets/closeout.css`）：定版家檔案 → 摘要＋KPI、01 十階段、02 ①～③ 階段卡、03 ④ 觸發表／⑥ 對帳表、04 ⑦ 冒煙＋截圖／⑧、05 ⑨ 拍板／⑩ 本款成效、10 待決定 → `docs/reports/<日>-<slug>-closeout.md／.html`；敘事段（標題、藍圖、技術亮點、時間軸、導入）走人工區 `<!-- human:<key> -->` 重產保留；⑨ 拍板欄全填才算完成；⑩ 只放本款；自動 report_lint ＋ report_pair stamp | ⑩ 定版後、送審或結案時 |
 | `assets/report_template.html` | 報告版面（資料驅動，缺區塊顯示「尚無資料」）| render |
 | `assets/adapters/*.yaml` | 平台對接：表名、欄位對照、GID 格式；`TODO:` 表示待確認 | query / probe |
 | `assets/playbook.yaml` | 策略 playbook：症狀 → 假設 → 要查什麼 → 建議 → 知識庫頁 | insight；實戰後增修 |
@@ -135,6 +135,7 @@ data/slot/<slug>/docs/reports/<資料日>-<slug>-d7.html／.json     定版報�
 
 | 版本 | 日期 | 變更 |
 |------|------|------|
+| 0.2.7 | 2026-10-21 | closeout 改照樣板版型（使用者：「結案報告很陽春」「拿吉屋當作成效樣板」）：HTML 改 boardroom 版型（header、摘要、KPI 卡、00～10 節、階段卡、④ 觸發表取 `rtp-report.gate.checks`、⑥ 對帳表、⑦ 冒煙截圖內嵌）；敘事走 12 個人工區 `human:<key>`（舊 `human:notes` 仍讀）；🔴 修 ⑨ 只看 review/index.html 就算完成（改：拍板欄全填才完成，否則「送審中」）；🔴 修 ⑥ 對帳把 go-parity.json 與分檔重複加總（56 萬 → 16 萬）；⑩ 未上線寫「上線後補」，不引用別款；測試改驗樣板元件 |
 | 0.2.6 | 2026-10-21 | `test_query_parallel_export` 改量「同時在跑的支數」（假 bq_export 每支各寫一個起訖時間檔，workers 4 時重疊 ≥ 3；多程序同寫一檔在 Windows 會併行掉行），不再比總耗時——Windows 起 Python 慢時原測試會誤判（實測 28 秒 > 門檻 23.4 秒，但並行其實有效） |
 | 0.2.5 | 2026-10-21 | `gr_run.py --help`／`-h` 印用法後 exit 0（原本 exit 2，CLI 契約測試 `test_help_is_safe_and_works` 失敗）；沒給或給錯 stage 仍為 2 |
 | 0.2.4 | 2026-10-20 | metadata：depends_on 改 `{name, version}` 帶範圍（全庫治理，無行為變更） |

@@ -24,6 +24,16 @@
 
 ---
 
+## 2026-10-21 (ark-game-report 0.2.7：結案報告照樣板版型)
+
+- closeout HTML 改照樣板「樂奇 aidev 結案報告」（ark-html-report boardroom）：header、摘要、KPI 卡、00～10 節、階段卡、④ 觸發表（`rtp-report.gate.checks`）、⑥ 對帳表、⑦ 冒煙截圖內嵌；CSS `assets/closeout.css`（自足、不外連字型）
+- 敘事走 12 個人工區 `<!-- human:<key> -->`，重產保留（舊 `human:notes` 仍讀）
+- 🔴 修：⑨ 只看 review/index.html 就判完成 → 改為拍板欄全填才完成，否則「送審中」（與 ark-game-proto review_build 同規則）
+- 🔴 修：⑥ 對帳把 `go-parity.json` 與分檔重複加總（HuffNPuff 56 萬 → 正確 16 萬）
+- ⑩ 只放本款成效；未上線寫「上線後補」，不引用別款
+
+---
+
 ## 2026-10-21 (ark-game-report 0.2.6：並行測試改量重疊)
 
 - `test_query_parallel_export` 不再比總耗時（Windows 起 Python 慢時 28 秒 > 門檻 23.4 秒，但並行其實有效）；改由假 bq_export 每支寫一個起訖時間檔，驗 workers 4 時同時在跑 ≥ 3 支
