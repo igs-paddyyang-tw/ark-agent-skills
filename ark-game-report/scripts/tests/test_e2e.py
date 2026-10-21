@@ -179,9 +179,9 @@ def test_closeout_report():
 
 
 def test_query_parallel_export():
-    """匯出並行：假 bq_export 每支睡 3 秒，13 支在 --workers 4 下應遠低於循序的 39 秒（Windows 起 Python 每支約 1 秒，睡久一點讓並行效果蓋過啟動成本）。"""
+    """匯出並行：假 bq_export 記下每支的起訖時間，--workers 4 時同時在跑的支數要 ≥ 3。
+    （0.2.1 原本比總耗時，Windows 起 Python 慢時會誤判；改量重疊，與機器快慢無關。）"""
     import os
-    import time
     import yaml
     with tempfile.TemporaryDirectory() as t:
         tmp = pathlib.Path(t)
@@ -191,7 +191,9 @@ def test_query_parallel_export():
         (fake / "bq_export.py").write_text(
             "import sys, time, pathlib\n"
             "a = sys.argv; out = pathlib.Path(a[a.index('--out') + 1])\n"
-            "time.sleep(3); out.parent.mkdir(parents=True, exist_ok=True); out.write_text('x\\n1\\n')\n",
+            "import os; log = pathlib.Path(__file__).with_name('spans'); log.mkdir(exist_ok=True); t0 = time.time()\n"
+            "time.sleep(2); out.parent.mkdir(parents=True, exist_ok=True); out.write_text('x\\n1\\n')\n"
+            "(log / f'{os.getpid()}-{t0}.txt').write_text(f'{t0} {time.time()}')\n",   # 每支一檔：多程序同寫一檔在 Windows 會併行
             encoding="utf-8")
         cfg = yaml.safe_load((tmp / "report.yaml").read_text(encoding="utf-8"))
         ad = yaml.safe_load((SCRIPTS.parent / "assets" / "adapters" / "bigquery-igs.yaml").read_text(encoding="utf-8"))
@@ -200,15 +202,15 @@ def test_query_parallel_export():
         cfg["benchmark_games"] = [{"name": f"B{i}", "ids": [str(i)], "launch_date": "2026-09-01"} for i in range(3)]
         (tmp / "report.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
         env = dict(os.environ, ARK_DB_QUERY_DIR=str(fake))
-        t0 = time.time()
         q = run("query", "--config", "report.yaml", "--run", "--bench", "--workers", "4", cwd=tmp, env=env)
-        el = time.time() - t0
         n = sum(len(j["export"]) for j in q["data"]["jobs"])
         assert q["rc"] == 0 and q["data"]["workers"] == 4 and n == 13, q
         assert all(v["rc"] == 0 for j in q["data"]["jobs"] for v in j["export"].values())
-        assert el < n * 3 * 0.6, f"並行無效：{n} 支耗時 {el:.1f}s"
+        spans = [tuple(map(float, f.read_text().split())) for f in (fake / "spans").glob("*.txt")]
+        peak = max(sum(1 for a, b in spans if a <= t < b) for t, _ in spans)
+        assert len(spans) == n and peak >= 3, f"並行無效：{len(spans)}/{n} 支，同時最多 {peak} 支（workers 4）"
         # 同期資料已有 CSV → 沿用快取，只重撈本機 4 支；--refresh 才全部重撈
-        src = (fake / "bq_export.py").read_text(encoding="utf-8").replace("time.sleep(3)", "time.sleep(0)")
+        src = (fake / "bq_export.py").read_text(encoding="utf-8").replace("time.sleep(2)", "time.sleep(0)")
         (fake / "bq_export.py").write_text(src, encoding="utf-8")
         q = run("query", "--config", "report.yaml", "--run", "--bench", cwd=tmp, env=env)
         tails = [v["tail"] for j in q["data"]["jobs"] for v in j["export"].values()]

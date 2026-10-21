@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-21 (ark-game-report 0.2.6：並行測試改量重疊)
+
+- `test_query_parallel_export` 不再比總耗時（Windows 起 Python 慢時 28 秒 > 門檻 23.4 秒，但並行其實有效）；改由假 bq_export 每支寫一個起訖時間檔，驗 workers 4 時同時在跑 ≥ 3 支
+- 多程序同寫一個 log 檔在 Windows 會併行掉行 → 每支一檔
+
+---
+
 ## 2026-10-21 (佈局契約 v3.5 補充：1 MB 額度不計 html)
 
 - ark-game-spec 2.6.1：`data_total_kb` 1 MB 額度不含 `game/`、`review/` 與 `*.html` View 軌（使用者決議，比照 `single_file_kb` 排除 html）

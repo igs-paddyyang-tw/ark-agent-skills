@@ -20,7 +20,7 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "0.2.5"
+  version: "0.2.6"
   updated: 2026-10-21
   outputs:
     - { format: data, audience: ai }
@@ -135,6 +135,7 @@ data/slot/<slug>/docs/reports/<資料日>-<slug>-d7.html／.json     定版報�
 
 | 版本 | 日期 | 變更 |
 |------|------|------|
+| 0.2.6 | 2026-10-21 | `test_query_parallel_export` 改量「同時在跑的支數」（假 bq_export 每支各寫一個起訖時間檔，workers 4 時重疊 ≥ 3；多程序同寫一檔在 Windows 會併行掉行），不再比總耗時——Windows 起 Python 慢時原測試會誤判（實測 28 秒 > 門檻 23.4 秒，但並行其實有效） |
 | 0.2.5 | 2026-10-21 | `gr_run.py --help`／`-h` 印用法後 exit 0（原本 exit 2，CLI 契約測試 `test_help_is_safe_and_works` 失敗）；沒給或給錯 stage 仍為 2 |
 | 0.2.4 | 2026-10-20 | metadata：depends_on 改 `{name, version}` 帶範圍（全庫治理，無行為變更） |
 | 0.2.3 | 2026-10-20 | metadata：schema 1.2 三軸（category `document`、form `executor`、domain `game`；全庫治理，無行為變更） |
