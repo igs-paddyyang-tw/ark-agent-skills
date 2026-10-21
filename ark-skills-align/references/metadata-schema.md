@@ -72,12 +72,12 @@ D-7 只定了「消費端型必填」，**沒有定值的格式**，而 audit �
 > 後者會讓下一個人跳過驗證。（同本 repo 記過的「憑空的預設值比沒有設定更糟」。）
 
 現況：`ark-agent-bot-builder`／`ark-agent-team-builder`／`ark-db-query` 有實測來源已填；
-`ark-weknora-cli`／`ark-docker-deploy` **查無版本來源，刻意留空**（AL-107 P2 保留）：
+`ark-docker-deploy` 2026-10-21 實機 build 後補上；`ark-weknora-cli` **查無版本來源，刻意留空**（AL-107 P2 保留）：
 
 | skill | 2026-10-21 實測 | 為什麼仍留空 | 要補需要 |
 |---|---|---|---|
 | ark-weknora-cli | `weknora_ingest.py kb-list` 對內網 WeKnora（ninja-bot `.env`）唯讀成功，回 2 個 KB | 伺服器版本查不到：`/api/v1/system/info` 403（API key scope 不足）、`/version` 不存在；單元測試走 `fake_client` | 有 system scope 的 key，或伺服器維運方提供版本 |
-| ark-docker-deploy | 未實測（實機 build 未獲授權） | 範本從未在真 docker 上 build 過 | 依 SKILL.md 範本 build＋up＋健康檢查一輪，記 docker／compose 版本 |
+| ark-docker-deploy | ✅ 已補：範本產 Python 專案 → compose build／up → 35 秒 healthy、/api/status 200（docker 28.3.3、compose 2.39.1） | — | Node／Go 範本仍未實測 |
 
 ## deprecated stub 規格
 

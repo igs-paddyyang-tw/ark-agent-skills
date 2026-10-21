@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-21 (ark-docker-deploy 1.0.2：實機驗證)
+
+- 照 SKILL.md 範本產 Python 專案（python:3.12-slim multi-stage）→ `docker compose build`／`up -d` → 35 秒內 healthy、`/api/status` 200，
+  builder 階段裝的套件正確帶到 runtime → 補 `tested_against`（docker 28.3.3、docker-compose 2.39.1；**只驗 Python 路徑**）
+- 實測抓到：compose 範本頂層 `version: "3.8"` 在 Compose v2 每個指令都印 obsolete 警告 → 移除，注意事項補說明
+- ark-skills-align 2.4.2（metadata-schema.md 實測紀錄）；audit P2 2 → **1**（僅 weknora-cli 刻意留空）；manifest `skills-2026.10-r6`
+
+---
+
 ## 2026-10-21 (P2 收尾：孤兒 asset、tested_against 實測紀錄)
 
 - ark-game-quicktest 2.1.5：SKILL.md 補連 `references/quicktest-targets.template.yaml`（quicktest.yaml 範本，原本 agent 讀不到）

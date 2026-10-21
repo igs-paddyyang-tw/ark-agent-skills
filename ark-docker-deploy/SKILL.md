@@ -16,8 +16,13 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "1.0.1"
-  updated: 2026-10-20
+  version: "1.0.2"
+  updated: 2026-10-21
+  # 2026-10-21 實測：照本檔範本產 Python 專案（python:3.12-slim multi-stage）→ compose build／up -d →
+  # 35 秒內 healthy、/api/status 200。只驗了 Python 路徑；Node／Go 範本未實測
+  tested_against:
+    docker: "28.3.3"
+    docker-compose: "2.39.1"
 ---
 
 # ark-docker-deploy
@@ -105,8 +110,6 @@ CMD ["python", "start.py"]
 ### 步驟 3：產出 docker-compose.yaml
 
 ```yaml
-version: "3.8"
-
 services:
   {service_name}:
     build:
@@ -255,6 +258,7 @@ services:
 
 - multi-stage build 減少 image 大小（~200MB vs ~800MB）
 - `.env` 不進 image（透過 `env_file` 掛載）
+- compose 檔**不寫頂層 `version:`** —— Compose v2 已廢除該欄位，寫了每個指令都會印 obsolete 警告（2026-10-21 實測 2.39.1）
 - `data/` 目錄用 volume 持久化（SQLite DB）
 - HEALTHCHECK 確保 orchestrator 能偵測服務狀態
 - `restart: unless-stopped` 確保 crash 後自動重啟
