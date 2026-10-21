@@ -19,8 +19,8 @@ metadata:
   category: process
   form: executor
   domain: game
-  version: "2.1.4"
-  updated: 2026-10-20
+  version: "2.1.5"
+  updated: 2026-10-21
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }
@@ -54,6 +54,7 @@ metadata:
 | `scripts/qt_run.py` | lint → 複製範本到 `engine/` → patch main.go（含 v1.2 的 odds 載入路徑跟版本、固定 seed `--seed`）/ game_process.go 常數 → `go run .` → qt_report | 跑快測 |
 | `scripts/qt_report.py` | `report_<ver>.txt` → `rtp-report.json` → md-report（三向 verdict）；v1.2 加 `template_caveats`（偵測範本已知偏差 F-1/F-2/F-5/F-6/F-7，md「範本已知偏差」節）；`--publish docs/reports/data` | 已有報告檔、只要驗證 |
 | `references/quicktest-contract.md` | quicktest.yaml（目標）/ odds.json 語意 / rtp-report.json / 三向規則 | 建目標檔、改 lint 時 |
+| `references/quicktest-targets.template.yaml` | quicktest.yaml 範本：單版 target_rtp／rtp_tolerance／feel，多版 `versions[]`（qt_report `--version-id`） | 新遊戲要建目標檔時複製改 |
 | `scripts/tests/` | golden：範本 `report_1.0.0.txt` 解析與三向、範本 odds 通過 lint、null/provenance 阻斷、決議填值 | 改腳本後 |
 
 ## 決策樹

@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-21 (P2 收尾：孤兒 asset、tested_against 實測紀錄)
+
+- ark-game-quicktest 2.1.5：SKILL.md 補連 `references/quicktest-targets.template.yaml`（quicktest.yaml 範本，原本 agent 讀不到）
+- ark-game-report 0.2.5：`gr_run.py --help` exit 0（CLI 契約全綠）
+- ark-skills-align 2.4.1：metadata-schema.md 記 tested_against 實測證據 ——
+  weknora-cli `kb-list` 對內網 WeKnora 唯讀成功，但伺服器版本查不到（system/info 403）→ **刻意留空**；
+  docker-deploy 範本未獲授權實機 build → 留空。「憑空的版本比空白更糟」
+- audit P2 3 → **2**（只剩上述兩個有意留空）；manifest `skills-2026.10-r5`
+
+---
+
 ## 2026-10-21 (ark-game-report 0.2.6：並行測試改量重疊)
 
 - `test_query_parallel_export` 不再比總耗時（Windows 起 Python 慢時 28 秒 > 門檻 23.4 秒，但並行其實有效）；改由假 bq_export 每支寫一個起訖時間檔，驗 workers 4 時同時在跑 ≥ 3 支
