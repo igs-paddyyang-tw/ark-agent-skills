@@ -1,4 +1,4 @@
-# 遊戲產出佈局契約（game-layout contract v3.7）
+# 遊戲產出佈局契約（game-layout contract v3.8）
 
 > **單一來源（SSOT）**：一款遊戲從競品到上線的所有產出放哪，以本檔為準；機器可讀版是同目錄的 `game-layout.yaml`。
 > 擁有者：**ark-game-spec**（製程入口）。ark-game-prob（`ps_layout` 守門）、ark-game-quicktest、ark-game-proto 依本契約讀寫路徑。
@@ -9,6 +9,7 @@
 > v3.5（2026-10-20）：**拍板包不與各階段產出重疊**（使用者決議）：每份文件的 md＋html 都放在它自己階段的目錄（review_build `publish_docs` 在 md 旁產同名 html，帶 `content-src` 戳記，ps_layout L-STAMP 驗）；`review/` 只放拍板書、`checks/` 與定版家放不下的自足單檔（`play.html`、`gdd-overview.html`），其餘成品以相對連結 `../<stage>/…` 指向定版家，不複製；清冊多一欄 `links`；要整包傳給人用 `review_build --export <資料夾>`。結案報告（`*closeout*`）不進送審包。設計見專案 `docs/designs/2026-10-20-review-pack-dedup-design.md`。
 > v3.6（2026-10-21，使用者決議）：新增 **`ref/` 參考資源層**（⓪ 收錄）：每款遊戲的原始參考資源（機率表、文字規格、編導規格、Client 摘要、線上機率）轉錄後放 `ref/`，只增不改；十階段從 ref 讀，蒸餾知識庫最後才做。原檔不進 data（正本留來源 repo，全量抽取放 `output/<domain>/<slug>/extract/`）；ref 額度另計 < 1 MB；`ref/` 永不進 `review/`。守門 `ps_layout` L-REF。設計見專案 `docs/designs/2026-10-21-game-ref-layout-design.md`。
 > v3.7（2026-10-22，ark-web-game 計畫 P1 任務 1.6）：⑧ 新增必交 **`game/trace-map.md` 抽選點對照表**（prob-spec §3 抽選點 → 參數 → Go 函式 → SpinResult 欄位 → 演出步驟；格式與檢查 `ark-web-game scripts/wg_trace_check.py`）；⑧ 負責 skill 由「規劃中 ark-game-code」改為 **ark-web-game**（Server 範本 `wg_server_init.py`、抽離 SOP）；⑦ `stage.yaml` 可加 `bundles:`、`service:`、`game_key`、`version`（stage_build 資料夾版另產 `manifest.json`＋`release.json`，屬 output）。
+> v3.8（2026-10-27，使用者決議「素材要跟製程產出一起版控，否則雛形產不出來」）：**素材版控分層 L1～L4**（§1a）——新增定版家 **`art/` 可出貨素材**（原創或授權的美術成品，⑦⑧ 共用；另計 < 5 MB、單檔 < 1 MB、只收 webp／png／ogg／m4a；ps_layout L-ART），跨遊戲共用音效放 `data/web-game/pixi-game-platform/shared/sfx/`；內部參考（競品影片、裁圖、截圖、原試玩包）仍不進 git，`analysis/source/manifest.json` 由群組展開為逐檔 sha256（專案 `scripts/knowledge/source_media.py expand／verify`）；⑦ 找不到內部參考時以佔位圖建置（ark-game-proto 1.8.0）。驗收：乾淨 clone 不帶外部資料夾，⑦ stage_build、⑧-C 打包與 `docker compose build` 都成功。分析見專案 `docs/reports/review/2026-10-27-game-assets-git-layering.md`。
 > v3.4（2026-10-19）：閉環 **九→十階段**（使用者決議「送審＝上線前」）：`review/` 拍板包正式編為 **⑨ 送審拍板（上線前）**，原 ⑨ 上線成效改為 **⑩**（路徑與 skill 不變，仍為 ark-game-report）；stages 鍵 `拍板` → `⑨`、`⑨` → `⑩`。設計見專案 `docs/designs/2026-10-19-slot-pipeline-workflow-final-design.md`。
 
 ## 1. 兩個家與判準
@@ -22,7 +23,19 @@
 > v3.5（2026-10-20 使用者決議）：1 MB 額度**不計 html**，比照單檔上限排除 View 軌——html 是 md 的可讀版，額度量的是 Content 軌與資料；`ps_layout` L-SIZE 據此算總量並 warning。
 `game/`（⑦ 用戶端、⑧ Server 原始碼）另計額度 **< 1 MB**：1 MB 規則源自 milefo（4.8 MB 中 exe 佔 70%），要擋的是二進位與可重產大檔，不是原始碼；`prob-spec.html` 等受 ps_lint 戳記／空殼守門的 View 仍留定版家（v3.2，2026-10-19）。
 `review/`（拍板包）另計額度 **< 5 MB**（v3.3，2026-10-19 使用者決議）：研發產物是給人拍板的，**人會打開、會拿去 demo 的成品**（⑦ 雙擊可玩的試玩單檔、② 素材總覽自足版、⑥⑦ 真瀏覽器驗收報告與代表截圖、導覽頁）即使能重產也進定版家，換機器、傳給人都打得開；仍禁二進位與影片。只在**送審前**用 `review_build` 發布一次，不是每次 build 都更新（控制 git 膨脹）。
-判準一句話：**「刪掉之後能用指令重產」→ 工作檯；「刪掉就要人重做判斷」→ 定版家；「要拿給人拍板／demo」→ 定版家 `review/`。**
+`art/`（可出貨素材，v3.8）另計額度 **< 5 MB、單檔 < 1 MB**：出貨用的原創／授權美術成品（WebP／PNG）與遊戲專屬音效；**出貨位元組＝git 裡的檔**（打包工具直通，不重壓），所以雖是二進位也進定版家。產生器只在改版時重產，人工確認後提交。
+判準一句話：**「刪掉之後能用指令重產」→ 工作檯；「刪掉就要人重做判斷」→ 定版家；「要拿給人拍板／demo」→ 定版家 `review/`；「要出貨的素材成品」→ 定版家 `art/`。**
+
+## 1a. 素材版控分層（v3.8）
+
+| 層 | 內容 | 位置 | git | 守門 |
+|---|---|---|---|---|
+| L1 原始碼與設定 | game.js、Go Server、Client 程式、assets.yaml、stage.yaml、產生器、規格、文件 | 定版家各階段目錄、`data/web-game/` | ✅ | 各 skill lint |
+| L2 可出貨素材 | 原創或授權的美術成品、UI、Logo、遊戲音效；跨遊戲共用音效 | `data/slot/<slug>/art/`；`data/web-game/pixi-game-platform/shared/sfx/` | ✅（`.gitattributes` binary） | ps_layout L-ART |
+| L3 內部參考 | 競品影片、截圖、裁圖、抽幀、原試玩包、未授權原廠素材 | 原始位置（例 `D:\kiro-cli\data\<競品>`） | ❌（只登錄 `analysis/source/manifest.json` 逐檔 sha256） | `source_media.py verify`；不得進 L2 |
+| L4 重產物 | dist、單檔 html、打包素材、執行檔、qt runs、報告資料、gdd 抽幀 | `output/` | ❌ | `.gitignore` |
+
+可出貨素材總量超過約 200 MB，或出現單檔 > 5 MB（原廠美術、影片演出）時，L2 改走 Git LFS 再議。
 
 ## 2. 十階段 × 子目錄
 
@@ -48,6 +61,7 @@ data/slot/<slug>/
 ├── README.md                          遊戲卡（doc_role: index；模式、版本、①～⑩ 狀態）
 ├── LAYOUT.md · layout-report.json     ps_layout 產物（勿手改）
 ├── publish-manifest.json              gs_publish 的 sha 清冊
+├── art/                          ⑦⑧ 可出貨素材（v3.8；L2；另計 < 5 MB、單檔 < 1 MB；README.md 記來源與改版方式）
 ├── ref/                          ⓪ 參考資源層（v3.6；額度另計 < 1 MB；只增不改；永不進 review/）
 │   ├── README.md                      ref 卡：來源總覽、版本地圖、判讀紀錄（R-id＋可重驗證據＋信心）、未收清單、待確認
 │   ├── manifest.json                  來源清冊：id、repo、commit、path、sha256、bytes、kind、version、role、status、sensitivity、outputs
@@ -58,7 +72,7 @@ data/slot/<slug>/
 │   ├── game-analysis.yaml · kb-refs.yaml · evidence.jsonl
 │   ├── report/<date>-game-analysis-<run>.md
 │   └── source/                        競品素材登錄（不放素材本體）
-│       ├── manifest.json              素材路徑 ＋ sha256 ＋ 用途
+│       ├── manifest.json              素材路徑 ＋ sha256 ＋ 用途（v3.8：群組展開為逐檔，source_media.py expand／verify）
 │       └── competitor-spec-<ver>.md   人工競品規格書（內容不改，只複製）
 ├── spec/                         ②
 │   ├── game-spec.v1.md · decisions.yaml · decisions-applied.json · config-spec.yaml
@@ -123,7 +137,8 @@ output/slot/<slug>/
 | 執行計畫、pipeline 狀態檔 | 專案層 `docs/plans/`、`docs/pipeline/<slug>.yaml` |
 | skill 規格／設計（例：pack 擴充） | 專案層 `docs/specs/`、`docs/designs/` |
 | 手法卡、方法論 | `knowledge/slot/` |
-| 競品素材本體（影片、裁圖、試玩） | 原始位置（例：`D:\kiro-cli\data\<競品>`），只在 `analysis/source/manifest.json` 登錄 |
+| 競品素材本體（影片、裁圖、試玩） | 原始位置（例：`D:\kiro-cli\data\<競品>`），只在 `analysis/source/manifest.json` 登錄（L3；v3.8 逐檔 sha256） |
+| 跨遊戲共用音效（公司音效庫） | `data/web-game/pixi-game-platform/shared/sfx/`（L2，ogg 原檔＋轉好的 m4a；v3.8） |
 | 自家遊戲原檔（機率表 xlsx、Go 快測、Server 設定、編導規格） | 來源 repo（slot_math_squad、GoldenHoyeahServer、GoldenHoyeahSlotKnowledgeBase…），只在 `ref/manifest.json` 登錄；轉錄進 `ref/`（v3.6） |
 
 ## 7. 各 skill 的讀寫點
@@ -133,7 +148,8 @@ output/slot/<slug>/
 | ark-game-spec | `gs_run --slug <slug>` 預設 run 在 `output/slot/<slug>/runs/`；`publish` → `analysis/`、`spec/`（含 `spec/gdd/`）、`analysis/source/` | 本契約 |
 | ark-game-quicktest | `quicktest/` | `spec/config-spec.yaml`、`spec/decisions.yaml` |
 | ark-game-prob | `prob/`；`ps_layout` 產 `LAYOUT.md` | `quicktest/`、`spec/`、`analysis/` |
-| ark-game-proto | 驗證台 → `proto/`；Stage → `game/pixi-client/`（清冊）＋ `output/slot/<slug>/game/pixi-client/`（建置） | `prob/prob-spec.md` |
+| ark-game-proto | 驗證台 → `proto/`；Stage → `game/pixi-client/`（清冊）＋ `output/slot/<slug>/game/pixi-client/`（建置） | `prob/prob-spec.md`；內部參考（L3，找不到 → 佔位圖） |
+| ark-web-game | ⑧ `game/go-server/`、`game/trace-map.md`；⑧-C 打包 → `output/web-game/<game>/`（L4） | `art/`（L2）、`shared/sfx/`、`quicktest/odds/` |
 | 工程 | `game/go-server/`、`game/handoff.md` | `quicktest/odds/`、`prob/` |
 
 ## 8. 相容與遷移
@@ -141,4 +157,5 @@ output/slot/<slug>/
 - v3.6：既有 `kb/xlsx/` 不搬；導入 ref 時在 `ref/manifest.json` 登錄為 legacy（`outputs` 指向 `kb/xlsx/`）。新收錄一律走 `ref/`。
 - 舊路徑在一個版本內仍可讀：`proto/stage/`（→ `game/pixi-client/`）、`server/`（→ `game/`；`server/handoff.md` → `game/handoff.md`）、`docs/report/`（→ `docs/reports/`）、`data/gdd/<slug>/`（→ `spec/gdd/` ＋ `output/slot/<slug>/gdd/`）、`artifacts/cva/<run>/`（→ `output/slot/<slug>/runs/`）。
 - 遷移只搬不刪；搬完跑 `ps_layout --game data/slot/<slug> --mode design`，error = 0 才算完成。
+- v3.8：既有遊戲的出貨美術由打包產物還原成 `art/<名稱>.webp`（位元組不變，重打包 releaseId 相同）；`assets.yaml` 的 art 來源改 `dir:`，產生器保留為 `generator:`（只在 `--regen` 時跑）。
 - 本契約改版時同步 `game-layout.yaml`，並在 `data/slot/_schema/layout.md` 與 `knowledge/slot/raw/methodology/game-pipeline-layout.md` 更新指標。

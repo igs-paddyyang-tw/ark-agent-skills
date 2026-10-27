@@ -252,3 +252,28 @@ def test_layout_v36_ref_excluded_from_data_budget_and_review_leak(game):
     assert any(x["rule"] == "L-REF" and "KB >" in x["message"] for x in v)          # ref 另計 > 1 MB → error
     assert any(x["rule"] == "L-REF" and "ref 永不進 review" in x["message"] for x in v)
     assert not any(x["rule"] == "L-SIZE" and "定版家" in x["message"] for x in v)   # ref 不吃定版家 1 MB
+
+
+def test_layout_v38_art_layer(game):
+    """契約 v3.8（素材版控分層 L2）：art/ 不計入定版家 1 MB；只收 webp／png／ogg／m4a；單檔 > 1 MB、合計 > 5 MB → error；缺 README → warning"""
+    art = game / "art"
+    art.mkdir()
+    for i in range(3):
+        (art / f"bg{i}.webp").write_bytes(b"\0" * 600_000)                  # 1.8 MB 素材：不觸發 L-SIZE 定版家額度、也不觸發 500 KB 單檔 warning
+    r = run("ps_layout.py", "--game", str(game))
+    v = r["data"]["violations"]
+    assert not any(x["rule"] == "L-SIZE" and ("./" == x["where"] or "art/" in x["where"]) for x in v), v
+    assert any(x["rule"] == "L-ART" and x["where"].endswith("README.md") and x["severity"] == "warning" for x in v)
+    assert not any(x["rule"] == "L-ART" and x["severity"] == "error" for x in v), v
+    (art / "README.md").write_text("# art\n", encoding="utf-8")
+    (art / "clip.mp4").write_bytes(b"\0" * 10)                              # 影片不收
+    (art / "huge.png").write_bytes(b"\0" * 1_100_000)                       # 單檔 > 1 MB
+    for i in range(4):
+        (art / f"more{i}.webp").write_bytes(b"\0" * 900_000)                # 合計 > 5 MB
+    r = run("ps_layout.py", "--game", str(game))
+    msgs = [(x["where"], x["message"]) for x in r["data"]["violations"] if x["rule"] == "L-ART" and x["severity"] == "error"]
+    assert any(w.endswith("clip.mp4") for w, _ in msgs), msgs
+    assert any(w.endswith("huge.png") for w, _ in msgs), msgs
+    assert any(w == "art/" for w, _ in msgs), msgs
+    lr = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
+    assert lr["facts"]["art"]["files"] >= 8

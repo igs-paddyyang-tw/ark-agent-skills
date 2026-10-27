@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.10-r10",
-  "commit": "ffa5bdb",
-  "generated_at": "2026-10-27T13:51:00+08:00",
+  "release": "skills-2026.10-r11",
+  "commit": "418a695",
+  "generated_at": "2026-10-27T14:50:57+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.2.0",
@@ -310,9 +310,9 @@
       "updated": "2026-10-20"
     },
     "ark-game-prob": {
-      "version": "1.6.0",
-      "tree_hash": "sha256:2add53851276bd76103fff20139cfe5e5f6ab427c1194c8dc334d10592580534",
-      "contract_hash": "sha256:28718ceb3d301ec16220dd5b2994a42daaf8cffa027d30658b0abd7e6a0035db",
+      "version": "1.7.0",
+      "tree_hash": "sha256:69d1facd4e6f15b52c5f44bcdb94691740e393fe461b2b09b785df4bfcdb9b87",
+      "contract_hash": "sha256:78cd6a034eb12435a51b69d98c977b5b5d438ea0fe8a4d86c434d2640020fcec",
       "status": "active",
       "category": "document",
       "depends_on": [
@@ -326,12 +326,12 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-21"
+      "updated": "2026-10-27"
     },
     "ark-game-proto": {
-      "version": "1.7.0",
-      "tree_hash": "sha256:f343490ec398afced287b96f3233370c85e82173ae0c4acbc044c0837f1c3046",
-      "contract_hash": "sha256:89dd1050f8410cba0959cfca8988ad0aa9df70dc32666172a0d0c8cbf21ec0ae",
+      "version": "1.8.0",
+      "tree_hash": "sha256:9df15e5f488ad1715272f7ff40dde224bb5aaea3b043f189e387dd5493a0a3e8",
+      "contract_hash": "sha256:328fa4d85b018155557c9d03b7ecc8188d475f42656704436748e282ed4fb842",
       "status": "active",
       "category": "view",
       "depends_on": [
@@ -353,7 +353,7 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-22"
+      "updated": "2026-10-27"
     },
     "ark-game-quicktest": {
       "version": "2.2.1",
@@ -379,9 +379,9 @@
       "updated": "2026-10-27"
     },
     "ark-game-spec": {
-      "version": "2.7.0",
-      "tree_hash": "sha256:613d57951593868b0bd7745728d0b67de6c5b5c355934da2e14fcec052cbafd9",
-      "contract_hash": "sha256:8743e1a9ab681864623c5c4da55cf5ecb7f6b2e09e2e3b7a5e7e90b603967021",
+      "version": "2.8.0",
+      "tree_hash": "sha256:f5ceeda57b6e1b26e611d80e4b51a13b08bcef843194715541f3729c84466282",
+      "contract_hash": "sha256:3468faede7a86e7da8015e024c08317b0704e7475211511f6eb8edd1ae7810ef",
       "status": "active",
       "category": "document",
       "depends_on": [
@@ -407,7 +407,7 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-21"
+      "updated": "2026-10-27"
     },
     "ark-github-cli": {
       "version": "1.0.0",

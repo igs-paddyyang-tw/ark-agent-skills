@@ -19,8 +19,8 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "1.7.0"
-  updated: 2026-10-22
+  version: "1.8.0"
+  updated: 2026-10-27
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }
@@ -92,7 +92,8 @@ metadata:
 ```
 手上有 Proto 試玩模板的 game.js（或新遊戲照 stage-game-pack.md 寫）
 ├─ 遷移：複製 game.js → 數學段不動、演出段改 Pixi（features[type].Stage、presentation.stage）
-├─ data/slot/<slug>/game/pixi-client/{game.js, stage.yaml} → python scripts/stage/stage_build.py --slug <slug> [--folder | --serve]
+├─ data/slot/<slug>/game/pixi-client/{game.js, stage.yaml} → python scripts/stage/stage_build.py --slug <slug> [--folder | --serve] [--require-assets]
+│   （素材版控分層：stage.yaml assets_base 指的內部參考〔L3〕找不到 → 佔位模式照常建置，清冊記 assets_mode；要真圖才驗收時加 --require-assets）
 │   → output/slot/<slug>/game/pixi-client/single/index.html（單檔）＋ data/.../stage-build.json 清冊（佈局契約 v3 ⑦；任意路徑用 --game --out）
 │   └─ 開 index.html：?seed= 重現、?rng=go 用 Go Float64 流；除錯「強制」分頁 = 搜尋真 seed；「服務」分頁錄製 / 重播軌跡
 ├─ 驗：node scripts/stage/tests/stage_test.js --game <新> --orig <原>（結果一致 / 契約 / 分層 / Http）；smoke.js 截圖 0 error
@@ -138,6 +139,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.8.0 | 2026-10-27 | 素材版控分層（Paddy 拍板，雛形要能從 git 一次重產）：`stage_build --slug` 找不到 `assets_base`（內部參考 L3，例：D 槽競品裁圖）→ 佔位模式照常建置（runtime 本來就以佔位圖演出），清冊 `stage-build.json` 加 `assets_mode`（ref／partial／placeholder），`assets_base` 只寫 repo 相對路徑或 `external:<最後兩層>`／`placeholder`，不再寫各機器絕對路徑（避免換機器就改到進 git 的清冊）；`--require-assets` 缺圖就擋；佔位模式且 stage.yaml 有 `bundles:` 時不產 manifest／release.json（原本必要 bundle 為空會讓 wg_release 擋下整個建置——豬來 ⑦ 在沒有 D 槽的機器建不起來的真正原因），清冊記 `release_note`；測試 `test_slug_placeholder_mode_and_require_assets` |
 | 1.7.0 | 2026-10-23 | review_build 還原局與正式 Client（十階段 S-4 試行，神燈寶藏）：`--no-play`（R-3：不收 ⑦ 單檔、不連 ⑥ 驗證台、不收 ⑥⑦ 驗收截圖，兩者內嵌線上機率等級參數）、`--exclude-link <glob>`（例 prob/prob-spec*、docs/reports/*live*）、`--client-checks <e2e 資料夾>`（⑧-C 正式 Client e2e 報告合併為 checks/client-e2e.json＋截圖 WebP）、`--play-url`（測試環境試玩網址） |
 | 1.6.2 | 2026-10-22 | engine_trace：`--config`（QT_CONFIG 傳給引擎＝線上機率 config）、`--keep`（保底／天井為線上基本規則時不被 __trialTune 關掉）、`LoadProbSetting*`、多回傳值取贏分、`go:debug randseednop=0`；smoke 點擊逾時 60 s。W1 26 款 ⑦ 一律改用線上 config 重產 |
 | 1.6.1 | 2026-10-22 | description 縮到 894 字元（prompt_lint PL-020，原 1,157 > 1,024）：連線、Go Server、⑧ 抽離、正式 Client 觸發詞移交 ark-web-game；內容不變 |

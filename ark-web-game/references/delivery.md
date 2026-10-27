@@ -65,11 +65,15 @@ python .kiro/skills/ark-web-game/scripts/wg_measure_assets.py --slug <slug> --ch
 
 ## 6. 容器發佈（本機測試環境）
 
+> 素材版控分層（0.10.0，Paddy 2026-10-27 拍板）：L1 原始碼與設定、L2 可出貨素材（進 git）、L3 內部參考（只在 `ref/manifest.json` 登錄）、L4 重產物（output，不進 git）。驗收：乾淨 clone 不帶任何外部資料夾，`docker compose build` 成功。方法論見 aidev 知識庫 `knowledge/slot/raw/methodology/game-assets-git-layering.md`。
+
 > 參考實作：huffnpuff（`data/web-game/pixi-game-platform/deploy/huffnpuff/`），設計與手冊見 `docs/designs/2026-10-22-web-game-docker-deploy-design.md`、`docs/2026-10-22-web-game-docker-deploy-manual.md`；事實見知識庫 raw `2026-10-22-docker-deploy-notes`。
 
 - 兩個映像：Server（Go 靜態檔、alpine、非 root、HEALTHCHECK `/healthz`）；Client（node 建置＋測試 → nginx）。只對外開 web 一個埠。
-- 素材與 odds 用 BuildKit `additional_contexts` 帶入，不複製進程式碼樹；缺 `manifest.json` 建置失敗。
+- 素材打包在映像建置內完成（0.10.0）：`Dockerfile.client` 第一階段（python＋pyyaml）跑 `wg_pack_assets`，讀 git 裡的 L2 素材（`additional_contexts`：`art`＝`data/slot/<slug>/art`、`wgtools`＝本 skill `scripts/`；共用音效在 build context 的 `shared/sfx/`），不再依賴 `output/`。L2 成品直通，打包階段不需要 Pillow／ffmpeg；缺 `manifest.json` 建置失敗。odds 仍在 go-server `configs/`（R-3）。
 - nginx：`/ws` 走 Upgrade、逾時大於 Server 閒置秒數；index、manifest、release no-cache，雜湊檔 immutable；**不要在 server 區塊寫 `types {}`**（會蓋掉整張 MIME 表）。
+- 安全標頭（0.11.0，上線前資安 DEP-7／DEP-8）：`deploy/_shared/security-headers.conf`（nosniff、`X-Frame-Options SAMEORIGIN`＋CSP `frame-ancestors 'self'`、`Referrer-Policy no-referrer`、Permissions-Policy；HSTS 只在 HTTPS 正式網域開）由 Dockerfile.client 複製到 `/etc/nginx/snippets/`；server 層 `server_tokens off`＋include。**nginx 陷阱**：location 只要有自己的 `add_header` 就不繼承 server 層標頭，所以每個帶 `add_header` 的 location 都要再 include（`sec_check` 靜態會檢查）。
 - Client 預設連同站 `/ws`；每個瀏覽器自產訪客 arkId，避免 KickSameID 互踢。
 - 對外測試用 cloudflared Quick Tunnel（compose profile）；Server 是 `-dev`，測完即停。正式環境另走 §4 與設計文件第 8 節。
+- **dev 與 release 分開（0.11.0）**：`compose.yaml`＝dev（command 明確帶 `-dev`、`-balance`、可開 tunnel）；`compose.release.yaml`＝release 覆寫檔（`docker compose -f compose.yaml -f compose.release.yaml up`：不帶 `-dev`、加 `-redis` 與 Redis 服務）。Server 映像**預設 CMD 不帶 `-dev`**——漏給 command 時因缺 `-redis` 拒絕啟動（fail closed），不會退回開發模式。Client 正式 build 不產 source map（`PGP_SOURCEMAP=1` 才產，除錯用）。上線前跑 `tools/sec_check.py --profile prod`（讀 release 覆寫檔），P0／P1 無 FAIL 才放行。release 覆寫檔目前是「正式設定預演」：帳務仍是 DevWallet，平台錢包轉接另做。
 - 多款並存：每款一個 `deploy/<game>/`（compose 專案名＝遊戲），Web 埠錯開（豬來蓋福 3030、神燈寶藏 3031）。還原局 odds 放 go-server `configs/`、映像不推外部 registry（R-3）。

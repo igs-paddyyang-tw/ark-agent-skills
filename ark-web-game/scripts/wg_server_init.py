@@ -62,7 +62,8 @@ USER app
 EXPOSE 8787
 HEALTHCHECK --interval=10s --timeout=3s --retries=6 CMD wget -qO- http://127.0.0.1:8787/healthz >/dev/null || exit 1
 ENTRYPOINT ["/app/game-server"]
-CMD ["-addr", ":8787", "-dev", "-engine", "{engine}", "-odds", "/app/odds/odds.json"]
+# 預設不帶 -dev（fail closed：沒有 -redis 會拒絕啟動）；測試環境由 compose command 明確帶 -dev
+CMD ["-addr", ":8787", "-engine", "{engine}", "-odds", "/app/odds/odds.json"]
 """
 DOCKERIGNORE = "*.exe\nbin/\nout/\nreports/\n**/*_test.go\n**/testdata/\n"
 

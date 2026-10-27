@@ -20,8 +20,8 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "2.7.0"
-  updated: 2026-10-21
+  version: "2.8.0"
+  updated: 2026-10-27
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -71,7 +71,7 @@ metadata:
 | `scripts/pack/` | `pack_resolve.py`（`--list` / `--domain`）、`pack_lint.py`（`--all`）、`pack_new.py` | 新增 / 修改 domain pack |
 | `_lib/` | `run_common.py`（envelope / run / manifest / pack 載入 / evidence / spec parser / atlas / ffmpeg；四份舊 common 的超集）、`pack_common.py`、`llm_adapter.py`、`guard.py`（注入 regex 唯一一份）、`md_render.py`（content-src 戳記）| 所有 stage import |
 | `domains/` | `_core` / `_template` / `slot-game` / `fish-game` / `fast-game`（原 domain pack 註冊庫原封搬入）；`ARK_GAME_DOMAINS_DIR` 可覆寫（舊 `ARK_GAME_DOMAINS_SKILL` 相容一版）| 契約見 `references/pack-contract.md` |
-| `references/game-layout-contract.md`、`game-layout.yaml` | **遊戲產出佈局契約 v3.6（SSOT）**：`data/slot/<slug>/` ⓪ `ref/` 參考資源層（v3.6）＋十階段子目錄（analysis／spec／prob／quicktest／proto／game{pixi-client ⑦, go-server ⑧}／review ⑨ 送審拍板包／docs ⑩ 上線成效）與 `output/slot/<slug>/` 工作檯；ps_layout、quicktest、proto 依此讀寫 | 開新遊戲、publish、搬移產物前 |
+| `references/game-layout-contract.md`、`game-layout.yaml` | **遊戲產出佈局契約 v3.8（SSOT）**：素材版控分層 L1～L4（v3.8：`art/` 可出貨素材進 git、內部參考只在 `analysis/source/manifest.json` 逐檔登錄）＋ `data/slot/<slug>/` ⓪ `ref/` 參考資源層（v3.6）＋十階段子目錄（analysis／spec／prob／quicktest／proto／game{pixi-client ⑦, go-server ⑧}／review ⑨ 送審拍板包／docs ⑩ 上線成效）與 `output/slot/<slug>/` 工作檯；ps_layout、quicktest、proto 依此讀寫 | 開新遊戲、publish、搬移產物前 |
 | `references/run-contract.md` | run 目錄、evidence、後處理守門、game-analysis / kb-refs / spec md / config-spec / benchmark 契約（自 1.x SKILL.md 原文抽出）| 改任何 stage 腳本前 |
 | `references/pack-contract.md`、`gdd-contract.md`、`atlas-contract.md`、`gdd-template-anatomy.md`、`video-calibration.md` | 各 stage 契約與調參 | 對應 stage |
 | `references/concept-gdd-template.md`、`genre-guides.md`、`concept-example/` | **創作模式**（純提詞）：只有一句話概念時產 10 章 GDD 或 One Pager | 沒有影片也沒有 xlsx 時 |
@@ -134,6 +134,12 @@ data/atlas/<slug>/ atlas.yaml · NN-*.md · assets/figures/ · site/index.html �
 | bundle | md 段注入（script／iframe／on*=）、md 圖找不到 → exit 2；預算 `budget_mb`、內嵌後殘留本機圖片連結 → exit 3；`--check` 戳記過期 → exit 3 | 寄出的 HTML 破圖、爆大小、夾帶可執行碼 |
 | atlas | `atlas_lint` 10 組（含 ATL-NUM：書裡沒有 spec 沒有的數字、ATL-STALE）| 憑空數字、過期來源 |
 | pack | `pack_lint` 20 餘組（PACK-ITEMS 恰 10 項、PACK-KB-TAGS 受控詞彙…）| pack 契約破壞 |
+
+## 2.8 變更：佈局契約 v3.8（素材版控分層）
+
+- 2026-10-27 使用者決議：素材要跟製程產出一起版控，否則雛形產不出來。契約新增 §1a L1～L4 與定版家 `art/`（L2 可出貨素材，⑦⑧ 共用，另計 < 5 MB；ps_layout L-ART，ark-game-prob 1.7.0）；共用音效 `data/web-game/pixi-game-platform/shared/sfx/`。
+- 競品素材（L3）仍不進 git：`analysis/source/manifest.json` 由群組展開為逐檔 sha256（專案 `scripts/knowledge/source_media.py expand／verify`）；publish 寫入的群組格式相容。
+- 消費端：ark-web-game 0.10.0（打包讀 `art/`、成品直通）、ark-game-proto 1.8.0（⑦ 缺內部參考 → 佔位圖建置）。
 
 ## 2.4 變更：publish stage（①② 定版件 → data/slot/<slug>，G-1）
 

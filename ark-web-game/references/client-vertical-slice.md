@@ -62,13 +62,13 @@ python .kiro/skills/ark-web-game/scripts/wg_client_init.py --sync-template --fro
 - 不直接在遊戲碼用 ArkConn；一律經 GameService。
 - 不把競品裁圖、影片截圖、平台樣圖（含真人頭像）放進正式 Client；不美化、不臨摹它們。
 
-## 6. 素材（0.7.0）
+## 6. 素材（0.7.0；0.10.0 改版控分層）
 
 | 項目 | 做法 |
 |---|---|
-| 來源 | 原創美術：遊戲自帶產生器（例 `games/huffnpuff/art/gen_art.py`，程式繪製 SVG）；音效：公司共用音效庫（原檔不進 repo，`--set sfx=<資料夾>` 或環境變數）。美術組交圖：同名 PNG／WebP 放 override 資料夾即取代，程式不改 |
-| 設定 | `games/<game>/assets.yaml`（pgp-assets/1）：sources、image（WebP 品質）、audio（ogg＋m4a）、bundles（required、images 別名 → 來源、sounds） |
-| 打包 | `python .kiro/skills/ark-web-game/scripts/wg_pack_assets.py --config games/<game>/assets.yaml --out <aidev>/output/web-game/<game> --set sfx=<資料夾> [--svg-engine auto／cairo／browser]` → `assets/<bundle>/<別名>.<雜湊8>.webp`、`manifest.json`、`release.json`（打包後立即 verify）。需要 Pillow、SVG 轉圖（cairosvg，或 node＋playwright 走瀏覽器）、ffmpeg（m4a）。cairosvg 不支援 paint-order 與文字漸層；兩種方式尺寸相同、字形略有差異 |
+| 來源 | **L2 可出貨素材在 git**（0.10.0）：美術成品 `<aidev>/data/slot/<slug>/art/<名稱>.webp`（⑦⑧ 共用；ps_layout L-ART 守門：每款 ≤ 5 MB、單檔 ≤ 1 MB）；公司共用音效 `pixi-game-platform/shared/sfx/`（ogg 原檔＋轉好的 m4a）。產生器（例 `games/<game>/art/gen_art.py`）只在美術改版時跑（`--regen art --export art=<L2 資料夾>`，人工確認後提交）。美術組試圖：同名 PNG／WebP 放 override 環境變數資料夾即取代；正式換圖＝同名提交到 L2 |
+| 設定 | `games/<game>/assets.yaml`（pgp-assets/1）：sources（`art: { dir: ../../../../slot/<slug>/art, generator: art/gen_art.py, override: { env: … } }`、`sfx: { dir: ../../shared/sfx }`）、image（WebP 品質）、audio（ogg＋m4a）、bundles（required、images 別名 → 來源、sounds）。來源取用順序：override → `--set` → dir → env → generator |
+| 打包 | `python .kiro/skills/ark-web-game/scripts/wg_pack_assets.py --config games/<game>/assets.yaml --out <aidev>/output/web-game/<game>`（不用 `--set`）→ `assets/<bundle>/<別名>.<雜湊8>.webp`、`manifest.json`、`release.json`（打包後立即 verify）。**直通**：成品 WebP（無 scale／max_side）原位元組出貨、同名 m4a 直接用，同一份 L2 打幾次 releaseId 都一樣；全部直通時只需 pyyaml。重產（SVG／PNG 來源）才需要 Pillow、SVG 轉圖（cairosvg，或 node＋playwright）、ffmpeg；cairosvg 不支援 paint-order 與文字漸層，字形依本機字型而異——所以出貨以 L2 成品為準，不以產生器為準 |
 | 建置 | `PGP_ASSETS_DIR=<--out 資料夾> pnpm --filter <game> build`（Vite publicDir，dist 帶 `assets/`；程式 chunk 在 `js/`） |
 | 執行 | Boot 載入步驟：讀 manifest → 必要 bundle 載完才可玩（失敗 → `ASSET_LOAD_FAILED`）；可玩後背景載其餘 bundle 與音效；抽到玩法時 `Art.ensureFor(featureArt)` 先確保玩法素材；沒載到的圖退回佔位圖形 |
 | 音效 | WebAudio；首次點擊或按鍵後才出聲（瀏覽器規定）；依 `canPlayType` 挑 ogg 或 m4a（iOS Safari）；`?mute` 靜音 |

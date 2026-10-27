@@ -48,7 +48,7 @@ def rt_url(s: str) -> str:
     return f"runtime/_src/{s[5:]}" if s.startswith("@src/") else f"runtime/{s}"
 PIXI = HERE.parent / "vendor" / "pixi.min.js"
 TEMPLATE = HERE / "index.template.html"
-VERSION = "1.5.0"
+VERSION = "1.8.0"
 WG_RELEASE = HERE.parents[2] / "ark-web-game" / "scripts" / "wg_release.py"   # 同層 skill（Release Manifest；1.5.0）
 
 
@@ -302,6 +302,26 @@ def load_stage_yaml(p: pathlib.Path) -> dict:
     return cfg
 
 
+def assets_label(p: pathlib.Path, repo: pathlib.Path, found: bool) -> str:
+    """寫進清冊（stage-build.json，進 git）的素材來源標記：repo 內給相對路徑；repo 外只寫「external:<最後兩層>」，不寫各機器的絕對路徑（1.8.0）"""
+    if not found:
+        return "placeholder"
+    try:
+        return p.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        return "external:" + "/".join(p.resolve().parts[-2:])
+
+
+def resolve_assets_found(base_dir: pathlib.Path, cands) -> tuple[pathlib.Path, bool]:
+    """同 resolve_assets，另回傳是否真的找到素材資料夾（找不到 → 佔位模式：runtime 以佔位圖演出，雛形照常建置）"""
+    env = os.environ.get("STAGE_ASSETS")
+    lst = ([env] if env else []) + (cands if isinstance(cands, list) else [cands] if cands else [])
+    if not lst:
+        return base_dir, True                                # 沒設 assets_base：素材相對 game.js（例：無素材的佔位遊戲）
+    p = resolve_assets(base_dir, cands)
+    return p, p != base_dir
+
+
 def resolve_assets(base_dir: pathlib.Path, cands) -> pathlib.Path:
     """assets_base 可給字串或清單（Windows 路徑 / WSL 路徑 / 相對路徑），取第一個存在的；環境變數 STAGE_ASSETS 優先"""
     env = os.environ.get("STAGE_ASSETS")
@@ -324,12 +344,16 @@ def slug_build(a) -> None:
         data = repo / "data" / "slot" / a.slug / "proto" / "stage"
     yml = load_stage_yaml(data / "stage.yaml")
     game = data / str(yml.get("game", "game.js"))
-    assets = resolve_assets(data, yml.get("assets_base"))
+    assets, found = resolve_assets_found(data, yml.get("assets_base"))
+    configured = bool(os.environ.get("STAGE_ASSETS") or yml.get("assets_base"))   # 沒設 assets_base＝遊戲包不用外部素材（例：神燈寶藏 ⑦ 佔位貼圖）
     out = repo / "output" / "slot" / a.slug / "game" / "pixi-client"
     max_side = int(yml.get("max_side", a.max_side) or 0)
     odds = (data / str(yml["odds"])).resolve() if yml.get("odds") else None   # stage.yaml 的 odds:（相對本目錄；1.1.2）
     service = yml.get("service") or None                   # 1.5.0：結果來源（local／http／ws）→ window.__STAGE_SERVICE；網址參數仍可覆寫
     bundles = yml.get("bundles") or None                   # 1.5.0：分包 → folder/manifest.json＋release.json
+    release_note = None
+    if bundles and not found:                              # 1.8.0：佔位模式沒有素材可分包 → 不產 release（否則必要 bundle 為空，wg_release 會擋下整個建置）
+        bundles, release_note = None, "佔位模式（找不到內部參考素材）：不產 manifest／release.json；要發布分包請在有素材的機器建置"
     rmeta = {"game_key": str(yml.get("game_key") or a.slug.split("-")[0]), "version": str(yml.get("version") or "0.0.0"), "game_id": a.slug}
     single = build(game, out / "single", assets, True, int(yml.get("inline_quality", a.inline_quality)), max_side, odds, service)
     folder = None
@@ -338,14 +362,18 @@ def slug_build(a) -> None:
     man = {"schema": "proto-stage-build/1", "slug": a.slug, "skill": f"ark-game-proto {VERSION} stage", "game": game.relative_to(repo).as_posix(),
            "game_sha16": hashlib.sha256(game.read_bytes()).hexdigest()[:16],
            "odds": odds.relative_to(repo).as_posix() if odds else None, "odds_sha16": hashlib.sha256(odds.read_bytes()).hexdigest()[:16] if odds else None,
-           "assets_base": str(assets), "assets": single["assets"], "missing": single["missing"],
+           "assets_base": assets_label(assets, repo, found) if configured else "none",
+           "assets_mode": ("none" if not configured and not single["missing"] else "ref" if found and not single["missing"] else "placeholder" if not found else "partial"),
+           "assets": single["assets"], "missing": single["missing"],
            "outputs": {"single": (out / "single" / "index.html").relative_to(repo).as_posix(), "single_bytes": single["bytes"], "folder": (out / "folder").relative_to(repo).as_posix() if folder else None},
-           "service": service, "release": ({k: v for k, v in folder["release"].items() if k in ("releaseId", "bundles", "unassigned")} if folder and folder.get("release") else None),
-           "runtime": "output 為重產物（不入 git）；依 data/slot/_schema/layout.md：data < 1 MB、圖檔不入 data"}
+           "service": service, **({"release_note": release_note} if release_note else {}), "release": ({k: v for k, v in folder["release"].items() if k in ("releaseId", "bundles", "unassigned")} if folder and folder.get("release") else None),
+           "runtime": "output 為重產物（L4，不入 git）；缺的素材 runtime 以佔位圖演出（雛形照常可玩）；可出貨素材在 data/slot/<slug>/art（L2），內部參考只在 ref/manifest.json 登錄（L3）"}
     (data / "stage-build.json").write_text(json.dumps(man, ensure_ascii=False, indent=1), encoding="utf-8")
     if single["bytes"] > a.budget_mb * 1e6:
         emit(man, False, "GATE_BLOCKED", f"單檔 {single['bytes'] / 1e6:.1f} MB 超過 {a.budget_mb} MB")
-    man["delivery"] = f"{man['outputs']['single']}（{single['bytes'] / 1e6:.2f} MB）{('＋ ' + man['outputs']['folder'] + '/') if man['outputs']['folder'] else ''}{('｜release ' + man['release']['releaseId']) if man.get('release') else ''}｜素材 {single['assets']}（缺 {len(single['missing'])}）｜清冊 {(data / 'stage-build.json').relative_to(repo).as_posix()}"
+    if a.require_assets and single["missing"]:
+        emit(man, False, "GATE_BLOCKED", f"--require-assets：缺 {len(single['missing'])} 個素材（assets_mode={man['assets_mode']}）；設 STAGE_ASSETS 或 stage.yaml assets_base 指到參考素材")
+    man["delivery"] = f"{man['outputs']['single']}（{single['bytes'] / 1e6:.2f} MB）{('＋ ' + man['outputs']['folder'] + '/') if man['outputs']['folder'] else ''}{('｜release ' + man['release']['releaseId']) if man.get('release') else ''}｜素材 {single['assets']}（缺 {len(single['missing'])}；{man['assets_mode']}）｜清冊 {(data / 'stage-build.json').relative_to(repo).as_posix()}"
     if a.serve:
         print(json.dumps({"success": True, "data": man}, ensure_ascii=False), flush=True)
         serve(out / "folder", a.port)
@@ -371,6 +399,7 @@ def main():
     ap.add_argument("--budget-mb", type=float, default=15.0)
     ap.add_argument("--serve", action="store_true")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--require-assets", action="store_true", help="缺任何素材就擋（預設：缺圖改佔位、照常建置；1.8.0）")
     a = ap.parse_args()
     if a.slug:
         return slug_build(a)

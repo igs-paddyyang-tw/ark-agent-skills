@@ -24,6 +24,8 @@
              來源的 outputs 都要存在（error）；ref/ 下每個檔都要被某來源的 outputs 涵蓋（error）；只准文字格式 .md/.csv/.json/.yaml/.txt（原檔不進 data → error）；
              ref 另計 > 1 MB → error；role／status／sensitivity 不在枚舉 → error；README 缺五區塊（來源總覽、版本地圖、判讀紀錄、未收清單、待確認）→ warning；
              來源 repo 在本機時（--source-root 或 manifest.source_roots）重算 sha256 不符 → warning；review/ 清冊連到 ref/ → error
+  L-ART      art/ 可出貨素材（契約 v3.8，選配）：只收 webp／png／ogg／m4a（＋README.md、json）→ 其他 error；單檔 > 1 MB → error；合計 > 5 MB → error；
+             缺 README.md → warning；art/ 不計入 L-SIZE 的定版家 1 MB 額度（素材版控分層 L2：⑦⑧ 共用、出貨位元組＝git 裡的檔）
   L-RTP      docs/ 下（人寫的）md 提到的「Total RTP / 總 RTP」實測數字 ≠ rtp-report（±0.01 個百分點）→ warning（列檔名:行號；數字前後出現 golden／目標／理論／參數表者略過）
 
 用法: python ps_layout.py --game output/games/<slug> [--mode restore|design] [--write-md] [--strict]
@@ -221,7 +223,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
     review = game / "review"
     gdir = game / "game"
     for f in game.rglob("*"):
-        if not f.is_file() or "_retired" in f.parts or review in f.parents or (game / "ref") in f.parents:   # v3.6：ref/ 另計（L-REF）
+        if not f.is_file() or "_retired" in f.parts or review in f.parents or (game / "ref") in f.parents or (game / "art") in f.parents:   # v3.6：ref/ 另計（L-REF）；v3.8：art/ 另計（L-ART）
             continue
         suf = f.suffix.lower()
         if suf in BIN_EXT:
@@ -243,6 +245,23 @@ def check(game: pathlib.Path, mode: str) -> dict:
         add("L-SIZE", "./", f"定版家 {data_bytes // 1024} KB > {DATA_KB} KB（不含 game/、review/、*.html）：可重產的中間檔移到 output/slot/<slug>/", "warning")
     facts["size"] = {"max_file": max_file[0], "max_bytes": max_file[1], "exe_count": exe_count, "config_versions": len(cfg_jsons),
                      "data_kb": data_bytes // 1024, "data_limit_kb": DATA_KB}
+
+    # L-ART（契約 v3.8，2026-10-27：素材版控分層 L2＝可出貨素材進 git；⑦⑧ 共用；只放原創或授權素材）
+    art = game / "art"
+    if art.is_dir():
+        ART_KB, ART_FILE_KB, ART_EXT = 5120, 1024, {".webp", ".png", ".ogg", ".m4a", ".md", ".json"}
+        files = [f for f in art.rglob("*") if f.is_file()]
+        total = sum(f.stat().st_size for f in files)
+        for f in files:
+            if f.suffix.lower() not in ART_EXT:
+                add("L-ART", rel(f), f"art/ 只收 webp／png／ogg／m4a（＋README.md、清單 json），不收 {f.suffix or '無副檔名'}：影片、原始檔（psd 等）、競品素材走 ref/manifest.json 登錄（L3）")
+            elif f.stat().st_size > ART_FILE_KB * 1024:
+                add("L-ART", rel(f), f"單檔 {f.stat().st_size // 1024} KB > {ART_FILE_KB} KB：縮圖或拆圖；超過請改 Git LFS 再議")
+        if total > ART_KB * 1024:
+            add("L-ART", "art/", f"art/ 合計 {total // 1024} KB > {ART_KB} KB（契約 v3.8）：降品質或把非出貨素材移出")
+        if not (art / "README.md").is_file():
+            add("L-ART", "art/README.md", "art/ 缺 README.md（來源、產生器、授權、改版方式）", "warning")
+        facts["art"] = {"files": len(files), "total_kb": total // 1024, "limit_kb": ART_KB}
 
     # L-REVIEW（契約 v3.3：review/ 拍板包另計 5 MB；給人拍板 / demo 的成品，禁二進位與影片）
     if review.is_dir():

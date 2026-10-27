@@ -5,6 +5,7 @@ const assetsDir = process.env.PGP_ASSETS_DIR;
 export default defineConfig({
   base: './',
   publicDir: assetsDir || 'public',
-  build: { assetsDir: 'js', target: 'es2022', sourcemap: true, rollupOptions: { output: { manualChunks: { pixi: ['pixi.js'] } } } },
+  // source map：正式 build 不產（上線前資安 CLIENT-2／DEP-6：.map 會公開原始碼）；要除錯建置結果時 PGP_SOURCEMAP=1。vite dev server 本來就有 source map
+  build: { assetsDir: 'js', target: 'es2022', sourcemap: process.env.PGP_SOURCEMAP === '1', rollupOptions: { output: { manualChunks: { pixi: ['pixi.js'] } } } },
   test: { environment: 'node', include: ['test/**/*.test.ts'] },
 });

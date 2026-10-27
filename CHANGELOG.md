@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-10-27 (遊戲製程：素材版控分層 L1～L4（佈局契約 v3.8）＋網頁遊戲上線前資安；ark-web-game 0.11.1、game-proto 1.8.0、game-prob 1.7.0、game-spec 2.8.0)
+
+> aidev 回貢（豬來蓋福、神燈寶藏兩款實作與驗收）。
+
+### 素材版控分層：讓 ⑦ 試玩版與 ⑧ 正式 Client 能從 git 一次重產
+- **ark-game-spec 2.8.0**：佈局契約 v3.8——§1a L1 原始碼／L2 可出貨素材（定版家 `art/`，另計 < 5 MB、單檔 < 1 MB）／L3 內部參考（只登錄 `analysis/source/manifest.json` 逐檔 sha256）／L4 重產物；`game-layout.yaml` 加 `asset_layers`、`art` 額度
+- **ark-game-prob 1.7.0**：ps_layout 新增 **L-ART**（art/ 只收 webp／png／ogg／m4a＋README、單檔 > 1 MB、合計 > 5 MB → error；不計入定版家 1 MB）
+- **ark-game-proto 1.8.0**：`stage_build --slug` 找不到內部參考素材 → 佔位模式照常建置（`stage.yaml` 有 `bundles:` 時不產分包 release，否則必要 bundle 為空會擋下整個建置）；清冊加 `assets_mode`、不再寫各機器絕對路徑；`--require-assets`
+- **ark-web-game 0.10.0**：`wg_pack_assets` 來源順序 override → --set → dir → env → generator；成品 WebP 與同名音效**直通**（出貨位元組＝git 裡的檔，兩款重打包 releaseId 不變）；`--regen`／`--export` 凍結美術成品；Docker 建置內打包、不依賴 output
+- 驗收（`git archive` 乾淨目錄、沒有 output 與外部資料夾）：Client 測試 69／69、兩款打包／建置／⑦ stage_build 成功
+
+### 網頁遊戲上線前資安（ark-web-game 0.11.0／0.11.1）
+- 範本預設安全：`wg_server_init` 產的 Server 映像預設 CMD **不帶 `-dev`**（fail closed：缺 `-redis` 拒絕啟動）；client-template 正式 build **不產 source map**（`PGP_SOURCEMAP=1` 才產）
+- references/delivery §6：dev（`compose.yaml`）與 release（`compose.release.yaml` 覆寫檔）分開；nginx 安全標頭 snippet＋`server_tokens off`，以及「location 有自己的 `add_header` 就不繼承 server 層標頭」的陷阱
+- 決策樹加「資安」分支、守門表加資安兩列；client-template 附 `tools/sec_check.py`（唯讀稽核器：只讀設定與打包、唯讀 GET）
+- 兩款實測：上線前判定由 4 FAIL、2 WARN → 0 FAIL、0 WARN
+
+### 其他
+- ark-web-game 合併上游 0.9.2（category → scaffolder）
+- 測試：web-game 17、game-proto 37（12 skip）、game-prob 93、game-spec 78；audit P0／P1 = 0
+- manifest `skills-2026.10-r11`
+
 ## 2026-10-27 (BRAIN.md 統一「判準＋角色」：ark-agent-init 2.5.0、bot-builder 3.2.0；docker-deploy 1.1.0 補 Node／Go)
 
 ### BRAIN.md 同名兩種內容 → 統一（Paddy 定：方案 1）

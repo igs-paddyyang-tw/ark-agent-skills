@@ -148,3 +148,30 @@ def test_bundles_release_and_service(tmp_path):
     hit.write_bytes(png + b"tampered")
     v = subprocess.run([sys.executable, "-X", "utf8", str(wg), "verify", "--dir", str(out), "--release", str(out / "release.json")], capture_output=True, text=True, encoding="utf-8")
     assert v.returncode == 1 and "b.png" in v.stdout
+
+
+def test_slug_placeholder_mode_and_require_assets(tmp_path):
+    """1.8.0：assets_base 指到不存在的外部參考資料夾 → 佔位模式照常建置（清冊不寫各機器絕對路徑）；--require-assets 才擋"""
+    repo = tmp_path / "repo"
+    (repo / ".kiro").mkdir(parents=True)
+    d = repo / "data" / "slot" / "demo" / "game" / "pixi-client"
+    d.mkdir(parents=True)
+    shutil.copy2(DEMO, d / "game.js")
+    (d / "stage.yaml").write_text("game: game.js\nassets_base:\n  - D:/no/such/ref/folder\n  - /mnt/d/no/such/ref/folder\n"
+                                  "game_key: demo\nversion: 1.0.0\nbundles:\n  demo-core:\n    required: true\n    include: [\"../art/**\"]\n", encoding="utf-8")
+    rc, j = run("--slug", "demo", "--repo", repo)
+    assert rc == 0, j
+    man = json.loads((d / "stage-build.json").read_text(encoding="utf-8"))
+    assert man["assets_mode"] == "placeholder" and man["assets_base"] == "placeholder", man
+    assert str(tmp_path) not in json.dumps(man, ensure_ascii=False), "清冊不得寫入本機絕對路徑"
+    assert man["release"] is None and "佔位模式" in man.get("release_note", ""), "佔位模式不產 release（必要 bundle 為空不得擋建置）"
+    if man["missing"]:
+        rc2, j2 = run("--slug", "demo", "--repo", repo, "--require-assets")
+        assert rc2 != 0 and "require-assets" in json.dumps(j2, ensure_ascii=False)
+    # 參考資料夾在 repo 外且存在 → external:<最後兩層>
+    ext = tmp_path / "ext" / "refs"
+    ext.mkdir(parents=True)
+    (d / "stage.yaml").write_text(f"game: game.js\nassets_base: {ext.as_posix()}\n", encoding="utf-8")
+    rc3, _ = run("--slug", "demo", "--repo", repo)
+    man3 = json.loads((d / "stage-build.json").read_text(encoding="utf-8"))
+    assert rc3 == 0 and man3["assets_base"] == "external:ext/refs" and man3["assets_mode"] in ("ref", "partial")

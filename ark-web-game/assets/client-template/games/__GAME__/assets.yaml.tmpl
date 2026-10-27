@@ -1,13 +1,16 @@
 # __NAME__ 素材設定（ark-web-game wg_pack_assets；格式 pgp-assets/1）
-#   python <aidev>/.kiro/skills/ark-web-game/scripts/wg_pack_assets.py --config games/__GAME__/assets.yaml --out <output 資料夾> [--set 來源=資料夾]
+#   python <aidev>/.kiro/skills/ark-web-game/scripts/wg_pack_assets.py --config games/__GAME__/assets.yaml --out <output 資料夾>（素材都在 repo，不用 --set）
 #   打包後：game.config.ts 的 assets 改 './assets/manifest.json'，建置時 PGP_ASSETS_DIR=<output 資料夾>
 #   畫面認得的別名：bg_main、logo、reel_frame、reel_bg、ui_panel、ui_spin、ui_auto、ui_plus、ui_minus、sym_<符號代號>、win_big／mega／super；音效 sfx_spin、sfx_stop、sfx_prewin、sfx_alarm、sfx_board_start、sfx_board_end、sfx_fast_on、sfx_fast_off、sfx_info
 schema: pgp-assets/1
 game_key: __KEY__
 version: 0.1.0
 sources:
-  art: { dir: art }                     # 圖檔資料夾（svg／png／webp）；原創美術或美術組交件
-  # sfx: { env: GAME_SFX_DIR }          # 音效資料夾（原檔不進 repo）
+  # 素材版控分層（ark-web-game 0.10.0）：可出貨素材（L2）在 git，出貨位元組＝git 裡的檔
+  #   美術成品：<aidev>/data/slot/<slug>/art/<名稱>.webp（⑦⑧ 共用；ps_layout L-ART：每款 ≤ 5 MB、單檔 ≤ 1 MB）
+  #   有產生器時加 generator: art/gen_art.py（只在 --regen art 時跑；改版後 --export art=<L2 資料夾> 再提交）
+  art: { dir: ../../../../slot/__GAME__/art }
+  sfx: { dir: ../../shared/sfx }        # 公司共用音效（ogg 原檔＋轉好的 m4a）
 image: { format: webp, quality: 86 }
 audio: { formats: [ogg, m4a] }
 bundles:

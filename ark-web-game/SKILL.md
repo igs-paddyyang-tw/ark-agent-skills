@@ -19,7 +19,7 @@ metadata:
   category: scaffolder
   form: executor
   domain: game
-  version: "0.9.2"
+  version: "0.11.1"
   updated: 2026-10-27
   outputs:
     - { format: data, audience: ai }
@@ -63,7 +63,7 @@ metadata:
 | `scripts/wg_measure_assets.py` | 量素材大小並依 bundles 分組（原檔或單檔建置內嵌兩種來源）；`--check` 驗合計與不重疊 | 定 Bundle 與預算前 |
 | `scripts/wg_draw_scan.js` | ⑧ 第 1 步：掃 game.js 抽值點與順序 → trace-map 草稿；`--dump-spec` 輸出設定正本；`--compare` 對既有 trace-map | 抽離開始、改 game.js 數學後 |
 | `scripts/wg_server_init.py` | 由 `assets/go-server-template` 產 Go Server 骨架；`--sync-template` 由參考 Server 更新範本 | ⑧ 第 2 步 |
-| `scripts/wg_pack_assets.py` | 正式 Client 素材打包：依遊戲 `assets.yaml`（schema pgp-assets 第 1 版）把原創美術產生器／素材資料夾轉 WebP、音效轉 ogg＋m4a、產 PixiJS manifest 與 release.json（並 verify） | 素材或美術改動後、建置前 |
+| `scripts/wg_pack_assets.py` | 正式 Client 素材打包：依遊戲 `assets.yaml`（schema pgp-assets 第 1 版）讀 git 裡的 L2 素材（成品 WebP、ogg＋m4a 直通，位元組不變），產 PixiJS manifest 與 release.json（並 verify）；`--regen`＋`--export` 由產生器重產並凍結回 L2 | 建置前（Docker 映像內也會跑）；美術改版時 |
 | `scripts/wg_svg_render.mjs` | 瀏覽器（Playwright Chromium）SVG → PNG；wg_pack_assets 沒有 cairosvg 或 `--svg-engine browser` 時呼叫 | 由 wg_pack_assets 呼叫 |
 | `scripts/wg_client_init.py` | 由 `assets/client-template` 產正式 Client monorepo 或加一款遊戲；`--sync-template` 由參考 Client 更新範本 | 建正式 Client |
 | `assets/go-server-template/` | Go Server 範本（ark-go 複本、api、round、result、prob 介面；34 檔） | wg_server_init 使用，勿手改 |
@@ -86,6 +86,11 @@ metadata:
 │   └─ references/client-vertical-slice.md：wg_client_init → 設定與 Presenter → 素材（assets.yaml → wg_pack_assets）→ e2e（真 Server）→ trace-parity
 ├─ 交付
 │   └─ references/delivery.md：wg_measure_assets → bundles → wg_release pack → 上傳 → wg_release verify
+├─ 資安（每款都做，0.11.1；事實與踩雷見 knowledge/webgame/raw/2026-10-23-web-game-security-hardening.md「新遊戲開發時的資安檢查點」）
+│   ├─ 開新遊戲：deploy/<game> 從既有遊戲複製（compose.yaml＝dev、compose.release.yaml＝release、nginx.conf 已含 security-headers）；
+│   │   Server 映像預設 CMD 不帶 -dev、Client 正式 build 不產 source map（範本已是安全預設，不要改回）
+│   ├─ ⑧ 測試環境（S-3）：python tools/sec_check.py --game <slug> [--client <名>] --base http://localhost:<埠> --profile test → 0 FAIL
+│   └─ 上線前（S-9）：同指令 --profile prod（讀 compose.release.yaml）→ P0／P1 無 FAIL 才放行；人工項目照規格 §5 勾
 └─ 收尾（每次都做）
     └─ references/kb-loop.md：事實 → knowledge/webgame/raw → wiki；做法 → references／scripts；升版號
 ```
@@ -98,6 +103,8 @@ metadata:
 | 抽離對帳 | 正式設定 ≥ 2 seed 共 ≥ 10 萬局、壓力版、不給設定守門，整份 SpinResult 0 不一致 | 依第一個不一致的局號回頭比對抽值順序 |
 | Server | `go test ./... -race`、vendored 守門（`internal/ark-go` 不得就地修改） | 修程式，不改守門 |
 | 契約 | 每局通過 SpinResult schema；金額全為整數 | 修 Builder，不放寬 schema |
+| 資安（開發期） | `tools/sec_check.py --profile test` 0 FAIL（S-3 測試環境） | 照報告修設定；不要為了過關改檢查 |
+| 資安（上線前） | `tools/sec_check.py --profile prod` P0／P1 無 FAIL；規格 §5 人工項目已勾（S-9） | 補 `compose.release.yaml`、映像預設、source map、nginx 標頭；擋下不上線 |
 | 正式 Client | `pnpm -r typecheck／test／build` 全過；e2e main／features／pending／protocol 全過；trace-parity 事件逐筆相同 | 依第一筆不同的事件回頭查演出流程 |
 | 發布 | `wg_release verify` exit 0 | 重新建置，不手改 release.json |
 | 回寫 | 知識庫 guard／taxonomy／lint 0 errors、索引 fresh；skill 測試與 prompt_lint 通過 | 收尾未完成，不升版號 |
@@ -111,12 +118,16 @@ metadata:
 - **seed 不出 Server**：回應與局號都不得含數學 seed。
 - **事實寫知識庫、做法寫 skill**：同一內容不在兩處複製，互相連結。
 - **正式 Client 只用原創或授權素材**：競品裁圖、截圖只供內部參考（Stage），不美化、不臨摹、不打包進正式 Client。
+- **可出貨素材進 git，出貨位元組＝git 裡的檔**（0.10.0 素材版控分層 L1～L4）：美術成品在 `data/slot/<slug>/art/`、共用音效在 `pixi-game-platform/shared/sfx/`；內部參考只在 `analysis/source/manifest.json` 登錄；output 只放重產物。乾淨 clone 要能直接 `docker compose build`。
 
 ## 版本
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
-| 0.9.2 | 2026-10-27 | metadata：category `executor` → `scaffolder`（schema 1.2 三軸：executor 是形態、已由 `form: executor` 表示；主要產出是 Server／Client 骨架與發版清單），無行為變更 |
+| 0.11.1 | 2026-10-27 | 資安進開發流程（Paddy：下次開發要注意資安）：決策樹加「資安」分支（開新遊戲、⑧ 測試環境、上線前三個檢查點）、守門表加資安兩列；`tools/sec_check.py` 進 client-template（新平台一開就有），`--game` 不再限兩款、可加 `--client` |
+| 0.11.0 | 2026-10-27 | 上線前資安三件（2026-10-23 資安快測 prod 4 FAIL → 0）：範本預設安全——`wg_server_init` 產的 Server 映像預設 CMD 不帶 `-dev`（fail closed）、client-template vite 正式 build 不產 source map（`PGP_SOURCEMAP=1` 才產）；兩款加 `compose.release.yaml`、nginx `security-headers.conf`＋`server_tokens off`；delivery §6 補 dev／release 分開與 nginx add_header 繼承陷阱；測試 17 |
+| 0.10.0 | 2026-10-27 | 素材版控分層（Paddy 拍板，佈局契約 v3.8）：`wg_pack_assets` 來源順序 override → --set → dir → env → generator，成品 WebP 與同名音效直通（兩款重打包 releaseId 不變、位元組相同），`--regen`／`--export` 凍結美術成品；兩款美術成品進 `data/slot/<slug>/art/`、共用音效進 `shared/sfx/`；`Dockerfile.client` 建置內打包（不依賴 output）；client-template assets.yaml 改 L2 寫法；delivery §6、client-vertical-slice §6 更新；測試 16 |
+| 0.9.2 | 2026-10-27 | metadata：category `executor` → `scaffolder`（schema 1.2 三軸：executor 是形態、已由 `form: executor` 表示；主要產出是 Server／Client 骨架與發版清單），無行為變更（上游 r7） |
 | 0.9.1 | 2026-10-27 | 首次推上游：description 去掉 `ark-go`／`ark-game-code` 字樣（audit dangling-desc-ref P1：description 裡的 ark-* 會被當成 skill 名；ark-go 是 Go 網路模組、ark-game-code 是原規劃舊名），正文說明不變 |
 | 0.9.0 | 2026-10-23 | 第二款神燈寶藏（還原局）：extraction-sop §5 Go → Go 路線；`wg_trace_check` 支援還原模式表號（### 表 X-n）；Server 範本加 Dockerfile／.dockerignore／tools/smoke_ws.js；Client 範本同步訪客 arkId 與 PresenterCtx.reels（玩法在主轉輪逐手停輪）；delivery §6 第二款 Web 埠 3031 |
 | 0.8.0 | 2026-10-22 | 階段報告 A-6、A-7：`wg_pack_assets --svg-engine auto／cairo／browser`＋`wg_svg_render.mjs`（兩種轉圖尺寸一致測試）；正式 Client e2e 通用化（`e2e/e2e.mjs`＋`e2e.config.json`），收進 client-template |

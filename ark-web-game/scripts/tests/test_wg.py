@@ -179,7 +179,7 @@ def test_client_init_scaffold(tmp_path):
     dest = tmp_path / "pgp-demo"
     r = run("wg_client_init.py", "--out", dest, "--game", "demo-slot", "--key", "demo", "--name", "Demo's Slot")
     assert r.returncode == 0, r.stdout + r.stderr
-    for rel in ["package.json", "pnpm-workspace.yaml", "packages/ark-wire/src/codec.ts", "packages/ark-wire/test/mock-ark.mjs",
+    for rel in ["package.json", "pnpm-workspace.yaml", "tools/sec_check.py", "packages/ark-wire/src/codec.ts", "packages/ark-wire/test/mock-ark.mjs",
                 "packages/game-service/src/ws.ts", "packages/shared-types/src/protocol.ts", "games/demo-slot/src/main.ts",
                 "games/demo-slot/src/game/controller.ts", "games/demo-slot/src/presenters/index.ts", "games/demo-slot/.wg-client.json",
                 "games/demo-slot/e2e/e2e.mjs", "games/demo-slot/e2e/e2e.config.json", "games/demo-slot/assets.yaml"]:
@@ -275,3 +275,66 @@ def test_pack_assets_svg_engines(tmp_path):
     if not sizes:
         pytest.skip("cairosvg 與瀏覽器轉圖都不可用")
     assert all(s == (80, 160) for s in sizes.values()), sizes
+
+
+def test_pack_assets_l2_passthrough_dir_priority_export(tmp_path, monkeypatch):
+    """0.10.0 素材版控分層：dir（repo 內 L2）優先於 env／generator；成品 WebP 與同名音效直通（位元組不變）；--regen＋--export 凍結成品"""
+    pytest.importorskip("PIL")
+    from PIL import Image
+    art = tmp_path / "art"
+    art.mkdir()
+    Image.new("RGBA", (32, 32), (9, 9, 9, 255)).save(art / "sym_A.webp", "WEBP", quality=70)
+    art_bytes = (art / "sym_A.webp").read_bytes()
+    gen = tmp_path / "gen.py"                                   # generator 產不同的圖（PNG），用來驗證 dir 優先、--regen 改用它
+    gen.write_text("import sys,pathlib\nfrom PIL import Image\no=pathlib.Path(sys.argv[2]);o.mkdir(parents=True,exist_ok=True)\n"
+                   "Image.new('RGBA',(16,16),(200,0,0,255)).save(o/'sym_A.png')\n", encoding="utf-8")
+    sfx = tmp_path / "sfx"
+    sfx.mkdir()
+    (sfx / "ding.ogg").write_bytes(b"OggS-fake-ogg")
+    (sfx / "ding.m4a").write_bytes(b"fake-m4a-bytes")           # 同名成品：不得呼叫 ffmpeg
+    other = tmp_path / "env-sfx"
+    other.mkdir()
+    (other / "ding.ogg").write_bytes(b"OggS-from-env")
+    monkeypatch.setenv("WG_T_SFX", str(other))
+    cfg = {"schema": "pgp-assets/1", "game_key": "t", "version": "0.1.0",
+           "sources": {"art": {"dir": "art", "generator": "gen.py"}, "sfx": {"dir": "sfx", "env": "WG_T_SFX"}},
+           "image": {"quality": 86}, "audio": {"formats": ["ogg", "m4a"]},
+           "bundles": {"t-core": {"required": True, "images": {"sym_A": "art:sym_A"}, "sounds": {"sfx_ding": "sfx:ding.ogg"}}}}
+    cp = tmp_path / "assets.json"
+    cp.write_text(json.dumps(cfg), encoding="utf-8")
+    env = {**__import__("os").environ, "PATH": ""}               # 沒有 ffmpeg 也要過
+    r = subprocess.run([sys.executable, "-X", "utf8", str(SCRIPTS / "wg_pack_assets.py"), "--config", str(cp), "--out", str(tmp_path / "o1")],
+                       capture_output=True, text=True, encoding="utf-8", env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    res = json.loads(r.stdout)
+    assert res["sources"] == {"art": "dir", "sfx": "dir"} and res["passthrough"] == 1 and res["svgEngine"] == "none" and not res["warnings"]
+    out = tmp_path / "o1" / "assets"
+    man = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    img = man["bundles"][0]["assets"][0]["src"]
+    assert (out / img).read_bytes() == art_bytes, "成品 WebP 直通：出貨位元組＝L2 檔"
+    got = {s.rsplit(".", 1)[1]: (out / s).read_bytes() for s in man["sounds"][0]["src"]}
+    assert got == {"ogg": b"OggS-fake-ogg", "m4a": b"fake-m4a-bytes"}, "dir 優先於 env；同名 m4a 直通"
+    # 同一份 L2 打兩次 → release 完全相同（可重現）
+    r2 = run("wg_pack_assets.py", "--config", cp, "--out", tmp_path / "o2")
+    assert json.loads((tmp_path / "o2/assets/release.json").read_text(encoding="utf-8"))["releaseId"] == \
+        json.loads((out / "release.json").read_text(encoding="utf-8"))["releaseId"], r2.stdout
+    # 美術改版：--regen art 用 generator，--export 把成品寫回 L2
+    frozen = tmp_path / "frozen"
+    r3 = run("wg_pack_assets.py", "--config", cp, "--out", tmp_path / "o3", "--regen", "art", "--export", f"art={frozen}")
+    assert r3.returncode == 0, r3.stdout + r3.stderr
+    assert json.loads(r3.stdout)["sources"]["art"] == "generator"
+    assert Image.open(frozen / "sym_A.webp").size == (16, 16)
+    # dir 不存在 → 退回 generator（舊設定相容）
+    cfg["sources"]["art"]["dir"] = "no-such-dir"
+    cp.write_text(json.dumps(cfg), encoding="utf-8")
+    r4 = run("wg_pack_assets.py", "--config", cp, "--out", tmp_path / "o4")
+    assert r4.returncode == 0 and json.loads(r4.stdout)["sources"]["art"] == "generator"
+
+
+def test_release_safe_defaults_in_templates():
+    """0.11.0 上線前資安：範本預設要安全——Server 映像預設 CMD 不帶 -dev（fail closed）、Client 正式 build 不產 source map"""
+    init = (SCRIPTS / "wg_server_init.py").read_text(encoding="utf-8")
+    cmd = [ln for ln in init.splitlines() if ln.startswith("CMD [")]
+    assert cmd and all('"-dev"' not in ln for ln in cmd), cmd
+    vite = (SKILL / "assets/client-template/games/__GAME__/vite.config.ts").read_text(encoding="utf-8")
+    assert "sourcemap: true" not in vite and "PGP_SOURCEMAP" in vite

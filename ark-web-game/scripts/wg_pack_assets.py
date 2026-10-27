@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """wg_pack_assets — 依遊戲素材設定（assets.yaml）打包正式 Client 素材：圖轉 WebP、音效多格式、PixiJS 分包清單、Release Manifest。
 
-素材來源（sources）三種，可並用：
-  generator  遊戲自帶的原創美術產生器（例：games/<game>/art/gen_art.py --out <暫存>），產出 SVG
-  dir／env   素材資料夾（路徑或環境變數；原檔不複製進 repo，例：共用音效）
-  override   同名覆蓋（美術組交 PNG／WebP 時，放這裡即取代產生器的圖，程式不用改）
+素材來源（sources）可並用，取用順序（0.10.0，素材版控分層 L2）：
+  override   同名覆蓋（美術組本機試圖：環境變數指到資料夾，取代 repo 裡的圖，程式不用改）
+  --set      命令列指定資料夾（Docker 建置、測試用）
+  dir        repo 內的「可出貨素材」資料夾（L2，進 git）：例 data/slot/<slug>/art/、pixi-game-platform/shared/sfx/
+  env        環境變數指到的資料夾（舊做法；dir 不存在時才用）
+  generator  原創美術產生器（例：games/<game>/art/gen_art.py --out <暫存>，產 SVG）；只在 --regen 或 dir 不存在時執行
+
+直通（pass-through，0.10.0）：
+  圖：來源已是 .webp 且這張圖沒有 scale／max_side → 原位元組直接用（不再重壓，出貨位元組＝git 裡的檔）
+  音效：來源資料夾有同名不同副檔名（例 RESPIN.ogg 旁的 RESPIN.m4a）→ 直接用，不呼叫 ffmpeg
+  全部直通時不需要 Pillow／cairosvg／ffmpeg（Docker 打包階段只需 pyyaml）
 
 輸出（<out>/assets/）：
   <bundle>/<alias>.<雜湊8>.webp｜.ogg｜.m4a    檔名帶內容雜湊（CDN 長快取）
@@ -13,6 +20,9 @@
 
 用法:
   python wg_pack_assets.py --config <assets.yaml> --out <資料夾> [--set sfx=<資料夾>] [--svg-engine auto|cairo|browser] [--only-check]
+  python wg_pack_assets.py --config <assets.yaml> --out <資料夾> --regen art --export art=<repo 的 art 資料夾>   # 美術改版：重跑產生器並把成品寫回 L2
+  --regen 名稱：這個來源強制改用 generator（忽略 dir）
+  --export 名稱=資料夾：把這個來源的出貨成品寫回資料夾（圖 <名稱>.webp；音效 <檔名>.<格式>），之後提交進 git
   --svg-engine：SVG 轉圖方式。auto（預設）＝有 cairosvg 用 cairosvg，否則用瀏覽器（wg_svg_render.mjs，需 node＋playwright）
   --set 名稱=路徑：覆寫 sources 的資料夾（等同設定環境變數）
   --only-check：只檢查設定與來源齊全，不輸出
@@ -59,7 +69,9 @@ def h8(b: bytes) -> str:
 
 
 class Sources:
-    def __init__(self, cfg: dict, base: pathlib.Path, sets: dict[str, str], tmp: pathlib.Path):
+    def __init__(self, cfg: dict, base: pathlib.Path, sets: dict[str, str], tmp: pathlib.Path, regen: set[str] | None = None):
+        regen = regen or set()
+        self.used: dict[str, str] = {}
         self.dirs: dict[str, list[pathlib.Path]] = {}
         self.missing_roots: list[str] = []
         for name, s in (cfg.get("sources") or {}).items():
@@ -69,8 +81,17 @@ class Sources:
                 roots.append(pathlib.Path(os.environ[ov["env"]]))
             elif isinstance(ov, str):
                 roots.append((base / ov).resolve())
+            dir_ = (base / s["dir"]).resolve() if s.get("dir") else None
+            how = "override" if roots else ""
             if name in sets:
                 roots.append(pathlib.Path(sets[name]))
+                how = how or "set"
+            elif name not in regen and dir_ is not None and dir_.is_dir():
+                roots.append(dir_)
+                how = how or "dir"
+            elif name not in regen and s.get("env") and os.environ.get(s["env"]):
+                roots.append(pathlib.Path(os.environ[s["env"]]))
+                how = how or "env"
             elif s.get("generator"):
                 gen = (base / s["generator"]).resolve()
                 out = tmp / f"gen-{name}"
@@ -78,11 +99,11 @@ class Sources:
                 if r.returncode != 0:
                     die(f"產生器失敗：{gen}", 2, stderr=r.stderr[-1500:])
                 roots.append(out)
-            elif s.get("env") and os.environ.get(s["env"]):
-                roots.append(pathlib.Path(os.environ[s["env"]]))
-            elif s.get("dir"):
-                roots.append((base / s["dir"]).resolve())
+                how = how or "generator"
+            elif name in regen:
+                die(f"--regen {name}：這個來源沒有 generator")
             roots = [r for r in roots if r.is_dir()]
+            self.used[name] = how
             if not roots:
                 self.missing_roots.append(f"{name}（{s.get('env') or s.get('dir') or s.get('generator')}；可用 --set {name}=<資料夾>；{s.get('hint', '')}）")
             self.dirs[name] = roots
@@ -144,7 +165,15 @@ class SvgRenderer:
         return hit
 
 
+def passthrough(src: pathlib.Path, spec: dict, img: dict) -> bool:
+    """成品 WebP、沒有縮放要求 → 原位元組直接出貨（L2 版控的前提：出貨位元組＝git 裡的檔）"""
+    return (src.suffix.lower() == ".webp" and float(spec.get("scale", img.get("scale", 1.0))) == 1.0
+            and not int(spec.get("max_side", img.get("max_side", 0)) or 0))
+
+
 def render_image(src: pathlib.Path, spec: dict, img: dict, svg: SvgRenderer) -> bytes:
+    if passthrough(src, spec, img):
+        return src.read_bytes()
     from PIL import Image  # noqa: PLC0415
     scale = float(spec.get("scale", img.get("scale", 1.0)))
     if src.suffix == ".svg":
@@ -169,6 +198,10 @@ def audio_variants(src: pathlib.Path, formats: list[str], warn: list[str]) -> li
     for fmt in formats:
         if src.suffix.lstrip(".").lower() == fmt:
             out.append((fmt, src.read_bytes()))
+            continue
+        sib = src.with_suffix(f".{fmt}")
+        if sib.is_file():                                   # 0.10.0：同名成品（L2 已轉好的 m4a）直接用
+            out.append((fmt, sib.read_bytes()))
             continue
         if not have_ff:
             warn.append(f"沒有 ffmpeg，{src.name} 不產 {fmt}")
@@ -196,6 +229,8 @@ def main() -> None:
     ap.add_argument("--set", action="append", default=[])
     ap.add_argument("--only-check", action="store_true")
     ap.add_argument("--svg-engine", choices=["auto", "cairo", "browser"], default="auto")
+    ap.add_argument("--regen", action="append", default=[], help="這個來源強制用 generator（美術改版）")
+    ap.add_argument("--export", action="append", default=[], help="名稱=資料夾：把出貨成品寫回（L2 凍結）")
     a = ap.parse_args()
     cfgp = pathlib.Path(a.config).resolve()
     if not cfgp.is_file():
@@ -204,10 +239,11 @@ def main() -> None:
     if cfg.get("schema") != "pgp-assets/1":
         die("設定 schema 必須是 pgp-assets/1")
     sets = dict(s.split("=", 1) for s in a.set if "=" in s)
+    exports = {k: pathlib.Path(v).resolve() for k, v in (s.split("=", 1) for s in a.export if "=" in s)}
     bundles = cfg.get("bundles") or {}
     img, aud = cfg.get("image") or {}, cfg.get("audio") or {}
     with tempfile.TemporaryDirectory() as td:
-        src = Sources(cfg, cfgp.parent, sets, pathlib.Path(td))
+        src = Sources(cfg, cfgp.parent, sets, pathlib.Path(td), set(a.regen))
         missing, aliases = [], set()
         plan = []
         for bname, b in bundles.items():
@@ -233,15 +269,27 @@ def main() -> None:
             shutil.rmtree(out)
         out.mkdir(parents=True)
         warn: list[str] = []
-        svg = SvgRenderer(a.svg_engine)
+        need_svg = any(k == "images" and p.suffix == ".svg" for _, k, _, _, p in plan)
+        svg = SvgRenderer(a.svg_engine if need_svg else "auto")
+        if not need_svg:
+            svg.engine = "none"                              # 全部直通／點陣圖：不需要轉 SVG
+        n_pass = 0
+        exported: list[str] = []
         svg.prefetch([(p, float(spec.get("scale", img.get("scale", 1.0)))) for _, k, _, spec, p in plan if k == "images" and p.suffix == ".svg"], pathlib.Path(td))
         man: dict = {"bundles": [], "sounds": [], "meta": {"schema": "pgp-assets-manifest/1", "game_key": cfg.get("game_key"), "version": cfg.get("version")}}
         by_b: dict[str, list] = {b: [] for b in bundles}
         stats: dict[str, dict] = {b: {"files": 0, "bytes": 0} for b in bundles}
         for bname, kind, alias, spec, p in plan:
             (out / bname).mkdir(exist_ok=True)
+            sname, _, srel = spec["src"].partition(":")
             if kind == "images":
+                n_pass += passthrough(p, spec, img)
                 data = render_image(p, spec, img, svg)
+                if sname in exports:
+                    dst = exports[sname] / f"{pathlib.Path(srel).with_suffix('').as_posix()}.webp"
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    dst.write_bytes(data)
+                    exported.append(dst.name)
                 name = f"{bname}/{alias}.{h8(data)}.webp"
                 (out / name).write_bytes(data)
                 by_b[bname].append({"alias": alias, "src": name})
@@ -250,6 +298,11 @@ def main() -> None:
             else:
                 srcs = []
                 for fmt, data in audio_variants(p, list(aud.get("formats", ["ogg"])), warn):
+                    if sname in exports:
+                        dst = exports[sname] / f"{pathlib.Path(srel).stem}.{fmt}"
+                        dst.parent.mkdir(parents=True, exist_ok=True)
+                        dst.write_bytes(data)
+                        exported.append(dst.name)
                     name = f"{bname}/{alias}.{h8(data)}.{fmt}"
                     (out / name).write_bytes(data)
                     srcs.append(name)
@@ -274,7 +327,8 @@ def main() -> None:
             die("wg_release verify 失敗", 1, detail=v.stdout[-800:])
         total = sum(s["bytes"] for s in stats.values())
         print(json.dumps({"ok": True, "out": str(out), "assets": len(plan), "bundles": stats, "totalBytes": total,
-                          "requiredBytes": sum(stats[b]["bytes"] for b in man["meta"]["required"]), "svgEngine": svg.engine, "warnings": warn[:20]}, ensure_ascii=False, indent=1))
+                          "requiredBytes": sum(stats[b]["bytes"] for b in man["meta"]["required"]), "svgEngine": svg.engine, "sources": src.used, "passthrough": n_pass,
+                          "exported": len(exported), "warnings": warn[:20]}, ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":
