@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-27 (ark-github-cli 1.0.0：正式定版)
+
+- 0.x 卻 `status: active`、每次收尾都在用 → 定 **1.0.0**；CLI／stdout 契約與 0.2.3 相同，無破壞性變更（版本表註明，AL-103 通過）
+- manifest `skills-2026.10-r9`
+
+---
+
 ## 2026-10-27 (ark-skills-align 2.5.0：補實作 AL-102／103／106 ＋ tree_hash 不再吃 .pytest_cache)
 
 - **AL-102**（P1）契約檔變了版號沒升、**AL-108**（P2，新）內容變了版號沒升、**AL-103**（P2）major 無 Breaking 說明、**AL-106**（P3）updated 早於契約 commit ——
