@@ -1,4 +1,4 @@
-﻿# kiro_files Policy 預設組合
+# kiro_files Policy 預設組合
 
 ## 概述
 
