@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-27 (ark-agent-init 2.4.0：AGENTS.md 落點單一權威)
+
+來源：nana-team 標準化時 AGENTS.md 落點被人工校正兩次 → review `kiro-cli/docs/designs/ark-agent-init-agents-md-placement-improvement.md`（F-1~F-4）。
+根因是套件內四處說法互相矛盾，且程式產出與人工定案相反、測試把錯誤落點鎖死。
+
+- **A-1 單一權威**：SKILL.md 頂部一句定死「AGENTS.md 一律放 workspace 根：專案根＝SSOT、子 agent 工作目錄根＝複本、`.kiro/steering/` 永遠不放（指回根的 symlink 除外）」，
+  SKILL.md 其餘 9 處、`references/defaults/README.md`、`five-layer-architecture.md` 改為引用；修正「AGENTS.md 會被 daemon 覆寫」（實為 policy `once`）
+- **A-2 程式**：`build_kiro.py` 子 agent 複本改落工作目錄根（與 ark_team_agent 1.2.19 daemon `_write_root_agents_md` 落點一致），profile 片段併入同一落點；重跑不再長回 steering/
+- **A-3 測試**：原斷言「子 agent steering/ 應有 AGENTS.md」是反的 → 改為斷言 steering 0 份、wd 根有複本、重跑不復發、validate 抓放錯的實體複本、接受指回根的 symlink；反證：改回舊落點 9 項轉紅
+- **A-4 稽核**：新增 `scripts/audit_agents_layout.py`（只看 team.yaml 編制內 agent、訊息帶「應改放哪」、缺 team.yaml 明說跳過、認得 symlink）；`build_kiro.py --validate` 共用同一套規則（專案根缺 SSOT 不在 validate 擋：daemon 首次啟動才產）
+- 順帶：`ark-web-game` 0.9.2 category `executor` → `scaffolder`（新 skill 沿用 1.1 混軸舊值，三軸測試與 audit `category-axis-mixed` 皆紅）；README 補重產
+
+---
+
 ## 2026-10-27 (aidev 網頁遊戲與還原局優化回貢：5 個 skill 升版＋新增 ark-web-game)
 
 來源：aidev-team-agent 2026-10-22～23 實戰（豬來蓋福、神燈寶藏網頁正式版；Go 世代 26 款還原局）。

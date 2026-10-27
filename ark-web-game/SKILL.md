@@ -16,10 +16,10 @@ metadata:
   schema_version: "1.2"
   status: experimental
   author: paddyyang
-  category: executor
+  category: scaffolder
   form: executor
   domain: game
-  version: "0.9.1"
+  version: "0.9.2"
   updated: 2026-10-27
   outputs:
     - { format: data, audience: ai }
@@ -116,6 +116,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 0.9.2 | 2026-10-27 | metadata：category `executor` → `scaffolder`（schema 1.2 三軸：executor 是形態、已由 `form: executor` 表示；主要產出是 Server／Client 骨架與發版清單），無行為變更 |
 | 0.9.1 | 2026-10-27 | 首次推上游：description 去掉 `ark-go`／`ark-game-code` 字樣（audit dangling-desc-ref P1：description 裡的 ark-* 會被當成 skill 名；ark-go 是 Go 網路模組、ark-game-code 是原規劃舊名），正文說明不變 |
 | 0.9.0 | 2026-10-23 | 第二款神燈寶藏（還原局）：extraction-sop §5 Go → Go 路線；`wg_trace_check` 支援還原模式表號（### 表 X-n）；Server 範本加 Dockerfile／.dockerignore／tools/smoke_ws.js；Client 範本同步訪客 arkId 與 PresenterCtx.reels（玩法在主轉輪逐手停輪）；delivery §6 第二款 Web 埠 3031 |
 | 0.8.0 | 2026-10-22 | 階段報告 A-6、A-7：`wg_pack_assets --svg-engine auto／cairo／browser`＋`wg_svg_render.mjs`（兩種轉圖尺寸一致測試）；正式 Client e2e 通用化（`e2e/e2e.mjs`＋`e2e.config.json`），收進 client-template |

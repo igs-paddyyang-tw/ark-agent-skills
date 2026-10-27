@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.10-r6",
-  "commit": "5743f1c",
-  "generated_at": "2026-10-21T14:15:25+08:00",
+  "release": "skills-2026.10-r7",
+  "commit": "a42e030",
+  "generated_at": "2026-10-27T13:09:06+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.1.3",
@@ -31,14 +31,14 @@
       "updated": "2026-10-20"
     },
     "ark-agent-init": {
-      "version": "2.3.2",
-      "tree_hash": "sha256:4fea718d8a52383805c9e80a5d2c94489380a2580ea71cfe8dac518f8197b389",
-      "contract_hash": "sha256:f1eb4c564148d0cd5d78377c7d78a8cc08fce52722f4a612c9aa718898f97a4c",
+      "version": "2.4.0",
+      "tree_hash": "sha256:b699f887c07cc832e419254816d9a858a1a66369cfb45971a57a2bac455d323a",
+      "contract_hash": "sha256:3215251f454b2038fc9ade840e653bf6778395a14e04976eee69ae7ac2aaa2e9",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [],
       "replaces": [],
-      "updated": "2026-10-20"
+      "updated": "2026-10-27"
     },
     "ark-agent-role-profile": {
       "version": "1.3.3",
@@ -310,9 +310,9 @@
       "updated": "2026-10-20"
     },
     "ark-game-prob": {
-      "version": "1.4.8",
-      "tree_hash": "sha256:51cfdec2b2c678500136bb0fa54ece95fc1f454989a6a043f6fd33ad5927c156",
-      "contract_hash": "sha256:7e5f898a3dd72a4f2cdf4f9fd3f7276522485403370b1c7c61bb103a303fb634",
+      "version": "1.6.0",
+      "tree_hash": "sha256:2add53851276bd76103fff20139cfe5e5f6ab427c1194c8dc334d10592580534",
+      "contract_hash": "sha256:28718ceb3d301ec16220dd5b2994a42daaf8cffa027d30658b0abd7e6a0035db",
       "status": "active",
       "category": "document",
       "depends_on": [
@@ -329,9 +329,9 @@
       "updated": "2026-10-21"
     },
     "ark-game-proto": {
-      "version": "1.3.0",
-      "tree_hash": "sha256:c9405ee1147750fc8648c0a38325a467738b514f7518c00300b4c5a7e1eb1717",
-      "contract_hash": "sha256:31199e8b996848caa3c8ca66c60f95438347f7f86c2a613e18568abbd547eada",
+      "version": "1.7.0",
+      "tree_hash": "sha256:f343490ec398afced287b96f3233370c85e82173ae0c4acbc044c0837f1c3046",
+      "contract_hash": "sha256:89dd1050f8410cba0959cfca8988ad0aa9df70dc32666172a0d0c8cbf21ec0ae",
       "status": "active",
       "category": "view",
       "depends_on": [
@@ -353,12 +353,12 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-20"
+      "updated": "2026-10-22"
     },
     "ark-game-quicktest": {
-      "version": "2.1.5",
-      "tree_hash": "sha256:379ac7a2dd71b256f05c05931f7fc66e59c4b72ac9b63024dc3a352e25b4f9a4",
-      "contract_hash": "sha256:4f1668f481156b62f352045a1b0237adfb03bc552ffa66b609e504b3010bebcf",
+      "version": "2.2.1",
+      "tree_hash": "sha256:c5fd76bbc7c9badfb3a498a06c2308a954ed38cf9b3ad6765de9ab64007b3e6d",
+      "contract_hash": "sha256:d6ad9dcb82b3e911f0e6e4f531eadc2647136b2f0fca429ca883a74a3f006b8c",
       "status": "active",
       "category": "process",
       "depends_on": [
@@ -376,12 +376,12 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-21"
+      "updated": "2026-10-27"
     },
     "ark-game-spec": {
-      "version": "2.6.1",
-      "tree_hash": "sha256:09cc19da82688e0443fe712e7a585f801aa3bb1cd2ccd5479590b597a1edddc3",
-      "contract_hash": "sha256:10bbb2c5db948f6aba3f2a4c9a1ddff15765504c09f678adc002654b14f0e93a",
+      "version": "2.7.0",
+      "tree_hash": "sha256:613d57951593868b0bd7745728d0b67de6c5b5c355934da2e14fcec052cbafd9",
+      "contract_hash": "sha256:8743e1a9ab681864623c5c4da55cf5ecb7f6b2e09e2e3b7a5e7e90b603967021",
       "status": "active",
       "category": "document",
       "depends_on": [
@@ -754,9 +754,9 @@
       "updated": "2026-10-20"
     },
     "ark-wiki-engine": {
-      "version": "3.0.2",
-      "tree_hash": "sha256:7363ac796da75bd3c40a7f8f05e2e0f295a146814dbd86ea2ef7e680dacf4573",
-      "contract_hash": "sha256:f769d24116234096d9996064e65874ca2859bab63b1bcf0e47ad09f2a4ecafdd",
+      "version": "3.0.3",
+      "tree_hash": "sha256:f8b440fd673dfd5baab7755a2607f5fbc0658be33b120ce18ad3eea26c4d183d",
+      "contract_hash": "sha256:db28e2edcdbe0f8b15b5610a437bceaa84444dff9e612a2de2ab5368a3eb5554",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],
@@ -764,7 +764,7 @@
         "mcp-wiki-server",
         "team-mcp.wiki_query"
       ],
-      "updated": "2026-10-20"
+      "updated": "2026-10-27"
     },
     "ark-xlsx-tool": {
       "version": "1.0.1",

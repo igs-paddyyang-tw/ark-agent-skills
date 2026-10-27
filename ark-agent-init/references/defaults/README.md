@@ -7,7 +7,7 @@
 | 產出檔 | 範本來源 | 說明 |
 |--------|---------|------|
 | `.kiro/steering/SOUL.md` | `assets/steering/SOUL-{root,leader,admin,worker}.md` | 依角色選一 |
-| `.kiro/steering/AGENTS.md` | 產出時組出（見 SKILL 步驟）| 全域規範，SSOT |
+| `AGENTS.md`（workspace 根，**不在 steering/**）| 子 agent 複本由 build_kiro 產；專案根 SSOT 由 daemon 首次啟動產或手寫 | 全域規範 —— 落點見 SKILL.md 頂部單一權威 |
 | `.kiro/steering/CODE.md` | `assets/steering/CODE.md` | 程式碼規範（`fileMatch: src/**/*.py`）|
 | `.kiro/steering/MEMORY.md` | `assets/steering/MEMORY-template.md` | 工作記憶（含自我保護上限）|
 | `.kiro/steering/BRAIN.md` | `assets/steering/BRAIN.md` | 角色知識範本 |
