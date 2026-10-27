@@ -1,4 +1,5 @@
 machine: panda
+status: draft                     # draft（待核帳驗證）→ verified（aiqa_pack promote 由人下）
 display_name: 熊貓寶寶
 spec_source: TODO 規格書
 symbols: []                       # 代號，不取名

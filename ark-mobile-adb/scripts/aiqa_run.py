@@ -21,6 +21,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aiqa_common as C  # noqa: E402
 import aiqa_device as D  # noqa: E402
+import aiqa_economy as E  # noqa: E402
 import aiqa_oracle as O  # noqa: E402
 
 DEFAULT_TIERS = ("T1", "T2", "T3", "T5")
@@ -304,10 +305,11 @@ def gate(item: dict, pack: dict, tiers: tuple) -> tuple[str | None, str | None]:
     return None, None
 
 
-def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader: str, visual: str, llm, timeout_s: float) -> dict:
+def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader: str, visual: str, llm, timeout_s: float, mode: str = "normal") -> dict:
     item_dir = run_dir / "items" / item["id"]
     item_dir.mkdir(parents=True, exist_ok=True)
     rep_results, reps = [], []
+    rep_obs: list[dict] = []  # 每 rep 的 observations（batch 核帳用）
     for k in range(1, int(item.get("repeat", 1)) + 1):
         rep_dir = item_dir / f"rep-{k}"
         trace = D.Trace(rep_dir / "trace.jsonl")
@@ -335,6 +337,7 @@ def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader:
                 if src in obs and a["id"] not in obs:
                     obs[a["id"]] = obs[src]
         results = O.evaluate(item.get("assertions", []), obs)  # 中斷也判：已收集的觀察若已 FAIL，FAIL 優先於 BLOCK
+        rep_obs.append(dict(obs))
         C.atomic_write(rep_dir / "observations.json", json.dumps({k2: v for k2, v in obs.items()}, ensure_ascii=False, default=str, indent=1))
         C.atomic_write(rep_dir / "verdict.json", json.dumps({"status": status, "error": err, "assertions": results, "evidence": ex.evidence}, ensure_ascii=False, default=str, indent=1))
         reps.append({"rep": k, "status": status, "error": err, "assertions": results, "evidence_count": len(ex.evidence), "elapsed_s": round(dev.now() - ex.t0, 2)})
@@ -344,6 +347,26 @@ def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader:
     blocked = next((r["error"] for r in reps if r["status"] in ("blocked",)), None)
     errored = next((r["error"] for r in reps if r["status"] in ("error", "timeout")), None)
     hard_fail = any(a["result"] == "FAIL" for r in reps for a in r["assertions"])
+    ledger_meta = None
+    # --mode batch：economy 連轉核帳取代單轉守恆 oracle（credit-primary）
+    if mode == "batch" and not blocked and not errored and rep_obs:
+        is_econ, names = E.is_economy_item(item, rep_obs[-1])
+        if is_econ:
+            per_rep_rec = [E.reconcile(o, names) for o in rep_obs]
+            ledger_meta = {"mode": "batch", "names": names, "reps": per_rep_rec}
+            verdicts = [rc["verdict"] for rc in per_rep_rec]
+            if len(set(verdicts)) > 1 and "PASS" in verdicts and "FAIL" in verdicts:
+                v = {"verdict": "FLAKY", "reason": f"連轉核帳重複不一致 {verdicts}"}
+            elif "FAIL" in verdicts:
+                v = {"verdict": "FAIL", "reason": next(rc["reason"] for rc in per_rep_rec if rc["verdict"] == "FAIL")}
+            elif "NEEDS_HUMAN" in verdicts:
+                v = {"verdict": "NEEDS_HUMAN", "reason": next(rc["reason"] for rc in per_rep_rec if rc["verdict"] == "NEEDS_HUMAN")}
+            else:
+                v = {"verdict": "PASS", "reason": per_rep_rec[-1]["reason"]}
+            out = {"id": item["id"], "title": item["title"], "category": item.get("category"), "folder": item.get("folder"), "tier": item["tier"],
+                   **v, "ledger": ledger_meta, "reps": reps, "baseline": item.get("baseline"), "dir": str(item_dir)}
+            C.atomic_write(item_dir / "verdict.json", json.dumps(out, ensure_ascii=False, default=str, indent=1))
+            return out
     if hard_fail and (blocked or errored):
         v = {"verdict": "FAIL", "reason": f"斷言 FAIL（流程隨後中斷：{blocked or errored}）"}
     else:
@@ -360,6 +383,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="aiqa runner")
     ap.add_argument("--checklist", required=True)
     ap.add_argument("--backend", default=None, choices=["adb", "fake"])
+    ap.add_argument("--mode", default="normal", choices=["normal", "batch"],
+                    help="batch = economy 項逐手讀 credit 接 ledger 連轉核帳（credit-primary），取代單轉守恆 oracle")
     ap.add_argument("--device")
     ap.add_argument("--reader", default=None, choices=["fake", "tesseract", "llm", "dual"], help="dual = tesseract+llm 雙讀，不一致 → NEEDS_HUMAN")
     ap.add_argument("--visual", default=None, choices=["fake", "llm"])
@@ -418,6 +443,7 @@ def main() -> None:
     manifest = {"run_id": run_dir.name, "contract": C.CONTRACT, "created_at": C.now(), "checklist": str(a.checklist), "checklist_sha256": C.sha_file(a.checklist),
                 "game": doc["game"], "machine": doc.get("machine"), "pack_sha256": pack["_sha256"], "backend": backend, "device": serial,
                 "reader": reader, "visual": visual, "tiers": list(tiers), "protocol": C.PROTOCOL_VERSION, "skill_version": C.SKILL_VERSION,
+                "mode": a.mode,
                 "llm": llm.meta() if llm else None, "bugs": bugs}
     C.atomic_write(run_dir / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=1))
     results, t0 = [], time.time()
@@ -428,7 +454,7 @@ def main() -> None:
             results.append({"id": it["id"], "title": it["title"], "category": it.get("category"), "folder": it.get("folder"), "tier": it["tier"], **v,
                             "reps": [], "baseline": it.get("baseline"), "dir": None})
             continue
-        results.append(run_item(it, pack, dev_factory, run_dir, reader, visual, llm, a.timeout_s))
+        results.append(run_item(it, pack, dev_factory, run_dir, reader, visual, llm, a.timeout_s, a.mode))
         C.atomic_write(run_dir / "results.json", json.dumps({"results": results}, ensure_ascii=False, default=str, indent=1))
     counts = {v: sum(1 for r in results if r["verdict"] == v) for v in C.VERDICTS}
     manifest.update(finished_at=C.now(), elapsed_s=round(time.time() - t0, 1), counts=counts, items=len(results), llm=llm.meta() if llm else None)

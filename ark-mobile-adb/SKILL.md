@@ -8,7 +8,7 @@ description: |
   record（錄人手點擊）/ replay（零 LLM、checkpoint）/ lint / explain（SOP）。playtest：`aiqa_playtest` 讀清單 md → 基本測試 + 自我探索（E1–E16）→
   單檔 HTML 報告 + 下一輪回歸清單。
   使用此 skill 當提及：BlueStacks / 模擬器 / Android 裝置操作、adb 連不上、遊戲畫面自動化、aiqa、AI QA、遊戲測試自動化、
-  測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、gamepack 解耦 / 外部 pack 目錄 / --pack-dir、trigger / GM harness、掛測、穩定讀數 / count-up 讀數 / 資產對帳、測項人工回饋 / 審查意見 / refine 下一版、
+  測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、gamepack 解耦 / 外部 pack 目錄 / --pack-dir、trigger / GM harness、掛測、穩定讀數 / count-up 讀數 / 資產對帳 / 連轉核帳 / ledger / economy batch / 逐手對帳 / 外部加幣誤判 / 核帳驅動建檔 / autobox / machine verify promote、測項人工回饋 / 審查意見 / refine 下一版、
   按鍵精靈 / 座標腳本 / 錄製重放 / macro、adb 太慢、座標點空、縮圖座標、找色、試玩報告、AI 試玩、新手體驗、
   探索測試、冒煙測試、清單 md 產報告 html、playtest。
   不適用於：iOS、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-game-spec）、一般程式測試（→ ark-test-runner）。
@@ -17,8 +17,8 @@ metadata:
   status: active
   author: paddyyang
   category: executor
-  version: "2.4.0"
-  updated: 2026-10-15
+  version: "2.5.0"
+  updated: 2026-10-27
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -77,9 +77,12 @@ metadata:
 | `references/v2.2-playtest-upgrade.md` | 兩份範本報告的格式 / 做法分析與 v2.2 對應 | 了解 v2.2 改了什麼 |
 | `examples/ghy-newbie.checklist.md` | 金猴爺新手體驗清單範例（三種寫法、探索重點、禁止） | 寫清單的起點 |
 | `scripts/ark_mobile_adb.py` | 裝置層 CLI；`--json` envelope；`doctor` 由下往上診斷 | 任何裝置操作 |
-| `scripts/aiqa_pack.py` | gamepack `lint` / `new` / `resolve` / `calibrate-demo` | 新遊戲、校準後 |
+| `scripts/aiqa_pack.py` | gamepack `lint` / `new` / `resolve` / `calibrate-demo` / `draft` / `verify` / `promote`（autobox） | 新遊戲、校準後、核帳驅動建檔 |
 | `scripts/aiqa_testgen.py` | `import-xlsx` / `expand` / `from-qa` / `from-spec` / `lint` / `render` / `refine` | 產測試清單 + 人工回饋修正 |
-| `scripts/aiqa_run.py` | 執行 checklist（`--backend adb|fake`、`--reader`、`--visual`、`--tiers`、`--items`、`--bugs`） | 跑測試 |
+| `scripts/aiqa_run.py` | 執行 checklist（`--backend adb|fake`、`--mode normal|batch`、`--reader`、`--visual`、`--tiers`、`--items`、`--bugs`） | 跑測試（batch = economy 連轉核帳） |
+| `scripts/aiqa_ledger.py` | 連轉資產核帳純函式（6 類判定：OK / SINGLE_OFF / STREAK_OFF / NEEDS_HUMAN / BASELINE_BROKEN / EXTERNAL_CREDIT） | economy batch / autobox 共用 |
+| `scripts/aiqa_economy.py` | economy batch 轉接層（observations → credit-primary 組 Spin → ledger → item verdict） | `aiqa_run --mode batch` |
+| `scripts/aiqa_gamepack_autobox.py` | 核帳驅動建檔驗證（`verify_profile`：無 FAIL + 乾淨守恆 ≥ min_clean + 有 win>0） | `aiqa_pack verify` 併用 / 獨立 CLI |
 | `scripts/aiqa_report.py` | run → test-report.md / test-results.xlsx / mantis-drafts.md / benchmark.json | 出報告 |
 | `scripts/aiqa_macro.py` | 按鍵精靈式腳本：`record` / `replay [--backend fake] [--dry-run]` / `lint` / `explain` | 建座標腳本、量加速比 |
 | `gamepacks/<g>/macros/*.yaml` | 該遊戲的確定性腳本（checklist 以 `{do: macro, name}` 呼叫） | 跑流程 |
@@ -155,7 +158,9 @@ gamepack 根的優先序：`--pack-dir` ＞ 環境變數 `ARK_AIQA_GAMEPACKS` �
 │   ├─ 先 dry-run：--backend fake（demo-slot）確認 checklist 邏輯；--bugs 注入看 FAIL 有沒有抓到
 │   ├─ 真機：--backend adb --device <serial> --reader tesseract|dual --visual llm [--tiers T1,T3,T5] [--items ...]
 │   ├─ pack 未校準 → GATE_BLOCKED（--allow-uncalibrated 只供除錯）；wm size ≠ pack 解析度 → BAD_INPUT
-│   └─ 想省 LLM：--reader tesseract；想更保守：--reader dual（雙讀不一致 → NEEDS_HUMAN）
+│   ├─ 想省 LLM：--reader tesseract；想更保守：--reader dual（雙讀不一致 → NEEDS_HUMAN）
+│   └─ economy 連轉守恆 → --mode batch（逐手讀 cb/bet/win/ca 接 ledger，credit-primary；只 SINGLE/STREAK_OFF 進 FAIL）
+├─ 新機台要標「已核帳驗證」→ aiqa_pack draft → 正常連轉收 spins.json → aiqa_pack verify → 人確認 aiqa_pack promote
 └─ 出報告 → aiqa_report.py --run <run>；先看「誤 PASS」與「與人工不一致」，再看 FAIL；xlsx 可直接進既有流程
 ```
 
@@ -171,6 +176,71 @@ gamepack 根的優先序：`--pack-dir` ＞ 環境變數 `ARK_AIQA_GAMEPACKS` �
 | NA | iOS / 真機 / 音效 / CN / ipv6 | 不執行，報告列出 |
 
 verdict：PASS / FAIL / FLAKY（重複不一致）/ NEEDS_HUMAN（視覺信心 < 0.8、讀數 null、執行錯誤）/ BLOCK / NA。**視覺斷言不能單獨撐 PASS 的高風險判定；誤 PASS 在報告第一頁單獨計數。**
+
+## economy 連轉核帳（`aiqa_run --mode batch`）
+
+連轉核帳驗證遊戲經濟守恆：checklist 於 `repeat` 內**逐手**讀 credit 前後（`cb`/`ca`）、`bet`、`win`，
+`aiqa_run --mode batch` 把那串讀數逐手組 `Spin` 餵進 `aiqa_ledger`，判 6 類（OK / SINGLE_OFF /
+STREAK_OFF / NEEDS_HUMAN / BASELINE_BROKEN / EXTERNAL_CREDIT），取代單轉守恆 oracle（純等式 win 讀錯會誤 FAIL）。
+
+```bash
+python scripts/aiqa_run.py --checklist <economy>.json --mode batch --backend adb --device <d> --reader tesseract --pack-dir <packs>
+```
+
+economy 項的辨識：item 明寫 `economy: true`（或 `economy: {names: {...}}` 自訂讀數名），或
+observations 同時含 `cb`/`bet`/`win`/`ca` 四個 list（逐手累積）時自動偵測。item verdict：
+
+- 只 `SINGLE_OFF` / `STREAK_OFF` 進 **FAIL**（人為少錢 / 漏派彩 / 手間金額憑空消失）。
+- 升級 / 任務外部加幣、win 讀不到、基準失效 → **不當 FAIL**（NEEDS_HUMAN，交人覆核）。
+- 🔑 **credit 為真相**：win ROI 在大獎 count-up 動畫期可能不可靠（高估）；win 讀數僅當**穩定且與
+  credit delta 自洽**（`|（cb − ca） − (bet − win)| ≤ tol`）才採用，否則當 `None` → ledger 判
+  NEEDS_HUMAN，**不可因不穩 win 誤判 SINGLE_OFF**（真機對照：信任不穩 win → 2 假 SINGLE_OFF；
+  credit-primary → 2 NEEDS_HUMAN，has_fail=false）。
+- 大獎 count-up 動畫可 >10s：credit `read` 的 `stabilize.timeout_s` 建議放寬到 15；讀不穩退化為
+  NEEDS_HUMAN（不誤 FAIL，可接受）。
+
+連轉讀數 checklist 片段（實證可行，不需新 primitive）：
+
+```json
+{"do":"repeat","times":10,"actions":[
+  {"do":"read","name":"cb","roi":"credit","oracle":"ocr_number","stabilize":{"mode":"same_twice","timeout_s":15}},
+  {"do":"read","name":"bet","roi":"bet","oracle":"ocr_number","stabilize":{"mode":"same_twice","timeout_s":6}},
+  {"do":"tap","target":"btn:spin"},
+  {"do":"wait","state":"reels_settled"},
+  {"do":"read","name":"win","roi":"win","oracle":"ocr_number","stabilize":{"mode":"same_twice","timeout_s":8}},
+  {"do":"read","name":"ca","roi":"credit","oracle":"ocr_number","stabilize":{"mode":"same_twice","timeout_s":15}}
+]}
+```
+
+## 核帳驅動建檔（`aiqa_pack` draft / verify / promote，autobox）
+
+不另花押注試轉：用正常玩的連轉讀數經 `aiqa_ledger` 核帳，通過門檻才把 `machine.yaml`
+從 `status: draft` 升 `verified`。machine.yaml 加 `status` 欄（`draft` / `verified`）。
+
+```bash
+python scripts/aiqa_pack.py draft   --game ghy --machine aztec2                 # 標 status: draft（列 pending rois/screens）
+python scripts/aiqa_pack.py verify  --game ghy --machine aztec2 --spins s.json  # 核帳 → 回「可升」；不改檔
+python scripts/aiqa_pack.py promote --game ghy --machine aztec2                 # 人確認後才升 status
+```
+
+`spins.json`：list of `{credit_before, bet, win(可 null), credit_after, action?}`。verify 通過門檻：
+**無 FAIL、乾淨守恆（OK）≥ `--min-clean`（預設 3）、至少一手讀到 `win>0`**（`--no-require-win` 可關；
+`--tol` 調容差）。不過 → `GATE_BLOCKED`（exit 3）並指出「核帳不符 → 框選 / roi 需修」。
+**人保最終否決**：verify 只回「可升」，是否標 verified 由 `promote`（人下的動作）決定。
+
+| 連轉輸入 | verify 結果 | 意義 |
+|---|---|---|
+| credit 守恆、有讀到 win>0 | can_promote: true | 框可升（待人確認） |
+| credit 守恆、win 未讀到 | NOT（`--no-require-win` 可放行） | credit 框可升、贏分框未證實 |
+| 含人為少錢 / 手間金額消失 | NOT「核帳不符 → roi 需修」 | 壞框不誤升 |
+
+## 環境前置（economy / 真機 run 重要）
+
+- 裝置 **Physical wm size 必須等於 pack `resolution`**（如 fuxing3 橫向 1280×720）。
+  `adb shell wm size <W>x<H>` 的 **override 不被認**——aiqa_run 讀 **Physical**（不符 → BAD_INPUT）；
+  改 BlueStacks 顯示設定並重啟。
+- **tesseract 需在執行行程 PATH**（Windows：`C:\Program Files\Tesseract-OCR`）；否則 reader 報缺
+  tesseract、economy run 讀數失敗。
 
 ## 一次跑完（fake，無憑證）
 
