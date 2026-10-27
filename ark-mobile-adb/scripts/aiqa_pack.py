@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""aiqa_pack — gamepack 工具：lint / new / calibrate-demo / resolve。
+"""aiqa_pack — gamepack 工具：lint / new / calibrate-demo / resolve / draft / verify / promote。
 
 用法:
   python aiqa_pack.py lint --game ghy [--machine aztec2]        # error → exit 3
   python aiqa_pack.py new --game mahjong --display-name 麻將
   python aiqa_pack.py calibrate-demo                              # 由合成遊戲產 demo-slot 的 screens/buttons 模板圖
   python aiqa_pack.py resolve --game demo-slot [--machine x] [--out r.json]
+  python aiqa_pack.py draft --game ghy --machine aztec2                       # 標 status: draft
+  python aiqa_pack.py verify --game ghy --machine aztec2 --spins spins.json   # autobox 核帳 → 回「可升」（不改檔）
+  python aiqa_pack.py promote --game ghy --machine aztec2                     # 人確認後 status draft→verified
 校準真遊戲：在 BlueStacks 截圖 → 用 ark_mobile_adb.py crop 裁錨點 → 填 screens/buttons/rois → lint 綠 → calibrated: true。
+autobox：不另花押注試轉——用正常連轉讀數經 aiqa_ledger 核帳，通過門檻才由人 promote 升 verified。
 """
 from __future__ import annotations
 
@@ -22,6 +26,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aiqa_common as C  # noqa: E402
 
 ACTIONS = {"macro", "navigate", "tap", "key", "wait", "read", "capture", "ask", "repeat", "restart_app", "net", "harness", "crash_check", "loop_spin", "manual_step", "swipe"}
+
+STATUS_VALUES = ("draft", "verified")
 
 
 def lint_pack(game: str, machine: str | None, root=None) -> list[dict]:
@@ -122,6 +128,71 @@ def calibrate_demo() -> dict:
     return {"templates": made}
 
 
+# ---------------------------------------------------------------- autobox：draft → verify → promote
+def _machine_yaml_path(game: str, machine: str, root=None) -> pathlib.Path:
+    """machines/<machine>/machine.yaml 的實體路徑（寫 status 用，非 merged pack）。"""
+    root = root or C.GAMEPACKS_DIR
+    return root / game / "machines" / machine / "machine.yaml"
+
+
+def _read_status(mp: pathlib.Path) -> str:
+    return str((C.yaml_load(mp) or {}).get("status") or "draft") if mp.exists() else "draft"
+
+
+def _write_status(mp: pathlib.Path, status: str) -> None:
+    """只改 machine.yaml 的 status 欄，其餘保持原樣（含欄位順序，status 置頂）。"""
+    doc = C.yaml_load(mp) or {}
+    new = {"status": status}
+    for k, v in doc.items():
+        if k != "status":
+            new[k] = v
+    C.atomic_write(mp, C.yaml_dump(new))
+
+
+def draft_machine(game: str, machine: str, root=None) -> dict:
+    """把機台檔標為 draft（待核帳驗證）。machine.yaml 不存在 → 報錯提示先建。"""
+    mp = _machine_yaml_path(game, machine, root)
+    if not mp.exists():
+        C.fail("BAD_INPUT", f"machine.yaml 不存在：{mp}", "先建機台檔（screens/rois/navigation），再 draft")
+    _write_status(mp, "draft")
+    pending = []
+    doc = C.yaml_load(mp) or {}
+    if not doc.get("rois"):
+        pending.append("rois（贏分/押注/credit 框）")
+    if not doc.get("screens"):
+        pending.append("screens（錨點模板）")
+    return {"game": game, "machine": machine, "status": "draft", "machine_yaml": str(mp),
+            "pending": pending,
+            "next": f"正常連轉收 spins.json → python aiqa_pack.py verify --game {game} --machine {machine} --spins spins.json"}
+
+
+def verify_machine(game: str, machine: str, spins_path: str, *, min_clean: int, require_win: bool, tol: float, root=None) -> dict:
+    """對連轉讀數做核帳驗證（autobox）；只回「可升 verified」，不改檔。"""
+    import aiqa_gamepack_autobox as AB
+    mp = _machine_yaml_path(game, machine, root)
+    if not mp.exists():
+        C.fail("BAD_INPUT", f"machine.yaml 不存在：{mp}", "先 aiqa_pack.py draft")
+    sp = pathlib.Path(spins_path)
+    if not sp.exists():
+        C.fail("BAD_INPUT", f"spins JSON 不存在：{sp}", "連轉逐手讀 credit_before/bet/win/credit_after 存成 list")
+    r = AB.verify_profile(AB._load_spins(sp), min_clean=min_clean, require_win=require_win, tol=tol)
+    return {"game": game, "machine": machine, "current_status": _read_status(mp),
+            "can_promote": r.verified, "reason": r.reason,
+            "clean_pairs": r.clean_pairs, "wins": r.wins, "fails": r.fails,
+            "next": (f"人確認後 → python aiqa_pack.py promote --game {game} --machine {machine}"
+                     if r.verified else "修框選/roi 後重收 spins 再 verify")}
+
+
+def promote_machine(game: str, machine: str, root=None) -> dict:
+    """人確認後把 machine.yaml status draft → verified（本命令即「人下」的動作）。"""
+    mp = _machine_yaml_path(game, machine, root)
+    if not mp.exists():
+        C.fail("BAD_INPUT", f"machine.yaml 不存在：{mp}", "先 aiqa_pack.py draft")
+    prev = _read_status(mp)
+    _write_status(mp, "verified")
+    return {"game": game, "machine": machine, "status": "verified", "previous": prev, "machine_yaml": str(mp)}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="gamepack tools")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -131,6 +202,17 @@ def main() -> None:
     sub.add_parser("calibrate-demo")
     s = sub.add_parser("resolve"); s.add_argument("--game", required=True); s.add_argument("--machine"); s.add_argument("--out")
     s = sub.add_parser("list")
+    s = sub.add_parser("draft", help="把機台檔標為 draft（待核帳驗證）")
+    s.add_argument("--game", required=True); s.add_argument("--machine", required=True)
+    s.add_argument("--pack-dir", help="gamepack 根目錄")
+    s = sub.add_parser("verify", help="autobox：對連轉讀數核帳，回「可升 verified」（不改檔）")
+    s.add_argument("--game", required=True); s.add_argument("--machine", required=True)
+    s.add_argument("--spins", required=True, help="spins JSON：list of {credit_before,bet,win,credit_after,action?}")
+    s.add_argument("--min-clean", type=int, default=3); s.add_argument("--no-require-win", action="store_true")
+    s.add_argument("--tol", type=float, default=1.0); s.add_argument("--pack-dir", help="gamepack 根目錄")
+    s = sub.add_parser("promote", help="人確認後把 status draft→verified")
+    s.add_argument("--game", required=True); s.add_argument("--machine", required=True)
+    s.add_argument("--pack-dir", help="gamepack 根目錄")
     a = ap.parse_args()
     if a.cmd == "list":
         C.emit({"games": C.list_games(), "dir": str(C.GAMEPACKS_DIR)})
@@ -163,6 +245,19 @@ def main() -> None:
             C.atomic_write(pathlib.Path(a.out), json.dumps(pack, ensure_ascii=False, indent=1, default=str))
         C.emit({"game": pack["game"], "machine": pack.get("machine"), "sha256": pack["_sha256"], "screens": list(pack.get("screens", {})),
                 "buttons": list(pack.get("buttons", {})), "rois": list(pack.get("rois", {})), "harness": pack.get("harness"), "calibrated": pack.get("calibrated")})
+    if a.cmd == "draft":
+        root = C.resolve_pack_root(getattr(a, "pack_dir", None))
+        C.emit(draft_machine(a.game, a.machine, root=root))
+    if a.cmd == "verify":
+        root = C.resolve_pack_root(getattr(a, "pack_dir", None))
+        data = verify_machine(a.game, a.machine, a.spins, min_clean=a.min_clean,
+                              require_win=not a.no_require_win, tol=a.tol, root=root)
+        if not data["can_promote"]:
+            C.fail("GATE_BLOCKED", data["reason"], data["next"], data=data)
+        C.emit(data)
+    if a.cmd == "promote":
+        root = C.resolve_pack_root(getattr(a, "pack_dir", None))
+        C.emit(promote_machine(a.game, a.machine, root=root))
 
 
 if __name__ == "__main__":
