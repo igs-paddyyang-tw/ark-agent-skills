@@ -1,0 +1,284 @@
+// Package table 是遊戲桌的骨架：每桌一個 goroutine（actor），入桌 / 離桌、同桌廣播、
+// 斷線保留座位、panic 隔離、排空。遊戲邏輯（開砲、魚群、結算）由遊戲模組實作 Hooks。
+//
+// 對應 Python ArkEngine/ArkGame/TableSystem.py（Table、TableSystem）。客戶端協定相同：
+//
+//	sys "table"：any / new / join / leave，回應 {"status":0,"id":..,"type":..} 或錯誤碼
+//	入桌廣播 {"cmd":"join","data":{"ark_id":..},"sys":"table"}（含自己）
+//	離桌廣播 {"cmd":"leave","data":{"ark_id":..},"sys":"table"}（給其他人）
+//
+// 與 Python 的差異：斷線不立即離桌，座位保留 HoldFor（預設 30 秒，配合 router 的重連導回原 pod）；
+// 期間重連並送 any / new 會回到原桌原座。逾時才離桌結算。
+package table
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"runtime/debug"
+	"time"
+
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/ark-go/wire"
+)
+
+// SysName 是桌系統的 sys 名稱。
+const SysName = "table"
+
+// Seat 是桌上的一個座位。只在桌的 goroutine 內存取。
+type Seat struct {
+	Index   int
+	ArkID   string
+	Session *session.Session // 斷線保留期間為 nil
+	JoinAt  time.Time
+	HeldTil time.Time      // 斷線保留到何時；連線中為零值
+	Data    map[string]any // 遊戲模組的玩家資料
+}
+
+// Connected 回報座位上的玩家是否在線。
+func (s *Seat) Connected() bool { return s.Session != nil }
+
+// Hooks 是遊戲模組要實作的事件。全部在桌的 goroutine 內呼叫（同一張桌依序，不需加鎖）。
+type Hooks interface {
+	// OnJoin：玩家入桌（新入桌，或斷線保留期間重連回座；reconnect 為 true）。
+	OnJoin(t *Table, s *Seat, reconnect bool)
+	// OnDisconnect：玩家斷線，座位進入保留。
+	OnDisconnect(t *Table, s *Seat)
+	// OnLeave：玩家真正離桌（主動離開、保留逾時、排空、桌出錯）。遊戲模組在這裡結算與寫回。
+	OnLeave(t *Table, s *Seat, reason string)
+	// OnTick：每 TickEvery 呼叫一次（魚群、計時）。
+	OnTick(t *Table, now time.Time)
+}
+
+// NopHooks 是什麼都不做的 Hooks（測試與骨架用）。
+type NopHooks struct{}
+
+func (NopHooks) OnJoin(*Table, *Seat, bool)    {}
+func (NopHooks) OnDisconnect(*Table, *Seat)    {}
+func (NopHooks) OnLeave(*Table, *Seat, string) {}
+func (NopHooks) OnTick(*Table, time.Time)      {}
+
+// Table 是一張遊戲桌。
+type Table struct {
+	ID    string
+	Type  string // 廳館
+	Limit int
+
+	m      *Manager
+	hooks  Hooks
+	log    *slog.Logger
+	inbox  chan func()
+	done   chan struct{}
+	seats  []*Seat
+	closed bool // 只在桌 goroutine 內存取
+}
+
+// ErrTableClosed：桌已關閉。
+var ErrTableClosed = errors.New("table: closed")
+
+// Do 把 fn 送進桌的 goroutine 執行（非同步）。桌已關閉時回傳 ErrTableClosed。
+func (t *Table) Do(fn func()) error {
+	select {
+	case <-t.done:
+		return ErrTableClosed
+	default:
+	}
+	select {
+	case t.inbox <- fn:
+		return nil
+	case <-t.done:
+		return ErrTableClosed
+	}
+}
+
+// call 送進桌的 goroutine 並等待完成。
+func (t *Table) call(ctx context.Context, fn func()) error {
+	ch := make(chan struct{})
+	if err := t.Do(func() { defer close(ch); fn() }); err != nil {
+		return err
+	}
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.done:
+		return ErrTableClosed
+	}
+}
+
+func (t *Table) run(tick time.Duration) {
+	defer close(t.done)
+	tk := time.NewTicker(tick)
+	defer tk.Stop()
+	for !t.closed {
+		select {
+		case fn := <-t.inbox:
+			t.safe("inbox", fn)
+		case now := <-tk.C:
+			t.safe("tick", func() {
+				t.expireHolds(now)
+				t.hooks.OnTick(t, now)
+			})
+		}
+	}
+}
+
+// safe 執行 fn；panic 時先讓所有玩家離桌（OnLeave 結算寫回），再關桌，並關閉玩家連線讓他們重新配桌。
+func (t *Table) safe(where string, fn func()) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		t.log.Error("table panic, evacuating", "table", t.ID, "where", where, "panic", fmt.Sprint(r), "stack", string(debug.Stack()))
+		t.m.stats.panics.Add(1)
+		for _, s := range t.Seats() {
+			sess := s.Session
+			t.removeSeat(s, "table error")
+			if sess != nil {
+				sess.Close(530, "table error")
+			}
+		}
+		t.close()
+	}()
+	fn()
+}
+
+// Seats 回傳目前的座位（含斷線保留中）。只能在桌的 goroutine 內呼叫。
+func (t *Table) Seats() []*Seat {
+	out := make([]*Seat, 0, len(t.seats))
+	for _, s := range t.seats {
+		if s != nil {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// SeatOf 回傳玩家的座位。只能在桌的 goroutine 內呼叫。
+func (t *Table) SeatOf(arkID string) *Seat {
+	for _, s := range t.seats {
+		if s != nil && s.ArkID == arkID {
+			return s
+		}
+	}
+	return nil
+}
+
+// Broadcast 送給桌上所有在線玩家。只能在桌的 goroutine 內呼叫。
+func (t *Table) Broadcast(sys, cmd string, data any) {
+	t.BroadcastExcept("", sys, cmd, data)
+}
+
+// BroadcastExcept 送給除了 arkID 以外的在線玩家。
+func (t *Table) BroadcastExcept(arkID, sys, cmd string, data any) {
+	for _, s := range t.seats {
+		if s != nil && s.Session != nil && s.ArkID != arkID {
+			_ = s.Session.Send(sys, cmd, data)
+		}
+	}
+}
+
+func (t *Table) count() int {
+	n := 0
+	for _, s := range t.seats {
+		if s != nil {
+			n++
+		}
+	}
+	return n
+}
+
+// addSeat 在桌的 goroutine 內入座；已有座位（斷線保留中或被同帳號取代）時回原座。
+func (t *Table) addSeat(sess *session.Session, now time.Time) (*Seat, bool, error) {
+	if t.closed {
+		return nil, false, ErrTableClosed
+	}
+	if s := t.SeatOf(sess.ArkID()); s != nil {
+		s.Session, s.HeldTil = sess, time.Time{}
+		t.Broadcast(SysName, "join", map[string]any{"ark_id": s.ArkID})
+		t.hooks.OnJoin(t, s, true)
+		return s, true, nil
+	}
+	for i, s := range t.seats {
+		if s == nil {
+			seat := &Seat{Index: i, ArkID: sess.ArkID(), Session: sess, JoinAt: now, Data: map[string]any{}}
+			t.seats[i] = seat
+			t.m.seated(t, seat.ArkID, +1)
+			t.Broadcast(SysName, "join", map[string]any{"ark_id": seat.ArkID})
+			t.hooks.OnJoin(t, seat, false)
+			return seat, false, nil
+		}
+	}
+	return nil, false, errFull
+}
+
+var errFull = errors.New("table: full")
+
+// removeSeat 讓玩家真正離桌：OnLeave（結算）→ 通知其他人 → 釋放座位。
+func (t *Table) removeSeat(s *Seat, reason string) {
+	if t.seats[s.Index] != s {
+		return
+	}
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.log.Error("OnLeave panic", "table", t.ID, "ark_id", s.ArkID, "panic", fmt.Sprint(r))
+			}
+		}()
+		t.hooks.OnLeave(t, s, reason)
+	}()
+	t.seats[s.Index] = nil
+	t.m.seated(t, s.ArkID, -1)
+	t.BroadcastExcept(s.ArkID, SysName, "leave", map[string]any{"ark_id": s.ArkID})
+	if t.count() == 0 {
+		t.close()
+	}
+}
+
+func (t *Table) expireHolds(now time.Time) {
+	for _, s := range t.Seats() {
+		if !s.Connected() && !s.HeldTil.IsZero() && now.After(s.HeldTil) {
+			t.removeSeat(s, "disconnect timeout")
+		}
+	}
+}
+
+func (t *Table) close() {
+	if t.closed {
+		return
+	}
+	t.closed = true
+	t.m.tableClosed(t)
+}
+
+// Routed 把遊戲指令包成 dispatch handler：在玩家所在桌的 goroutine 內執行，回應經 Session 送出。
+// 玩家不在桌上時回 {"status":-1,"msg":"not in table"}。
+func Routed(m *Manager, h func(t *Table, s *Seat, p *wire.Packet) (any, error)) func(ctx context.Context, sess *session.Session, p *wire.Packet) (any, error) {
+	return func(ctx context.Context, sess *session.Session, p *wire.Packet) (any, error) {
+		t := m.TableOf(sess.ArkID())
+		if t == nil {
+			return map[string]any{"status": -1, "msg": "not in table"}, nil
+		}
+		err := t.Do(func() {
+			seat := t.SeatOf(sess.ArkID())
+			if seat == nil || seat.Session != sess {
+				return
+			}
+			out, err := h(t, seat, p)
+			if err != nil {
+				t.log.Error("table handler", "table", t.ID, "cmd", p.Cmd, "ark_id", seat.ArkID, "err", err)
+				return
+			}
+			if out != nil {
+				_ = sess.Reply(p, out)
+			}
+		})
+		if err != nil {
+			return map[string]any{"status": -1, "msg": "table closed"}, nil
+		}
+		return nil, nil
+	}
+}

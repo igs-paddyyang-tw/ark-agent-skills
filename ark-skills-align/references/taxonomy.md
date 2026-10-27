@@ -1,6 +1,17 @@
-# 分類法（schema v1）
+# 分類法（schema 1.2：三軸）
 
-兩層分類：職能角色（`category`）× 受眾（`outputs.audience`）。
+三個正交欄位 ＋ 既有的產出格式：
+
+| 欄位 | 回答 | 受控詞彙 |
+|---|---|---|
+| `category` | **產出什麼**（職能） | process／scaffolder／pipeline／view／document／ops |
+| `form` | agent **怎麼用** | executor／instruction |
+| `domain` | 屬於**哪個業務** | general／game |
+| `outputs` | 產出格式 × 受眾 | 見下方「outputs 預設」 |
+
+> 為什麼拆：1.1 把「形態」（`executor`）與「領域」（`domain`）塞進 `category`，違反本檔
+> 「判準是**產出物**而非**手段**」的原則 —— 詳見 `docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md`。
+> 詞彙的**程式權威**是 `scripts/audit_skills.py`；其他腳本的複本由 repo 根的 `test_taxonomy_vocab.py`（根 scripts/tests 下）守一致。
 
 > 🔴 **歸屬以各 skill 的 frontmatter 為唯一真相**（2026-08-12 決策 C）。
 > 本文件只定義**受控詞彙**與**outputs 預設／例外**，**不再維護歸屬名冊**。
@@ -32,10 +43,30 @@
 | pipeline | 管線元件 | `[{format: data, audience: ai}]` |
 | view | 呈現層 | `[{format: html, audience: human}]` |
 | document | 文件輸出 | `[{format: md, audience: both}]` |
-| domain | 領域 SOP | `[{format: md, audience: both}]` |
 | ops | 維運 | `[{format: md, audience: ai}]` |
 
-**舊縮寫**（`proc`／`scaffold`／`present`／`doc`／`sop`）為 legacy alias，
+> 🔴 `executor`、`domain` **不是** category（schema 1.2 起）。舊複本寫這兩個值 → audit P2 `category-axis-mixed`；
+> 不設自動別名（同一舊值對應多個新值），改法：形態寫 `form`、領域寫 `domain`，category 依產出物重選。
+
+## form 判準
+
+只看「**主要產出是誰做的**」，不看有沒有 `scripts/` 目錄、也不看呼叫次數：
+
+| form | 判準 | 例 |
+|---|---|---|
+| `executor` | 自帶 `scripts/` 決定性產生主要產出，agent 以 bash 呼叫、讀 stdout 契約 | db-query、wiki-engine、game-prob |
+| `instruction` | LLM 依 SKILL.md 產生主要產出；附帶腳本只做守門／渲染／輔助 | md-report（lint）、html-report（戳記）、release-notes（骨架） |
+
+## domain 判準
+
+| domain | 判準 |
+|---|---|
+| `game` | 內容綁遊戲業務（遊戲製程、玩家、遊戲行銷、遊戲 QA） |
+| `general` | 換成非遊戲專案照樣能用（同時涵蓋通用與遊戲的也算，例：kpi-calculator） |
+
+> 只在出現第三個業務且有 ≥ 2 個 skill 時才擴充；擴充要同步 audit 與各複本（測試會擋）。
+
+**舊縮寫**（`proc`／`scaffold`／`present`／`doc`／`sop`）為 legacy alias（注意 `sop` 現對應 `document`），
 過渡期由 `audit_skills.py` 報 P3 容忍，新 skill 一律用上表 canonical 值。
 
 ⚠️ `deprecated` **不是** category —— 它是 `status`。

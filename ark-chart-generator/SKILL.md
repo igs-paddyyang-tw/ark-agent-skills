@@ -9,11 +9,13 @@ description: |
   或任何需要將數據轉換為圖片的場景。
   不適用於：可篩選排序的互動式儀錶板請用 ark-html-dashboard；報告內嵌的視覺區塊請用 ark-html-report（本 skill 產的是靜態圖檔）。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai

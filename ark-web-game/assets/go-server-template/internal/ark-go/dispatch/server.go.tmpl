@@ -1,0 +1,339 @@
+package dispatch
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"runtime/debug"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/gorilla/websocket"
+
+	"__MODULE__/internal/ark-go/guard"
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/ark-go/wire"
+	"__MODULE__/internal/ark-go/ws"
+)
+
+// SNMode 決定 sn 遞增檢查的行為。
+type SNMode int
+
+const (
+	SNOff     SNMode = iota // 不檢查
+	SNLog                   // 只記錄（預設；等客戶端確認 WebSocket sn 遞增，見設計文件 N2）
+	SNEnforce               // 拒絕重複或倒退的 sn
+)
+
+// Config 是連線層參數。零值欄位使用預設。
+type Config struct {
+	AuthTimeout   time.Duration // 連線後多久內必須認證，預設 10 秒
+	AliveTimeout  time.Duration // 多久沒收到封包就以 408 關閉，預設 20 秒（Python client_timeout=15，實際 15～30 秒才踢）
+	FloodLimit    int64         // 每秒封包上限，預設 40（Python blockFrequence）
+	FloodContinue int           // 連續幾秒超限就 509，預設 3（Python blockContinue）
+	MaxConns      int           // 本 pod 連線上限，0 = 不限
+	TokenTTL      time.Duration // token 有效期，續期間隔 = 0.9 倍，預設 1800 秒
+	SN            SNMode
+	WS            ws.Options
+	Trusted       guard.TrustedProxies // 可信代理（gateway / ALB 網段）
+	Tick          time.Duration        // 巡檢間隔，預設 1 秒
+}
+
+func (c *Config) defaults() {
+	if c.AuthTimeout <= 0 {
+		c.AuthTimeout = 10 * time.Second
+	}
+	if c.AliveTimeout <= 0 {
+		c.AliveTimeout = 20 * time.Second
+	}
+	if c.FloodLimit == 0 {
+		c.FloodLimit = 40
+	}
+	if c.FloodContinue <= 0 {
+		c.FloodContinue = 3
+	}
+	if c.TokenTTL <= 0 {
+		c.TokenTTL = 1800 * time.Second
+	}
+	if c.Tick <= 0 {
+		c.Tick = time.Second
+	}
+}
+
+// Stats 是連線層計數器（之後接 metrics）。
+type Stats struct {
+	Opened, Closed     atomic.Int64
+	AuthOK, AuthFailed atomic.Int64
+	UnknownCmd         atomic.Int64
+	SNRejected         atomic.Int64
+	Panics             atomic.Int64
+	BadPackets         atomic.Int64
+	Oversize           atomic.Int64
+	CloseByCode        sync.Map // int → *atomic.Int64
+}
+
+func (st *Stats) closed(code int) {
+	st.Closed.Add(1)
+	v, _ := st.CloseByCode.LoadOrStore(code, new(atomic.Int64))
+	v.(*atomic.Int64).Add(1)
+}
+
+type client struct {
+	s         *session.Session
+	flood     guard.FloodMeter
+	nextRenew atomic.Int64 // unix nano；0 = 尚未認證
+}
+
+// Server 是玩家 WebSocket 埠。
+type Server struct {
+	Router   *Router
+	Auth     *session.Authenticator
+	Registry *session.Registry
+	Logger   *slog.Logger
+	Stats    Stats
+
+	// OnClose 在連線結束時呼叫（業務模組用來離桌、寫回），可為 nil。
+	OnClose func(s *session.Session, code int, reason string)
+
+	// Observe 記錄每個指令的處理時間（handler 執行時間，不含排隊），可為 nil。
+	// 交給桌 goroutine 的指令（table.Routed）只量到「送進桌」為止，桌內的處理時間由桌另外量。
+	Observe func(sys, cmd string, d time.Duration)
+
+	cfg      Config
+	upgrader websocket.Upgrader
+	clients  sync.Map // uint64 → *client
+	draining atomic.Bool
+	now      func() time.Time
+}
+
+// NewServer 建立 Server。auth.Registry 會被設為 Server 的 Registry。
+func NewServer(cfg Config, router *Router, auth *session.Authenticator, logger *slog.Logger) *Server {
+	cfg.defaults()
+	if logger == nil {
+		logger = slog.Default()
+	}
+	reg := session.NewRegistry()
+	auth.Registry = reg
+	if auth.Logger == nil {
+		auth.Logger = logger
+	}
+	return &Server{
+		Router:   router,
+		Auth:     auth,
+		Registry: reg,
+		Logger:   logger,
+		cfg:      cfg,
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  4096,
+			WriteBufferSize: 4096,
+			// 客戶端有 App 與 Web，與 Python 相同不檢查 Origin
+			CheckOrigin: func(*http.Request) bool { return true },
+		},
+		now: time.Now,
+	}
+}
+
+// ServeHTTP 升級成 WebSocket 並處理這條連線直到結束。
+func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if srv.draining.Load() {
+		http.Error(w, "draining", http.StatusServiceUnavailable)
+		return
+	}
+	c, err := srv.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return // Upgrade 已回應錯誤
+	}
+	conn := ws.New(c, srv.cfg.WS)
+	conn.OnOversize = func(p *wire.Packet) {
+		srv.Stats.Oversize.Add(1)
+		srv.Logger.Error("packet over 9999 chars dropped", "cmd", p.Cmd, "ret", p.Ret, "sys", p.SysName())
+	}
+	now := srv.now()
+	s := session.New(conn, srv.cfg.Trusted.ClientIP(r), now)
+	cl := &client{s: s, flood: guard.FloodMeter{Limit: srv.cfg.FloodLimit, Continue: srv.cfg.FloodContinue}}
+	srv.Registry.Add(s)
+	srv.clients.Store(s.ID, cl)
+	srv.Stats.Opened.Add(1)
+
+	if total, _ := srv.Registry.Count(); srv.cfg.MaxConns > 0 && total > srv.cfg.MaxConns {
+		conn.Close(ws.CodeMaxConn, "maxconn limit")
+	}
+
+	conn.ReadLoop(func(p *wire.Packet) { srv.handle(r.Context(), cl, p) }, func(body []byte, err error) {
+		srv.Stats.BadPackets.Add(1)
+		srv.Logger.Warn("bad packet", "session", s.ID, "err", err)
+	})
+	<-conn.Done()
+
+	code, reason := conn.CloseInfo()
+	srv.clients.Delete(s.ID)
+	srv.Registry.Remove(s)
+	srv.Stats.closed(code)
+	if srv.OnClose != nil {
+		srv.safe(s, "on_close", func() { srv.OnClose(s, code, reason) })
+	}
+}
+
+type authData struct {
+	ArkID    string `json:"ark_id"`
+	ArkToken string `json:"ark_token"`
+}
+
+func (srv *Server) handle(ctx context.Context, cl *client, p *wire.Packet) {
+	s := cl.s
+	cl.flood.Hit()
+	s.Touch(srv.now())
+
+	// 客戶端回應伺服器指令
+	if p.Cmd == "" {
+		if p.Ret != "" && s.State() == session.Authed {
+			if h := srv.Router.ret(p.SysName(), p.Ret); h != nil {
+				srv.call(ctx, s, p, h, false)
+			}
+		}
+		return
+	}
+
+	if p.Sys == nil {
+		switch p.Cmd {
+		case "auth":
+			var d authData
+			_ = json.Unmarshal(p.Data, &d)
+			res := srv.Auth.Auth(ctx, s, d.ArkID, d.ArkToken, srv.now())
+			if res.Status == 0 {
+				srv.Stats.AuthOK.Add(1)
+				srv.Logger.Info("auth ok", "ark_id", s.ArkID(), "ip", s.RemoteIP, "session", s.ID)
+				cl.nextRenew.Store(srv.now().Add(srv.cfg.TokenTTL * 9 / 10).UnixNano())
+			} else {
+				srv.Stats.AuthFailed.Add(1)
+			}
+			_ = s.Reply(p, res)
+			if res.CloseReason != "" {
+				s.Close(ws.CodeClosed, res.CloseReason)
+			}
+			return
+		case "alive":
+			return
+		case "close":
+			_ = s.Reply(p, "Bye")
+			s.Close(ws.CodeClosed, "client close")
+			return
+		}
+	}
+
+	if s.State() != session.Authed {
+		if p.Sys != nil {
+			_ = s.Reply(p, map[string]any{"status": -999, "msg": "not authed"})
+		}
+		return
+	}
+
+	h := srv.Router.cmd(p.SysName(), p.Cmd)
+	if h == nil {
+		srv.Stats.UnknownCmd.Add(1)
+		srv.Logger.Debug("unknown cmd", "sys", p.SysName(), "cmd", p.Cmd, "ark_id", s.ArkID())
+		return
+	}
+	if !srv.checkSN(s, p) {
+		return
+	}
+	srv.call(ctx, s, p, h, true)
+}
+
+// checkSN 檢查 sn 嚴格遞增。只由該連線的讀 goroutine 呼叫，不需要鎖。
+func (srv *Server) checkSN(s *session.Session, p *wire.Packet) bool {
+	if srv.cfg.SN == SNOff {
+		return true
+	}
+	n, ok := p.SNInt()
+	if !ok {
+		return true
+	}
+	if s.HasLastSN && n <= s.LastSN {
+		srv.Stats.SNRejected.Add(1)
+		srv.Logger.Warn("sn not increasing", "ark_id", s.ArkID(), "sn", n, "last", s.LastSN, "cmd", p.Cmd, "enforce", srv.cfg.SN == SNEnforce)
+		return srv.cfg.SN != SNEnforce
+	}
+	s.LastSN, s.HasLastSN = n, true
+	return true
+}
+
+func (srv *Server) call(ctx context.Context, s *session.Session, p *wire.Packet, h Handler, reply bool) {
+	var out any
+	var err error
+	start := time.Now()
+	srv.safe(s, p.SysName()+"."+p.Cmd+p.Ret, func() { out, err = h(ctx, s, p) })
+	if srv.Observe != nil {
+		srv.Observe(p.SysName(), p.Cmd+p.Ret, time.Since(start))
+	}
+	if err != nil {
+		srv.Logger.Error("handler error", "sys", p.SysName(), "cmd", p.Cmd, "ark_id", s.ArkID(), "err", err)
+		return
+	}
+	if reply && out != nil {
+		_ = s.Reply(p, out)
+	}
+}
+
+// safe 執行 fn，panic 只記錄、不讓連線或 pod 掛掉。
+func (srv *Server) safe(s *session.Session, what string, fn func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			srv.Stats.Panics.Add(1)
+			srv.Logger.Error("panic", "where", what, "ark_id", s.ArkID(), "panic", fmt.Sprint(r), "stack", string(debug.Stack()))
+		}
+	}()
+	fn()
+}
+
+// Run 執行每秒巡檢：流量封鎖、心跳逾時、認證期限、token 續期。ctx 結束時返回。
+func (srv *Server) Run(ctx context.Context) {
+	t := time.NewTicker(srv.cfg.Tick)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			srv.sweep(ctx, srv.now())
+		}
+	}
+}
+
+func (srv *Server) sweep(ctx context.Context, now time.Time) {
+	srv.clients.Range(func(_, v any) bool {
+		cl := v.(*client)
+		s := cl.s
+		switch {
+		case cl.flood.Tick():
+			srv.Logger.Warn("bandwidth limit exceeded", "ark_id", s.ArkID(), "ip", s.RemoteIP)
+			s.Close(ws.CodeFlood, "Bandwidth Limit Exceeded")
+		case now.Sub(s.LastActive()) > srv.cfg.AliveTimeout:
+			s.Close(ws.CodeAliveTimeout, "server alive timeout")
+		case s.State() == session.Unauthed && now.Sub(s.OpenedAt) > srv.cfg.AuthTimeout:
+			s.Close(ws.CodeClosed, "auth timeout")
+		case s.State() == session.Authed && cl.nextRenew.Load() != 0 && now.UnixNano() >= cl.nextRenew.Load():
+			cl.nextRenew.Store(now.Add(srv.cfg.TokenTTL * 9 / 10).UnixNano())
+			go srv.Auth.Renew(ctx, s)
+		}
+		return true
+	})
+}
+
+// Drain 進入排空：拒絕新連線，並以 4002 關閉所有現有連線（業務模組應先在 OnClose 內結算）。
+func (srv *Server) Drain(reason string) {
+	srv.draining.Store(true)
+	srv.clients.Range(func(_, v any) bool {
+		v.(*client).s.Close(ws.CodeDraining, reason)
+		return true
+	})
+}
+
+// Draining 回報是否排空中（給 readiness 用）。
+func (srv *Server) Draining() bool { return srv.draining.Load() }
+
+// Conns 回傳（全部連線數, 已認證連線數）。
+func (srv *Server) Conns() (int, int) { return srv.Registry.Count() }

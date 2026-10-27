@@ -1,0 +1,56 @@
+# ark-game-report 報告設定：一份報告一個檔（D+7、D+30 各複製一份，或改 stage 重跑）
+# 每一節都可以刪或改：資料拿不到的區塊，gr_probe 會自動標成「略過」，報告顯示「尚無資料」。
+
+game:
+  name: "{name}"
+  slug: "{slug}"
+  id: "{game_id}"                 # 顯示用
+  ids: ["{game_id}"]              # 合併計算的子 ID（多館別、多房間都列進來）
+  launch_date: "{launch_date}"
+
+stage: {stage}                    # 7 / 14 / 30
+adapter: "{adapter}"              # assets/adapters/<adapter>.yaml；csv＝自己準備資料集
+data_dir: "output/slot/{slug}/report-data/d{stage}"
+out_dir: "data/slot/{slug}/docs/reports"   # 佈局契約 ⑩（docs/reports/）
+
+spec:                             # Q5 機率規格基準（取自機率規格書／快測報告）
+  target_rtp: null                # 例：0.965
+  sigma: null                     # 單手報酬標準差（以押注為單位），例：12.0
+  triggers: {{}}                  # 特色名稱: 1/Freq，例：{{"Free Game": 180}}；資料欄位為 trig_<名稱>
+
+views:                            # 切分：column 是 game_user_daily / slot_users 的欄位
+  - {{name: 全體}}
+  # - {{name: CN, column: market, values: [CN]}}
+  # - {{name: 非CN, column: market, not_values: [CN]}}
+
+composition:                      # Q2 玩家組成維度（數值用 buckets，類別用 categories）
+  - {{title: 會員等級, column: vip, buckets: {{"V0–1": [0, 1], "V2–4": [2, 4], "V5–7": [5, 7], "V8+": [8, 99]}}}}
+  - {{title: 新舊玩家, column: reg_days, buckets: {{"≤30 天": [0, 30], "31–180 天": [31, 180], "＞180 天": [181, 99999]}}}}
+  # - {{title: 市場, column: market, categories: [CN, JP, TW], other: 其他}}
+
+depth:
+  segment: 會員等級               # Q4 分層用哪個 composition 維度
+  deep_spins: 200                 # 單日單機 ≥ 此手數算深度玩家
+
+health:
+  intense_spins: 3000             # 單日單機 ≥ 此手數算高強度玩家
+  late_buckets: ["0–6 時"]        # hours 資料集裡算「深夜」的 bucket
+
+erosion_window_days: 7            # Q6 上線前後比較的天數
+
+units:
+  bet_scale: 1000000000           # 押量顯示單位換算
+  bet_unit: "B"
+
+lights:                           # 燈號門檻（基準不足時的固定門檻；有 benchmark.csv 時 Q1/Q3/Q4 改用分位數）
+  q2_top_group_ratio: [0.8, 1.0]  # 最高等級組 本機佔比 ÷ 全虎機佔比：< 0.8 紅、< 1.0 黃
+  q5_out_streak: 3                # RTP 連續 N 日出信賴帶 → 紅
+  q5_trigger_dev: 0.2             # 觸發率偏離 > 20%（期望次數 ≥ 30）→ 紅
+  q6_erosion: [0.4, 0.6]          # 侵蝕率 < 0.4 綠、< 0.6 黃
+  h_bench_q: 0.8                  # 有同期基準時，健康觀察門檻＝同期此分位數（前 1% 押量佔比、高強度比例）
+  h_top1: 0.4                     # 無同期基準時的固定門檻：前 1% 玩家押量佔比 > 此值 → 黃
+  h_intense_ratio: 0.01           # 高強度玩家 ÷ 遊玩人數 ≥ 此值 → 黃
+
+kb:                               # gr_insight 查知識庫（ark-wiki-engine）；不需要可整段刪掉
+  wiki_dirs: ["knowledge/shared/wiki", "knowledge/slot/wiki"]
+  top_k: 3

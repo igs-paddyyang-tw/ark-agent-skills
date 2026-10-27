@@ -1,0 +1,90 @@
+// Package prob 是機率模組的介面與註冊表（ark-web-game references/architecture.md 第 2 節的 ①）。
+//
+// 一款遊戲只要實作 Game 並在 init() 呼叫 Register，局服務（internal/round）、網路（internal/api）就不用改。
+// 依賴方向：api → round → prob；prob 與各遊戲套件不得 import round / api（快測、cmd/sim 才能直接用）。
+package prob
+
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+	"sync"
+
+	"__MODULE__/internal/result"
+)
+
+// Rand 是數學流：只用 Float64()（[0,1)）。Server 與模擬用 math/rand 的 *rand.Rand（Go Float64 = Int63()/2^63）。
+type Rand interface{ Float64() float64 }
+
+// Outcome 是一局的數學結果（RoundOutcome，倍數）；各遊戲自訂結構。
+type Outcome interface{ TotalX() float64 }
+
+// Scene 是開發用情境（dev/force），由各遊戲解析與比對。
+type Scene any
+
+// Info 是遊戲對外資訊（不含輪帶、權重、seed）。
+type Info struct {
+	Reels      int
+	Rows       int
+	Symbols    []string
+	Bets       []int
+	DefaultBet int
+	BetBase    int
+	Feature    string
+	Profile    string // odds._meta.profile（例 trial-ref）
+}
+
+// Game 是一款遊戲的機率模組。
+type Game interface {
+	// Info 回傳盤面、押注表等對外資訊。
+	Info() Info
+	// Play 用數學流 rng 算完一局；fx 由呼叫端提供演出流種子（在規格書規定的抽值點之後才抽，不影響數學流）。
+	Play(rng Rand, fx func() uint32) Outcome
+	// Body 把 Outcome 換算成 SpinResult 本體（整數 credit）；信封欄位由 result.Finish 補。
+	Body(o Outcome, bet int) result.Body
+	// ParseScene 解析 dev/force 的情境（null、字串、{label}、條件物件）；未知 label 回 ok=false。
+	ParseScene(raw json.RawMessage) (sc Scene, ok bool, err error)
+	// Match 判斷一局是否符合情境（沿數學流往後找自然轉出的局，從不修改結果）。
+	Match(sc Scene, o Outcome) bool
+}
+
+// Factory 由 odds 設定檔建立遊戲。
+type Factory func(oddsPath string) (Game, error)
+
+var (
+	mu  sync.RWMutex
+	reg = map[string]Factory{}
+)
+
+// Register 登記一個機率模組（在遊戲套件的 init() 呼叫）。
+func Register(engine string, f Factory) {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, dup := reg[engine]; dup {
+		panic("prob: 重複註冊 " + engine)
+	}
+	reg[engine] = f
+}
+
+// Open 依引擎名稱與 odds 路徑建立遊戲。
+func Open(engine, oddsPath string) (Game, error) {
+	mu.RLock()
+	f, ok := reg[engine]
+	mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("沒有註冊的機率模組 %q（已註冊：%v）", engine, Names())
+	}
+	return f(oddsPath)
+}
+
+// Names 回傳已註冊的引擎名稱。
+func Names() []string {
+	mu.RLock()
+	defer mu.RUnlock()
+	out := make([]string, 0, len(reg))
+	for k := range reg {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}

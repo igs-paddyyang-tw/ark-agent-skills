@@ -10,10 +10,12 @@ description: |
   不適用於：要建一個會對話的 TG bot 請用 ark-agent-bot-builder（套件消費端）或 ark-webapp-generator（獨立應用）；本 skill 只負責把東西發出去。
 metadata:
   author: paddyyang
-  schema_version: 1
+  schema_version: "1.2"
   category: pipeline
-  version: "2.0.0"
-  updated: 2026-08-13
+  form: executor
+  domain: general
+  version: "2.0.1"
+  updated: 2026-10-20
   outputs:
     - { format: data, audience: human }
   render: none

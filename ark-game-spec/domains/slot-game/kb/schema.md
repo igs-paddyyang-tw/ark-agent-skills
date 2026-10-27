@@ -17,3 +17,5 @@ contract: "1"
 | sticky-wild | 黏著 wild |
 | cascade | 消除連鎖 |
 | retrigger | free spin 內再觸發 |
+| collect | 收集物（鑰匙、徽章等）累積觸發或晉級 |
+| stage-feature | 多段式特色遊戲（依序闖關、逐段升階） |

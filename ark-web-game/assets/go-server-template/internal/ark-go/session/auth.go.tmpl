@@ -1,0 +1,131 @@
+package session
+
+import (
+	"context"
+	"log/slog"
+	"time"
+
+	"__MODULE__/internal/ark-go/ws"
+)
+
+// AuthResult 是回給客戶端的 auth 回應，格式與 Python 相同（GameSocket.py:143-188）。
+type AuthResult struct {
+	Status int    `json:"status"`
+	Msg    string `json:"msg,omitempty"`
+
+	// CloseReason 非空時，呼叫端送出回應後要以 530 關閉連線（不序列化）。
+	CloseReason string `json:"-"`
+}
+
+var (
+	resultOK     = AuthResult{Status: 0}
+	resultFailed = AuthResult{Status: 1, Msg: "auth failed"}
+	resultBlock  = AuthResult{Status: 2, Msg: "auth block"}
+)
+
+// AuthHook 在認證成功後依序呼叫；回傳 false 代表否決（Python 的 onAuth 事件）。
+type AuthHook func(ctx context.Context, s *Session) bool
+
+// Kicker 把「某帳號在這裡登入了」通知其他 pod（經 bus）。
+type Kicker interface {
+	PublishKick(ctx context.Context, arkID, token string) error
+}
+
+// Authenticator 處理 auth 指令、同帳號踢除與 token 續期。
+type Authenticator struct {
+	Tokens      TokenStore
+	Registry    *Registry
+	Kicker      Kicker     // 可為 nil（單機）
+	Hooks       []AuthHook // 可為 nil
+	MaxFailures int        // 同一連線認證失敗幾次就斷線，預設 3
+	Logger      *slog.Logger
+
+	// OnKicked 在連線被同帳號踢除時呼叫（業務模組用來離桌），可為 nil。
+	OnKicked func(s *Session, reason string)
+}
+
+func (a *Authenticator) log() *slog.Logger {
+	if a.Logger != nil {
+		return a.Logger
+	}
+	return slog.Default()
+}
+
+// Auth 處理一次 auth 指令。
+func (a *Authenticator) Auth(ctx context.Context, s *Session, arkID, token string, now time.Time) AuthResult {
+	if s.State() == Authed {
+		// 已認證：身分不可改。同一組帳號 + token 視為重送。
+		if s.ArkID() == arkID && s.Token() == token {
+			return resultOK
+		}
+		a.log().Warn("re-auth with different identity", "session", s.ID, "ark_id", s.ArkID(), "new_ark_id", arkID)
+		return resultFailed
+	}
+
+	ok, err := a.Tokens.Verify(ctx, arkID, token, "")
+	if err != nil {
+		a.log().Error("token verify", "err", err, "ark_id", arkID)
+	}
+	if !ok {
+		max := a.MaxFailures
+		if max <= 0 {
+			max = 3
+		}
+		if n := s.addFailure(); n >= max {
+			a.log().Warn("auth failed too many times", "ip", s.RemoteIP, "ark_id", arkID)
+			r := resultFailed
+			r.CloseReason = "auth failed"
+			return r
+		}
+		return resultFailed
+	}
+
+	if !s.bind(arkID, token, now) {
+		return resultFailed
+	}
+	for _, o := range a.Registry.markAuthed(s) {
+		a.kick(o, "KickSameID A")
+	}
+	if a.Kicker != nil {
+		if err := a.Kicker.PublishKick(ctx, arkID, token); err != nil {
+			a.log().Error("publish kick", "err", err, "ark_id", arkID)
+		}
+	}
+	for _, h := range a.Hooks {
+		if !h(ctx, s) {
+			r := resultBlock
+			r.CloseReason = "auth block"
+			return r
+		}
+	}
+	return resultOK
+}
+
+func (a *Authenticator) kick(s *Session, reason string) {
+	a.log().Info("kick same id", "ark_id", s.ArkID(), "session", s.ID, "ip", s.RemoteIP, "reason", reason)
+	if a.OnKicked != nil {
+		a.OnKicked(s, reason)
+	}
+	s.Close(ws.CodeKickSameID, reason)
+}
+
+// HandleRemoteKick 處理其他 pod 發來的踢除：關掉本 pod 同帳號、但 token 不同的連線。
+func (a *Authenticator) HandleRemoteKick(arkID, token string) {
+	for _, s := range a.Registry.ByArkID(arkID) {
+		if s.Token() != token {
+			a.kick(s, "KickSameID B")
+		}
+	}
+}
+
+// Renew 續期 token；token 已被換掉（別處登入）時關閉連線。
+func (a *Authenticator) Renew(ctx context.Context, s *Session) {
+	ok, err := a.Tokens.Renew(ctx, s.ArkID(), s.Token(), "")
+	if err != nil {
+		a.log().Error("token renew", "err", err, "ark_id", s.ArkID())
+		return // Redis 暫時出錯不踢人，下次再試
+	}
+	if !ok {
+		a.kick(s, "token replaced")
+	}
+}

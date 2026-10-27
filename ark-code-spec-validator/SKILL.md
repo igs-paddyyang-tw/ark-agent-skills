@@ -11,13 +11,15 @@ description: |
   非程式碼 coverage。如需 coverage 分析，請用 ark-test-runner。
   不適用於：單純的 code review 請用 ark-code-review；網頁抓取請用 ark-web-scraper。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   # 2026-09-14 T1 併入（--sync 模式）
   replaces: [ark-api-doc-sync]
   status: active
-  updated: 2026-09-11
+  updated: 2026-10-20
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both

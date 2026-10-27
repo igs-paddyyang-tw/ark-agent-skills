@@ -22,6 +22,8 @@ set = 輪帶組（-1 不比）、group = FG 組別 / Bonus 類型（-1 無）、
 | 彌勒佛 | collect-mult | 777 / 40,000,000（fg-only）| 179,395 | 2 | — | 0 |
 | Tiger and Dragon | coin-lock | 42 / 300,000 | 368 | 0 | 1 | 0 |
 | Tiger and Dragon | coin-lock | 777 / 20,000,000（fg-only）| 24,921 | 35 | 120 | 0 |
+| 神燈寶藏 | frame-chest | 42 / 2,000,000 | 14,139 | 0 | — | 0 |
+| 神燈寶藏 | frame-chest | 777 / 20,000,000（fg-only）| 143,927 | 0 | — | 0 |
 
 ## 出現差異時
 
@@ -32,3 +34,6 @@ set = 輪帶組（-1 不比）、group = FG 組別 / Bonus 類型（-1 無）、
 | 只有 total 不同、mg/fg 相同 | MaxWin 封頂語意（彌勒佛：MG+FG 合計封頂、FG 分項不封頂；T&D：扣在 Bonus、Bonus 統計記封頂後）|
 | MG 贏分不同 | 第一軸符號規則、WILD 倍數相加 / 連乘、Line_bet |
 | 觸發局不同 | 觸發只在條件成立時才呼叫 Intn（短路求值）|
+| 從第 0 局起每局都錯一點 | MG 停輪前還有 Go 才有的抽值（神燈寶藏：全盤事件 GetResultByWeight 每手空抽一次 → config `mg.all_board`）|
+| trace 第一行後夾雜文字、解析失敗 | 引擎自己 fmt.Println（神燈寶藏 FG 線獎最大倍率）→ trace 把 os.Stdout 導 DevNull、只寫原 stdout |
+| 引擎用全域 `rand.Intn`（無 worker）| trace 用 `rand.Seed(seed)`；go.mod `go ≥ 1.24` 時 Seed 無效 → 需 `GODEBUG=randseednop=0`（frame-chest trace 啟動自檢）|

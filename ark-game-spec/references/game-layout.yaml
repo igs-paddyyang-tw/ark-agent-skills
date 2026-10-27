@@ -1,0 +1,56 @@
+# 遊戲產出佈局契約 v3（機器可讀版）——人讀版：game-layout-contract.md（兩者同步改）
+contract: "3.7"
+owner: ark-game-spec
+updated: 2026-10-22
+homes:
+  data: "data/{domain}/{slug}"        # 定版家，入 git
+  output: "output/{domain}/{slug}"    # 工作檯，不入 git
+limits:
+  data_total_kb: 1024        # 不含 game/、review/ 與 *.html View 軌（v3.5，比照 single_file_kb 排除 html）
+  game_total_kb: 1024        # game/（⑦ pixi-client ＋ ⑧ go-server 原始碼）另計
+  ref_total_kb: 1024         # ref/ 參考資源層另計（v3.6）：只放轉錄與清冊，原檔不進 data
+  review_total_kb: 5120      # review/ 拍板包另計（v3.3）：給人看、可 demo 的成品；禁二進位與影片
+  single_file_kb: 500
+  forbid_suffix: [.exe, .dll, .so, .mp4, .mov, .zip, .7z]
+stages:
+  "①": {dir: analysis, skill: ark-game-spec}
+  "②": {dir: spec, skill: ark-game-spec}
+  "③⑤": {dir: prob, skill: ark-game-prob}
+  "④": {dir: quicktest, skill: ark-game-quicktest}
+  "⑥": {dir: proto, skill: ark-game-proto}
+  "⑦": {dir: game/pixi-client, skill: ark-game-proto}
+  "⑧": {dir: game/go-server, skill: ark-web-game}   # v3.7：Server 範本 wg_server_init、⑧ 抽離 SOP；承接原規劃 ark-game-code
+  "⑨": {dir: review, skill: [ark-game-proto, ark-book]}   # 送審拍板（上線前；v3.4）：review_build 彙整 ②⑤⑥⑦⑧ 成品＋驗收＋拍板書
+  "⑩": {dir: docs/reports, config: report, skill: [ark-game-report, math-reviewer]}   # report/report-d<N>.yaml；中間檔 output/{domain}/{slug}/report-data/d<N>/
+data_tree:
+  root_files: [README.md, LAYOUT.md, layout-report.json, publish-manifest.json]
+  analysis: {files: [game-analysis.yaml, kb-refs.yaml, evidence.jsonl], dirs: [report, source]}
+  analysis/source: {files: [manifest.json, "competitor-spec-*.md"]}
+  spec: {files: [game-spec.v1.md, decisions.yaml, decisions-applied.json, config-spec.yaml], optional: [game-spec.v1.html], dirs: [dev-spec, gdd]}   # v3.5：md 旁的 html 由 review_build publish_docs 產
+  spec/dev-spec: {files: [game-spec.md, feature-spec.md, state-machine.md, ui-spec.md, qa-checklist.md]}   # config-spec 由 gs_publish 提到 spec/ 根層
+  spec/gdd: {files: [gdd.yaml, symbols.yaml, screens.yaml, info.yaml, i18n.csv], dirs: [rules]}
+  prob: {files: [prob-spec.md, prob-spec.html, prob-spec.meta.json, lint-report.json], optional: [prob-spec.xlsx, "config-diff.*", prob-data.json]}
+  quicktest: {files: [quicktest.yaml, qt-config.yaml], optional: [symbols.tsv, lint-report.json], dirs: [odds, engine, qt-report, config, _tuning]}
+  proto: {optional: [game-config.json, index.html, "go-parity.*", gaps.md]}
+  game: {optional: [handoff.md, handoff.html, trace-map.md], dirs: [go-server, pixi-client]}   # trace-map.md：v3.7 ⑧ 必交（wg_trace_check）；設 optional 以免既有還原局在 ps_layout 失敗
+  review: {files: [index.html, review-manifest.json], optional: [play.html, gdd-overview.html, REVIEW.md], dirs: [checks, "{slug}-decision"]}   # v3.5：只放拍板書＋定版家放不下的自足單檔；其餘成品以 ../<stage>/… 相對連結，不複製（白名單外組包時清掉）
+  review/checks: {optional: ["*.json", "*.webp", "*.png"]}
+  docs: {dirs: [decisions, designs, reports, versions]}
+  kb: {files: [spec.md, prob.md, code.md, qt-result.md, versions.md, methods.md], dirs: [xlsx, paramcheck, notes]}
+  ref: {files: [README.md, manifest.json], dirs: [prob-table, docs, design, client, live]}   # v3.6 參考資源層（⓪ 收錄；遊戲層 raw，只增不改）；設計見專案 docs/designs/2026-10-21-game-ref-layout-design.md
+ref_rules:   # v3.6
+  roles: [main, variant, next, history, evidence, live, skip]
+  status: [transcribed, summarized, referenced, skipped]
+  sensitivity: [internal, confidential-live]
+  readme_sections: [來源總覽, 版本地圖, 判讀紀錄, 未收清單, 待確認]
+  never_in_review: [ref]
+output_tree: [runs, analysis, gdd, game/pixi-client, game/go-server, proto, build, qt-runs, extract, sandbox, _retired]   # extract：ref 來源的全量抽取（v3.6）
+modes:
+  design: {required: [README.md, analysis, spec, prob, quicktest], optional: [ref, proto, game, review, docs, kb]}
+  restore: {required: [README.md, kb, quicktest], optional: [ref, prob, spec, docs]}
+legacy:   # 一個版本內仍可讀；新產出一律寫新路徑
+  "proto/stage": "game/pixi-client"
+  "server": "game"
+  "docs/report": "docs/reports"
+  "data/gdd/{slug}": ["spec/gdd", "output/{domain}/{slug}/gdd"]
+  "artifacts/cva/{run}": "output/{domain}/{slug}/runs/{run}"

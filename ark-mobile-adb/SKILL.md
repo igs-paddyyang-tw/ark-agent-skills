@@ -13,10 +13,12 @@ description: |
   探索測試、冒煙測試、清單 md 產報告 html、playtest。
   不適用於：iOS、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-game-spec）、一般程式測試（→ ark-test-runner）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   status: active
   author: paddyyang
-  category: executor
+  category: ops
+  form: executor
+  domain: game
   version: "2.5.0"
   updated: 2026-10-27
   outputs:

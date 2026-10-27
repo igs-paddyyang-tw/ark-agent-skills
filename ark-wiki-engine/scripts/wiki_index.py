@@ -196,6 +196,17 @@ def _collect(wiki_dir: Path, tokenizer: str) -> tuple[dict, dict, dict]:
     return metadata, graph, {"postings": postings, "userdict": sorted(t for t in userdict_terms if t)}
 
 
+
+def _discard(path: Path) -> str | None:
+    """移除舊索引目錄；沒有刪除權限（共用資料夾、同步碟）時改名成 .index.old-<時間>，不中斷 build。回傳警告或 None"""
+    try:
+        shutil.rmtree(path)
+        return None
+    except OSError as e:
+        bak = path.with_name(f"{path.name}.old-{datetime.now().strftime('%Y%m%d%H%M%S%f')}")
+        os.replace(path, bak)
+        return f"無法刪除 {path.name}（{e.__class__.__name__}），已改名為 {bak.name}；可手動清除"
+
 def cmd_build(wiki_dir: Path, tokenizer_mode: str, backend: str, embed: bool) -> None:
     if backend == "bm25s":
         emit_error(ErrorCode.BAD_ARGUMENTS,
@@ -220,8 +231,11 @@ def cmd_build(wiki_dir: Path, tokenizer_mode: str, backend: str, embed: bool) ->
     try:
         metadata, graph, bm = _collect(wiki_dir, tokenizer)
         tmp = wiki_dir / ".index.tmp"
+        warns = []
         if tmp.exists():
-            shutil.rmtree(tmp)
+            w = _discard(tmp)
+            if w:
+                warns.append(w)
         (tmp / "bm25").mkdir(parents=True)
         _w = lambda p, o: (tmp / p).write_text(
             json.dumps(o, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -242,10 +256,12 @@ def cmd_build(wiki_dir: Path, tokenizer_mode: str, backend: str, embed: bool) ->
         (tmp / ".gitignore").write_text("*\n", encoding="utf-8")
 
         if idx.exists():
-            shutil.rmtree(idx)
+            w = _discard(idx)
+            if w:
+                warns.append(w)
         os.replace(tmp, idx)   # 原子切換
         emit_json({"ok": True, "action": "build", "index_dir": str(idx), "manifest": manifest,
-                   "meta": {"embed": embed and "not_implemented" or "skipped"}})
+                   "meta": {"embed": embed and "not_implemented" or "skipped"}, "warnings": warns})
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         lock_fd.close()

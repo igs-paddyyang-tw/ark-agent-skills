@@ -12,14 +12,17 @@ description: |
   即使只是「幫我看一下某張表有什麼欄位」也應使用本 skill 的 bq_schema.py 而非 MCP。
   不適用於：知識庫語意問答請用 ark-weknora-cli；wiki 頁面查詢請用 ark-wiki-engine（本 skill 只查結構化資料庫）。
 metadata:
-  schema_version: "1.1"
+  schema_version: "1.2"
   # 只列**測試實際跑過**的：scripts/tests 走 sqlite3（標準庫）端到端。
   # BigQuery 路徑的 google-cloud-bigquery>=3.20 只在 requirements 宣告，
   # 測試未涵蓋（需真實 BQ 連線）→ 不列進來，不然這個欄位就在說謊。
   tested_against:
     python-sqlite3: "3.12.3 stdlib"
   status: active
-  category: executor        # v1 誤標 pipeline、實為 scaffolder；v2 起為可直接執行工具箱
+  # category 沿革：v1 誤標 pipeline；v2 標 executor（把形態當職能）；schema 1.2 起職能＝pipeline、形態另由 form: executor 表示
+  category: pipeline
+  form: executor
+  domain: general
   outputs:
     # stdout 統一 JSON 契約 rows/count/truncated/out_file + meta；
     # bq_export.py --out 落盤為 jsonl / csv —— 兩者皆歸受控詞彙 data
@@ -29,8 +32,8 @@ metadata:
   depends_on: []
   replaces: [bq-mcp-server]
   author: paddyyang
-  version: "3.0.0"
-  updated: 2026-09-16
+  version: "3.0.2"
+  updated: 2026-10-20
 ---
 
 # ark-db-query v2.0

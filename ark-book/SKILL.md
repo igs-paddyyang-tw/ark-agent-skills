@@ -3,7 +3,7 @@ name: ark-book
 description: |
   教學產出專用 skill：把一個主題（skill 用法、流程、工具、案例）寫成「一本書」，雙軌輸出——
   Content 軌 Markdown 章節給 AI 當知識庫（chunk 自足、frontmatter 契約、受控 tags，可被 ark-wiki-engine ingest），
-  View 軌單檔 HTML 書給人閱讀（目錄、章節導覽、閱讀進度；六種可擴充風格 library/felt/neon/shonen/manga/console，與 ark-html-report 同一套 token 契約）。
+  View 軌單檔 HTML 書給人閱讀（目錄、章節導覽、閱讀進度；七種可擴充風格 library/felt/neon/shonen/manga/console/storybook，與 ark-html-report 同一套 token 契約）。
   每本書會登錄到 library/catalog.json，未來由圖書館網站以「一本一本的書」上架。
   內建教學引擎（蒸餾自 hung-yi-lee-skill：先給問題再給方法、直覺先於形式、每章有 punchline、常見誤解、動手做、三句回顧）
   與 deterministic 守門腳本：book_lint.py（契約與教學結構驗證）、book_build.py（MD→HTML 書 + 雙軌戳記）、
@@ -13,16 +13,20 @@ description: |
   分析報告（時點快照、有 verdict）請用 ark-md-report；單頁報告網頁請用 ark-html-report；本 skill 管「會被反覆閱讀與教學」的長期內容。
 metadata:
   author: paddyyang
-  schema_version: 1
-  version: 1.0.0
-  updated: 2026-09-17
+  schema_version: "1.2"
+  version: "1.1.2"
+  updated: 2026-10-20
   category: document
+  form: instruction
+  domain: general
   outputs:
     - { format: md, audience: ai }
     - { format: html, audience: human }
     - { format: data, audience: ai }
   render: self
-  depends_on: [ark-html-report, ark-wiki-engine]
+  depends_on:
+    - { name: ark-html-report, version: "^1.0.0" }
+    - { name: ark-wiki-engine, version: "^3.0.0" }
   status: active
 ---
 
@@ -107,7 +111,7 @@ lint 驗證：`book.yaml` 契約、章節 frontmatter 必要欄位與枚舉、�
 ### 5. Build 成書（View 軌）
 
 ```bash
-python scripts/book_build.py --list-styles                    # 六種預設：library / felt / neon / shonen / manga / console
+python scripts/book_build.py --list-styles                    # 七種預設：library / felt / neon / shonen / manga / console / storybook
 python scripts/book_build.py books/{slug}/                    # → books/{slug}/site/index.html，風格取 book.yaml style（預設 library）
 python scripts/book_build.py books/{slug}/ --style neon --out /tmp/neon.html   # 試風格，不動 site/
 python scripts/book_build.py books/{slug}/ --check            # 驗雙軌戳記，MD 改了沒重 build → STALE

@@ -1,0 +1,212 @@
+// Package api 是對外介面（ark-web-game references/wire-protocol.md）：
+//
+//	Stage HTTP 契約（API-101～107）    /api/slot/:gameId/{init,spin,action,balance,ack,round/:roundId,dev/force}
+//	ark-go WebSocket（sys "slot"）      /ws
+//	內部純算結果（給 slot-bot，無帳務）  POST /internal/v1/play
+//	健康檢查                            /healthz、/readyz
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"net/http"
+	"strings"
+	"time"
+
+	"__MODULE__/internal/round"
+)
+
+// HTTP 是 Stage 契約的 handler。
+type HTTP struct {
+	Svc      *round.Service
+	Log      *slog.Logger
+	Internal bool // 開 /internal/v1/play（只該在內網 / slot-bot 後面開）
+}
+
+// statusOf：錯誤碼 → HTTP 狀態碼（WS 回應的 status 用同一張表）。
+var statusOf = map[string]int{
+	round.ErrInvalidBet: 400, round.ErrInsufficient: 402, round.ErrNotSupported: 400,
+	round.ErrNotFound: 404, "SESSION_EXPIRED": 401, "BAD_REQUEST": 400, round.ErrServer: 500,
+	round.ErrProtocol: 426, round.ErrRoundInProgress: 409,
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func asErr(err error) *round.Error {
+	var ge *round.Error
+	if !errors.As(err, &ge) {
+		ge = &round.Error{Code: round.ErrServer, Message: err.Error()}
+	}
+	return ge
+}
+
+func codeOf(ge *round.Error) int {
+	if c := statusOf[ge.Code]; c != 0 {
+		return c
+	}
+	return 500
+}
+
+func writeErr(w http.ResponseWriter, err error) {
+	ge := asErr(err)
+	writeJSON(w, codeOf(ge), ge)
+}
+
+func cors(w http.ResponseWriter) {
+	h := w.Header()
+	h.Set("Access-Control-Allow-Origin", "*")
+	h.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	h.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+}
+
+// player 由 Bearer token 取得玩家身分。開發用：token 本身就是玩家代號（沒給 = anon）。
+func player(r *http.Request) string {
+	t := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
+	if t == "" {
+		return "anon"
+	}
+	return t
+}
+
+// req 是各指令共用的請求本體（HTTP body 與 WS data 同格式）。
+type req struct {
+	Bet         int               `json:"bet"`
+	RequestID   string            `json:"requestId"`
+	RoundID     string            `json:"roundId"`
+	Choice      any               `json:"choice"`
+	Scene       json.RawMessage   `json:"scene"`
+	Protocol    map[string]string `json:"protocol"`
+	RuntimeAPI  string            `json:"runtimeApi"`
+	GameVersion string            `json:"gameVersion"`
+}
+
+func (q req) init() round.ClientInit {
+	return round.ClientInit{Protocol: q.Protocol, RuntimeAPI: q.RuntimeAPI, GameVersion: q.GameVersion}
+}
+
+// Register 掛上路由。
+func (h *HTTP) Register(mux *http.ServeMux) {
+	prefix := "/api/slot/" + h.Svc.GameID() + "/"
+	mux.HandleFunc(prefix, h.serve)
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]any{"ok": true}) })
+	if h.Internal {
+		mux.HandleFunc("/internal/v1/play", h.internalPlay)
+	}
+}
+
+func (h *HTTP) serve(w http.ResponseWriter, r *http.Request) {
+	cors(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(204)
+		return
+	}
+	t0 := time.Now()
+	op := strings.TrimPrefix(r.URL.Path, "/api/slot/"+h.Svc.GameID()+"/")
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	p := player(r)
+	var body req
+	if r.Method == http.MethodPost && r.ContentLength != 0 {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&body); err != nil {
+			writeErr(w, &round.Error{Code: "BAD_REQUEST", Message: err.Error()})
+			return
+		}
+	}
+	defer func() { h.Log.Debug("http", "op", op, "player", p, "ms", time.Since(t0).Milliseconds()) }()
+	switch {
+	case op == "init":
+		info, err := h.Svc.Init(ctx, p, body.init())
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, info)
+	case op == "balance":
+		b, err := h.Svc.Balance(ctx, p)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, map[string]int{"balance": b})
+	case op == "spin":
+		if r.Method != http.MethodPost {
+			writeErr(w, &round.Error{Code: "BAD_REQUEST", Message: "spin 需要 POST"})
+			return
+		}
+		res, err := h.Svc.Spin(ctx, p, body.Bet, body.RequestID)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, res)
+	case op == "action":
+		res, err := h.Svc.Action(ctx, p, body.RoundID, body.Choice, body.RequestID)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, res)
+	case op == "ack": // API-106
+		if err := h.Svc.Ack(ctx, p, body.RoundID); err != nil {
+			writeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, map[string]any{"status": 0})
+	case strings.HasPrefix(op, "round/"): // API-107
+		res, err := h.Svc.Fetch(ctx, p, strings.TrimPrefix(op, "round/"))
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, res)
+	case op == "dev/force":
+		if !h.Svc.Dev() {
+			writeErr(w, &round.Error{Code: round.ErrNotFound, Message: "dev 端點未開啟"})
+			return
+		}
+		sc, err := h.Svc.ParseScene(body.Scene)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		res, err := h.Svc.Force(ctx, p, sc, body.Bet, body.RequestID)
+		if err != nil {
+			writeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, res)
+	default:
+		writeErr(w, &round.Error{Code: round.ErrNotFound, Message: r.URL.Path})
+	}
+}
+
+// internalPlay：slot-bot server 呼叫的純算結果端點。帳務由呼叫端負責：
+// 請求 { player, bet, requestId, balanceBefore }，回 SpinResult（balanceAfter = balanceBefore − bet + totalWin，僅供對帳）。
+func (h *HTTP) internalPlay(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, &round.Error{Code: "BAD_REQUEST", Message: "需要 POST"})
+		return
+	}
+	var in struct {
+		Player        string `json:"player"`
+		Bet           int    `json:"bet"`
+		RequestID     string `json:"requestId"`
+		BalanceBefore int    `json:"balanceBefore"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&in); err != nil || in.Player == "" || in.RequestID == "" {
+		writeErr(w, &round.Error{Code: "BAD_REQUEST", Message: "需要 player、bet、requestId"})
+		return
+	}
+	res, err := h.Svc.PlayOnly(r.Context(), in.Player, in.Bet, in.RequestID, in.BalanceBefore)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, 200, res)
+}

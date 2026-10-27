@@ -1,0 +1,212 @@
+# 策略方向 playbook：症狀 → 假設 → 要查什麼 → 建議行動 → 知識庫參考
+# gr_insight 用 metrics.json 逐條比對 when（全部成立才觸發）。這是「分析思維的起點」，不是結論：
+# 觸發後要照 checks 去驗證假設，確認後才寫進結論。實戰後依經驗增刪規則即可，不用改程式。
+#
+# when 條件：m＝metrics.json 的欄位（可用點號，例如 ret.1、q6.erosion_rate），op ∈ < <= > >= ==，
+#            ref＝另一個 metrics 欄位，或 value＝固定值。任一欄位缺值（None）→ 這條不觸發，列為「無法判斷」。
+# kb.page 是 shared／slot wiki 的頁名；kb_query 交給 wiki_query 補搜相關頁。
+
+rules:
+  - id: LOW_HEAT
+    q: Q1
+    severity: P1
+    when: [{m: share_eval, op: "<", ref: bench_share_p30}]
+    finding: "押注佔比 {share_eval:%} 低於歷史新機同期 P30（{bench_share_p30:%}），熱度不足"
+    hypotheses:
+      - 曝光不足：入口位置、推播、活動資源比歷史新機少
+      - 題材或美術吸引力弱：試玩率也偏低時優先懷疑
+      - 試了就走：試玩率正常但佔比低，問題在留存或押注深度
+    checks: ["試玩率 vs 同期中位（Q1 KPI）", "D1 回訪率（Q3）", "上線期間的曝光與活動紀錄（營運）"]
+    actions: ["先分清是「沒人來」還是「來了不玩」，再決定加曝光或調體驗"]
+    kb: [{page: design-guide-overview, why: "主遊戲、FG 的體驗設計規則"}]
+    kb_query: "新機 熱度 試玩 曝光"
+
+  - id: TRIAL_OK_RETENTION_LOW
+    q: Q3
+    severity: P1
+    when: [{m: trial_avg, op: ">=", ref: bench_trial_p50}, {m: ret_eval, op: "<", ref: bench_ret_p30}]
+    finding: "試玩率不差（{trial_avg:%}），但回訪率 {ret_eval:%} 低於同期 P30：玩家試了不回來"
+    hypotheses:
+      - 首局體驗差：前幾十手沒有獎感、太久不觸發特色
+      - 波動太高：小額玩家資金很快歸零
+      - 玩法理解門檻高：規則或表演讓人看不懂
+    checks: ["首玩日人均手數與深度玩家比例（Q4）", "FG／特色觸發率是否低於規格（Q5）", "低押注分層的回訪率"]
+    actions: ["檢視前期體驗：保底、期待累積、壞體驗不要太集中"]
+    kb:
+      - {page: design-guide-0-general, why: "壞體驗要少但不能沒有；少見但玩家喜歡的狀況要多給機率"}
+      - {page: K-009-feature-bonus-guaranteed-minimum, why: "保底設計"}
+      - {page: K-027-nowin-expectation-accumulation, why: "空轉期待累積"}
+      - {page: P-005-feel-to-rate-mapping, why: "體感頻率 ↔ 觸發率區間"}
+    kb_query: "首局 體驗 保底 空轉 留存"
+
+  - id: TRIAL_LOW_RETENTION_HIGH
+    q: Q1
+    severity: P2
+    when: [{m: trial_avg, op: "<", ref: bench_trial_p50}, {m: ret_eval, op: ">=", ref: bench_ret_p60}]
+    finding: "回訪率 {ret_eval:%} 高於同期 P60，但試玩率 {trial_avg:%} 偏低：好玩但知道的人少"
+    hypotheses: ["曝光與入口不足", "題材在目標族群的吸引力弱"]
+    checks: ["曝光位置與推播紀錄", "各市場、各等級的試玩率（Q2、Q4）"]
+    actions: ["加曝光或活動導流；這類機台加資源的效益通常最高"]
+    kb: []
+    kb_query: "新機 曝光 導流"
+
+  - id: TOP_TIER_UNDERREPRESENTED
+    q: Q2
+    severity: P1
+    when: [{m: top_group_ratio, op: "<", value: 0.8}]
+    finding: "最高等級組在本機的佔比只有全虎機的 {top_group_ratio:x} 倍：核心高押注客群沒有進來"
+    hypotheses:
+      - 押注檔位上限不夠或押注升級沒有誘因
+      - 波動與獎型不符合高押注玩家（追大獎 vs 求停留）
+      - 推播或 VIP 通路沒有覆蓋
+    checks: ["高等級分層的試玩率與平均押注（Q4）", "最大押注與押注級距分布"]
+    actions: ["檢查押注檔位與對應輪帶；評估高押注專屬的期待機制"]
+    kb:
+      - {page: K-008-bet-level-reel-strip-split, why: "依押注等級拆輪帶"}
+      - {page: 運氣的誘餌-ch04, why: "行動派（追大獎）與逃避派（求停留）的波動偏好"}
+    kb_query: "高押注 VIP 押注等級 波動"
+
+  - id: FAST_DECAY
+    q: Q1
+    severity: P2
+    when: [{m: share_last, op: "<", ref: share_first}, {m: decay_ratio, op: "<", value: 0.4}]
+    finding: "押注佔比從首日 {share_first:%} 掉到 {share_last:%}（剩 {decay_ratio:%}）：新鮮感退得快"
+    hypotheses: ["缺少中期目標（收集、升階、累積）", "大獎太難開，期待撐不住", "同期有其他新機或活動分流"]
+    checks: ["D3 以後的回訪率曲線斜率（Q3）", "同期上線的機台與活動", "大獎與 JP 實際開出次數（Q5）"]
+    actions: ["評估加入中期累積型機制或期間限定活動"]
+    kb:
+      - {page: K-006-bowl-growth-stage, why: "升階型中期目標"}
+      - {page: K-001-coin-count-trigger, why: "收集觸發"}
+      - {page: 賭客信條-ch09, why: "跨時選擇：未來的獎勵會被打折"}
+    kb_query: "中期目標 收集 升階 新鮮感"
+
+  - id: RTP_OUT_HIGH
+    q: Q5
+    severity: P0
+    when: [{m: q5.out_streak, op: ">=", value: 3}, {m: q5.rtp_dir, op: "==", value: high}]
+    finding: "累計 RTP {q5.rtp:%2} 高於信賴帶上緣 {q5.rtp_hi:%2}，且連續 {q5.out_streak} 日在帶外：機率可能有誤"
+    hypotheses: ["線上設定檔版本和快測不同", "特色觸發率偏高", "σ 低估，信賴帶太窄"]
+    checks: ["線上設定檔 sha 與快測的 config-spec 對照", "觸發率表（Q5）", "快測報告的 σ 與樣本數"]
+    actions: ["立即通知機率人員，對照 ark-game-quicktest 的 rtp-report"]
+    kb:
+      - {page: P-003-spec-lint-quality-gate, why: "快測三向守門"}
+      - {page: dynamic-adjust-exceptions, why: "線上有沒有動態調整機率的做法"}
+    kb_query: "RTP 偏高 設定檔 快測"
+
+  - id: RTP_OUT_LOW
+    q: Q5
+    severity: P1
+    when: [{m: q5.out_streak, op: ">=", value: 3}, {m: q5.rtp_dir, op: "==", value: low}]
+    finding: "累計 RTP {q5.rtp:%2} 低於信賴帶下緣 {q5.rtp_lo:%2}，連續 {q5.out_streak} 日：玩家實際拿回的比設計少"
+    hypotheses: ["設定檔版本不同", "大獎還沒開出（高波動機台短期常見）", "特色觸發率偏低"]
+    checks: ["大獎與 JP 開出次數", "觸發率表", "設定檔 sha"]
+    actions: ["通知機率人員；高波動機台先延長觀察，不要急著調"]
+    kb: [{page: P-003-spec-lint-quality-gate, why: "快測三向守門"}]
+    kb_query: "RTP 偏低 波動"
+
+  - id: RTP_OUT_RECOVERED
+    q: Q5
+    severity: P2
+    when: [{m: q5.out_streak, op: ">=", value: 3}, {m: q5.rtp_dir, op: "==", value: in}]
+    finding: "累計 RTP 曾連續 {q5.out_streak} 日落在信賴帶外，目前 {q5.rtp:%2} 已回到帶內"
+    hypotheses: ["早期樣本小、大獎集中在少數日子", "期間內曾更換設定檔"]
+    checks: ["帶外那幾天的大獎與 JP 紀錄", "設定檔變更紀錄"]
+    actions: ["確認原因後在結論註明；沒有設定變更就不用調整"]
+    kb: [{page: P-003-spec-lint-quality-gate, why: "快測三向守門"}]
+    kb_query: ""
+
+  - id: TRIGGER_DEVIATION
+    q: Q5
+    severity: P1
+    when: [{m: q5.trigger_alert_count, op: ">", value: 0}]
+    finding: "{q5.trigger_alert_names} 的觸發率偏離規格超過門檻（樣本數足夠）"
+    hypotheses: ["設定檔與規格不一致", "線上有動態調整（重轉、砍圖騰）", "統計口徑不同（重觸發是否算一次）"]
+    checks: ["觸發次數的計算口徑", "設定檔 sha", "例外清單中的動態調整做法是否有用"]
+    actions: ["和機率人員對帳；口徑不同就修正資料欄位定義"]
+    kb:
+      - {page: design-guide-2-free-game, why: "FG 設計規則"}
+      - {page: dynamic-adjust-exceptions, why: "動態調整例外清單"}
+    kb_query: "觸發率 偏離 FG"
+
+  - id: HIGH_EROSION
+    q: Q6
+    severity: P1
+    when: [{m: q6.erosion_rate, op: ">=", value: 0.6}]
+    finding: "侵蝕率 {q6.erosion_rate:%}：本機押量大多是從自家其他機台（主要是 {q6.top_source}）搬過來的"
+    hypotheses: ["題材、玩法與既有機台太像", "上線時段與同類機台重疊"]
+    checks: ["來源機台與本機的題材、玩法相似度", "虎機總押量變化（是否仍有淨增量）"]
+    actions: ["差異化題材或玩法；錯開同類機台的活動檔期"]
+    kb:
+      - {page: 賭客信條-ch16, why: "雙尾理論：熱門集中與兩極分化"}
+      - {page: references-xlsx-dedup, why: "手法去重：避免同手法重複上線"}
+    kb_query: "侵蝕 同質 題材 差異化"
+
+  - id: NET_INCREMENT
+    q: Q6
+    severity: P3
+    when: [{m: q6.slot_change, op: ">", value: 0.02}, {m: q6.erosion_rate, op: "<", value: 0.4}]
+    finding: "虎機總押量 {q6.slot_change:+%}、侵蝕率只有 {q6.erosion_rate:%}：本機帶來淨增量"
+    hypotheses: ["吸引了原本不玩虎機或少玩的玩家"]
+    checks: ["新舊玩家組成（Q2）"]
+    actions: ["列為成功案例，納入下一款的歷史基準與設計參考"]
+    kb: []
+    kb_query: ""
+
+  - id: CONCENTRATION
+    q: H
+    severity: P2
+    when: [{m: top1, op: ">", ref: h_top1_cut}]          # 有同期基準＝同期 P80（lights.h_bench_q），否則固定 lights.h_top1
+    finding: "前 1% 玩家佔本機押量 {top1:%}，高於門檻 {h_top1_cut:%}：成效比同期更依賴少數玩家"
+    hypotheses: ["高押注玩家帶動", "少數玩家高強度遊玩"]
+    checks: ["這批玩家的單日手數與時段", "和全虎機的集中度比較"]
+    actions: ["結論中註明集中度；不要只用總押量判斷成功"]
+    kb: [{page: 運氣的誘餌-overview, why: "設計紅線總表"}]
+    kb_query: "高強度 集中 玩家健康"
+
+  - id: INTENSE_PLAYERS
+    q: H
+    severity: P2
+    when: [{m: intense_ratio, op: ">", ref: h_intense_cut}]   # 有同期基準＝同期 P80，否則固定 lights.h_intense_ratio
+    finding: "高強度玩家佔遊玩人數 {intense_ratio:%}，高於門檻 {h_intense_cut:%}"
+    hypotheses: ["機台節奏讓人停不下來（快停、自動轉、長時間高檔起伏）"]
+    checks: ["高強度玩家的時段與連續天數"]
+    actions: ["交營運與客服評估是否需要提醒或介入機制"]
+    kb:
+      - {page: 運氣的誘餌-ch06, why: "完美的偶發性：越自動越難抽身"}
+      - {page: 運氣的誘餌-ch08, why: "追損"}
+    kb_query: "追損 高強度 自動轉"
+
+  - id: LATE_NIGHT
+    q: H
+    severity: P3
+    when: [{m: late_share, op: ">=", value: 0.25}]
+    finding: "深夜時段押量佔 {late_share:%}"
+    hypotheses: ["目標市場時區差", "高強度玩家集中在深夜"]
+    checks: ["分市場看時段分布"]
+    actions: ["先排除時區因素，再判斷是否屬健康風險"]
+    kb: [{page: 運氣的誘餌-ch07, why: "漸賭漸遠"}]
+    kb_query: "深夜 遊玩"
+
+  - id: SOLID_LAUNCH
+    q: Q1
+    severity: P3
+    when: [{m: lights.Q1, op: "==", value: g}, {m: lights.Q3, op: "==", value: g}]
+    finding: "規模與留存都高於歷史同期 P60"
+    hypotheses: []
+    checks: ["Q6 侵蝕率，確認不是搬自家玩家"]
+    actions: ["列為穩定機台；把它的參數與玩法整理進設計參考"]
+    kb: []
+    kb_query: ""
+
+# 各期別的分析提醒（gr_insight 會附在 insights.md）
+reminders:
+  7:
+    - 樣本小：D+7 的回訪率只看 D1～D3；RTP 偏離先看是否仍在信賴帶，不要急著調機率
+    - 新鮮感：首日偏高是常態，看「掉多少、掉到哪」比看首日更有用
+    - 活動干擾：同期有大型活動時，佔比與排名要註明
+  14:
+    - 檢查點：比較 D+7 結論是否還成立，特別是回訪率曲線是否持平
+  30:
+    - 看穩態：用最後 7 日判斷佔比，不要用 30 日平均（被首週拉高）
+    - 看搬移：侵蝕率與虎機總押量一起看，才知道是增量還是搬家
+    - 回饋設計：D+30 結論要回寫到機率設計參考（K 卡、設計指南）

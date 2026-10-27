@@ -64,14 +64,18 @@ SECTIONS = [
     ("pipeline",             "③ 管線元件 Pipeline",        "結構化資料"),
     ("view",                 "④ 呈現層 View",              "HTML / 視覺（給人看）"),
     ("document",             "⑤ 文件輸出 Document",        "MD / Office"),
-    ("domain",               "⑥ 領域 SOP Domain",          "策略分析 MD"),
-    ("ops",                  "⑦ 維運 Ops",                 "診斷 / 驗證"),
-    ("executor",             "⑧ 執行器 Executor",          "捆綁 scripts，agent 直接跑"),
+    ("ops",                  "⑥ 維運 Ops",                 "診斷 / 驗證"),
 ]
+#: 與 ark-skills-align/scripts/audit_skills.py 的 FORM_CODES／DOMAIN_CODES 一致
+#: （scripts/tests/test_taxonomy_vocab.py 守）
+FORM_LABEL = {"executor": "⚙️ 執行", "instruction": "📝 指示"}
+DOMAIN_LABEL = {"general": "通用", "game": "🎮 遊戲"}
 
 _FM = re.compile(r"^---\s*\n(.*?)\n---", re.S)
 _CATEGORY = re.compile(r"^\s{2,}category:\s*([A-Za-z0-9_-]+)", re.M)
 _STATUS = re.compile(r"^\s{2,}status:\s*([A-Za-z0-9_-]+)", re.M)
+_FORM = re.compile(r"^\s{2,}form:\s*([A-Za-z0-9_-]+)", re.M)
+_DOMAIN = re.compile(r"^\s{2,}domain:\s*([A-Za-z0-9_-]+)", re.M)
 _DESC = re.compile(r"^description:\s*(\|[-+]?)?\s*(.*?)(?=^\w|\Z)", re.M | re.S)
 _MIGRATED = re.compile(r"\*\*Migrated to\*\*:\s*(.+)")
 #: SKILL.md 內的 deprecation 說明。格式如
@@ -92,7 +96,7 @@ def _first_line(desc: str, limit: int = 100) -> str:
     return text[:limit] + ("…" if len(text) > limit else "")
 
 
-def scan() -> tuple[dict[str, list[tuple[str, str]]], list[tuple[str, str]]]:
+def scan() -> tuple[dict[str, list[tuple[str, str, str, str]]], list[tuple[str, str]]]:
     """掃描所有 skill 目錄。
 
     ## deprecated 有兩種形態，兩種都要認
@@ -111,7 +115,7 @@ def scan() -> tuple[dict[str, list[tuple[str, str]]], list[tuple[str, str]]]:
     Returns:
         (依分類分組的 active skill, deprecated 清單 `[(名稱, 去向)]`)
     """
-    active: dict[str, list[tuple[str, str]]] = {}
+    active: dict[str, list[tuple[str, str, str, str]]] = {}
     deprecated: list[tuple[str, str]] = []
 
     for d in sorted(p for p in ROOT.iterdir() if p.is_dir() and p.name.startswith("ark-")):
@@ -148,7 +152,10 @@ def scan() -> tuple[dict[str, list[tuple[str, str]]], list[tuple[str, str]]]:
 
         desc_m = _DESC.search(block)
         desc = _first_line(desc_m.group(2)) if desc_m else "（無描述）"
-        active.setdefault(cat, []).append((d.name, desc))
+        form_m, dom_m = _FORM.search(block), _DOMAIN.search(block)
+        form = FORM_LABEL.get(form_m.group(1), form_m.group(1)) if form_m else "—"
+        dom = DOMAIN_LABEL.get(dom_m.group(1), dom_m.group(1)) if dom_m else "—"
+        active.setdefault(cat, []).append((d.name, desc, form, dom))
 
     return active, deprecated
 
@@ -158,7 +165,7 @@ def render(active: dict, deprecated: list) -> str:
     known = {k for k, _, _ in SECTIONS}
     未分類 = sorted(set(active) - known)
 
-    L = [MARK_START, "", f"> **{total} 個 Skill**，兩層分類（職能角色 × 受眾）。",
+    L = [MARK_START, "", f"> **{total} 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。",
          "> 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。", ""]
 
     for key, title, audience in SECTIONS:
@@ -167,8 +174,8 @@ def render(active: dict, deprecated: list) -> str:
         if not rows:
             L += ["（目前無）", ""]
             continue
-        L += ["| Skill | 定位 |", "|-------|------|"]
-        L += [f"| `{n}` | {d.replace('|', '｜')} |" for n, d in rows]
+        L += ["| Skill | 形態 | 領域 | 定位 |", "|-------|------|------|------|"]
+        L += [f"| `{n}` | {f} | {dm} | {d.replace('|', '｜')} |" for n, d, f, dm in rows]
         L += [""]
 
     if 未分類:
@@ -177,7 +184,7 @@ def render(active: dict, deprecated: list) -> str:
               "> 要嘛補登記，要嘛修正 frontmatter —— 留在這一節代表分類治理有缺口。", "",
               "| Skill | category |", "|-------|----------|"]
         for cat in 未分類:
-            for n, _ in sorted(active[cat]):
+            for n, *_ in sorted(active[cat]):
                 L += [f"| `{n}` | `{'（無）' if cat == '__uncategorised__' else cat}` |"]
         L += [""]
 

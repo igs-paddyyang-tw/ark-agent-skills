@@ -34,8 +34,8 @@
 | 層 | team（ark_team_agent） | bot（ark_bot_agent） | 誰寫 | 進 context |
 |---|---|---|---|---|
 | 🧠 人格 | `.kiro/steering/SOUL.md` | 同左 | ✋ 人（`--profile` 可渲染） | ✅ |
-| 🧠 規範 SSOT | 根 `AGENTS.md` | 同左 | ✋ 人／daemon | ✅ |
-| 🧠 判準 | `.kiro/steering/BRAIN.md` | 同左（`context_builder` 自動注入） | ✋ 人（build_kiro 尚不產） | ✅ |
+| 🧠 規範 SSOT | 根 `AGENTS.md`（子 agent 工作目錄根各一份複本；`steering/` 不放 —— 見 SKILL.md 頂部單一權威） | 同左 | ✋ 人／daemon | ✅ |
+| 🧠 判準 | `.kiro/steering/BRAIN.md` | 同左（`context_builder` 自動注入） | 🤖 build_kiro 產（判準＋角色段，once）／✋ 人補 | ✅ |
 | 🧠 畫像／程式規範 | `.kiro/steering/USER.md`、`CODE.md` | 同左 | ✋ 人 | ✅／🔸 |
 | 📝 導覽 + 里程碑 | `.kiro/steering/MEMORY.md`（< 20 KB） | 同左 | ✋ 人 | ✅ |
 | 📝 持久事實 | `memory/memory.md` | 同左 | 🤖 `memory-distill`／consolidate | 🔸 |
@@ -47,13 +47,15 @@
 | 📚 產品／github／weknora | `knowledge/<product>/`、`$ARK_GITHUB_ROOT`、外部 RAG | 選配 | 🤖 排程 | 🔸 |
 | 🖐️ 技能（共用） | `.kiro/skills/<name>/`（複本，非 symlink） | 同左 | 上游 | 🔸 按需 |
 | 🖐️ 技能（套件內建） | `ark_team_agent` 內建工具 | `ark_bot_agent.skills.internal` | 套件 | — |
-| 🔌 腳本（業務） | `scripts/`、專案自己的模組 | `skills/`（`run_bot(skills=["skills"])` 掃描） | 本專案 | — |
+| 🔌 腳本（業務） | `scripts/`、專案自己的模組 | `skills/` 裡綁本專案的插件（見下方註） | 本專案 | — |
 | 🔌 腳本（維運） | `scripts/` | 同左 | 本專案 | — |
 | 🔌 外部工具 | `.kiro/settings/mcp.json`（daemon 產）／`.mcp.json` | 同左 | ✋／daemon | — |
 | 產出 | `artifacts/{reports,sim,perf,triage}/` | `output/{reports,replies,images,exports,drafts}/` | 🤖／✋ | ❌ |
 
-> ⚠️ bot 的根 `skills/` **名字叫 skills、本質是腳本層**（綁本專案 config/templates 的業務模組），
-> 和 `.kiro/skills`（技能層）同名 —— 文件與 BRAIN.md 要標明，避免被當成技能同步。
+> ⚠️ bot 的根 `skills/` 是 ark_bot_agent 的 **`BaseSkill` 插件包**（`run_bot(skills=["skills"])` 掃描），
+> **目錄名是套件慣例，不要改名**。它屬哪一層看**內容**，不看目錄名：插件通用、換專案還用得上 → 技能
+> （該升格回貢）；綁本專案 config／templates／資料 → 腳本。和 `.kiro/skills`（SKILL.md 技能）同名但不同機制，
+> BRAIN.md 寫明本專案 `skills/` 的定位即可，不需同步。（2.3.1 更正：2.3.0 曾寫「本質是腳本層」，太武斷）
 
 ## 4. 紅線（五層之間）
 
@@ -65,6 +67,7 @@
 
 ## 5. 檢核清單（建置或稽核 workspace 時）
 
+- [ ] AGENTS.md 佈局：`scripts/audit_agents_layout.py` 通過（專案根 1＋編制內子 agent 根各 1＋steering 0）
 - [ ] `.kiro/steering/BRAIN.md` 存在，且是本 agent 專用（無範本殘留的他角色路徑）
 - [ ] BRAIN.md 的資源表列出五層，並寫明本專案「腳本」在哪
 - [ ] 根層 `knowledge/` 只有櫃子目錄 + `index.md`／`log.md`／`schema.md`，沒有 `raw/`、`wiki/`

@@ -32,7 +32,7 @@ def _make_skill(tmp_path: Path, body: str, extra_files: list[str] = ()) -> Path:
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text("x", encoding="utf-8")
     fm = ("---\nname: ark-fixture\ndescription: |\n  測試用 fixture skill。\n"
-          "metadata:\n  category: executor\n  version: \"1.0\"\n---\n\n")
+          "metadata:\n  category: pipeline\n  form: executor\n  version: \"1.0\"\n---\n\n")
     (skill / "SKILL.md").write_text(fm + body, encoding="utf-8")
     return skill / "SKILL.md"
 

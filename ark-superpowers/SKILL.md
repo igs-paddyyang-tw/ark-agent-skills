@@ -12,11 +12,13 @@ description: |
   或任何需要產出結構化工程決策文件的場景。
   不適用於：與使用者一來一往共同起草請用 ark-doc-coauthoring；遊戲企劃文件請用 ark-game-spec；照 plan 執行請用 ark-spec-executor。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.3"
+  schema_version: "1.2"
   status: active
-  updated: 2026-09-11
+  updated: 2026-10-20
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both

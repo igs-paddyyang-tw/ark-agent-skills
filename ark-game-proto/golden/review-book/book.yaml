@@ -1,0 +1,41 @@
+title: "Huff N' Puff Open House 拍板書"
+slug: huffnpuff-open-house-decision
+subtitle: "四件事決定它能不能從研發走向上線"
+author: aidev-agent（樂奇）
+version: 1
+status: review
+language: zh-Hant
+level: intermediate
+audience: "要拍板這款遊戲能不能進正式開發的製作人、主管與機率負責人；不用會寫程式，但要願意親手玩幾局"
+outcomes:
+  - 用 play.html 的強制情境親手確認五種特色遊戲的體感是否到位
+  - 判斷正式機率 kb-v1 是否可以從 candidate 升為定版
+  - 決定 Free Games（6 頂安全帽）是否進 v1
+  - 排定把競品素材換成正式美術的範圍與時程
+prerequisites: []
+scope_out:
+  - 機率參數怎麼由知識庫推導（見 docs/designs/2026-10-16-prob-arch-design.md）
+  - Go Server 的程式細節與部署
+  - 上線後的成效（⑩，遊戲上線後才會有）
+tags: [slot, probability, pipeline]
+sources:
+  - ../../quicktest/qt-report/rtp-report.json
+  - ../../prob/prob-spec.md
+  - ../../proto/README.md
+  - ../../spec/game-spec.v1.md
+  - ../../docs/reports/2026-10-19-huffnpuff-pipeline-closeout.md
+chapters:
+  - 00-preface
+  - 01-status
+  - 02-feel-check
+  - 03-odds-approve
+  - 04-free-games
+  - 05-art-swap
+  - 99-appendix-artifacts
+shelf: game-decision
+style: storybook
+cover:
+  spine_color: wine
+  emoji: "🐷"
+created: 2026-10-19
+updated: 2026-10-19

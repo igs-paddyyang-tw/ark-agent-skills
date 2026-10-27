@@ -9,15 +9,17 @@ description: |
   或任何需要自動偵測數據異常並發送通知的場景。
   不適用於：指標定義與計算邏輯請用 ark-kpi-calculator；服務端點是否活著請用 ark-dashboard-health（本 skill 偵測的是數值異常，不是服務故障）。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai
   author: paddyyang
-  version: "1.0.0"
-  updated: 2026-05-18
+  version: "1.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-anomaly-detector

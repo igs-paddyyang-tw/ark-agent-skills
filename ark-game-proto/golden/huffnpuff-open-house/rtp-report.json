@@ -1,0 +1,206 @@
+{
+ "contract": "1",
+ "format": "fasttest",
+ "version": "1.0.0",
+ "generated_at": "2026-10-19 11:41:47.0000",
+ "spins": 20000000,
+ "total_win": 4607417270,
+ "total_bet": 4800000000,
+ "games": {
+  "MainGame": {
+   "rtp": 0.388812,
+   "hitrate": 0.2762,
+   "freq": null,
+   "multi": null,
+   "playtimes": null,
+   "retrirate": null,
+   "maxmulti": null
+  },
+  "SpecialGameTotal": {
+   "rtp": 0.571066,
+   "hitrate": null,
+   "freq": 25.4,
+   "multi": 14.5,
+   "playtimes": 5.14,
+   "retrirate": 0.0,
+   "maxmulti": 5274.0
+  },
+  "StrawSpin": {
+   "rtp": 0.08682499999999999,
+   "hitrate": null,
+   "freq": 40.02,
+   "multi": 3.47,
+   "playtimes": 5.05,
+   "retrirate": 0.0,
+   "maxmulti": 23.0
+  },
+  "StickSpin": {
+   "rtp": 0.099978,
+   "hitrate": null,
+   "freq": 119.66,
+   "multi": 11.96,
+   "playtimes": 5.05,
+   "retrirate": 0.0,
+   "maxmulti": 75.5
+  },
+  "BrickSpin": {
+   "rtp": 0.19388000000000002,
+   "hitrate": null,
+   "freq": 222.2,
+   "multi": 43.08,
+   "playtimes": 5.07,
+   "retrirate": 0.0,
+   "maxmulti": 228.0
+  },
+  "PalaceSpin": {
+   "rtp": 0.10998100000000001,
+   "hitrate": null,
+   "freq": 820.61,
+   "multi": 90.25,
+   "playtimes": 5.05,
+   "retrirate": 0.0,
+   "maxmulti": 1096.0
+  },
+  "OpenHouse": {
+   "rtp": 0.080402,
+   "hitrate": null,
+   "freq": 3274.93,
+   "multi": 263.31,
+   "playtimes": 16.04,
+   "retrirate": 0.0,
+   "maxmulti": 5274.0
+  },
+  "Total": {
+   "rtp": 0.9598789999999999,
+   "maxmulti": 5274.0
+  }
+ },
+ "detail": {
+  "sd": 8.91,
+  "confidence": {
+   "95": [
+    0.956,
+    0.9638
+   ]
+  },
+  "maxwin_note": "maxwin統計: 封頂 0 次"
+ },
+ "symbol_hit_rate": {},
+ "symbol_hit_rtp": {},
+ "reel_set_rtp": {},
+ "asset_100": [],
+ "multiple": [],
+ "special_range": [],
+ "decile": {},
+ "raw_sections": [
+  "BASE INFO",
+  "Game Detail Information",
+  "Open House",
+  "Feature Multiple Distribution",
+  "Source"
+ ],
+ "rtp_total": 0.9598789999999999,
+ "rtp_main": 0.388812,
+ "rtp_special": 0.571066,
+ "special_trigger_rate": 0.03937007874015748,
+ "award_range": [],
+ "gate": {
+  "checks": [
+   {
+    "id": "rtp",
+    "status": "PASS",
+    "sim": 0.9598789999999999,
+    "target": 0.96,
+    "diff": -0.00012100000000003774,
+    "tol": 0.005,
+    "msg": "模擬 95.9879% vs 目標 96.00%（差 -0.0121%，容許 ±0.5%）"
+   },
+   {
+    "id": "feel:StrawSpin",
+    "status": "PASS",
+    "rate": 0.02498750624687656,
+    "freq": 40.02,
+    "band": [
+     0.02,
+     0.04
+    ],
+    "preset": null,
+    "msg": "StrawSpin 觸發 1/40.0（2.50%）落在自訂區間 1/25~1/50"
+   },
+   {
+    "id": "feel:StickSpin",
+    "status": "PASS",
+    "rate": 0.008357011532675915,
+    "freq": 119.66,
+    "band": [
+     0.006667,
+     0.01
+    ],
+    "preset": null,
+    "msg": "StickSpin 觸發 1/119.7（0.84%）落在自訂區間 1/100~1/150"
+   },
+   {
+    "id": "feel:BrickSpin",
+    "status": "PASS",
+    "rate": 0.004500450045004501,
+    "freq": 222.2,
+    "band": [
+     0.003333,
+     0.006667
+    ],
+    "preset": null,
+    "msg": "BrickSpin 觸發 1/222.2（0.45%）落在自訂區間 1/150~1/300"
+   },
+   {
+    "id": "feel:PalaceSpin",
+    "status": "PASS",
+    "rate": 0.0012186056713907947,
+    "freq": 820.61,
+    "band": [
+     0.001,
+     0.001429
+    ],
+    "preset": null,
+    "msg": "PalaceSpin 觸發 1/820.6（0.12%）落在自訂區間 1/700~1/1000"
+   },
+   {
+    "id": "feel:OpenHouse",
+    "status": "PASS",
+    "rate": 0.00030535003801607973,
+    "freq": 3274.93,
+    "band": [
+     0.000222,
+     0.0004
+    ],
+    "preset": null,
+    "msg": "OpenHouse 觸發 1/3274.9（0.03%）落在自訂區間 1/2500~1/4505"
+   },
+   {
+    "id": "null",
+    "status": "PASS",
+    "msg": "parameters.value 全為 null 或附 decision",
+    "params": []
+   }
+  ],
+  "verdict": "confirmed",
+  "inputs": {
+   "targets": "data/slot/huffnpuff-open-house/quicktest/quicktest.yaml",
+   "config_spec": "data/slot/huffnpuff-open-house/spec/config-spec.yaml",
+   "discovered": []
+  }
+ },
+ "template_caveats": [
+  {
+   "id": "retrigger",
+   "finding": "F-5",
+   "row": "SpecialGameTotal",
+   "msg": "RetriRate 0.00% 為範本未記錄 retrigger 次數所致，不代表沒有 retrigger；改看 PlayTimes 是否大於初始手數"
+  },
+  {
+   "id": "maxwin-count",
+   "finding": "F-2",
+   "row": "maxwin統計",
+   "msg": "maxwin 頻率被高估：範本在同一場 FG 截頂後每手都計次，且主遊戲不封頂；請以 FG 觸發頻率為上限解讀"
+  }
+ ]
+}

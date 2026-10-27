@@ -12,13 +12,15 @@ description: |
   產生 Markdown 檔、資料備份時，用本 skill 的匯出章節將結果寫入磁碟。
   不適用於：從資料庫取數請用 ark-db-query；轉換完的繪圖請用 ark-chart-generator（本 skill 只做中間那段轉換與匯出）。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   # 2026-09-14 T2 併入
   replaces: [ark-file-export]
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai

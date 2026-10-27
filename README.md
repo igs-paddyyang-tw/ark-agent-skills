@@ -33,141 +33,134 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **60 個 Skill**，兩層分類（職能角色 × 受眾）。
+> **62 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
 
-> 輸出：MD 給 AI｜`category: process`｜12 個
+> 輸出：MD 給 AI｜`category: process`｜13 個
 
-| Skill | 定位 |
-|-------|------|
-| `ark-agent-role-profile` | 以三檔位訪談（quick / standard / deep）引出 agent 的角色定位，產出結構化 `role-profile.yaml`（identity / stance / scope / … |
-| `ark-agent-team-design` | 從業務目標設計 agent team 的編制：三檔位訪談（quick 套用編制樣板 / standard 6 題 / deep 交 ark-grill-me 拷問），產出 `team-spec.yam… |
-| `ark-code-spec-validator` | 驗證 code 與 spec/design 文件的一致性，產出 Drift Report。 |
-| `ark-doc-coauthoring` | 引導使用者透過結構化工作流共同撰寫文件。 |
-| `ark-grill-me` | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
-| `ark-mcp-builder` | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
-| `ark-planning-with-files` | 持久化任務追蹤：複雜任務（3+ 步驟）自動建立 3-File Pattern（task_plan.md / findings.md / progress.md）， 防止 context 丟失、goal… |
-| `ark-project-planning` | 標準化專案計畫流程。 |
-| `ark-prompt-spec-validator` | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
-| `ark-skill-creator` | 建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。 |
-| `ark-spec-executor` | 讀取 ark-superpowers 產出的 plan.md（7 欄任務表 + AC-ID + 依賴），以 deterministic 腳本 解析契約 → DAG 排序 → 逐任務派給 runner … |
-| `ark-superpowers` | 產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫）， 基於 power-engineer-skills 框架，協助資深工程師與技術領導者 將技術決… |
+| Skill | 形態 | 領域 | 定位 |
+|-------|------|------|------|
+| `ark-agent-role-profile` | 📝 指示 | 通用 | 以三檔位訪談（quick / standard / deep）引出 agent 的角色定位，產出結構化 `role-profile.yaml`（identity / stance / scope / … |
+| `ark-agent-team-design` | 📝 指示 | 通用 | 從業務目標設計 agent team 的編制：三檔位訪談（quick 套用編制樣板 / standard 6 題 / deep 交 ark-grill-me 拷問），產出 `team-spec.yam… |
+| `ark-code-spec-validator` | 📝 指示 | 通用 | 驗證 code 與 spec/design 文件的一致性，產出 Drift Report。 |
+| `ark-doc-coauthoring` | 📝 指示 | 通用 | 引導使用者透過結構化工作流共同撰寫文件。 |
+| `ark-game-quicktest` | ⚙️ 執行 | 🎮 遊戲 | C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， determin… |
+| `ark-grill-me` | 📝 指示 | 通用 | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
+| `ark-mcp-builder` | 📝 指示 | 通用 | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
+| `ark-planning-with-files` | 📝 指示 | 通用 | 持久化任務追蹤：複雜任務（3+ 步驟）自動建立 3-File Pattern（task_plan.md / findings.md / progress.md）， 防止 context 丟失、goal… |
+| `ark-project-planning` | 📝 指示 | 通用 | 標準化專案計畫流程。 |
+| `ark-prompt-spec-validator` | ⚙️ 執行 | 通用 | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
+| `ark-skill-creator` | 📝 指示 | 通用 | 建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。 |
+| `ark-spec-executor` | ⚙️ 執行 | 通用 | 讀取 ark-superpowers 產出的 plan.md（7 欄任務表 + AC-ID + 依賴），以 deterministic 腳本 解析契約 → DAG 排序 → 逐任務派給 runner … |
+| `ark-superpowers` | 📝 指示 | 通用 | 產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫）， 基於 power-engineer-skills 框架，協助資深工程師與技術領導者 將技術決… |
 
 ## ② 平台生成器 Scaffolders
 
-> 輸出：專案骨架｜`category: scaffolder`｜5 個
+> 輸出：專案骨架｜`category: scaffolder`｜6 個
 
-| Skill | 定位 |
-|-------|------|
-| `ark-agent-bot-builder` | 產出 ark_bot_agent 套件消費端的 Bot workspace 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（runtime / Web UI / 記憶 / TG polling… |
-| `ark-agent-init` | 產出完整的 agent workspace 配置（steering、agents、prompts、skills、settings、 knowledge、memory），根據使用者指定的角色自動生成。 |
-| `ark-agent-team-builder` | 產出 ark_team_agent 套件消費端的多 agent 團隊 daemon 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（team daemon / 多 runtime / Kanb… |
-| `ark-docker-deploy` | 產出容器化部署配置（Dockerfile + docker-compose.yaml + .dockerignore + 部署腳本）， 支援 Python / Node / Go 專案自動偵測，mul… |
-| `ark-webapp-generator` | 產出完整的「webbot」應用骨架 —— 一個 lifespan 一次啟動四層： FastAPI Server + Web Chat UI、BaseSkill 插件系統、WorkflowEngine … |
+| Skill | 形態 | 領域 | 定位 |
+|-------|------|------|------|
+| `ark-agent-bot-builder` | 📝 指示 | 通用 | 產出 ark_bot_agent 套件消費端的 Bot workspace 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（runtime / Web UI / 記憶 / TG polling… |
+| `ark-agent-init` | 📝 指示 | 通用 | 產出完整的 agent workspace 配置（steering、agents、prompts、skills、settings、 knowledge、memory），根據使用者指定的角色自動生成。 |
+| `ark-agent-team-builder` | 📝 指示 | 通用 | 產出 ark_team_agent 套件消費端的多 agent 團隊 daemon 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（team daemon / 多 runtime / Kanb… |
+| `ark-docker-deploy` | 📝 指示 | 通用 | 產出容器化部署配置（Dockerfile + docker-compose.yaml + .dockerignore + 部署腳本）， 支援 Python / Node / Go 專案自動偵測，mul… |
+| `ark-web-game` | ⚙️ 執行 | 🎮 遊戲 | 網頁遊戲 ⑦⑧ 工程 skill：把「單機試玩版」做成「Server 算結果、網路傳送、PixiJS Client 只演出」的網頁遊戲。 |
+| `ark-webapp-generator` | 📝 指示 | 通用 | 產出完整的「webbot」應用骨架 —— 一個 lifespan 一次啟動四層： FastAPI Server + Web Chat UI、BaseSkill 插件系統、WorkflowEngine … |
 
 ## ③ 管線元件 Pipeline
 
-> 輸出：結構化資料｜`category: pipeline`｜16 個
+> 輸出：結構化資料｜`category: pipeline`｜18 個
 
-| Skill | 定位 |
-|-------|------|
-| `ark-agent-cli` | 統一 Agent CLI 閘道：封裝 kiro-cli / claude / gemini / codex 四種 CLI 為單一呼叫介面。 |
-| `ark-anomaly-detector` | 產出 KPI 異常偵測模組 + 告警規則引擎 + MCP Tool + 排程整合。 |
-| `ark-browser-tool` | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
-| `ark-chart-generator` | 產出 chart_generator.py 標準化圖表 Skill，使用 Matplotlib 將結構化數據轉換為圖表， 輸出至 artifacts/charts 目錄。 |
-| `ark-code-review` | 產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、 風格一致性驗證、安全性掃描、PR 審查報告產生。 |
-| `ark-community-cli` | 社群訊息蒐集與分析的 CLI skill：以標準 SOP 從 Discord（自家伺服器，bot 唯讀）與 X／Twitter（日本市場， X API v2 pay-per-use）取得訊息，統一 s… |
-| `ark-cost-tracker` | 產出 API 呼叫成本追蹤 Skill，記錄 LLM API 的 token 使用量和費用。 |
-| `ark-data-contract` | 當使用者需要驗證管線元件間的 schema 契約時使用此技能。 |
-| `ark-etl-pipeline` | 產出 etl_pipeline.py 資料轉換 Skill，將任何資料來源（CSV、JSON、API 回傳、 Skill 輸出、資料庫查詢）轉換為 chart_generator 可直接使用的標準格式… |
-| `ark-kpi-calculator` | 產出標準化 KPI 計算引擎模組 + MCP Tool，支援遊戲類指標（DAU/MAU/ARPU/RTP/留存率/LTV） 與通用指標（轉換率/流失率/NPS）。 |
-| `ark-llm-tools` | 產出 LLM 通用工具 Skills（summarize、analyze、qa、intent_parse）， 搭配 GeminiAdapter 或 LLMAdapter 進行文字摘要、資料分析、問答、… |
-| `ark-security-audit` | 產出 security_audit.py 安全性掃描 Skill，對專案進行程式碼安全性檢查與弱點偵測。 |
-| `ark-telegram-sender` | 通用 Telegram 發送 Skill：文字訊息（HTML 格式）、檔案附件、圖片。 |
-| `ark-test-runner` | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
-| `ark-translator` | 產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯， 支援繁體中文、簡體中文、英文、日文互譯。 |
-| `ark-web-scraper` | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
+| Skill | 形態 | 領域 | 定位 |
+|-------|------|------|------|
+| `ark-agent-cli` | 📝 指示 | 通用 | 統一 Agent CLI 閘道：封裝 kiro-cli / claude / gemini / codex 四種 CLI 為單一呼叫介面。 |
+| `ark-anomaly-detector` | 📝 指示 | 通用 | 產出 KPI 異常偵測模組 + 告警規則引擎 + MCP Tool + 排程整合。 |
+| `ark-browser-tool` | 📝 指示 | 通用 | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
+| `ark-chart-generator` | 📝 指示 | 通用 | 產出 chart_generator.py 標準化圖表 Skill，使用 Matplotlib 將結構化數據轉換為圖表， 輸出至 artifacts/charts 目錄。 |
+| `ark-code-review` | 📝 指示 | 通用 | 產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、 風格一致性驗證、安全性掃描、PR 審查報告產生。 |
+| `ark-community-cli` | ⚙️ 執行 | 🎮 遊戲 | 社群訊息蒐集與分析的 CLI skill：以標準 SOP 從 Discord（自家伺服器，bot 唯讀）與 X／Twitter（日本市場， X API v2 pay-per-use）取得訊息，統一 s… |
+| `ark-cost-tracker` | 📝 指示 | 通用 | 產出 API 呼叫成本追蹤 Skill，記錄 LLM API 的 token 使用量和費用。 |
+| `ark-data-contract` | 📝 指示 | 通用 | 當使用者需要驗證管線元件間的 schema 契約時使用此技能。 |
+| `ark-db-query` | ⚙️ 執行 | 通用 | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
+| `ark-etl-pipeline` | 📝 指示 | 通用 | 產出 etl_pipeline.py 資料轉換 Skill，將任何資料來源（CSV、JSON、API 回傳、 Skill 輸出、資料庫查詢）轉換為 chart_generator 可直接使用的標準格式… |
+| `ark-kpi-calculator` | 📝 指示 | 通用 | 產出標準化 KPI 計算引擎模組 + MCP Tool，支援遊戲類指標（DAU/MAU/ARPU/RTP/留存率/LTV） 與通用指標（轉換率/流失率/NPS）。 |
+| `ark-llm-tools` | 📝 指示 | 通用 | 產出 LLM 通用工具 Skills（summarize、analyze、qa、intent_parse）， 搭配 GeminiAdapter 或 LLMAdapter 進行文字摘要、資料分析、問答、… |
+| `ark-security-audit` | 📝 指示 | 通用 | 產出 security_audit.py 安全性掃描 Skill，對專案進行程式碼安全性檢查與弱點偵測。 |
+| `ark-telegram-sender` | ⚙️ 執行 | 通用 | 通用 Telegram 發送 Skill：文字訊息（HTML 格式）、檔案附件、圖片。 |
+| `ark-test-runner` | 📝 指示 | 通用 | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
+| `ark-translator` | 📝 指示 | 通用 | 產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯， 支援繁體中文、簡體中文、英文、日文互譯。 |
+| `ark-web-scraper` | 📝 指示 | 通用 | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
+| `ark-wiki-engine` | ⚙️ 執行 | 通用 | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
 ## ④ 呈現層 View
 
-> 輸出：HTML / 視覺（給人看）｜`category: view`｜3 個
+> 輸出：HTML / 視覺（給人看）｜`category: view`｜4 個
 
-| Skill | 定位 |
-|-------|------|
-| `ark-frontend-design` | 產出獨特、生產級品質的前端介面，具備高設計水準；並可先產出完整設計系統 （色彩、字型、元件、間距規範 + CSS 變數）再據此開發，確保一致性。 |
-| `ark-html-dashboard` | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
-| `ark-html-report` | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
+| Skill | 形態 | 領域 | 定位 |
+|-------|------|------|------|
+| `ark-frontend-design` | 📝 指示 | 通用 | 產出獨特、生產級品質的前端介面，具備高設計水準；並可先產出完整設計系統 （色彩、字型、元件、間距規範 + CSS 變數）再據此開發，確保一致性。 |
+| `ark-game-proto` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：製程 C 段「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。 |
+| `ark-html-dashboard` | 📝 指示 | 通用 | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
+| `ark-html-report` | 📝 指示 | 通用 | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
 
 ## ⑤ 文件輸出 Document
 
-> 輸出：MD / Office｜`category: document`｜9 個
+> 輸出：MD / Office｜`category: document`｜14 個
 
-| Skill | 定位 |
-|-------|------|
-| `ark-book` | 教學產出專用 skill：把一個主題（skill 用法、流程、工具、案例）寫成「一本書」，雙軌輸出—— Content 軌 Markdown 章節給 AI 當知識庫（chunk 自足、frontmat… |
-| `ark-daily-news` | 產出科技日報：MD-first 雙軌流程。 |
-| `ark-docx-tool` | 當使用者想要建立、讀取、編輯或操作 Word 文件（.docx 檔案）時使用此技能。 |
-| `ark-md-report` | 產出「給 AI 看」的結構化分析報告 Markdown（Content 軌），與 ark-html-report（View 軌）成對。 |
-| `ark-pdf-tool` | 處理 PDF 檔案的所有操作。 |
-| `ark-pptx-tool` | 任何涉及 .pptx 檔案的情境皆使用此技能——無論作為輸入、輸出或兩者皆是。 |
-| `ark-release-notes` | 當使用者需要從 git log 產出結構化 changelog 或版本說明時使用此技能。 |
-| `ark-uml-generator` | 產出 Mermaid 格式的 UML 圖表，用於系統設計文件。 |
-| `ark-xlsx-tool` | 當試算表檔案為主要輸入或輸出時，請使用此技能。 |
+| Skill | 形態 | 領域 | 定位 |
+|-------|------|------|------|
+| `ark-book` | 📝 指示 | 通用 | 教學產出專用 skill：把一個主題（skill 用法、流程、工具、案例）寫成「一本書」，雙軌輸出—— Content 軌 Markdown 章節給 AI 當知識庫（chunk 自足、frontmat… |
+| `ark-daily-news` | 📝 指示 | 通用 | 產出科技日報：MD-first 雙軌流程。 |
+| `ark-docx-tool` | 📝 指示 | 通用 | 當使用者想要建立、讀取、編輯或操作 Word 文件（.docx 檔案）時使用此技能。 |
+| `ark-game-prob` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、 ark-game-quicktest（Go 快測）… |
+| `ark-game-report` | ⚙️ 執行 | 🎮 遊戲 | Slot 新機上線成效報告 executor：把一款新機的上線表現做成標準格式報告（D+7 上線初判 / D+14 檢查點 / D+30 穩態定調）， 並帶出分析思維與策略方向。 |
+| `ark-game-spec` | ⚙️ 執行 | 🎮 遊戲 | 遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill， 與 ark-game-prob（機率規格書）、ark-game-quicktest（Go… |
+| `ark-marketing` | 📝 指示 | 🎮 遊戲 | 遊戲行銷與成長策略：ASO（應用商店優化）、CRO（轉換率優化）、 文案撰寫、社群行銷、UA（用戶獲取）、LiveOps 活動規劃。 |
+| `ark-md-report` | 📝 指示 | 通用 | 產出「給 AI 看」的結構化分析報告 Markdown（Content 軌），與 ark-html-report（View 軌）成對。 |
+| `ark-pdf-tool` | 📝 指示 | 通用 | 處理 PDF 檔案的所有操作。 |
+| `ark-pptx-tool` | 📝 指示 | 通用 | 任何涉及 .pptx 檔案的情境皆使用此技能——無論作為輸入、輸出或兩者皆是。 |
+| `ark-release-notes` | 📝 指示 | 通用 | 當使用者需要從 git log 產出結構化 changelog 或版本說明時使用此技能。 |
+| `ark-retention-analysis` | 📝 指示 | 🎮 遊戲 | 玩家留存與 LTV 分析：Cohort 分析、留存曲線、LTV 預測、流失預警。 |
+| `ark-uml-generator` | 📝 指示 | 通用 | 產出 Mermaid 格式的 UML 圖表，用於系統設計文件。 |
+| `ark-xlsx-tool` | 📝 指示 | 通用 | 當試算表檔案為主要輸入或輸出時，請使用此技能。 |
 
-## ⑥ 領域 SOP Domain
+## ⑥ 維運 Ops
 
-> 輸出：策略分析 MD｜`category: domain`｜2 個
+> 輸出：診斷 / 驗證｜`category: ops`｜7 個
 
-| Skill | 定位 |
-|-------|------|
-| `ark-marketing` | 遊戲行銷與成長策略：ASO（應用商店優化）、CRO（轉換率優化）、 文案撰寫、社群行銷、UA（用戶獲取）、LiveOps 活動規劃。 |
-| `ark-retention-analysis` | 玩家留存與 LTV 分析：Cohort 分析、留存曲線、LTV 預測、流失預警。 |
-
-## ⑦ 維運 Ops
-
-> 輸出：診斷 / 驗證｜`category: ops`｜4 個
-
-| Skill | 定位 |
-|-------|------|
-| `ark-dashboard-health` | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
-| `ark-env-doctor` | 當使用者遇到開發環境問題時使用此技能。 |
-| `ark-skills-align` | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
-| `ark-weknora-cli` | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
-
-## ⑧ 執行器 Executor
-
-> 輸出：捆綁 scripts，agent 直接跑｜`category: executor`｜9 個
-
-| Skill | 定位 |
-|-------|------|
-| `ark-db-query` | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
-| `ark-game-prob` | 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、 ark-game-quicktest（Go 快測）… |
-| `ark-game-proto` | 機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：遊戲開發製程 C 段的「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。 |
-| `ark-game-quicktest` | C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， determin… |
-| `ark-game-spec` | 遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill， 與 ark-game-prob（機率規格書）、ark-game-quicktest（Go… |
-| `ark-github-cli` | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
-| `ark-grafana-query` | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
-| `ark-mobile-adb` | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。 |
-| `ark-wiki-engine` | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
+| Skill | 形態 | 領域 | 定位 |
+|-------|------|------|------|
+| `ark-dashboard-health` | 📝 指示 | 通用 | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
+| `ark-env-doctor` | ⚙️ 執行 | 通用 | 當使用者遇到開發環境問題時使用此技能。 |
+| `ark-github-cli` | ⚙️ 執行 | 通用 | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
+| `ark-grafana-query` | ⚙️ 執行 | 通用 | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
+| `ark-mobile-adb` | ⚙️ 執行 | 🎮 遊戲 | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。 |
+| `ark-skills-align` | ⚙️ 執行 | 通用 | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
+| `ark-weknora-cli` | ⚙️ 執行 | 通用 | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
 
 <!-- END GENERATED CATALOGUE -->
 
 ---
 
-## 分類規格
+## 分類規格（schema 1.2：三軸）
+
+> 權威：`ark-skills-align/references/taxonomy.md`（詞彙與判準）、`references/metadata-schema.md`（欄位）；
+> 為什麼拆三軸見 `docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md`。
 
 每個 `SKILL.md` 的 frontmatter 需有：
 
 ```yaml
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   author: paddyyang
-  category: pipeline        # 見下表
+  category: pipeline        # 產出什麼（職能）—— 決定 README 分節
+  form: executor            # agent 怎麼用：executor｜instruction
+  domain: general           # 屬於哪個業務：general｜game
   outputs:
-    - { format: md, audience: ai }
+    - { format: data, audience: ai }
   depends_on: []
 ```
 
@@ -178,12 +171,15 @@ metadata:
 | `pipeline` | ③ 管線元件 | 可被程式呼叫的元件，產出結構化資料 |
 | `view` | ④ 呈現層 View | HTML／視覺，**給人看** |
 | `document` | ⑤ 文件輸出 | MD／Office 檔案 |
-| `domain` | ⑥ 領域 SOP | 特定業務領域的做法 |
-| `ops` | ⑦ 維運 | 診斷、驗證 |
-| `executor` | ⑧ 執行器 | 捆綁 `scripts/`，agent 直接以 bash 執行 |
+| `ops` | ⑥ 維運 | 診斷、驗證 |
 
-> `presentation-content` 是 `ark-md-report` 的舊值，**已併入 `document`** ——
-> 寫這個值 `audit_skills.py` 會報 P3、`gen_readme.py` 會丟進「⚠️ 未分類」。
+| form | 判準（只看「主要產出誰做的」） |
+|------|------|
+| `executor` | 自帶 `scripts/` 決定性產生，agent 以 bash 呼叫 |
+| `instruction` | LLM 依 SKILL.md 產生；附帶的腳本只做守門／渲染／輔助 |
+
+> `executor`、`domain` **不再是 category**（1.1 把形態、領域塞進職能欄位，違反「判準是產出物而非手段」）——
+> 舊複本寫這兩個值 `audit_skills.py` 報 P2 `category-axis-mixed`；`presentation-content` 舊值報 P3。
 
 **新增 category 必須同時登記到 `scripts/gen_readme.py` 的 `SECTIONS`**，
 否則該 skill 會落到「⚠️ 未分類」一節。

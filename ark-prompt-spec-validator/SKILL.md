@@ -14,16 +14,19 @@ description: |
   pytest 單元測試請用 ark-test-runner。
 metadata:
   author: paddyyang
-  schema_version: 1
+  schema_version: "1.2"
   category: process
+  form: executor
+  domain: general
   outputs:
     - { format: md, audience: both }
     - { format: data, audience: ai }
   render: none
-  depends_on: [ark-md-report]
+  depends_on:
+    - { name: ark-md-report, version: "^1.0.0" }
   status: active
-  version: "1.0.0"
-  updated: 2026-09-11
+  version: "1.1.2"
+  updated: 2026-10-27
 ---
 
 # ark-prompt-spec-validator

@@ -1,0 +1,24 @@
+package prob
+
+import "math"
+
+// Mulberry32 是演出流（只影響畫面的抽選），與用戶端 Proto.createRng 逐位元相同。
+type Mulberry32 struct{ a uint32 }
+
+// NewMulberry32 以 seed 建立演出流。
+func NewMulberry32(seed uint32) *Mulberry32 { return &Mulberry32{a: seed} }
+
+// Float64 實作 Rand。
+func (m *Mulberry32) Float64() float64 {
+	m.a += 0x6d2b79f5
+	t := m.a
+	t = (t ^ (t >> 15)) * (t | 1)
+	t ^= t + (t^(t>>7))*(t|61)
+	return float64(t^(t>>14)) / 4294967296
+}
+
+// U32 抽一個 32 位元整數（= JS Math.floor(rng() × 2^32)）。
+func U32(r Rand) uint32 { return uint32(math.Floor(r.Float64() * 4294967296)) }
+
+// FxXor 是演出流 seed 的混合常數（= Proto.svc.FX_XOR）。
+const FxXor = 0x5bd1e995

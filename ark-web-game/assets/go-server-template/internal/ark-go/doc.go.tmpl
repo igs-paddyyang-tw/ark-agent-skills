@@ -1,0 +1,9 @@
+// Package arkgo 是標準網路模組（fish_go 分支）的**複本**，見 ADR-005。
+//
+// 🔴 不得就地修改。來源與每個檔案的 sha256 記在 VENDORED.json，
+// TestVendoredUnmodified 會擋下任何改動 —— 要改就回上游（fish_go 分支）改，再重新同步。
+// 唯一的差異是匯入路徑（改寫後再 gofmt）：`.../fish_go/internal/platform/net/X` → `.../internal/ark-go/X`、
+// `.../fish_go/internal/game/table` → `.../internal/ark-go/table`。
+//
+// 為什麼是複本：fish_go 的套件位於它自己 module 的 `internal/`，Go 不允許跨 module 匯入。
+package arkgo

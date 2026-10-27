@@ -1,4 +1,5 @@
-"""ark-game-proto 建置測試：兩款 golden（彌勒佛 collect-mult、Tiger and Dragon coin-lock）md → config → html。
+"""ark-game-proto 建置測試：golden（彌勒佛 collect-mult、Tiger and Dragon coin-lock、Huff N' Puff huff-house）md → config → html；
+神燈寶藏 frame-chest 用 repo 內 data/slot/magic-lamp（線上機率不進 golden）。
 
 需要 ark-game-prob 1.4+ 的 ps_mdview（ARK_GAME_PROB_SCRIPTS 或 .kiro/skills/ark-game-prob/scripts）。
 node 相關：快速 smoke 預設跑；完整 core_test（約 1 分鐘 / 款）設 SLOTPROTO_SLOW=1 才跑。
@@ -20,6 +21,7 @@ GOLDEN = SCRIPTS.parent / "golden"
 CASES = {
     "milefo": {"adapter": "milefo", "go": "go-config.a-standard.json", "model": "collect-mult", "gaps": 6, "match": 27, "gap": 1},
     "tiger-and-dragon": {"adapter": "tiger_dragon", "go": "go-odds_1.0.0.json", "model": "coin-lock", "gaps": 8, "match": 32, "gap": 0},
+    "huffnpuff-open-house": {"adapter": "huffnpuff_open_house", "go": "go-odds_1.0.0.json", "model": "huff-house", "gaps": 5, "match": 40, "gap": 2},
 }
 
 
@@ -40,12 +42,19 @@ def test_build_config_and_go_check(slug, tmp_path):
     d = build(slug, tmp_path, "--config-only")
     cfg = json.loads((tmp_path / "game-config.json").read_text(encoding="utf-8"))
     assert cfg["schema"] == "slot-proto-config/1" and cfg["fg"]["model"] == c["model"] and cfg["art"] == c["adapter"]
+    assert cfg["art"] in _art_sets(), f"src/art.js 沒有美術套 {cfg['art']}"
     assert len(cfg["gaps"]) == c["gaps"] and all({"id", "what", "spec", "assume", "check"} <= set(g) for g in cfg["gaps"])
     assert d["go_check"]["mismatch"] == 0 and d["go_check"]["match"] == c["match"] and d["go_check"]["gap"] == c["gap"]
     assert cfg["targets"]["summary"]["rtp_total"] > 90
     golden = json.loads((GOLDEN / slug / "game-config.json").read_text(encoding="utf-8"))
     for k in ("board", "paytable", "strips", "reelsets", "mg", "fg", "targets", "gaps"):
         assert cfg[k] == golden[k], f"{k} 與 golden 不一致（改了 adapter 請重產 golden）"
+
+
+def _art_sets() -> set[str]:
+    import re
+    m = re.search(r"const SETS = \{([^}]*)\}", (SCRIPTS / "src" / "art.js").read_text(encoding="utf-8"))
+    return {x.split(":")[0].strip() for x in m.group(1).split(",")}
 
 
 def test_html_single_file_and_parity_embed(tmp_path):
@@ -59,7 +68,7 @@ def test_html_single_file_and_parity_embed(tmp_path):
 def test_old_md_without_strips_fails_clearly(tmp_path):
     md = tmp_path / "prob-spec.md"
     md.write_text((GOLDEN / "milefo" / "prob-spec.md").read_text(encoding="utf-8").split("## 輪帶 Strip（附錄）")[0], encoding="utf-8")
-    r = subprocess.run([sys.executable, str(SCRIPTS / "proto_build.py"), "--md", str(md), "--out", str(tmp_path / "o")], capture_output=True, text=True, encoding="utf-8")
+    r = subprocess.run([sys.executable, "-X", "utf8", str(SCRIPTS / "proto_build.py"), "--md", str(md), "--out", str(tmp_path / "o")], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode != 0 and "strip" in (r.stderr + r.stdout)
 
 
@@ -90,6 +99,44 @@ def test_recorded_go_parity_zero_mismatch(slug):
     for p in (GOLDEN / slug).glob("go-parity.*.json"):
         x = json.loads(p.read_text(encoding="utf-8"))
         assert x["mismatch"] == 0 and x["spins"] >= 200_000, p.name
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="需要 node")
+@pytest.mark.parametrize("slug", sorted(CASES) + ["three-pigs"])
+def test_ui_smoke(slug):
+    """驗證台 UI 無頭冒煙：DOM / Pixi / Worker 替身跑完整 app.js（L1、缺口、Go 對照、L2、每種玩法各演一局含特色遊戲演出）。"""
+    cfg = GOLDEN / slug / "game-config.json"
+    if not cfg.exists():
+        pytest.skip(f"沒有 golden/{slug}")
+    r = subprocess.run(["node", str(HERE / "ui_smoke.js"), str(cfg)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+    assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-800:]
+
+
+@pytest.mark.skipif(not (shutil.which("node") and os.environ.get("SLOTPROTO_BROWSER")), reason="SLOTPROTO_BROWSER=1 才跑（真瀏覽器，每款 1～2 分鐘）")
+@pytest.mark.parametrize("slug", sorted(CASES) + ["three-pigs"])
+def test_browser_check(slug, tmp_path):
+    """真瀏覽器驗收：系統 Chrome / Edge 無頭模式跑驗證台與每種玩法演出（tests/browser_check.js；找不到瀏覽器 → skip）。"""
+    sys.path.insert(0, str(SCRIPTS))
+    import proto_build as B
+    cfg_p = GOLDEN / slug / "game-config.json"
+    if not cfg_p.exists():
+        pytest.skip(f"沒有 golden/{slug}")
+    B.build_html(json.loads(cfg_p.read_text(encoding="utf-8")), tmp_path, False)
+    r = subprocess.run(["node", str(HERE / "browser_check.js"), str(tmp_path), "--turbo", "--l2", "50000"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
+    if r.returncode == 2:
+        pytest.skip("找不到瀏覽器：" + r.stderr.strip()[-200:])
+    assert r.returncode == 0, r.stdout[-1500:]
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="需要 node")
+def test_huff_parity_tool_on_recorded_trace(tmp_path):
+    """huff-house：golden 內 Go 對照紀錄 0 差異且涵蓋五種玩法；tests/huff_parity.js 對小 trace 可重跑（tests/fixtures 有時）。"""
+    recs = sorted((GOLDEN / "huffnpuff-open-house").glob("go-parity.*.json"))
+    assert len(recs) >= 2
+    for p in recs:
+        x = json.loads(p.read_text(encoding="utf-8"))
+        assert x["mismatch"] == 0 and x["model"] == "huff-house" and set(x["byType"]) == {"ST", "SK", "BR", "GD", "OH"}, p.name
 
 
 # ───────── three-pigs（house-collect；Python 引擎，無 Go 對照，雙觸發線）─────────
@@ -133,3 +180,41 @@ def test_three_pigs_node_core():
     r = subprocess.run(["node", str(HERE / "core_test.js"), str(GOLDEN / "three-pigs" / "game-config.json")],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(REPO_ROOT))
     assert r.returncode == 0, r.stdout[-1500:]
+
+
+# ───── frame-chest（神燈寶藏）：輸入是線上機率（ref/live 等級，confidential-live），不複製進 skill golden；
+#       在含 data/slot/magic-lamp 的 repo 內才跑（向上找 repo 根）。
+def _magic_lamp() -> pathlib.Path | None:
+    for p in [pathlib.Path.cwd(), *pathlib.Path.cwd().parents, *SCRIPTS.parents]:
+        d = p / "data" / "slot" / "magic-lamp"
+        if (d / "prob" / "prob-spec.md").exists() and (d / "quicktest" / "config" / "live-b.json").exists():
+            return d
+    return None
+
+
+ML = _magic_lamp()
+
+
+@pytest.mark.skipif(ML is None, reason="repo 內沒有 data/slot/magic-lamp（線上機率不進 golden）")
+def test_magic_lamp_frame_chest(tmp_path):
+    args = [sys.executable, "-X", "utf8", str(SCRIPTS / "proto_build.py"), "--md", str(ML / "prob" / "prob-spec.md"), "--adapter", "magic_lamp",
+            "--go-config", str(ML / "quicktest" / "config" / "live-b.json"), "--strict", "--config-only", "--out", str(tmp_path)]
+    r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
+    env = json.loads(r.stdout.strip().splitlines()[-1])
+    assert env["success"] and env["data"]["go_check"]["mismatch"] == 0 and env["data"]["go_check"]["match"] >= 36, env
+    cfg = json.loads((tmp_path / "game-config.json").read_text(encoding="utf-8"))
+    assert cfg["fg"]["model"] == "frame-chest" and cfg["art"] in _art_sets() and len(cfg["gaps"]) == 7
+    assert [x["w"] for x in cfg["reelsets"]][:2] == [106, 24], "表 M-1 應採 §4 參數備註的 R-8 線上權重"
+    assert cfg["fg"]["retrigger"]["gate"] == 3 and cfg["mg"]["all_board"]["weight"] == [10000]
+    if shutil.which("node"):
+        js = ("const S=require(process.argv[1]),C=S.compile(require(process.argv[2]));"
+              "const a=S.spin(C,16940,{present:true}),b=S.spin(C,16940);if(a.totalWin!==b.totalWin||!a.fg)process.exit(1);"
+              "const e=S.exact(C,{bonusN:4000});console.log(JSON.stringify({mg:e.rtp_main,trig:e.fg_rate,sp:e.fc.spins}))")
+        q = subprocess.run(["node", "-e", js, str(SCRIPTS / "src" / "slot-core.js"), str(tmp_path / "game-config.json")], capture_output=True, text=True)
+        assert q.returncode == 0, q.stderr
+        v, T = json.loads(q.stdout), cfg["targets"]
+        assert abs(v["mg"] - T["summary"]["rtp_main"]) < 0.05 and abs(v["trig"] / T["summary"]["fg_rate"] - 1) < 0.01
+        assert abs(v["sp"] / T["frame_chest"]["spins"] - 1) < 0.02
+    for p in (ML / "proto").glob("go-parity.*.json"):
+        x = json.loads(p.read_text(encoding="utf-8"))
+        assert x["mismatch"] == 0 and x["model"] == "frame-chest", p.name

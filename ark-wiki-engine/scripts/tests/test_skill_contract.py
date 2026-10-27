@@ -78,13 +78,14 @@ def test_skill_md_size_and_no_dead_references():
 
 
 def test_skill_md_frontmatter_declares_executor():
-    """AC: AC-023 — frontmatter 必須是 executor + schema 1.1，且 outputs 用受控詞彙"""
+    """AC: AC-023 — frontmatter 必須宣告 form: executor（schema 1.2 三軸；1.1 時寫在 category），且 outputs 用受控詞彙"""
     text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
     fm = re.match(r"\A---\s*\n(.*?)\n---\s*\n", text, re.S)
     assert fm, "SKILL.md 缺 frontmatter"
     block = fm.group(1)
-    assert re.search(r"^\s+category:\s*executor\b", block, re.M)
-    assert re.search(r'^\s+schema_version:\s*"1\.1"', block, re.M)
+    assert re.search(r"^\s+form:\s*executor\b", block, re.M)
+    assert re.search(r"^\s+category:\s*pipeline\b", block, re.M)
+    assert re.search(r'^\s+schema_version:\s*"1\.2"', block, re.M)
     # `json` 不是合法 format 值（受控詞彙是 md|html|code|data|png|pdf|office）
     assert "format: json" not in block, "outputs 應用 data 而非 json（不為單一 skill 放寬守門）"
 

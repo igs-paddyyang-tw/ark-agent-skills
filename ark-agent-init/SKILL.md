@@ -14,20 +14,24 @@ description: |
   也是 ark-agent-bot-builder／ark-agent-team-builder 的**下一步**：骨架產完後由本 skill 補人格。
   不適用於：bot 骨架請用 ark-agent-bot-builder；team daemon 骨架請用 ark-agent-team-builder。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: scaffolder
+  form: instruction
+  domain: general
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.3.0"
-  updated: 2026-10-16
+  version: "2.5.0"
+  updated: 2026-10-27
 ---
 
 # ark-agent-init
 
 根據角色產出完整 agent workspace 配置（`.kiro/` + 多 CLI 入口檔）。
+
+> 🔴 **AGENTS.md 放哪（單一權威 —— 其他段落與 references 只引用這句，不自述）**：一律放 **workspace 根**。專案根一份＝**SSOT**；每個子 agent 的工作目錄根一份＝**複本**（與 ark_team_agent daemon 的落點一致）；`.kiro/steering/` **永遠不放** AGENTS.md（唯一例外：指向同層根那份的 symlink）。稽核：`python scripts/audit_agents_layout.py <project>`。
 
 ## 🎯 核心目標：打造「個人化成長五層」
 
@@ -35,7 +39,7 @@ metadata:
 
 | 層 | 落點 | 作用 | 本 skill 怎麼配 |
 |------|------|------|----------------|
-| 🧠 **大腦 BRAIN** | `.kiro/steering/`（`SOUL` 人格 · `BRAIN` 判準 · `AGENTS` 規範 · `CODE` · `USER` 畫像），always-on 常駐注入 | **個人化的根** —— 換一組 steering = 換一個 agent（決定它是誰、怎麼判斷、紅線在哪） | 依角色選模板渲染 SOUL；`--profile` 讓根目錄 manager 由指定角色渲染（§--profile） |
+| 🧠 **大腦 BRAIN** | `.kiro/steering/`（`SOUL` 人格 · `BRAIN` 判準 · `CODE` · `USER` 畫像）＋ workspace 根 `AGENTS.md` 規範，always-on 常駐注入 | **個人化的根** —— 換一組 steering = 換一個 agent（決定它是誰、怎麼判斷、紅線在哪） | 依角色選模板渲染 SOUL；`--profile` 讓根目錄 manager 由指定角色渲染（§--profile） |
 | 📝 **記憶 Memory** | `memory/`（四層：`BRAIN.md` 判準 → `MEMORY.md` 導覽 → `memory.md` 蒸餾 → `daily/`+`archive/` 流水） | **成長的時間軸** —— 記得經歷過什麼、踩過什麼坑 | 產 `memory/daily`+`archive` 骨架與 `memory.md` 四分節；蒸餾走 `memory-distill` 排程（見 `references/memory-architecture.md`，門檻 ark_team_agent ≥ 1.11.0） |
 | 📚 **知識 Knowledge** | `knowledge/`（`raw` → ingest → `wiki` 四層搜尋；五類來源櫃） | **成長的能力庫** —— 查得到領域知識，問一次之後都在 | 依 `team.yaml` `knowledge_sources` 產五櫃骨架 + 自動補 `knowledge_search_order`（見 `references/knowledge-sources-map.md`） |
 | 🖐️ **技能 Skill** | `.kiro/skills/<name>/`（上游 ark-agent-skills 複本）+ 套件內建 | **手腳** —— 跨專案共用的基本必要能力（怎麼做一件標準的事） | 依 `role-skills-map.md` 複製子集；更新走 `sync_skills`／`ark-skills-align` `mirror_sync`；修改只能提案回上游 |
@@ -45,7 +49,8 @@ metadata:
 >
 > **技能 vs 腳本**：換一個專案還用得上 → 技能；綁本專案資料、主機、帳號 → 腳本。skill 目錄底下的 `scripts/` 屬技能層。
 
-> 🟡 **已知對齊缺口（v2.3.0 仍在）**：🧠 **大腦的 `BRAIN.md` 判準層目前不由 `build_kiro.py` 自動產出**（grep 零命中），現行 workspace 的 `BRAIN.md` 多為手動補入。`assets/steering/BRAIN.md` 範本已就緒，待後續版本讓 `build_kiro.py` 一併產出（屬 code change，需測不破壞既有 workspace）。新建 workspace 時請留意手動補 `BRAIN.md`，並把範本的「本 Agent 附註」「品質護欄」換成該角色自己的內容（實例：nana-bot 曾直接複製範本，帶著 leader-agent 私有路徑上線）。
+> ✅ **BRAIN.md 由 build_kiro 產（2.5.0 起）**：`BRAIN.md` ＝ **五層判準**（共用，`assets/steering/BRAIN.md`）＋ **本角色知識背景**（`assets/steering/brain-roles/<role>.md`，選法同 ark_team_agent daemon：team.yaml `template` → instance 名 → role 對應），私有知識庫路徑依 instance 渲染；已存在不覆寫（policy once）。bot 型由 ark-agent-bot-builder 委派同一個函式產。
+> 背景：bot 套件注入 BRAIN.md 卻不產它（nana-bot 手抄範本、帶 leader 私有路徑上線），team daemon 產的只有角色知識沒有判準 —— 同名兩種內容，2.5.0 統一成一份。
 
 > **更名紀錄**：本 skill 原名 `ark-kiro-init`（v1.x），於 v2.0（2026-09-07）
 > 更名為 `ark-agent-init` —— 因為它產出的不只是 Kiro 的 `.kiro/`，
@@ -105,10 +110,12 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 
 | 檔案 | 誰產 | 手寫會怎樣 |
 |---|---|---|
-| `AGENTS.md`、`.kiro/settings/mcp.json`、`steering/TEAM.md` | **daemon 依 team.yaml 生成** | **會被覆寫** —— 別手改，改 team.yaml |
-| `SOUL.md`、`BRAIN.md`、`MEMORY.md`、`USER.md`、`CODE.md` | **手建**（或 `--profile` 渲染 SOUL） | daemon 不生，要自己建 |
+| `.kiro/settings/mcp.json`、`steering/TEAM.md` | **daemon 依 team.yaml 生成** | **會被覆寫**（依 policy）—— 別手改，改 team.yaml |
+| 各 workspace 根的 `AGENTS.md` | daemon 首次啟動產（policy `once`）；build_kiro 也給子 agent 產複本 | **不會**被覆寫 —— 可補工作區筆記；團隊規範改專案根那份再分配 |
+| `SOUL.md`、`MEMORY.md`、`USER.md`、`CODE.md` | **手建**（或 `--profile` 渲染 SOUL） | daemon 不生，要自己建 |
+| `BRAIN.md` | **build_kiro 產**（判準＋角色段；team daemon 也會產但只有角色段 —— 先跑 build_kiro） | policy once，手改會保留 |
 
-> 踩過的坑：手寫根層 AGENTS/mcp.json/TEAM.md 被 daemon 覆寫，以為設定沒生效。
+> 踩過的坑：手寫根層 mcp.json／TEAM.md 被 daemon 覆寫，以為設定沒生效。
 
 ---
 
@@ -127,7 +134,7 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 │   │                                  #      靠 sync_skills.py 同步更新，gitignore 排除
 │   └── steering/
 │       ├── CODE.md                    #   程式碼規範（fileMatch）
-│       ├── BRAIN.md                   #   🧠 判準層（記憶/知識使用準則；手建，build_kiro 不產）
+│       ├── BRAIN.md                   #   🧠 五層判準＋本角色知識背景（build_kiro 產，once）
 │       ├── MEMORY.md                  #   entry 記憶
 │       ├── SOUL.md                    #   人格（--profile 給定則由 role-profile 渲染，含 sha 戳記）
 │       ├── USER.md                    #   使用者百科
@@ -139,15 +146,15 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 │
 ├── agents/                            # 各 agent 工作目錄
 │   └── {name}-agent/
+│       ├── AGENTS.md                  #   複本（wd 根；根那份是 SSOT）—— 見頂部單一權威
 │       ├── .kiro/
 │       │   ├── agents/{role}.json     #   prompt→file://../../.kiro/steering/SOUL.md（基準是 .kiro/agents/，回自己 workspace 根）
 │       │   ├── prompts/{prompt}.md
 │       │   ├── settings/mcp.json
 │       │   ├── skills/{skill}/        #   從 skills/ 複製子集（非 symlink；sync 更新）
 │       │   └── steering/
-│       │       ├── AGENTS.md          #   複本（供該 agent 載入；根那份是 SSOT）
-│       │       ├── CODE.md
-│       │       ├── BRAIN.md           #   🧠 判準層（手建，build_kiro 不產）
+│       │       ├── CODE.md            #   🔴 steering/ 無 AGENTS.md
+│       │       ├── BRAIN.md           #   🧠 五層判準＋本角色知識背景（build_kiro 產，once）
 │       │       ├── MEMORY.md
 │       │       ├── SOUL.md            #   角色專屬
 │       │       ├── USER.md
@@ -222,13 +229,13 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 
 ```bash
 # 1) SSOT：repo root 的 AGENTS.md（Codex / Cursor / Gemini 直接讀）
-#    內容 = 通用規範（Kiro 的 .kiro/steering/AGENTS.md 可指向或複製同一份）
+#    內容 = 通用規範（steering/ 不放複本；要給 Kiro 另一個入口只能用下面 3) 的 symlink）
 
 # 2) Claude Code：symlink CLAUDE.md → AGENTS.md（一份內容，兩個入口）
 ln -s AGENTS.md CLAUDE.md
 
-# 3) Kiro CLI：.kiro/steering/AGENTS.md 亦可 symlink 回 root
-#    （或以 root AGENTS.md 為主、steering 只放 Kiro 專屬的 inclusion 設定）
+# 3) Kiro CLI（選配）：.kiro/steering/AGENTS.md 只允許 symlink 回 root —— 實體複本會兩份並存漂移
+#    （audit_agents_layout.py 認得指回根的 symlink，不會誤判）
 ln -sf ../../AGENTS.md .kiro/steering/AGENTS.md   # 視專案結構決定方向
 ```
 
@@ -391,9 +398,9 @@ agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不
 | hooks | 選填 | agentSpawn/postToolUse 等 |
 | welcomeMessage | 選填 | 切換到此 agent 時的提示 |
 
-### 2. steering/AGENTS.md（全域行為準則）
+### 2. AGENTS.md（全域行為準則，放 workspace 根）
 
-定義「怎麼做事」— 放在根目錄或 steering/ 下，Kiro 永遠自動載入（不需在 resources 引用）。
+定義「怎麼做事」— 放 workspace 根（見頂部單一權威），Kiro 自動載入（不需在 resources 引用）。
 
 ```markdown
 # {TeamName} 共用規範
@@ -650,9 +657,9 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 - 該 instance 的 Kiro CLI 啟動時 cwd = 根目錄，自動載入根目錄 `.kiro/`
 - 🔴 **不預設是 admin** —— `dir: "."` 可以是 qa-manager / bot-manager 等 manager 角色，
   用 `--profile <role>` 讓根目錄 SOUL 由該角色渲染（見上方 `--profile` 段）。
-- `steering/AGENTS.md` 是所有 agent 共用規範的**來源**（其他 agent 複製此檔）
-  - 🔴 **SSOT：`AGENTS.md` 要改就改根目錄那份，再重新分配到各 agent。**
-    子 agent 的是**複本**，直接改子 agent 的會被下次分配覆蓋、且造成多份漂移。
+- 專案根 `AGENTS.md` 是所有 agent 共用規範的**來源**（子 agent 工作目錄根各有一份複本；落點見頂部單一權威）
+  - 🔴 **SSOT：`AGENTS.md` 要改就改專案根那份，再重新分配到各 agent。**
+    子 agent 的是**複本**，直接改子 agent 的會造成多份漂移。
 - `skills/` 放全套 Skills（admin 擁有全部能力）
 - `settings/mcp.json` 的 role 必須是 `admin`
 - 非 admin agent 的 .kiro/ 在 `agents/{name}-agent/.kiro/`（不在根目錄）
@@ -740,7 +747,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 - [ ] `agents/{role}.json` 有 name/description/prompt/tools/resources/allowedTools
 - [ ] `agents/{role}.json` 有 knowledgeBase resource 指向 knowledge/
 - [ ] `agents/{role}.json` 有 model（建議 "auto"）+ welcomeMessage
-- [ ] `steering/AGENTS.md` 有「⚠️ reply 必用」+ MCP 工具表 + 編號選項 + 終端回饋 + SDD 流程
+- [ ] 專案根 `AGENTS.md` 有「⚠️ reply 必用」+ MCP 工具表 + 編號選項 + 終端回饋 + SDD 流程；`audit_agents_layout.py` 通過
 - [ ] `steering/CODE.md` 有程式碼規範（Python 專案時）
 - [ ] `steering/MEMORY.md` 是導覽骨架（記憶住在哪 + 快照 + 里程碑索引），**無「每完成一個段落」**
 - [ ] 每個 agent 有 `memory/daily/`、`memory/archive/`、`memory/memory.md` 四分節（`--validate` 無記憶 ⚠️）
@@ -765,7 +772,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 📁 產出清單：
 - .kiro/agents/{role}.json
-- .kiro/steering/AGENTS.md（全域行為準則）
+- AGENTS.md（workspace 根；全域行為準則）
 - .kiro/steering/CODE.md（程式碼規範）
 - .kiro/steering/MEMORY.md（專案記憶）
 - .kiro/steering/SOUL.md（{size} KB）
@@ -811,7 +818,8 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 | 檔案 | 說明 |
 |------|------|
-| `BRAIN.md` | 記憶與資源使用準則（五層資源分工 + 技能／腳本分界 + 四層記憶摘要，標 AGENTS.md 為單一權威；inclusion: always） |
+| `BRAIN.md` | 五層判準段（資源分工 + 技能／腳本分界 + 四層記憶摘要，標 AGENTS.md 為單一權威；inclusion: always）＋ `{private_kb}`／`{role_section}` 佔位符 |
+| `brain-roles/<role>.md` | 角色知識背景（admin／ai-dev／coder／data／leader／librarian／market／qa／report／strategy，源自 ark_team_agent 角色範本；leader 含品質護欄）＋ `_default.md` 待填骨架 |
 | `CODE.md` | Kiro CLI 行為指南（程式碼規範，fileMatch: *.py） |
 | `MEMORY-template.md` | 記憶**導覽**骨架（記憶住在哪 + 快照 + 里程碑索引 + 待辦；build_kiro 產 MEMORY.md 用它） |
 | `SOUL-root.md` | 根目錄／預設角色：通用 AI 助手 |
@@ -882,7 +890,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 ### 預期產出（每個 agent）
 
 - `agents/{name}-agent/.kiro/steering/SOUL.md` — 角色定義
-- `agents/{name}-agent/.kiro/steering/AGENTS.md` — 行為準則
+- `agents/{name}-agent/AGENTS.md` — 行為準則（複本，wd 根）
 - `agents/{name}-agent/.kiro/steering/MEMORY.md` — 記憶骨架
 - `agents/{name}-agent/.kiro/agents/{role}.json` — Agent 配置
 

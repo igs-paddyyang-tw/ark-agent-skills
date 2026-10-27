@@ -1,0 +1,7 @@
+{
+ "from": "pgp",
+ "refGame": "huffnpuff",
+ "synced": "2026-10-23",
+ "files": 69,
+ "note": "由 wg_client_init.py --sync-template 產生，勿手改（遊戲專屬起始版寫在 wg_client_init.py OWN）"
+}

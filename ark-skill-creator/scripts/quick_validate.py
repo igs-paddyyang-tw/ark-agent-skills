@@ -109,6 +109,12 @@ def validate_skill(skill_path):
         for field in ("status", "category"):
             if field not in meta:
                 warnings.append(f"metadata.{field} 缺失（audit_skills 會列 P1）")
+        # schema 1.2 三軸：form（executor|instruction）、domain（general|game）
+        for field in ("form", "domain"):
+            if field not in meta:
+                warnings.append(f"metadata.{field} 缺失（schema 1.2 必填；見 ark-skills-align/references/taxonomy.md）")
+        if meta.get("category") in ("executor", "domain"):
+            warnings.append(f"metadata.category={meta['category']!r} 是 1.1 舊值：改用 form／domain，category 依產出物重選")
         if "outputs" not in meta:
             warnings.append("metadata.outputs 缺失（format/audience）")
     msg = "Skill is valid!"

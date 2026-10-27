@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "proto-stage-result/1",
+  "title": "SpinResult（ark-game-proto Stage）",
+  "description": "一局完整結果：主遊戲盤面、連線、玩法劇本、帳務。金額一律整數 credit（floor(倍數 × bet)）。對齊 docs/designs/2026-09-18-spinresult-config-contract-alignment.md。Server 模式 seed 可為 null（不外洩數學種子），fx 為純演出種子。",
+  "type": "object",
+  "required": ["schema", "roundId", "bet", "mode", "reel", "base", "feature", "totalWin", "winType", "balanceBefore", "balanceAfter", "fx"],
+  "properties": {
+    "schema": { "const": "proto-stage-result/1" },
+    "roundId": { "type": "string", "minLength": 1 },
+    "requestId": { "type": ["string", "null"], "description": "冪等鍵；同一 requestId 重送回同一結果、不重複扣款" },
+    "round": { "type": ["integer", "null"] },
+    "seed": { "type": ["integer", "null"] },
+    "bet": { "type": "integer", "exclusiveMinimum": 0 },
+    "betIndex": { "type": ["integer", "null"] },
+    "mode": { "enum": ["base"] },
+    "reel": {
+      "type": "object", "required": ["stops", "grid"],
+      "properties": {
+        "combo": { "type": ["integer", "string"] },
+        "stops": { "type": "array", "items": { "type": "integer" } },
+        "grid": { "type": "array", "items": { "type": "array", "items": { "type": "string" } }, "description": "[軸][列]" },
+        "view": { "type": ["array", "null"], "description": "盤面後處理前的原盤面（例：神秘圖騰變身前）" }
+      }
+    },
+    "base": {
+      "type": "object", "required": ["win", "ways", "trigger"],
+      "properties": {
+        "winX": { "type": "number" },
+        "win": { "type": "integer", "minimum": 0 },
+        "ways": { "type": "array", "items": { "type": "object", "required": ["sym", "len", "win", "cells"],
+          "properties": { "sym": { "type": "string" }, "len": { "type": "integer" }, "ways": { "type": ["integer", "null"] }, "line": { "type": ["integer", "null"] },
+            "winX": { "type": "number" }, "win": { "type": "integer" }, "cells": { "type": "array", "items": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 } } } } },
+        "scatter": { "type": ["object", "null"] },
+        "trigger": { "type": "boolean" },
+        "extra": { "type": "object", "description": "遊戲專屬主遊戲欄位（例 HuffNPuff：feat、scCount、scCnt）" }
+      }
+    },
+    "feature": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object", "required": ["type", "win", "script"],
+          "properties": {
+            "type": { "type": "string" }, "draw": { "type": "object" }, "group": { "type": ["string", "null"] },
+            "winX": { "type": "number" }, "win": { "type": "integer", "minimum": 0 }, "capped": { "type": "boolean" },
+            "spinsPlayed": { "type": ["integer", "null"] },
+            "script": { "type": "object", "description": "玩法劇本（logic.play record:true 的回傳，去掉 x 與 strips）；Presenter 唯一輸入" },
+            "awaitAction": { "type": ["object", "null"], "description": "選擇型玩法：等待玩家選擇（options、roundId）" } } }
+      ]
+    },
+    "totalX": { "type": "number" },
+    "totalWin": { "type": "integer", "minimum": 0 },
+    "capped": { "type": "boolean" },
+    "winType": { "enum": ["NO_WIN", "NORMAL", "LIGHT", "SMALL", "BIG", "MEGA", "SUPER", "GOLDEN"] },
+    "balanceBefore": { "type": "integer" },
+    "balanceAfter": { "type": "integer", "description": "= balanceBefore − bet + totalWin；Server 模式為權威值" },
+    "fx": { "type": "integer", "minimum": 0, "description": "演出亂數種子（純演出，不影響結果）" }
+  }
+}

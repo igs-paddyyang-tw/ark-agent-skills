@@ -25,6 +25,7 @@ import os
 import pathlib
 import re
 import shutil
+import stat
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -110,6 +111,8 @@ def main() -> None:
         files.append(entry)
         if not a.dry_run:
             dst.parent.mkdir(parents=True, exist_ok=True)
+            if dst.is_file() and not os.access(dst, os.W_OK):   # copy2 會帶上來源的唯讀屬性（evidence.jsonl）→ 重發前解除
+                dst.chmod(dst.stat().st_mode | stat.S_IWRITE)
             shutil.copy2(src, dst)
 
     manifest = {"kind": "game-publish", "skill": "ark-game-spec", "skill_version": C.SKILL_VERSION, "slug": slug,

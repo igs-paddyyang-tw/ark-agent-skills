@@ -1,0 +1,279 @@
+// Package wire 實作魚機客戶端與遊戲伺服器之間的封包格式（相容 Python GameSocket2）。
+//
+// # 格式
+//
+//	[長度：固定 4 位數、補零、十進位][JSON]
+//	指令：{"cmd":..., "data":..., "sn":..., "sys":...}
+//	回應：{"ret":..., "data":..., "sn":..., "sys":...}
+//
+// 依據：ArkEngine/ArkGame/GameSocket2.py:125-255、ArkSDK/Network/ArkSocketServer.py:62-79。
+//
+// # 兩個容易做錯的地方
+//
+//  1. 長度是「字元數」不是位元組數。Python 的 WebSocket 接收端先 decode('utf-8')
+//     再數長度（GameSocket2.py:222-235）。這裡收的時候以 rune 計數；送的時候把
+//     非 ASCII 字元一律轉成 \uXXXX（與 Python ujson / json 預設 ensure_ascii 相同），
+//     讓字元數等於位元組數，客戶端不論用哪一種算法都對得上。
+//  2. 長度欄位固定 4 位數，所以單一封包最多 9999 字元。Python 送超過時會產生
+//     5 位數前綴、讓接收端錯位；這裡直接拒絕送出（ErrTooLarge），由呼叫端告警。
+package wire
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"unicode/utf16"
+	"unicode/utf8"
+)
+
+const (
+	// HeaderLen 是長度前綴的寬度：len(str(buffersize=1024)) = 4。
+	HeaderLen = 4
+	// MaxBody 是 4 位數前綴能表示的最大字元數。
+	MaxBody = 9999
+)
+
+var (
+	// ErrTooLarge：封包超過 9999 字元，無法用 4 位數前綴表示。
+	ErrTooLarge = errors.New("wire: packet exceeds 9999 characters")
+	// ErrBadHeader：長度前綴不是 4 位數字。Python 遇到這種情況會以 530 關閉連線。
+	ErrBadHeader = errors.New("wire: bad length header")
+)
+
+// Packet 是一則指令或回應。nil 的欄位代表「沒有這個鍵」，與 Python
+// encodeCmd / encodeRet 只在值不為 None 時才放進 dict 的行為一致。
+type Packet struct {
+	Cmd  string          // "cmd"；回應封包為空
+	Ret  string          // "ret"；指令封包為空
+	Data json.RawMessage // "data"
+	SN   json.RawMessage // "sn"：原樣回傳，不解讀型別
+	Sys  *string         // "sys"：nil 代表 default system（Python 的 None）
+}
+
+// SysName 回傳 sys；default system 回傳空字串。
+func (p *Packet) SysName() string {
+	if p.Sys == nil {
+		return ""
+	}
+	return *p.Sys
+}
+
+// SNInt 嘗試把 sn 解讀為整數，供遞增檢查使用。
+func (p *Packet) SNInt() (int64, bool) {
+	if len(p.SN) == 0 {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(string(p.SN), 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
+
+// Sys 是建立 *string 的小工具。
+func Sys(name string) *string { return &name }
+
+type rawPacket struct {
+	Cmd  json.RawMessage `json:"cmd"`
+	Ret  json.RawMessage `json:"ret"`
+	Data json.RawMessage `json:"data"`
+	SN   json.RawMessage `json:"sn"`
+	Sys  json.RawMessage `json:"sys"`
+}
+
+// UnmarshalPacket 解析一個 JSON 封包。cmd / ret / sys 不是字串時視為缺少該鍵。
+func UnmarshalPacket(b []byte) (*Packet, error) {
+	var r rawPacket
+	if err := json.Unmarshal(b, &r); err != nil {
+		return nil, err
+	}
+	p := &Packet{Data: nonNull(r.Data), SN: nonNull(r.SN)}
+	p.Cmd, _ = jsonString(r.Cmd)
+	p.Ret, _ = jsonString(r.Ret)
+	if s, ok := jsonString(r.Sys); ok {
+		p.Sys = &s
+	}
+	return p, nil
+}
+
+func nonNull(b json.RawMessage) json.RawMessage {
+	if len(b) == 0 || string(b) == "null" {
+		return nil
+	}
+	return b
+}
+
+func jsonString(b json.RawMessage) (string, bool) {
+	if len(b) == 0 || b[0] != '"' {
+		return "", false
+	}
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return "", false
+	}
+	return s, true
+}
+
+// MarshalJSON 依 Python 的鍵集合輸出；鍵的順序不影響客戶端解析。
+func (p *Packet) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	first := true
+	field := func(k string, v []byte) {
+		if !first {
+			buf.WriteByte(',')
+		}
+		first = false
+		buf.WriteByte('"')
+		buf.WriteString(k)
+		buf.WriteString(`":`)
+		buf.Write(v)
+	}
+	str := func(s string) []byte { b, _ := json.Marshal(s); return b }
+	if p.Cmd != "" {
+		field("cmd", str(p.Cmd))
+	}
+	if p.Ret != "" {
+		field("ret", str(p.Ret))
+	}
+	if p.Data != nil {
+		field("data", p.Data)
+	}
+	if p.SN != nil {
+		field("sn", p.SN)
+	}
+	if p.Sys != nil {
+		field("sys", str(*p.Sys))
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+
+// MarshalASCII 把 v 編成 JSON，並把所有非 ASCII 字元轉成 \uXXXX（超出 BMP 的用
+// surrogate pair），讓輸出的字元數等於位元組數。HTML 字元不轉義。
+func MarshalASCII(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	out := bytes.TrimRight(buf.Bytes(), "\n")
+	return escapeNonASCII(out), nil
+}
+
+// escapeNonASCII 只會遇到字串內的非 ASCII 字元（JSON 的結構字元都是 ASCII），
+// 所以逐 rune 轉換是安全的。
+func escapeNonASCII(b []byte) []byte {
+	ascii := true
+	for _, c := range b {
+		if c >= utf8.RuneSelf {
+			ascii = false
+			break
+		}
+	}
+	if ascii {
+		return b
+	}
+	var buf bytes.Buffer
+	buf.Grow(len(b) + 16)
+	for len(b) > 0 {
+		r, size := utf8.DecodeRune(b)
+		b = b[size:]
+		switch {
+		case r < utf8.RuneSelf:
+			buf.WriteByte(byte(r))
+		case r > 0xFFFF:
+			r1, r2 := utf16.EncodeRune(r)
+			fmt.Fprintf(&buf, `\u%04x\u%04x`, r1, r2)
+		default:
+			fmt.Fprintf(&buf, `\u%04x`, r)
+		}
+	}
+	return buf.Bytes()
+}
+
+// EncodeFrame 把封包編成「4 位數長度 + JSON」。超過 9999 字元回傳 ErrTooLarge。
+func EncodeFrame(p *Packet) ([]byte, error) {
+	body, err := p.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return Frame(escapeNonASCII(body))
+}
+
+// Frame 替一段 JSON 加上長度前綴。body 必須已是 ASCII（見 MarshalASCII）。
+func Frame(body []byte) ([]byte, error) {
+	n := utf8.RuneCount(body)
+	if n > MaxBody {
+		return nil, ErrTooLarge
+	}
+	out := make([]byte, 0, HeaderLen+len(body))
+	out = append(out, fmt.Sprintf("%04d", n)...)
+	return append(out, body...), nil
+}
+
+// Decoder 是有狀態的切包器：一則 WebSocket 訊息可能含多個封包，也可能只有半個。
+type Decoder struct {
+	buf []byte // 累積中的 UTF-8 資料
+}
+
+// Feed 加入一則訊息，回傳完整切出的各個 JSON body。
+//
+// 回傳 ErrBadHeader 時，呼叫端應以 530 關閉連線（與 Python 相同）。
+// msg 不是合法 UTF-8 時整則丟棄（Python 的 decode('utf-8') 會拋例外，同樣丟棄）。
+func (d *Decoder) Feed(msg []byte) ([][]byte, error) {
+	if !utf8.Valid(msg) {
+		return nil, nil
+	}
+	d.buf = append(d.buf, msg...)
+	var out [][]byte
+	// Python：while len(buffer) > header_len
+	for utf8.RuneCount(d.buf) > HeaderLen {
+		size, err := parseHeader(d.buf[:HeaderLen])
+		if err != nil {
+			return out, err
+		}
+		end, ok := runeOffset(d.buf[HeaderLen:], size)
+		if !ok { // 收到一半
+			break
+		}
+		body := make([]byte, end)
+		copy(body, d.buf[HeaderLen:HeaderLen+end])
+		out = append(out, body)
+		d.buf = d.buf[HeaderLen+end:]
+	}
+	if len(d.buf) == 0 {
+		d.buf = nil
+	}
+	return out, nil
+}
+
+// Buffered 回傳尚未切出的位元組數（供上限檢查）。
+func (d *Decoder) Buffered() int { return len(d.buf) }
+
+func parseHeader(h []byte) (int, error) {
+	n := 0
+	for _, c := range h {
+		if c < '0' || c > '9' {
+			return 0, ErrBadHeader
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n, nil
+}
+
+// runeOffset 回傳前 n 個 rune 佔用的位元組數；不足 n 個時 ok=false。
+func runeOffset(b []byte, n int) (int, bool) {
+	off := 0
+	for i := 0; i < n; i++ {
+		if off >= len(b) {
+			return 0, false
+		}
+		_, size := utf8.DecodeRune(b[off:])
+		off += size
+	}
+	return off, true
+}

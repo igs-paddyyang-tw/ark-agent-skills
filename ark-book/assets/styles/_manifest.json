@@ -20,6 +20,9 @@
       "use_for": "新人手冊、輕鬆入門、需要降低防備心的內容", "motif": "callout 是對白框；難度用 ★ 稀有度；角落網點" },
     { "name": "console", "label": "實機", "dark": true,
       "inspiration": "實機畫面與易懂玩法：HUD 邊框、進度條、等寬字，讓人看見自己會按什麼",
-      "use_for": "腳本與工具操作手冊、指令密集的內容", "motif": "章節有 HUD 角括、閱讀進度像 HP 條、章號顯示為 STAGE" }
+      "use_for": "腳本與工具操作手冊、指令密集的內容", "motif": "章節有 HUD 角括、閱讀進度像 HP 條、章號顯示為 STAGE" },
+    { "name": "storybook", "label": "繪本", "dark": false,
+      "inspiration": "童話繪本與三隻小豬：米色紙本、手繪粗線框、稻草黃／木棕／磚紅／宮殿藍房子色、大野狼灰",
+      "use_for": "童話主題遊戲的拍板書與企劃書、需要親切感與故事感的內容", "motif": "書脊是一排房子門牌、當前章是推開的門；punchline 是釘在木頭上的告示牌" }
   ]
 }

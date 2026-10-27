@@ -6,11 +6,13 @@ description: |
   使用此 Skill 當使用者提及 UML、序列圖、類別圖、ERD、流程圖、
   架構圖、Mermaid、畫圖、系統互動圖、資料模型圖。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: document
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both

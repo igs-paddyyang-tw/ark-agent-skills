@@ -1,0 +1,202 @@
+package round
+
+import (
+	"context"
+	"encoding/json"
+	"sync"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+
+	"__MODULE__/internal/result"
+)
+
+// 局紀錄狀態（ark-web-game references/wire-protocol.md §4）。
+const (
+	Computed = "computed" // 已算完、已寫紀錄，尚未結算（或結算回應遺失）
+	Settled  = "settled"  // 錢包已結算；未 ack 前列為 pending
+	Acked    = "acked"    // Client 演完確認（或下一局隱含確認）
+	Failed   = "failed"   // 結算被拒（例：餘額不足），未扣款
+)
+
+// Record 是一局的紀錄。
+type Record struct {
+	Player    string             `json:"player"`
+	RequestID string             `json:"requestId"`
+	RoundID   string             `json:"roundId"`
+	State     string             `json:"state"`
+	Result    *result.SpinResult `json:"result"`
+	Updated   time.Time          `json:"updated"`
+}
+
+// Store 保存局紀錄：冪等（requestId → 局）、續玩（pending）、補拿（roundId → 結果）。
+type Store interface {
+	ByRequest(ctx context.Context, player, requestID string) (*Record, error)
+	ByRound(ctx context.Context, player, roundID string) (*Record, error)
+	Put(ctx context.Context, rec *Record) error
+	Pending(ctx context.Context, player string) (string, error)
+	SetPending(ctx context.Context, player, roundID string) error // "" 清除
+}
+
+// ---------- MemStore：開發用（單一行程；重啟即遺失）----------
+
+// MemStore 是記憶體實作；每位玩家最多保留 Max 局（FIFO 淘汰），預設 1000。
+type MemStore struct {
+	Max     int
+	mu      sync.Mutex
+	rounds  map[string]*Record // player|roundId
+	reqs    map[string]string  // player|requestId → roundId
+	order   map[string][]string
+	pending map[string]string
+}
+
+// NewMemStore 建立記憶體局紀錄。
+func NewMemStore() *MemStore {
+	return &MemStore{Max: 1000, rounds: map[string]*Record{}, reqs: map[string]string{}, order: map[string][]string{}, pending: map[string]string{}}
+}
+
+func clone(r *Record) *Record {
+	if r == nil {
+		return nil
+	}
+	c := *r
+	return &c
+}
+
+// ByRequest 實作 Store。
+func (m *MemStore) ByRequest(_ context.Context, p, req string) (*Record, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if id, ok := m.reqs[p+"|"+req]; ok {
+		return clone(m.rounds[p+"|"+id]), nil
+	}
+	return nil, nil
+}
+
+// ByRound 實作 Store。
+func (m *MemStore) ByRound(_ context.Context, p, id string) (*Record, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return clone(m.rounds[p+"|"+id]), nil
+}
+
+// Put 實作 Store。
+func (m *MemStore) Put(_ context.Context, r *Record) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	k := r.Player + "|" + r.RoundID
+	if _, ok := m.rounds[k]; !ok {
+		m.order[r.Player] = append(m.order[r.Player], r.RoundID)
+		if o := m.order[r.Player]; len(o) > m.Max {
+			old := m.rounds[r.Player+"|"+o[0]]
+			delete(m.rounds, r.Player+"|"+o[0])
+			if old != nil {
+				delete(m.reqs, r.Player+"|"+old.RequestID)
+			}
+			m.order[r.Player] = o[1:]
+		}
+	}
+	c := clone(r)
+	c.Updated = time.Now()
+	m.rounds[k] = c
+	m.reqs[r.Player+"|"+r.RequestID] = r.RoundID
+	return nil
+}
+
+// Pending 實作 Store。
+func (m *MemStore) Pending(_ context.Context, p string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.pending[p], nil
+}
+
+// SetPending 實作 Store。
+func (m *MemStore) SetPending(_ context.Context, p, id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if id == "" {
+		delete(m.pending, p)
+	} else {
+		m.pending[p] = id
+	}
+	return nil
+}
+
+// ---------- RedisStore：正式用（多副本共用；TTL 預設 24 小時）----------
+
+// RedisStore 以 Redis 保存局紀錄。鍵：<prefix>:round:<player>:<roundId>（JSON）、<prefix>:req:<player>:<requestId>、<prefix>:pending:<player>。
+type RedisStore struct {
+	C      redis.UniversalClient
+	Prefix string        // 例 "wg:huffnpuff-open-house"
+	TTL    time.Duration // 0 = 24h
+}
+
+func (s *RedisStore) ttl() time.Duration {
+	if s.TTL <= 0 {
+		return 24 * time.Hour
+	}
+	return s.TTL
+}
+
+func (s *RedisStore) k(kind, p, id string) string { return s.Prefix + ":" + kind + ":" + p + ":" + id }
+
+// ByRequest 實作 Store。
+func (s *RedisStore) ByRequest(ctx context.Context, p, req string) (*Record, error) {
+	id, err := s.C.Get(ctx, s.k("req", p, req)).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.ByRound(ctx, p, id)
+}
+
+// ByRound 實作 Store。
+func (s *RedisStore) ByRound(ctx context.Context, p, id string) (*Record, error) {
+	b, err := s.C.Get(ctx, s.k("round", p, id)).Bytes()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var r Record
+	if err := json.Unmarshal(b, &r); err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+// Put 實作 Store。
+func (s *RedisStore) Put(ctx context.Context, r *Record) error {
+	c := clone(r)
+	c.Updated = time.Now()
+	b, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	_, err = s.C.TxPipelined(ctx, func(pp redis.Pipeliner) error {
+		pp.Set(ctx, s.k("round", r.Player, r.RoundID), b, s.ttl())
+		pp.Set(ctx, s.k("req", r.Player, r.RequestID), r.RoundID, s.ttl())
+		return nil
+	})
+	return err
+}
+
+// Pending 實作 Store。
+func (s *RedisStore) Pending(ctx context.Context, p string) (string, error) {
+	id, err := s.C.Get(ctx, s.Prefix+":pending:"+p).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	return id, err
+}
+
+// SetPending 實作 Store。
+func (s *RedisStore) SetPending(ctx context.Context, p, id string) error {
+	if id == "" {
+		return s.C.Del(ctx, s.Prefix+":pending:"+p).Err()
+	}
+	return s.C.Set(ctx, s.Prefix+":pending:"+p, id, s.ttl()).Err()
+}

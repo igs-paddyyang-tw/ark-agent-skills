@@ -14,15 +14,18 @@ description: |
   不適用於：知識蒸餾入 wiki 請用 ark-wiki-engine（本 skill 不寫 wiki/）；產 changelog 請用
   ark-release-notes；自家業務數字口徑查詢請用 ark-db-query。
 metadata:
-  version: "0.2.0"
-  schema_version: 1
+  version: "1.0.0"
+  schema_version: "1.2"
   status: active
-  updated: 2026-09-22
-  category: executor
+  updated: 2026-10-27
+  category: ops
+  form: executor
+  domain: general
   outputs:
     - format: md
       audience: both
-  depends_on: [ark-wiki-engine]
+  depends_on:
+    - { name: ark-wiki-engine, version: "^3.0.0" }
   author: paddyyang
 ---
 
@@ -117,3 +120,10 @@ python scripts/wrapup_git.py <ws> --paths memory/ docs/ AGENTS.md --message "wra
 - 讀側唯讀：不 commit、不開 issue、不存 token（靠 `gh auth` / git credential）
 - 不蒸餾、不寫 wiki/（ark-wiki-engine）；不產 changelog（ark-release-notes）
 - 不做 code review / 測試——收尾假設工作已驗收
+
+## 版本
+
+| 版本 | 日期 | 內容 |
+|---|---|---|
+| 1.0.0 | 2026-10-27 | **正式定版，無破壞性變更**（CLI、stdout 契約、收尾四步與 0.2.3 相同）。0.x 卻是 `status: active` 且每次收尾都在用，版號語意對不上 → 定 1.0.0；之後契約變更依 semver |
+| 0.2.x | 2026-09-22 ~ 10-20 | 讀側 L2 平台知識＋寫側開發收尾四步；0.2.1~0.2.3 為全庫 metadata 治理（三軸、depends_on 範圍） |

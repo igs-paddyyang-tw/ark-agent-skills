@@ -31,21 +31,33 @@ from pathlib import Path
 
 import yaml
 
-# schema v1.1：受控詞彙 canonical 為全名；舊縮寫過渡期容忍（P3 警告）
-# 'executor'（2026-09-04 補登記）：捆綁可執行 scripts/、agent 直接以 bash 呼叫的 skill
-# （非「產碼食譜」）。新增 category 必須同時登記到 scripts/gen_readme.py 的 SECTIONS，
-# 否則該 skill 會落到 README 的「⚠️ 未分類」一節。
-CATEGORY_CODES = {"process", "scaffolder", "pipeline", "view", "document", "domain", "ops",
-                  "executor"}
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import semver  # noqa: E402  同目錄（align_sync 同法）
+import gen_manifest  # noqa: E402  tree_hash／contract_hash 與 manifest 同一套算法（不另寫一份）
+
+# schema v1.2（2026-10-20）：分類三軸 —— 規格 docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md
+#   category＝產出什麼（職能）、form＝agent 怎麼用、domain＝屬於哪個業務；產出格式沿用 outputs。
+# 本檔是受控詞彙的**程式權威**；gen_readme.py／prompt_lint.py／backfill_metadata.py 各有複本
+# （跨 skill 不互相 import），一致性由 repo 根的 test_taxonomy_vocab.py（根 scripts/tests 下）守住。
+# 新增 category 必須同時登記到 scripts/gen_readme.py 的 SECTIONS，否則會落到「⚠️ 未分類」。
+CATEGORY_CODES = {"process", "scaffolder", "pipeline", "view", "document", "ops"}
+#: 1.1 時代把「形態」「領域」塞進 category 的舊值 —— 一個舊值對應多個新值，不設自動別名；
+#: 報 P2 提示改用 form／domain（舊複本過渡期不擋）
+MIXED_AXIS_CATEGORIES = {"executor": "form: executor", "domain": "domain: <業務>"}
+#: executor＝主要產出由自帶 scripts/ 決定性產生；instruction＝主要產出由 LLM 依指示產生
+FORM_CODES = {"executor", "instruction"}
+DOMAIN_CODES = {"general", "game"}
 LEGACY_CATEGORY_ALIASES = {  # 舊值 → canonical（觸發 P3 legacy-category）
     "proc": "process", "scaffold": "scaffolder", "present": "view",
-    "doc": "document", "sop": "domain",
+    "doc": "document", "sop": "document",  # schema 1.2：domain 已非 category，SOP 類產出文件
     "presentation-content": "document",  # md-report 舊值，語意歸 Content 軌文件
 }
 # 注意：'deprecated' 不是合法 category —— 它是 status，出現時報 P1 要求轉 stub 格式
 OUTPUT_FORMATS = {"md", "html", "png", "pdf", "code", "data", "office"}
 #: 合法 schema_version（字串比對 —— frontmatter 寫 1 是 int、1.1 會被 YAML 讀成 str）
-SCHEMA_VERSIONS = {"1", "1.1"}
+SCHEMA_VERSIONS = {"1", "1.1", "1.2"}
+#: 自此版起 form／domain 必填
+THREE_AXIS_SCHEMA = "1.2"
 AUDIENCES = {"ai", "human", "both"}
 
 # 預設觸發詞衝突矩陣：獨占詞 → owner skill（可被 --config 覆寫/擴充）
@@ -94,6 +106,82 @@ def parse_frontmatter(text: str):
         return None
 
 
+def dep_name(ref) -> str:
+    """depends_on 項目的 skill 名稱 —— 字串形式（舊）或 {name, version} 物件（v2）皆可。
+
+    🔴 不可用 `str(ref)`：物件會變成 "{'name': ...}"，不是 `ark-` 開頭 →
+    依賴斷鏈檢查與反向依賴推導都會**靜默跳過**（2026-10-20 改物件格式前修正）。
+    """
+    if isinstance(ref, dict):
+        return str(ref.get("name", "")).strip()
+    return str(ref).split(".")[0].strip()
+
+
+def dep_range(ref) -> str:
+    """depends_on 項目的版本範圍；字串形式視為任意版本 `*`。"""
+    return str(ref.get("version", "*")).strip() if isinstance(ref, dict) else "*"
+
+
+#: semver.py 支援的單一子句（`^1.4.0`、`>=2.0`、`<3`）；satisfies() 對亂寫的範圍不報錯、只回 False，
+#: 不先驗語法會把「寫錯」誤報成 P0「上游不滿足」
+_RANGE_CLAUSE = re.compile(r"^(>=|<=|==|=|>|<|\^|~)?\d+(\.\d+){0,2}$")
+
+
+def valid_range(rng: str) -> bool:
+    rng = (rng or "").strip()
+    return rng in ("", "*") or all(_RANGE_CLAUSE.match(c) for c in rng.split())
+
+
+def _load_baseline_manifest(repo: Path) -> dict:
+    """上一班列車的 manifest（repo 內 ark-skills-align/release/manifest.json）—— AL-102／103 的比對基準。"""
+    mf = repo / "ark-skills-align" / "release" / "manifest.json"
+    try:
+        return (json.loads(mf.read_text(encoding="utf-8")) or {}).get("skills") or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _git_last_change(repo: Path, paths: list[Path]) -> str:
+    """paths 最後一次 commit 的日期（YYYY-MM-DD）；非 git repo 或沒有歷史 → ""。"""
+    if not paths:
+        return ""
+    import subprocess
+    r = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ad", "--date=short", "--",
+                        *[str(p.relative_to(repo)) for p in paths]], capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def _has_breaking_note(skill_dir: Path, version: str) -> bool:
+    """major 升版要有 Breaking 說明：skill 的 CHANGELOG.md 或 SKILL.md「版本」段，同一行有該版號＋Breaking／破壞。"""
+    for f in (skill_dir / "CHANGELOG.md", skill_dir / "SKILL.md"):
+        if not f.exists():
+            continue
+        for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
+            if version in line and re.search(r"breaking|破壞", line, re.I):
+                return True
+    return False
+
+
+def find_dep_cycles(graph: dict[str, list[str]]) -> list[list[str]]:
+    """回傳 depends_on 圖中的所有環（以排序後的成員去重）。"""
+    cycles, seen = [], set()
+
+    def dfs(node, path):
+        for nxt in graph.get(node, []):
+            if nxt in path:
+                cyc = path[path.index(nxt):]
+                key = tuple(sorted(cyc))
+                if key not in seen:
+                    seen.add(key)
+                    cycles.append(cyc + [nxt])
+            elif nxt in graph:
+                dfs(nxt, path + [nxt])
+
+    for n in sorted(graph):
+        dfs(n, [n])
+    return cycles
+
+
 def normalize(s: str) -> str:
     return re.sub(r"\s+", "", s or "").lower()
 
@@ -133,6 +221,10 @@ def audit(repo: Path, triggers: dict):
         "orphan-asset": "AL-019", "referenced-test-missing": "AL-020",
         "missing-schema-version": "AL-021", "missing-updated": "AL-022",
         "deprecated-field": "AL-023", "legacy-category": "AL-024",
+        "depends-on-cycle": "AL-030", "invalid-dep-range": "AL-031",
+        "content-changed-no-bump": "AL-108",
+        "category-axis-mixed": "AL-025", "missing-form": "AL-026", "invalid-form": "AL-027",
+        "missing-domain": "AL-028", "invalid-domain": "AL-029",
         # 版本系列（W1）
         "version-missing": "AL-101", "contract-changed-no-bump": "AL-102",
         "major-no-breaking": "AL-103", "depends-on-no-range": "AL-104",
@@ -206,6 +298,10 @@ def audit(repo: Path, triggers: dict):
         elif cat in LEGACY_CATEGORY_ALIASES:
             add("P3", "legacy-category", name,
                 f"category='{cat}' 為舊詞彙，請改 canonical '{LEGACY_CATEGORY_ALIASES[cat]}'（過渡期容忍）")
+        elif cat in MIXED_AXIS_CATEGORIES:
+            add("P2", "category-axis-mixed", name,
+                f"category='{cat}' 把形態／領域當職能（schema 1.2 已移除）：改用 "
+                f"{MIXED_AXIS_CATEGORIES[cat]}，category 依產出物改為 {sorted(CATEGORY_CODES)} 之一")
         elif cat not in CATEGORY_CODES:
             add("P1", "invalid-category", name,
                 f"category='{cat}' 不在受控詞彙 {sorted(CATEGORY_CODES)}")
@@ -267,7 +363,7 @@ def audit(repo: Path, triggers: dict):
         # 守門在守一個沒人維護的欄位，比沒有守門更誤導（會讓人以為依賴關係有被管理）。
         # 反向關係改由 depends_on **單向真相推導**（見 reverse_deps）。
         for ref in (meta.get("depends_on") or []):
-            base = str(ref).split(".")[0].strip()
+            base = dep_name(ref)
             if base.startswith("ark-") and base not in all_names:
                 add("P1", "dangling-skill-ref", name,
                     f"depends_on 指向不存在的 skill：{ref}（依賴斷鏈）")
@@ -276,10 +372,78 @@ def audit(repo: Path, triggers: dict):
                 "metadata.consumed_by 已廢除（2026-09-14）：反向關係由 depends_on 推導，"
                 "請改在下游 skill 宣告 depends_on")
 
+        # 三軸（schema 1.2）：1.2 起缺 form／domain 擋 P1；舊 schema 的複本過渡期 P3
+        three_axis = str(meta.get("schema_version")) == THREE_AXIS_SCHEMA
+        for field, codes in (("form", FORM_CODES), ("domain", DOMAIN_CODES)):
+            val = meta.get(field)
+            if val is None:
+                add("P1" if three_axis else "P3", f"missing-{field}", name,
+                    f"缺 metadata.{field}（{'|'.join(sorted(codes))}；schema 1.2 必填）")
+            elif val not in codes:
+                add("P1", f"invalid-{field}", name,
+                    f"metadata.{field}='{val}' 不在受控詞彙 {sorted(codes)}")
+
         if str(meta.get("schema_version")) not in SCHEMA_VERSIONS:
             add("P2", "missing-schema-version", name,
                 f"metadata.schema_version 應為 {sorted(SCHEMA_VERSIONS)} 之一，"
                 f"實際為 {meta.get('schema_version')!r}")
+
+    # AL-105 上游 depends_on 範圍不可滿足（P0，發版前置守門；v2 規格 AC-07／AC-08，2026-10-20 補實作）
+    #   範圍語法見 semver.py；目標版本取同 repo 該 skill 的 metadata.version
+    versions = {n: str(((i["fm"] or {}).get("metadata") or {}).get("version", "")).strip('"')
+                for n, i in active.items()}
+    graph: dict[str, list[str]] = {}
+    for name, info in active.items():
+        refs = ((info["fm"] or {}).get("metadata") or {}).get("depends_on") or []
+        graph[name] = [dep_name(r) for r in refs if dep_name(r) in active]
+        for ref in refs:
+            target, rng = dep_name(ref), dep_range(ref)
+            if target not in versions or rng == "*":
+                continue
+            if not valid_range(rng):
+                add("P1", "invalid-dep-range", name,
+                    f"depends_on {target} 的範圍 {rng!r} 無法解析；語法見 semver.py（例 ^1.4.0、>=2.0 <3）")
+                continue
+            if not semver.satisfies(versions[target], rng):
+                add("P0", "upstream-dep-unsatisfiable", name,
+                    f"depends_on {target} 要求 {rng}，但上游現為 {versions[target]}")
+    # AL-102／103／108／106 版號漂移（v2 規格 AC-07 登記、2026-10-27 補實作）
+    #   基準 = repo 內上一班 manifest；新 skill 或非 active（manifest 不收）不比
+    baseline = _load_baseline_manifest(repo)
+    for name, info in active.items():
+        meta = ((info["fm"] or {}).get("metadata") or {})
+        base = baseline.get(name)
+        cur_ver = str(meta.get("version", "")).strip('"')
+        sk_dir = Path(info["path"]).parent  # info["path"] 是 SKILL.md 檔案，不是目錄
+        globs = meta.get("contract_files") or gen_manifest.DEFAULT_CONTRACT_GLOBS
+        if base and cur_ver and str(base.get("version")) == cur_ver:
+            if gen_manifest.contract_hash(sk_dir, globs) != base.get("contract_hash"):
+                add("P1", "contract-changed-no-bump", name,
+                    f"契約檔（scripts／schemas／*contract*／*schema*）與 {cur_ver} 發版時不同，版號卻沒升 —— 至少升 minor")
+            elif gen_manifest.tree_hash(sk_dir) != base.get("tree_hash"):
+                add("P2", "content-changed-no-bump", name,
+                    f"內容與 {cur_ver} 發版時不同，版號卻沒升 —— 升 patch（否則 index 會出現同版號兩個 hash）")
+        if base and cur_ver and semver.is_semver(cur_ver) and semver.is_semver(str(base.get("version", ""))):
+            if semver.parse(cur_ver)[0] > semver.parse(str(base["version"]))[0] \
+                    and not _has_breaking_note(sk_dir, cur_ver):
+                add("P2", "major-no-breaking", name,
+                    f"major 升版 {base['version']} → {cur_ver} 卻沒有 Breaking 說明（CHANGELOG.md 或 SKILL.md 版本段寫明遷移方式）")
+        # AL-106：updated（最後內容修改日）早於契約檔最後 commit —— 改了契約卻沒更新 updated
+        #   🟡 只報 P3：回貢流程是「消費端先開發、數天後才推上游」，commit 日必然晚於真正修改日
+        #   （2026-10-27 實例：game-proto 1.7.0 於 10-23 開發、10-27 回貢）。版號有沒有升由 AL-102／108 把關
+        updated = str(meta.get("updated", "")).strip()
+        if updated:
+            contract_paths = [p for p in sk_dir.rglob("*") if p.is_file()
+                              and "__pycache__" not in p.parts and p.suffix != ".pyc"
+                              and any(p in set(sk_dir.glob(g)) for g in globs)]
+            last = _git_last_change(repo, contract_paths)
+            if last and updated < last:
+                add("P3", "updated-before-contract", name,
+                    f"metadata.updated={updated} 早於契約檔最後 commit {last}（回貢延遲可忽略；若是上游直接改的就更新 updated）")
+
+    # AL-030 依賴環：同步／安裝順序無解，也代表兩邊職責沒切乾淨（2026-10-20 game-prob ⇄ game-quicktest）
+    for cyc in find_dep_cycles(graph):
+        add("P1", "depends-on-cycle", cyc[0], "depends_on 成環：" + " → ".join(cyc))
 
     # 3.5 description **文字內容**裡的 ark-* 必須存在
     #
@@ -456,8 +620,7 @@ def audit(repo: Path, triggers: dict):
     reverse_deps: dict[str, list[str]] = {}
     for name, info in active.items():
         for ref in ((info["fm"] or {}).get("metadata") or {}).get("depends_on") or []:
-            base = str(ref).split(".")[0].strip()
-            reverse_deps.setdefault(base, []).append(name)
+            reverse_deps.setdefault(dep_name(ref), []).append(name)
     reverse_deps = {k: sorted(v) for k, v in sorted(reverse_deps.items())}
 
     # 14. referenced-test-missing：SKILL.md / scripts 註解引用的測試檔必須存在（抓 F-11 類漂移）

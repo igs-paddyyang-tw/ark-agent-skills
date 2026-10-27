@@ -154,3 +154,101 @@ def test_layout_accepts_analysis_and_valid_server(game):
     rep = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
     assert rep["facts"]["dirs"]["analysis"] is True and rep["facts"]["dirs"]["server"] is True
     assert rep["facts"]["server"]["handoff"] is True
+
+
+def test_layout_review_pack(game):
+    """契約 v3.3 L-REVIEW：review/ 另計 5 MB、禁影片、清冊過期 warning；review 內大 HTML 不觸發 L-SIZE 500 KB warning。"""
+    rv = game / "review"
+    (rv / "checks").mkdir(parents=True)
+    (rv / "index.html").write_text("<html></html>", encoding="utf-8")
+    (rv / "play.html").write_text("x" * 700_000, encoding="utf-8")             # 700 KB：review 內允許
+    (rv / "review-manifest.json").write_text(json.dumps({"files": [{"path": "play.html", "sha256_16": "0" * 16}]}), encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    vs = r["data"]["violations"]
+    assert not any(v["rule"] == "L-SIZE" and "review" in v["where"] for v in vs)
+    assert any(v["rule"] == "L-REVIEW" and v["severity"] == "warning" and "清冊" in v["message"] for v in vs)
+    assert not any(v["rule"] == "L-REVIEW" and v["severity"] == "error" for v in vs)
+    (rv / "checks" / "demo.mp4").write_bytes(b"\x00" * 10)
+    (rv / "big.html").write_text("x" * (5 * 1024 * 1024 + 10), encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    errs = [v for v in r["data"]["violations"] if v["rule"] == "L-REVIEW" and v["severity"] == "error"]
+    assert r["_rc"] == 3 and any(".mp4" in v["message"] for v in errs) and any("5120" in v["message"] for v in errs)
+
+
+def test_layout_v35_stage_html_stamp_and_review_links(game):
+    """契約 v3.5：定版家各階段 md 旁的 html 也驗 L-STAMP；review 清冊 links（連到的定版家成品）sha 不符 → L-REVIEW warning。"""
+    qr = game / "quicktest" / "qt-report"
+    qr.mkdir(parents=True, exist_ok=True)
+    (qr / "r.md").write_text("# 快測\n", encoding="utf-8")
+    (qr / "r.html").write_text("<html></html>\n<!-- content-src: r.md sha256:0000000000000000 -->\n", encoding="utf-8")
+    rv = game / "review"
+    rv.mkdir(exist_ok=True)
+    (rv / "index.html").write_text("<html></html>", encoding="utf-8")
+    (rv / "review-manifest.json").write_text(json.dumps({"files": [], "links": [{"path": "../quicktest/qt-report/r.html", "sha256_16": "0" * 16}]}), encoding="utf-8")
+    r = run("ps_layout.py", "--game", str(game))
+    vs = r["data"]["violations"]
+    assert any(v["rule"] == "L-STAMP" and "r.html" in v["where"] and v["severity"] == "error" for v in vs), vs
+    assert any(v["rule"] == "L-REVIEW" and "../quicktest/qt-report/r.html" in v["message"] for v in vs), vs
+
+
+def test_layout_data_budget_excludes_html(game):
+    """契約 v3.5：定版家 1 MB 額度不計 *.html View 軌（比照單檔上限）；非 html 超過才 warning。"""
+    d = game / "docs" / "reports"
+    d.mkdir(parents=True, exist_ok=True)
+    for i in range(3):
+        (d / f"big{i}.html").write_text("x" * 400_000, encoding="utf-8")      # 1.2 MB html：不計
+    r = run("ps_layout.py", "--game", str(game))
+    assert not any(v["rule"] == "L-SIZE" and v["where"] == "./" for v in r["data"]["violations"])
+    for i in range(3):
+        (d / f"big{i}.md").write_text("x" * 400_000, encoding="utf-8")        # 1.2 MB md：計入
+    r = run("ps_layout.py", "--game", str(game))
+    assert any(v["rule"] == "L-SIZE" and v["where"] == "./" and v["severity"] == "warning" for v in r["data"]["violations"])
+
+
+
+def _ref(g, sources, files):
+    ref = g / "ref"
+    ref.mkdir(exist_ok=True)
+    (ref / "README.md").write_text("# ref\n## 來源總覽\n## 版本地圖\n## 判讀紀錄\n## 未收清單\n## 待確認\n", encoding="utf-8")
+    (ref / "manifest.json").write_text(json.dumps({"slug": "demo", "contract": "3.6", "sources": sources}, ensure_ascii=False), encoding="utf-8")
+    for rel, txt in files.items():
+        p = ref / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(txt, encoding="utf-8")
+
+
+def _src(sid, outputs, role="main", status="transcribed", sens="internal"):
+    return {"id": sid, "repo": "r", "path": f"{sid}.xlsx", "sha256": "0" * 64, "kind": "prob-table",
+            "role": role, "status": status, "sensitivity": sens, "outputs": outputs}
+
+
+def test_layout_v36_ref_pass(game):
+    _ref(game, [_src("v9a", ["ref/prob-table/v9a/"]), _src("old", [], role="history", status="skipped")],
+         {"prob-table/v9a/參照表.csv": "a,b\n1,2\n"})
+    rep = run("ps_layout.py", "--game", str(game))
+    rules = [v["rule"] for v in rep.get("data", {}).get("violations", [])]
+    assert "L-REF" not in rules, rep
+    lr = json.loads((game / "layout-report.json").read_text(encoding="utf-8"))
+    assert lr["facts"]["ref"]["sources"] == 2
+
+
+def test_layout_v36_ref_catches_orphan_binary_enum_missing(game):
+    _ref(game, [_src("v9a", ["ref/prob-table/v9a/", "ref/docs/gone.md"]), _src("bad", [], role="weird", status="skipped")],
+         {"prob-table/v9a/a.csv": "x\n", "docs/orphan.md": "x\n", "raw.xlsx": "not really"})
+    rep = run("ps_layout.py", "--game", str(game))
+    assert not rep["success"]
+    msgs = " ".join(v["message"] for v in rep["data"]["violations"] if v["rule"] == "L-REF")
+    assert "gone.md" in msgs and "orphan.md" in msgs and "raw.xlsx" in msgs and "role=weird" in msgs
+
+
+def test_layout_v36_ref_excluded_from_data_budget_and_review_leak(game):
+    big = "x" * (600 * 1024)
+    _ref(game, [_src("v9a", ["ref/prob-table/v9a/"])], {"prob-table/v9a/big.csv": big, "prob-table/v9a/big2.csv": big})
+    (game / "review").mkdir()
+    (game / "review" / "index.html").write_text("<html></html>", encoding="utf-8")
+    (game / "review" / "review-manifest.json").write_text(json.dumps({"files": [], "links": [{"path": "../ref/live/x.json", "source": "ref/live/x.json"}]}), encoding="utf-8")
+    rep = run("ps_layout.py", "--game", str(game))
+    v = rep["data"]["violations"]
+    assert any(x["rule"] == "L-REF" and "KB >" in x["message"] for x in v)          # ref 另計 > 1 MB → error
+    assert any(x["rule"] == "L-REF" and "ref 永不進 review" in x["message"] for x in v)
+    assert not any(x["rule"] == "L-SIZE" and "定版家" in x["message"] for x in v)   # ref 不吃定版家 1 MB

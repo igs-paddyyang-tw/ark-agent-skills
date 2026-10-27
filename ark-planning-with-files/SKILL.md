@@ -8,15 +8,17 @@ description: |
   或任何需要跨 session 保持任務狀態的場景。
   不適用於：照 plan.md 自動執行與驗收請用 ark-spec-executor（同樣用 plan.md，但本 skill 管的是跨 session 不忘記，不是執行）。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: both
   author: paddyyang
-  version: "1.0.0"
-  updated: 2026-05-16
+  version: "1.0.1"
+  updated: 2026-10-20
   reference: https://github.com/OthmanAdi/planning-with-files
 ---
 

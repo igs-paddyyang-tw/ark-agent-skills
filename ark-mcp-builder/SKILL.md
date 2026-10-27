@@ -6,12 +6,14 @@ description: |
   使用此 Skill 當需要建立 MCP Server 整合外部 API 或服務，
   無論是 Python（FastMCP）或 Node/TypeScript（MCP SDK）。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-09-14
+  updated: 2026-10-20
   # 2026-09-14 scaffolder → process：它不產骨架，是「怎麼搭 MCP Server」的方法論
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: code
       audience: ai

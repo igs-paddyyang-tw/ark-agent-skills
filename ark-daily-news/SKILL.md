@@ -9,17 +9,22 @@ description: |
   不適用於：一般分析報告請用 ark-md-report／ark-html-report（本 skill 專責新聞素材的日報流程）。
 metadata:
   author: paddyyang
-  schema_version: 1
+  schema_version: "1.2"
   category: document
-  version: "2.1.0"
-  updated: 2026-08-13
+  form: instruction
+  domain: general
+  version: "2.1.2"
+  updated: 2026-10-20
   outputs:
     - { format: md, audience: ai }
     - { format: html, audience: human }
   render: html
   status: active
   # ark-wiki-engine：news_md_writer.py 實際執行 wiki_guard.py（不是「相關」而是真的呼叫）
-  depends_on: [ark-md-report, ark-html-report, ark-wiki-engine]
+  depends_on:
+    - { name: ark-md-report, version: "^1.0.0" }
+    - { name: ark-html-report, version: "^1.0.0" }
+    - { name: ark-wiki-engine, version: "^3.0.0" }
 ---
 
 # ark-daily-news

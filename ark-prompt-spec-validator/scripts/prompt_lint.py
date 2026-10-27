@@ -26,7 +26,12 @@ except ImportError:  # pragma: no cover
     sys.exit(3)
 
 # ---------------------------------------------------------------- vocab (same as audit_skills.py)
-CATEGORIES = {"process", "scaffolder", "pipeline", "view", "document", "domain", "ops", "executor"}
+# 受控詞彙複本 —— 權威是 ark-skills-align/scripts/audit_skills.py（schema 1.2 三軸），
+# 一致性由 skills repo 根的 test_taxonomy_vocab.py（根 scripts/tests 下）守住
+CATEGORIES = {"process", "scaffolder", "pipeline", "view", "document", "ops"}
+MIXED_AXIS_CATEGORIES = {"executor", "domain"}   # 1.1 舊值：形態／領域誤當職能 → P2
+FORMS = {"executor", "instruction"}
+DOMAINS = {"general", "game"}
 OUTPUT_FORMATS = {"md", "html", "png", "pdf", "code", "data", "office"}
 AUDIENCES = {"ai", "human", "both"}
 
@@ -36,9 +41,9 @@ DEFAULT_EXCLUSIVE_TRIGGERS = {
     "瀏覽器測試": "ark-browser-tool", "截圖": "ark-browser-tool",
     "寫 spec": "ark-superpowers", "產 spec": "ark-superpowers",
     "派工": "ark-project-planning", "共筆": "ark-doc-coauthoring",
-    "chatbot": "ark-agent-builder", "聊天機器人": "ark-agent-builder",
+    "chatbot": "ark-agent-bot-builder", "聊天機器人": "ark-agent-bot-builder",
     "博奕": "ark-html-dashboard", "老虎機": "ark-html-dashboard", "遊戲面板": "ark-html-dashboard",
-    "CLI 骨架": "ark-llm-cli",
+    "CLI 骨架": "ark-agent-cli",
     "驗證提詞": "ark-prompt-spec-validator", "prompt drift": "ark-prompt-spec-validator",
     "drift report": "ark-code-spec-validator",
 }
@@ -224,8 +229,15 @@ def lint_file(path: Path, dtype: str, cfg: dict, repo_skills: dict, rep: Report)
     if dtype == "skill" and not deprecated:
         if "schema_version" not in meta:
             add("PL-010", "P2", 2, "metadata.schema_version 缺失")
-        if meta.get("category") not in CATEGORIES:
+        if meta.get("category") in MIXED_AXIS_CATEGORIES:
+            add("PL-010", "P2", 2, f"metadata.category={meta.get('category')!r} 是 1.1 舊值（形態／領域誤當職能），"
+                "改用 form／domain，category 依產出物重選")
+        elif meta.get("category") not in CATEGORIES:
             add("PL-010", "P1", 2, f"metadata.category 缺失或不在受控詞彙：{meta.get('category')!r}")
+        if str(meta.get("schema_version")) == "1.2":
+            for field, codes in (("form", FORMS), ("domain", DOMAINS)):
+                if meta.get(field) not in codes:
+                    add("PL-010", "P1", 2, f"metadata.{field} 缺失或不在受控詞彙 {sorted(codes)}：{meta.get(field)!r}")
         outs = meta.get("outputs")
         if not isinstance(outs, list) or not outs:
             add("PL-010", "P1", 2, "metadata.outputs 缺失")

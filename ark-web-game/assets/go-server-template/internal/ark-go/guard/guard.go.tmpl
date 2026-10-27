@@ -1,0 +1,191 @@
+// Package guard 提供連線層的防護：流量封鎖、限流、可信來源 IP。
+//
+// 與 Python 的差異（見 docs/go-network-layer-design.md §6）：
+//   - 流量封鎖沒有任何指令能關閉（Python 的 watch 會呼叫 stopBlock）
+//   - 來源 IP 只信任可信代理附加的值；Python 的 getRealAddress() 會被 info 指令覆寫
+package guard
+
+import (
+	"net"
+	"net/http"
+	"net/netip"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+)
+
+// FloodMeter 實作 Python GameSocket 的流量封鎖演算法（GameSocket.py:210-238）：
+// 每秒結算一次，該秒封包數 > Limit 則 strikes+1，否則 strikes-1（不低於 0）；
+// strikes ≥ Continue 時判定超限。
+//
+// Hit 在讀取 goroutine 呼叫；Tick 由每秒一次的巡檢呼叫。兩者可並行。
+type FloodMeter struct {
+	Limit    int64 // 每秒最多幾包（Python blockFrequence=40）
+	Continue int   // 連續幾秒超過就斷線（Python blockContinue=3）
+
+	count   atomic.Int64
+	strikes int // 只在 Tick 內存取
+}
+
+// Hit 記錄收到一包。
+func (m *FloodMeter) Hit() { m.count.Add(1) }
+
+// Tick 結算過去一秒，回傳是否應以 509 關閉。
+func (m *FloodMeter) Tick() bool {
+	if m.Limit <= 0 {
+		return false
+	}
+	n := m.count.Swap(0)
+	if n > m.Limit {
+		m.strikes++
+	} else if m.strikes > 0 {
+		m.strikes--
+	}
+	return m.strikes >= m.Continue
+}
+
+// Bucket 是簡單的 token bucket：每秒補 Rate 個，最多存 Burst 個。並行安全。
+type Bucket struct {
+	Rate  float64
+	Burst float64
+
+	mu     sync.Mutex
+	tokens float64
+	last   time.Time
+}
+
+// Allow 取一個 token；沒有就回傳 false。
+func (b *Bucket) Allow(now time.Time) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.last.IsZero() {
+		b.tokens = b.Burst
+	} else {
+		b.tokens += now.Sub(b.last).Seconds() * b.Rate
+		if b.tokens > b.Burst {
+			b.tokens = b.Burst
+		}
+	}
+	b.last = now
+	if b.tokens < 1 {
+		return false
+	}
+	b.tokens--
+	return true
+}
+
+// Limiter 依 key（IP、ark_id）分別限流。閒置超過 idle 的 key 會在 Allow 時順手清掉。
+type Limiter struct {
+	Rate, Burst float64
+	Idle        time.Duration
+
+	mu      sync.Mutex
+	buckets map[string]*Bucket
+	sweep   time.Time
+}
+
+// Allow 判斷 key 這次請求是否放行。
+func (l *Limiter) Allow(key string, now time.Time) bool {
+	l.mu.Lock()
+	if l.buckets == nil {
+		l.buckets = make(map[string]*Bucket)
+	}
+	idle := l.Idle
+	if idle == 0 {
+		idle = 10 * time.Minute
+	}
+	if now.Sub(l.sweep) > idle {
+		for k, b := range l.buckets {
+			b.mu.Lock()
+			stale := now.Sub(b.last) > idle
+			b.mu.Unlock()
+			if stale {
+				delete(l.buckets, k)
+			}
+		}
+		l.sweep = now
+	}
+	b, ok := l.buckets[key]
+	if !ok {
+		b = &Bucket{Rate: l.Rate, Burst: l.Burst}
+		l.buckets[key] = b
+	}
+	l.mu.Unlock()
+	return b.Allow(now)
+}
+
+// TrustedProxies 是可信代理的網段（ALB 子網段、gateway pod 網段）。
+type TrustedProxies []netip.Prefix
+
+// ParseTrustedProxies 解析逗號分隔的 CIDR（也接受單一 IP）。
+func ParseTrustedProxies(s string) (TrustedProxies, error) {
+	var out TrustedProxies
+	for _, f := range strings.Split(s, ",") {
+		f = strings.TrimSpace(f)
+		if f == "" {
+			continue
+		}
+		if !strings.Contains(f, "/") {
+			a, err := netip.ParseAddr(f)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, netip.PrefixFrom(a, a.BitLen()))
+			continue
+		}
+		p, err := netip.ParsePrefix(f)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+func (t TrustedProxies) contains(a netip.Addr) bool {
+	a = a.Unmap()
+	for _, p := range t {
+		if p.Contains(a) {
+			return true
+		}
+	}
+	return false
+}
+
+// ClientIP 取得真實來源 IP：
+//   - socket 對端不是可信代理 → 直接用對端（客戶端自己帶的 X-Forwarded-For 一律不理）
+//   - 對端是可信代理 → 從 X-Forwarded-For 由右往左，跳過可信代理，取第一個不可信的位址
+func (t TrustedProxies) ClientIP(r *http.Request) string {
+	peer := remoteAddr(r.RemoteAddr)
+	pa, err := netip.ParseAddr(peer)
+	if err != nil || !t.contains(pa) {
+		return peer
+	}
+	var hops []string
+	for _, h := range r.Header.Values("X-Forwarded-For") {
+		for _, part := range strings.Split(h, ",") {
+			if part = strings.TrimSpace(part); part != "" {
+				hops = append(hops, part)
+			}
+		}
+	}
+	for i := len(hops) - 1; i >= 0; i-- {
+		a, err := netip.ParseAddr(hops[i])
+		if err != nil {
+			return peer // 格式錯誤：不信任再往左的內容
+		}
+		if !t.contains(a) {
+			return a.Unmap().String()
+		}
+	}
+	return peer
+}
+
+func remoteAddr(addr string) string {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+	return host
+}

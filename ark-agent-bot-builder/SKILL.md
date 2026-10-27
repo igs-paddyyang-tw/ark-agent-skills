@@ -12,19 +12,22 @@ description: |
   不適用於：① 多 agent 團隊 daemon → ark-agent-team-builder（ark_team_agent）；
   ② 非套件的獨立 FastAPI 應用 → ark-webapp-generator；③ steering 人格 → ark-agent-init。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   # 實測來源：SKILL.md「實測 ark_bot_agent 1.0.15」（2026-09-11 建 slot-bot）
   tested_against:
     ark_bot_agent: "1.0.15"
   status: active
   category: scaffolder
-  depends_on: [ark-agent-init]
+  form: instruction
+  domain: general
+  depends_on:
+    - { name: ark-agent-init, version: "^2.5.0" }   # BRAIN.md 產生（_write_brain）
   outputs:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.1.0"
-  updated: 2026-09-16
+  version: "3.2.0"
+  updated: 2026-10-27
 ---
 
 # ark-agent-bot-builder
@@ -90,13 +93,14 @@ uv pip install --python .venv/bin/python '<ark_bot_agent-*.whl>[search,skills]'
 ├── agents.yaml              # 有誰（assets/agents.yaml）← 專案根哨兵
 ├── .env                     # 機密（assets/env.example → .env）
 ├── requirements.txt         # 只列 wheel
-├── .kiro/steering/          # 人格（由 ark-agent-init 產）
+├── .kiro/steering/          # 人格（由 ark-agent-init 產）；BRAIN.md 由本 skill 委派 ark-agent-init 產
 ├── knowledge/
 │   ├── shared/{wiki,raw}/    # 🔴 Wiki 引擎讀這層（少一層 shared 會靜默失效）
 │   │   └── {schema,index,log}.md
-│   └── raw/memory-archive/   # MEMORY 歸檔落點（路徑寫死不可搬）
+│   （🔴 根層不放 raw/、wiki/ —— 五層紅線；舊 raw/memory-archive/ 已作廢）
 ├── memory/                   # 🔴 套件記憶落點（daily/recent.md/memory.md）
-│   └── daily/
+│   ├── daily/
+│   └── archive/              # 舊事件歸檔（記憶歸記憶，不進 knowledge）
 ├── artifacts/reports/        # 🔴 產出目錄（取代舊 output/）
 ├── agents/<name>-agent/      # 各 agent：.kiro + knowledge + memory + artifacts
 └── skills/                   # 業務 skill（選填，run_bot(skills=[...]) 掛載）

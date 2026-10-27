@@ -216,14 +216,85 @@ def test_validate_actually_catches_a_missing_file(project, victim):
 
 # ── v2.1：根目錄即 manager 的目錄佈局 ──────────────────────────
 
-def test_root_has_no_steering_agents_md(project):
-    """根目錄（wd="."）不產 steering/AGENTS.md —— 它用專案根那份（SSOT），
-    否則兩份都被 Kiro 載入造成漂移。子 agent 仍各有一份複本。"""
-    root_agents = project / ".kiro" / "steering" / "AGENTS.md"
-    assert not root_agents.exists(), "根 steering/ 不該產 AGENTS.md（用專案根那份）"
-    # 子 agent 仍需要複本
-    worker_agents = project / "agents" / "worker-agent" / ".kiro" / "steering" / "AGENTS.md"
-    assert worker_agents.exists(), "子 agent steering/ 應有 AGENTS.md 複本"
+AUDIT = SCRIPTS / "audit_agents_layout.py"
+
+
+def test_no_steering_agents_md_anywhere(project):
+    """AGENTS.md 單一權威（2.4.0）：`.kiro/steering/` 一律不放 AGENTS.md。
+
+    🔴 2.3.x 的斷言是反的（「子 agent steering/ 應有 AGENTS.md 複本」）—— 守門守在錯誤方向，
+    人工把複本搬到 agent 根之後，重跑 build_kiro 又長回 steering/（2026-10-25 review F-2／F-3）。
+    """
+    for name, inst in _instances().items():
+        steering = _kiro_dir(project, inst["working_directory"]) / "steering" / "AGENTS.md"
+        assert not steering.exists(), f"{name}：steering/ 不該有 AGENTS.md"
+
+
+@pytest.mark.parametrize("name,inst", sorted(
+    (n, i) for n, i in _instances().items() if i["working_directory"] != "."))
+def test_sub_agent_copy_lands_at_working_directory_root(project, name, inst):
+    """子 agent 的 AGENTS.md 複本在**工作目錄根**（與 ark_team_agent daemon 的落點一致）。"""
+    assert (project / inst["working_directory"] / "AGENTS.md").exists(), f"{name} 根目錄缺 AGENTS.md"
+
+
+def test_rebuild_does_not_regrow_steering_copy(project):
+    """重跑 build_kiro 不得把 AGENTS.md 長回 steering/（漂移復發的實際情境）。"""
+    r = subprocess.run([sys.executable, str(BUILD), str(project / "team.yaml"), str(project)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert not list(project.rglob(".kiro/steering/AGENTS.md"))
+
+
+def test_validate_flags_misplaced_steering_copy(project):
+    """steering/ 放了實體 AGENTS.md → validate 紅，訊息要說「應改放哪」。"""
+    (project / "agents/worker-agent/.kiro/steering/AGENTS.md").write_text("# 舊複本\n", encoding="utf-8")
+    r = subprocess.run([sys.executable, str(BUILD), "--validate", str(project)],
+                       capture_output=True, text=True)
+    assert r.returncode == 1
+    assert "放錯" in r.stdout and "agents/worker-agent/AGENTS.md" in r.stdout
+
+
+def test_validate_accepts_steering_symlink_to_root_copy(project):
+    """例外：steering/AGENTS.md 是指向 wd 根那份的 symlink（同一份內容）→ 不算兩份並存。"""
+    link = project / "agents/worker-agent/.kiro/steering/AGENTS.md"
+    link.symlink_to("../../AGENTS.md")
+    r = subprocess.run([sys.executable, str(BUILD), "--validate", str(project)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout
+
+
+def _audit(project) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(AUDIT), str(project), "--json"],
+                          capture_output=True, text=True)
+
+
+def test_audit_reports_missing_root_ssot(project):
+    """稽核腳本（運作中的 workspace 用）要抓專案根缺 SSOT；validate 刻意不擋（daemon 首次啟動才產）。"""
+    r = _audit(project)
+    out = json.loads(r.stdout)
+    assert r.returncode == 1 and out["status"] == "fail"
+    assert any(i["agent"] == "(專案根)" for i in out["issues"])
+
+
+def test_audit_passes_on_correct_layout(project):
+    (project / "AGENTS.md").write_text("# 團隊規範\n", encoding="utf-8")
+    r = _audit(project)
+    assert r.returncode == 0 and json.loads(r.stdout)["status"] == "pass", r.stdout
+
+
+def test_audit_ignores_agents_outside_team_yaml(project):
+    """編制外的殘留目錄（已裁撤角色的空殼）不檢查，否則製造假紅。"""
+    (project / "AGENTS.md").write_text("# 團隊規範\n", encoding="utf-8")
+    (project / "agents/retired-agent/.kiro/steering").mkdir(parents=True)
+    (project / "agents/retired-agent/.kiro/steering/AGENTS.md").write_text("x", encoding="utf-8")
+    assert _audit(project).returncode == 0
+
+
+def test_audit_skips_explicitly_without_team_yaml(tmp_path):
+    """範圍為空要明說跳過，不偽裝成通過。"""
+    r = _audit(tmp_path)
+    out = json.loads(r.stdout)
+    assert r.returncode == 0 and out["status"] == "skipped" and "team.yaml" in out["reason"]
 
 
 @pytest.mark.parametrize("name,inst", sorted(_instances().items()))
@@ -407,3 +478,67 @@ def test_validate_flags_legacy_memory(project):
     assert "7 個日期事件分節" in out
     assert "KB > 20 KB" in out
     assert "worker-agent/.kiro：缺 memory/ 骨架" in out
+
+
+# ── 2.5.0：BRAIN.md ＝ 五層判準＋本角色知識背景 ──────────────────
+
+def _brain(project, wd: str) -> str:
+    return (_kiro_dir(project, wd) / "steering" / "BRAIN.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("name,inst", sorted(_instances().items()))
+def test_brain_has_judgment_and_role_sections(project, name, inst):
+    """每個 agent 都有 BRAIN.md，且同時有五層判準與角色段；佔位符與 leader 範例不得殘留。
+
+    🔴 背景：bot 套件注入 BRAIN.md 卻不產它（nana-bot 手抄範本、帶 leader 私有路徑上線），
+       team daemon 產的只有角色知識沒有判準 —— 同名兩種內容，2.5.0 統一。
+    """
+    text = _brain(project, inst["working_directory"])
+    assert "## 五層資源" in text and "## 本角色知識背景" in text
+    assert "{private_kb}" not in text and "{role_section}" not in text
+    assert "leader 範例" not in text
+
+
+def test_brain_role_section_follows_daemon_selection(project):
+    """角色段選法同 daemon：instance 名優先（leader-agent → leader、admin-agent → admin），
+    worker 沒有同名範本 → coder；leader 帶品質護欄、別人不帶。"""
+    leader = _brain(project, "agents/leader-agent")
+    worker = _brain(project, "agents/worker-agent")
+    admin = _brain(project, "agents/admin-agent")
+    assert "Leader 知識背景" in leader and "品質護欄" in leader
+    assert "品質護欄" not in worker and "品質護欄" not in admin
+    assert "Coder 知識背景" in worker
+    assert "Admin 知識背景" in admin
+
+
+def test_brain_private_kb_path_matches_shelf(project):
+    """私有櫃路徑與 _build_knowledge_sources 同規則：根目錄 → knowledge/<name>/；子 agent → <wd>/knowledge/。"""
+    assert "`knowledge/demo-agent/wiki/`" in _brain(project, ".")
+    assert "`agents/worker-agent/knowledge/wiki/`" in _brain(project, "agents/worker-agent")
+
+
+def test_brain_is_not_overwritten(project):
+    """policy once：手寫或 daemon 寫過的 BRAIN.md 重跑不覆寫。"""
+    f = _kiro_dir(project, "agents/worker-agent") / "steering" / "BRAIN.md"
+    f.write_text("# 手寫的 BRAIN\n", encoding="utf-8")
+    subprocess.run([sys.executable, str(BUILD), str(project / "team.yaml"), str(project)],
+                   capture_output=True, text=True, check=True)
+    assert f.read_text(encoding="utf-8") == "# 手寫的 BRAIN\n"
+
+
+def test_brain_template_field_wins(tmp_path):
+    """team.yaml 的 `template` 優先於 instance 名與 role（與 daemon P2-8 相同）。"""
+    cfg = yaml.safe_load(TEAM_YAML)
+    cfg["instances"]["worker-agent"]["template"] = "qa"
+    (tmp_path / "team.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    subprocess.run([sys.executable, str(BUILD), str(tmp_path / "team.yaml"), str(tmp_path)],
+                   capture_output=True, text=True, check=True)
+    text = (tmp_path / "agents/worker-agent/.kiro/steering/BRAIN.md").read_text(encoding="utf-8")
+    assert "QA 知識背景" in text and "Coder 知識背景" not in text
+
+
+def test_validate_requires_brain(project):
+    (project / "agents/worker-agent/.kiro/steering/BRAIN.md").unlink()
+    r = subprocess.run([sys.executable, str(BUILD), "--validate", str(project)],
+                       capture_output=True, text=True)
+    assert r.returncode == 1 and "BRAIN.md" in r.stdout

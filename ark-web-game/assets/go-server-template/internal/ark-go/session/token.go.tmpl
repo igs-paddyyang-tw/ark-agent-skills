@@ -1,0 +1,93 @@
+package session
+
+import (
+	"context"
+	"crypto/subtle"
+	"errors"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
+
+// TokenStore 驗證與續期平台簽發的 token。Go 只讀與續期，不簽發、不刪除
+// （platform-db-contract.md 附錄）。
+type TokenStore interface {
+	// Verify 比對 token 是否等於平台 Redis 內的值。
+	Verify(ctx context.Context, arkID, token, platform string) (bool, error)
+	// Renew 只在 Redis 內的值仍等於 token 時續期；回傳是否仍有效。
+	Renew(ctx context.Context, arkID, token, platform string) (bool, error)
+}
+
+// RedisTokenStore 讀平台 Redis 的 token_* key，語意與 Python ArkEngine 相同：
+//   - multi_login：token_{ark_id}_{token}
+//   - 否則 platform 為空或 "main"：token_{ark_id}；其他 platform：token_{ark_id}_{platform}
+//   - 續期時一併續期 ArkServer:{codeName}:{ark_id}:IsTestAcc（值為 "True" 時）
+//
+// 依據：ArkGame/GameSocket.py:28-60, 143-160；ArkSDK/Network/ArkServer.py:700-742。
+type RedisTokenStore struct {
+	Client     redis.UniversalClient
+	TTL        time.Duration // Python token_time，預設 1800 秒
+	MultiLogin bool
+	CodeName   string // 例如 "tigershark"；用於 IsTestAcc key
+}
+
+// renewScript：值仍相同才 SETEX，避免把別處新登入的 token 蓋回舊值。
+var renewScript = redis.NewScript(`
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  redis.call('SETEX', KEYS[1], ARGV[2], ARGV[1])
+  return 1
+end
+return 0`)
+
+// Key 回傳 token 的 Redis key。
+func (r *RedisTokenStore) Key(arkID, token, platform string) string {
+	if r.MultiLogin {
+		return "token_" + arkID + "_" + token
+	}
+	if platform == "" || platform == "main" {
+		return "token_" + arkID
+	}
+	return "token_" + arkID + "_" + platform
+}
+
+func (r *RedisTokenStore) ttl() time.Duration {
+	if r.TTL <= 0 {
+		return 1800 * time.Second
+	}
+	return r.TTL
+}
+
+// Verify 實作 TokenStore。
+func (r *RedisTokenStore) Verify(ctx context.Context, arkID, token, platform string) (bool, error) {
+	if arkID == "" || token == "" {
+		return false, nil
+	}
+	v, err := r.Client.Get(ctx, r.Key(arkID, token, platform)).Result()
+	if errors.Is(err, redis.Nil) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return subtle.ConstantTimeCompare([]byte(v), []byte(token)) == 1, nil
+}
+
+// Renew 實作 TokenStore。
+func (r *RedisTokenStore) Renew(ctx context.Context, arkID, token, platform string) (bool, error) {
+	secs := int64(r.ttl() / time.Second)
+	n, err := renewScript.Run(ctx, r.Client, []string{r.Key(arkID, token, platform)}, token, secs).Int()
+	if err != nil {
+		return false, err
+	}
+	if n != 1 {
+		return false, nil
+	}
+	if r.CodeName != "" {
+		// 分開操作（不同 key 在 cluster 模式下可能不同 slot），非原子但與 Python 相同
+		k := "ArkServer:" + r.CodeName + ":" + arkID + ":IsTestAcc"
+		if v, err := r.Client.Get(ctx, k).Result(); err == nil && v == "True" {
+			r.Client.SetEx(ctx, k, v, r.ttl())
+		}
+	}
+	return true, nil
+}

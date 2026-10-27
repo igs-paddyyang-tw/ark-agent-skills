@@ -8,4 +8,6 @@ sections:
   - {id: free_spin,    title: Free Spin,            source_items: [S06], insert_after: anchor_b, claim_prefixes: [free_spin.]}
   - {id: bonus,        title: Bonus Feature,        source_items: [S06], insert_after: free_spin, claim_prefixes: [bonus.], entities: true}
   - {id: multiplier,   title: Multiplier,           source_items: [S06], insert_after: bonus, claim_prefixes: [free_spin.multiplier]}
-  - {id: jackpot,      title: Jackpot,              source_items: [S06], insert_after: multiplier, claim_prefixes: [jackpot.]}
+  - {id: hold_spin,    title: Hold & Spin,          source_items: [S06], insert_after: multiplier, claim_prefixes: [hold_spin.]}
+  - {id: stage_feature, title: Stage Feature,       source_items: [S06], insert_after: hold_spin, claim_prefixes: [stage_feature.]}
+  - {id: jackpot,      title: Jackpot,              source_items: [S06], insert_after: stage_feature, claim_prefixes: [jackpot.]}

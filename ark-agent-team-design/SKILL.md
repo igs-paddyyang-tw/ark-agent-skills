@@ -13,19 +13,23 @@ description: |
   （ark-agent-role-profile）；產 .kiro/ 檔案（ark-agent-init）。本 skill 只決定「誰在團隊裡、
   怎麼連」，不填 stance / hard_stops。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
   category: process
+  form: instruction
+  domain: general
   outputs:
     - format: data
       audience: ai
     - format: code
       audience: both
   render: none
-  depends_on: [ark-agent-role-profile, ark-grill-me]
+  depends_on:
+    - { name: ark-agent-role-profile, version: "^1.0.0" }
+    - { name: ark-grill-me, version: "^1.0.0" }
   author: paddyyang
-  version: "1.1.0"
-  updated: 2026-09-16
+  version: "1.2.2"
+  updated: 2026-10-20
 ---
 
 # ark-agent-team-design

@@ -38,7 +38,9 @@
   // ═════════ L1 精算 ═════════
   const CL = C.model === 'coin-lock';
   const HC = C.model === 'house-collect';
-  const exactOf = (c) => SlotCore.exact(c, HC ? { bonusN: 8000, mgN: 120000 } : { bonusN: 40000 });
+  const HF = C.model === 'huff-house';
+  const FC = C.model === 'frame-chest';
+  const exactOf = (c) => SlotCore.exact(c, HC ? { bonusN: 8000, mgN: 120000 } : HF || FC ? { bonusN: 20000 } : { bonusN: 40000 });
   let E = exactOf(C);
   const groupDetail = T.fg_group_detail || {}, bonusSpec = T.bonus || {};
   const TX2 = T.bonus || {};                       // house：§2 三變體 + Free（adapter targets_extra）
@@ -82,8 +84,110 @@
       <p class="note">房子均棟（草/木/磚）直接驗 SC 落格升級＋溢出轉移的路徑是否正確（G-TP-2）；對得上代表框升級邏輯忠實。stone15 換池門檻見 G-TP-3。</p>`;
     $('#pane-l1').innerHTML = h;
   }
+  // ───── huff-house（Huff N' Puff Open House）L1 ─────
+  const FT = T.feature || {};
+  const HFL = { ST: 'Straw Spin（稻草屋）', SK: 'Stick Spin（木屋）', BR: 'Brick Spin（磚屋）', GD: 'Palace Spin（宮殿）', OH: 'Open House（四房闖關）' };
+  const HMAT = { ST: 'SC_STRAW', SK: 'SC_STICK', BR: 'SC_BRICK', GD: 'SC_GOLD' }, HNAME = { ST: '稻草', SK: '木頭', BR: '磚頭', GD: '金條' };
+  const HHOUSE = { ST: '稻草屋', SK: '木屋', BR: '磚屋', GD: '宮殿' };
+  const RSNAME = ['一般連線組', '近失組（恰 5 顆建材）', 'Open House 組（恰 6 顆建材）'];
+  function renderL1Huff() {
+    E = exactOf(C);
+    const rows = [
+      ['主遊戲 RTP', TS.rtp_main, E.rtp_main, '%', vPP(E.rtp_main, TS.rtp_main, 0.3), `243 Ways 逐停點解析（WILD 第 ${C.wildFrom + 1} 軸起，G-HF-1）`],
+      ['玩法觸發率（五種合計）', TS.fg_rate, E.fg_rate, '%', vRel(E.fg_rate, TS.fg_rate, 0.02), '四建材顆數四維卷積 × 單顆觸發率（解析，不抽樣）'],
+      ['玩法 RTP（五種合計）', TS.rtp_free, E.rtp_free, '%', vPP(E.rtp_free, TS.rtp_free, 1), `各玩法固定 seed 直接抽樣 ${credits(E.bonusN)} 場`],
+      ['總 RTP', TS.rtp_total, E.rtp_total, '%', vPP(E.rtp_total, TS.rtp_total, 1), '容許 ±1 pp（玩法均倍為抽樣）'],
+    ];
+    const tot = rows[rows.length - 1];
+    $('#chipL1').innerHTML = `L1 精算總 RTP <b>${f(E.rtp_total, 2)}%</b> / 快測 ${f(TS.rtp_total, 2)}% ${badge(tot[4])}`;
+    const par = (cfg.go_parity || []);
+    let h = `<h3>一表看完：規格 §2（Go 快測 ${credits(TS.spins)} 局）vs 引擎精算（huff-house）</h3>
+      <p class="note">觸發率由「四種建材顆數」逐軸卷積後套 P-03 規則解析（≥ ${C.trig.min} 顆 → Open House；否則依 ${C.trig.order.map((k) => C.trig.mats[k].code).join('→')} 每顆各擲觸發率，先中先得）；
+      House Spin 與 Open House 是路徑相依（加框、封頂、升級、晉級），以固定 seed 抽樣估期望、附 95% CI；Open House 起始框依「觸發盤建材組成」的解析分布抽。
+      數學流只用 Float64，抽值順序與 Go 引擎相同${par.length ? `，<b>Go 逐局對照 ${par.map((x) => credits(x.spins) + ' 局').join(' + ')}、不一致 ${par.reduce((a, x) => a + x.mismatch, 0)}</b>（見「Go 對照」）` : ''}。</p>
+      <div class="kpis">
+        <div class="kpi"><div class="l">總 RTP（精算）</div><div class="n">${f(E.rtp_total, 2)}%</div><div class="s">快測 ${f(TS.rtp_total, 2)}% · Δ ${f(E.rtp_total - TS.rtp_total, 2)} pp</div></div>
+        <div class="kpi"><div class="l">主遊戲 RTP</div><div class="n">${f(E.rtp_main, 2)}%</div><div class="s">快測 ${f(TS.rtp_main, 2)}%</div></div>
+        <div class="kpi"><div class="l">玩法 RTP</div><div class="n">${f(E.rtp_free, 2)}%</div><div class="s">快測 ${f(TS.rtp_free, 2)}%</div></div>
+      </div>
+      <table><tr><th>指標</th><th>規格 §2</th><th>精算</th><th>差</th><th>判定</th></tr>
+      ${rows.map((r) => `<tr title="${esc(r[5])}"><td>${r[0]}</td><td class="num">${f(r[1], 3)}${r[3]}</td><td class="num">${f(r[2], 3)}${r[3]}</td><td class="num">${f(r[2] - r[1], 3)}</td><td>${badge(r[4])}</td></tr>`).join('')}</table>`;
+    h += `<h3>五種玩法：頻率 / 均倍 / 平均手數 / RTP（快測 vs 精算）</h3>
+      <div style="overflow-x:auto"><table><tr><th>玩法</th><th>每幾局 快/算</th><th>均倍 快/算 ±CI</th><th>手數 快/算</th><th>RTP 快/算</th><th>結構（精算）</th><th>判定</th></tr>
+      ${C.G.map((g) => { const x = E.groups[g] || {}, t = FT[g] || {};
+        const v = [vRel(100 / x.rate, t.freq, 0.02), vCI(x.avg_win, t.multi, 3 * (x.avg_ci || 0) + 0.02 * (t.multi || 0))];
+        const worst = v.includes('fail') ? 'fail' : v.includes('warn') ? 'warn' : 'pass';
+        const st = g === 'OH' ? `到木屋 ${f(x.reach[1], 1)}% · 磚屋 ${f(x.reach[2], 1)}% · 宮殿 ${f(x.reach[3], 1)}% · 重玩 ${f(x.replays, 3)}` : `均 ${f(x.frames, 2)} 框 · 封頂停 ${f(x.cap_stop, 1)}% · 滿 15 框 ${f(x.full, 2)}%`;
+        return `<tr><td>${esc(HFL[g] || g)}</td><td class="num">${f(t.freq, 1)} / ${f(100 / x.rate, 1)}</td><td class="num">${f(t.multi)} / ${f(x.avg_win)} ±${f(x.avg_ci)}</td><td class="num">${f(t.spins)} / ${f(x.spins)}</td><td class="num">${f(t.rtp)}% / ${f(x.rtp)}%</td><td style="font-size:11px">${st}</td><td>${badge(worst)}</td></tr>`; }).join('')}</table></div>
+      <p class="note">頻率判定 ±2%（解析值 vs 2,000 萬局抽樣）；均倍判定 3×CI + 2%。House Spin 手數含「有加框即補回」；Open House 手數為四房（含重玩）合計。</p>`;
+    h += `<h3>轉輪組：主遊戲 RTP 與觸發率逐組精算（K-022 ＋ K-026 近失組 ＋ 確定性 OH 組）</h3>
+      <table><tr><th>組</th><th>用途</th><th>權重</th><th>MG RTP</th><th>觸發率</th>${C.G.map((g) => `<th>${g}</th>`).join('')}</tr>
+      ${E.reelsets.map((r) => `<tr><td>#${r.idx}</td><td>${RSNAME[r.idx] || ''}</td><td class="num">${r.w}</td><td class="num">${f(r.mg_rtp, 2)}%</td><td class="num">${f(r.trig, 3)}%</td>${r.trigs.map((q) => `<td class="num">${f(q, 3)}%</td>`).join('')}</tr>`).join('')}</table>`;
+    $('#pane-l1').innerHTML = h;
+  }
+
+  // ───── frame-chest（神燈寶藏）L1 ─────
+  const FCT = T.frame_chest || {};
+  const FCZ = cfg.fg.group_zh || {};
+  const FCLV = ['無框', '銅框→木箱', '銀框→銀箱', '金框→金箱'];
+  const fcRetri = (spins) => (spins ? (100 * (spins - C.fc.spins)) / spins : null);    // 快測 RetriRate 口徑：加局數 / FG 總手數
+  function renderL1FC() {
+    E = exactOf(C);
+    const X = E.fc, par = cfg.go_parity || [];
+    const evShare = (i) => (FCT.events && FCT.events[i] ? FCT.events[i].share : null);
+    const rows = [
+      ['主遊戲 RTP', TS.rtp_main, E.rtp_main, '%', vPP(E.rtp_main, TS.rtp_main, 0.1), '表 M-1（R-8 線上權重）× 輪帶逐停點 × 243 Ways（解析）'],
+      ['FG 觸發率', TS.fg_rate, E.fg_rate, '%', vRel(E.fg_rate, TS.fg_rate, 0.01), 'SC 顆數逐軸卷積（解析）'],
+      ['FG 平均倍率', TS.fg_avg, E.fg_avg, '倍', vCI(E.fg_avg, TS.fg_avg, 2 * E.fg_avg_ci), `依觸發盤條件分布抽 ${credits(E.bonusN)} 場（±${f(E.fg_avg_ci)} 倍）`],
+      ['FG 平均手數', FCT.spins, X.spins, '手', vRel(X.spins, FCT.spins, 0.01), 'G-ML-2：本手 SC ≥ 3 加 1 局'],
+      ['加局率（加局數 / FG 手數）', FCT.retrig, fcRetri(X.spins), '%', vPP(fcRetri(X.spins), FCT.retrig, 0.5), '快測 RetriRate 口徑'],
+      ['金箱 ≥ 4 佔 FG', FCT.gold4, X.gold4, '%', vPP(X.gold4, FCT.gold4, 1), '表 F-8 特殊事件門檻'],
+      ['特殊事件 Super 佔事件', evShare(1), X.ev1, '%', vPP(X.ev1, evShare(1), 0.4), '表 F-8 權重 15 / 1,019'],
+      ['特殊事件 Ultra 佔事件', evShare(2), X.ev2, '%', vPP(X.ev2, evShare(2), 0.2), '表 F-8 權重 4 / 1,019'],
+      ['免費遊戲 RTP', TS.rtp_free, E.rtp_free, '%', vPP(E.rtp_free, TS.rtp_free, 1.5), ''],
+      ['總 RTP', TS.rtp_total, E.rtp_total, '%', vPP(E.rtp_total, TS.rtp_total, 1.5), '容許 ±1.5 pp（FG 為抽樣）'],
+    ];
+    const tot = rows[rows.length - 1];
+    $('#chipL1').innerHTML = `L1 精算總 RTP <b>${f(E.rtp_total, 2)}%</b> / 快測 ${f(TS.rtp_total, 2)}% ${badge(tot[4])}`;
+    let h = `<h3>一表看完：Go 快測（${credits(TS.spins)} 手）vs 引擎精算（frame-chest）</h3>
+      <p class="note">xlsx「數據貼貼」是空的，§2 目標改讀 <code>${esc(T.src || '')}</code>；FG 明細讀 <code>${esc(FCT.src || '—')}</code>。
+      主遊戲與觸發率逐停點解析；FG 的框位置來自觸發盤、升級路徑相依 → 先以「權重 × 該組觸發率」抽 MG 轉輪組，再在組內拒絕抽樣直到 SC ≥ ${C.fc.minSC}（= 真實觸發盤分布），跑整場 FG 估期望。
+      ${par.length ? `<b>Go 逐局對照 ${par.map((x) => credits(x.spins) + ' 手').join(' + ')}、不一致 ${par.reduce((a, x) => a + x.mismatch, 0)}</b>（見「Go 對照」）。` : ''}</p>
+      <div class="kpis">
+        <div class="kpi"><div class="l">總 RTP（精算）</div><div class="n">${f(E.rtp_total, 2)}%</div><div class="s">快測 ${f(TS.rtp_total, 2)}% · Δ ${f(E.rtp_total - TS.rtp_total, 2)} pp</div></div>
+        <div class="kpi"><div class="l">主遊戲 RTP</div><div class="n">${f(E.rtp_main, 3)}%</div><div class="s">快測 ${f(TS.rtp_main, 3)}%</div></div>
+        <div class="kpi"><div class="l">FG 每幾手一次</div><div class="n">${f(100 / E.fg_rate, 1)}</div><div class="s">快測 ${f(TS.fg_freq, 2)}</div></div>
+      </div>
+      <table><tr><th>指標</th><th>快測</th><th>精算</th><th>差</th><th>判定</th></tr>
+      ${rows.map((r) => `<tr title="${esc(r[5])}"><td>${r[0]}</td><td class="num">${f(r[1], 3)}${r[3]}</td><td class="num">${f(r[2], 3)}${r[3]}</td><td class="num">${r[1] == null || r[2] == null ? '—' : f(r[2] - r[1], 3)}</td><td>${badge(r[4])}</td></tr>`).join('')}</table>`;
+    const FG = FCT.groups || {};
+    h += `<h3>強度組（表 F-2 依進場 SC 數抽）：佔比 / 均倍（快測 vs 精算）</h3>
+      <table><tr><th>組</th><th>佔 FG 快/算</th><th>均倍 快/算 ±CI</th><th>平均手數</th><th>金箱≥4</th><th>RTP 貢獻</th><th>判定</th></tr>
+      ${C.G.map((g) => { const x = E.groups[g] || {}, t = FG[g] || {};
+        const v = [vPP(x.share, t.share, 1), vCI(x.avg_win, t.avg_win, 3 * (x.avg_ci || 0) + 0.02 * (t.avg_win || 0))];
+        const worst = v.includes('fail') ? 'fail' : v.includes('warn') ? 'warn' : 'pass';
+        return `<tr><td>${esc(g)}（${esc(FCZ[g] || '')}）</td><td class="num">${f(t.share)}% / ${f(x.share)}%</td><td class="num">${f(t.avg_win)} / ${f(x.avg_win)} ±${f(x.avg_ci)}</td><td class="num">${f(x.spins)}</td><td class="num">${f(x.gold4, 1)}%</td><td class="num">${f(x.rtp)}%</td><td>${badge(worst)}</td></tr>`; }).join('')}</table>`;
+    const EN = FCT.entry || {};
+    h += `<h3>進場 SC 顆數（佔 FG）</h3><table><tr><th>SC</th>${Object.keys(E.entry).filter((k) => E.entry[k] > 1e-3).map((k) => `<th>${k}</th>`).join('')}</tr>
+      <tr><td>快測</td>${Object.keys(E.entry).filter((k) => E.entry[k] > 1e-3).map((k) => `<td class="num">${EN[k] ? f((100 * EN[k].rate) / TS.fg_rate, 2) + '%' : '—'}</td>`).join('')}</tr>
+      <tr><td>精算</td>${Object.keys(E.entry).filter((k) => E.entry[k] > 1e-3).map((k) => `<td class="num">${f(E.entry[k], 2)}%</td>`).join('')}</tr></table>`;
+    const sh = FCT.share || {};
+    h += `<h3>FG 結構：框等級均顆數 ／ 贏分組成</h3>
+      <table><tr><th></th>${FCLV.map((l) => `<th>${l}</th>`).join('')}</tr>
+      <tr><td>快測</td>${(FCT.lv || []).map((v) => `<td class="num">${f(v)}</td>`).join('')}</tr><tr><td>精算</td>${X.lv.map((v) => `<td class="num">${f(v)}</td>`).join('')}</tr></table>
+      <table><tr><th></th><th>線獎</th><th>金框再中 ${C.fc.over}x</th><th>木箱</th><th>銀箱</th><th>金箱（含事件）</th></tr>
+      <tr><td>快測</td><td class="num">${f(sh.line)}%</td><td class="num">${f(sh.over)}%</td><td class="num">${f(sh.wood)}%</td><td class="num">${f(sh.silver)}%</td><td class="num">${f(sh.gold)}%</td></tr>
+      <tr><td>精算</td>${['line', 'over', 'wood', 'silver', 'gold'].map((k) => `<td class="num">${f(100 * X.share[k])}%</td>`).join('')}</tr></table>
+      <p class="note">快測的木／銀／金箱與線獎佔比分母是 FG 總得分；金箱含特殊事件重算。框等級均顆數直接驗「SC 落格升級」是否忠實（G-ML-7 開箱順序只影響抽值歸屬）。</p>`;
+    h += `<h3>轉輪組：主遊戲 RTP 與觸發率逐組精算（表 M-1，R-8 線上權重）</h3>
+      <table><tr><th>組</th><th>說明</th><th>R1～R5</th><th>權重（xlsx）</th><th>MG RTP</th><th>FG 觸發率</th></tr>
+      ${E.reelsets.map((r) => { const rs = C.reelsets[r.idx]; return `<tr><td>#${r.idx}</td><td>${esc(rs.desc || '')}</td><td class="num">${rs.use.join('')}</td><td class="num">${r.w}（${rs.w_xlsx}）</td><td class="num">${f(r.mg_rtp, 2)}%</td><td class="num">${f(r.trig, 3)}%</td></tr>`; }).join('')}</table>`;
+    $('#pane-l1').innerHTML = h;
+  }
   function renderL1() {
     if (HC) { renderL1House(); return; }
+    if (HF) { renderL1Huff(); return; }
+    if (FC) { renderL1FC(); return; }
     E = exactOf(C);
     const rows = CL ? [
       ['主遊戲 RTP', TS.rtp_main, E.rtp_main, '%', vPP(E.rtp_main, TS.rtp_main, Math.min(TOL, 0.5)), '輪帶 × Odds × 倍數 WILD（解析解）'],
@@ -161,6 +265,9 @@
         return errNow <= errAlt && vRel(E.fg_base, b, 0.02) === 'pass' ? ['pass', `「${C.ssMode === 'sc_sum' ? '*k 乘 SC 總和' : '*k 乘全部基底'}」重現均基底 ${f(E.fg_base)}（另一解 ${f(alt.fg_base)}）`] : ['warn', '目前語意非最佳解：切換 L1 的 G-2 開關比較'];
       },
       fg_groups: () => C.G.every((g) => vRel(E.groups[g].avg_win, (groupDetail[g] || {})['均贏分']) !== 'fail') ? ['pass', '各組均贏分皆在 1–3% 內'] : ['fail', '組別均贏分對不上'],
+      fc_spins: () => { const x = E.fc && E.fc.spins, t = (T.frame_chest || {}).spins; const v = vRel(x, t, 0.01); return [v, `精算 FG 平均 ${f(x, 3)} 手 vs 快測 ${f(t)} 手（加局率 ${f(fcRetri(x))}% vs ${f((T.frame_chest || {}).retrig)}%）`]; },
+      fc_event: () => { const ev = (T.frame_chest || {}).events || []; const v = [vPP(E.fc.ev1, ev[1] && ev[1].share, 0.4), vPP(E.fc.ev2, ev[2] && ev[2].share, 0.2)];
+        return [v.includes('fail') ? 'fail' : v.includes('warn') ? 'warn' : 'pass', `Super ${f(E.fc.ev1)}% / Ultra ${f(E.fc.ev2)}%（快測 ${f(ev[1] && ev[1].share)}% / ${f(ev[2] && ev[2].share)}%）`]; },
       mg_rtp: () => { const v = vPP(E.rtp_main, TS.rtp_main, Math.min(TOL, 0.5)); return [v === 'warn' ? 'pass' : v, `精算 MG ${f(E.rtp_main, 3)}% vs 規格 ${f(TS.rtp_main, 3)}%`]; },
       trig_split: () => { const ok = C.G.every((g) => vRel(100 / E.groups[g].rate, (bonusSpec[g] || {}).freq, 0.03) !== 'fail');
         return [ok ? 'pass' : 'fail', C.G.map((g) => `${g} 1/${f(100 / E.groups[g].rate, 0)}（規格 1/${f((bonusSpec[g] || {}).freq, 0)}）`).join('；')]; },
@@ -249,7 +356,7 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
       ['主遊戲命中率', TS.mg_hit, null, r.mg_hit, 196 * Math.sqrt((r.mg_hit / 100) * (1 - r.mg_hit / 100) / N), '%'],
       ['FG 觸發率', TS.fg_rate, E.fg_rate, r.fg_rate, ciFg, '%'],
       ['FG 平均倍率', TS.fg_avg, E.fg_avg, r.fg_avg, ciAvg, '倍'],
-      ...(CL || HC ? [] : [['平均初始基底', T.fg_detail?.base_avg, E.fg_base, r.fg_base, ciBase, '倍'],
+      ...(CL || HC || HF || FC ? [] : [['平均初始基底', T.fg_detail?.base_avg, E.fg_base, r.fg_base, ciBase, '倍'],
         ['全放 888 佔 FG', T.fg_detail?.all888_rate, null, r.all888_rate, st.fgN ? 196 * Math.sqrt((r.all888_rate / 100) * (1 - r.all888_rate / 100) / st.fgN) : null, '%']]),
       ...(C.maxWin ? [['MaxWin 封頂局', null, null, r.cap_rate, null, '%']] : []),
     ];
@@ -261,7 +368,12 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
       ${rows.map((x) => { const ref = x[2] ?? x[1]; const v = x[4] != null ? vCI(x[3], ref, Math.max(x[4], 1e-9)) : vRel(x[3], ref, 0.02);
         return `<tr><td>${x[0]}</td><td class="num">${f(x[1], 3)}${x[5]}</td><td class="num">${x[2] == null ? '—' : f(x[2], 3) + x[5]}</td><td class="num">${f(x[3], 3)}${x[4] != null ? ' ±' + f(x[4], 3) : ''}</td><td>${badge(v)}</td></tr>`; }).join('')}</table>
       <p class="note">判定基準：有精算值時比「模擬 vs 精算」（驗引擎實作）；無精算值時比「模擬 vs 規格」。手數少時 FG 相關指標 CI 很寬，屬正常。</p>
-      ${HC ? `<h3>四變體（模擬）</h3><table><tr><th>變體</th><th>佔 FG</th><th>每幾局</th><th>均倍 ±CI</th><th>平均手數</th><th>草/木/磚</th><th>規格均倍</th></tr>
+      ${FC ? `<h3>強度組（模擬）</h3><table><tr><th>組</th><th>佔 FG</th><th>均倍 ±CI</th><th>平均手數</th><th>金箱≥4</th><th>Super／Ultra 事件</th><th>快測均倍</th></tr>
+      ${C.G.map((g) => { const x = r.groups[g] || {}; return `<tr><td>${esc(g)}（${esc(FCZ[g] || '')}）</td><td class="num">${f(x.share)}%</td><td class="num">${f(x.avg_win)}${x.n ? ' ±' + f(x.avg_ci) : ''}</td><td class="num">${f(x.spins)}</td><td class="num">${f(x.gold4, 1)}%</td><td class="num">${f(x.ev1, 2)}% / ${f(x.ev2, 2)}%</td><td class="num">${f(((T.frame_chest || {}).groups || {})[g] && T.frame_chest.groups[g].avg_win)}</td></tr>`; }).join('')}</table>`
+      : HF ? `<h3>五種玩法（模擬）</h3><table><tr><th>玩法</th><th>佔玩法</th><th>每幾局</th><th>均倍 ±CI</th><th>平均手數</th><th>結構</th><th>快測均倍</th></tr>
+      ${C.G.map((g) => { const x = r.groups[g] || {}; const st = !x.n ? '—' : g === 'OH' ? `宮殿 ${f(x.reach[3], 1)}% · 重玩 ${f(x.replays, 3)}` : `均 ${f(x.frames, 2)} 框 · 封頂停 ${f(x.cap_stop, 1)}%`;
+        return `<tr><td>${esc(HFL[g] || g)}</td><td class="num">${f(x.share)}%</td><td class="num">${x.n ? f(100 / x.rate, 1) : '—'}</td><td class="num">${f(x.avg_win)}${x.n ? ' ±' + f(x.avg_ci) : ''}</td><td class="num">${f(x.spins)}</td><td style="font-size:11px">${st}</td><td class="num">${f((FT[g] || {}).multi)}</td></tr>`; }).join('')}</table>`
+      : HC ? `<h3>四變體（模擬）</h3><table><tr><th>變體</th><th>佔 FG</th><th>每幾局</th><th>均倍 ±CI</th><th>平均手數</th><th>草/木/磚</th><th>規格均倍</th></tr>
       ${C.G.map((g) => { const x = r.groups[g] || {}; return `<tr><td>${esc(VLABEL[g] || g)}</td><td class="num">${f(x.share)}%</td><td class="num">${x.n ? f(100 / x.rate, 0) : '—'}</td><td class="num">${f(x.avg_win)}${x.n ? ' ±' + f(x.avg_ci) : ''}</td><td class="num">${f(x.spins)}</td><td class="num">${f(x.grass, 1)}/${f(x.wood, 1)}/${f(x.stone, 1)}</td><td class="num">${f((TX2[g] || {}).multi)}</td></tr>`; }).join('')}</table>`
       : CL ? `<h3>三種 Bonus（模擬）</h3><table><tr><th>Bonus</th><th>每幾局</th><th>均倍 ±CI</th><th>平均局數</th><th>JACKPOT</th><th>規格均倍</th></tr>
       ${C.G.map((g) => { const x = r.groups[g] || {}; return `<tr><td>${esc(g)}</td><td class="num">${x.n ? f(100 / x.rate, 0) : '—'}</td><td class="num">${f(x.avg_win)}${x.n ? ' ±' + f(x.avg_ci) : ''}</td><td class="num">${f(x.spins)}</td><td class="num">${f(x.jp_rate)}%</td><td class="num">${f((bonusSpec[g] || {}).avg_win)}</td></tr>`; }).join('')}</table>`
@@ -313,6 +425,16 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
       `銅鑼 → 倍數 WILD：${(res.tags || []).length ? res.tags.map((t) => `R${t.r + 1}-${t.y + 1} ×${t.mul}`).join('、') : '無'}（G-TD-2 均勻 ${C.wm.min}～${C.wm.max}）`,
       `243 Ways：${res.ways.length ? res.ways.map((w) => `${w.sym}×${w.len}連 ${w.ways} ways${w.factor ? `（倍數因子和 ${w.factor}）` : ''} × ${w.odds} = ${w.win}`).join('；') : '無連線'} → ${res.mgWin} credit`,
       `虎 ${res.trig.cnt[0]}、龍 ${res.trig.cnt[1]}（G-TD-3）${fg ? ` → ${esc(fg.group)} Bonus${fg.mystery ? '（隨機觸發）' : ''}` : ''}`,
+    ] : HF ? [
+      `轉輪組 #${rs.idx}「${RSNAME[rs.idx] || ''}」（權重 ${rs.w}/${C.reelsetT.total}；Float64 抽，僅 >1 組時抽）`,
+      `Strip：${res.stops.map((s, i) => `R${i + 1}@${s}`).join('、')}`,
+      `243 Ways（WILD 第 ${C.wildFrom + 1} 軸起替代）：${res.ways.length ? res.ways.map((w) => `${w.sym}×${w.len}連 ${w.ways} ways × ${w.odds} = ${w.win}`).join('；') : '無連線'} → ${res.mgWin} credit`,
+      `建材 ${C.hf.mats.map((m, i) => `${HNAME[m]} ${res.nMat[i]}`).join(' · ')}（合計 ${res.nMat.reduce((a, b) => a + b, 0)}；≥${C.trig.min} → Open House，否則 ${C.trig.order.map((k) => C.trig.mats[k].code).join('→')} 每顆各擲）${fg ? ` → ${HFL[fg.type]}` : ' → 未觸發'}`,
+    ] : FC ? [
+      `表 M-1 → 輪帶組 #${rs.idx}「${esc(rs.desc || '')}」（權重 ${rs.w}/${C.reelsetT.total}，R-8 線上權重；xlsx 欄 ${rs.w_xlsx}）各軸用 Reels_${rs.use.join('/')}`,
+      `G-ML-5 全盤事件空抽一次（結果 0）→ Strip：${rs.use.map((x, i) => `R${i + 1}=Reels_${x}@${res.stops[i]}`).join('、')}`,
+      `243 Ways：${res.ways.length ? res.ways.map((w) => `${w.sym}×${w.len}連 ${w.ways} ways × ${w.odds} = ${w.win}`).join('；') : '無連線'} → ${res.mgWin} credit`,
+      `SC ${res.nSC} 顆（≥ ${C.fc.minSC} 進 FG）${fg ? ` → 表 F-2（${res.nSC} 顆列）抽到 ${fg.group}（${FCZ[fg.group] || ''}）` : ''}`,
     ] : HC ? [
       `表 M-1 → 輪帶組 #${rs.idx}（權重 ${rs.w}/${C.reelsetT.total}）各軸用帶 ${rs.use.join(',')}`,
       `Strip：${rs.use.map((x, i) => `R${i + 1}=組${x}@${res.stops[i]}`).join('、')}`,
@@ -324,13 +446,27 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
       `All Ways：${res.ways.length ? res.ways.map((w) => `${w.sym}×${w.len}連 ${w.ways} ways × ${w.odds} = ${w.win}`).join('；') : '無連線'} → ${res.mgWin} credit`,
       `特殊符號 SC ${res.nSC} + SS ${res.nSS} = ${res.nSC + res.nSS}（G-1 門檻 ${C.trigMin}）${fg ? ' → 進 FG' : ''}`,
     ];
-    if (!CL && !fg) trace.push(`盤面 SC/SS 分數牌：表 M-2（演出，不計分）`);
+    if (!CL && !HF && !FC && !fg) trace.push(`盤面 SC/SS 分數牌：表 M-2（演出，不計分）`);
     if (res.tease) trace.push('表 M-4 → 第五輪彩色聽牌（演出）');
     if (fg && CL) {
       const B = C.bonus[fg.type];
       trace.push(`${esc(fg.group)}：${B.reels}×${B.rows}、初始 ${B.spins} 手、${B.reset ? '有金幣落下重置' : '不重置'}、停入率 ${B.coin_rate}/10000 → 實際 ${fg.spins} 手、鎖 ${fg.coins} 顆${fg.type === C.unlock.bonus ? `、解鎖到 ${fg.unlocked} 列` : ''}`);
       trace.push(`結算：${fg.groups.length ? fg.groups.map((g) => `第${g.row + 1}列 ${g.len} 顆 [${g.kinds.map((k, i) => (k === 'arrow' ? '箭頭' : g.raw[i])).join(' ')}]${g.arrowAdd ? ` 箭頭+${g.arrowAdd}` : ''} → ${g.value}`).join('；') : '無相鄰成組'}${fg.jackpot ? `；JACKPOT ${fg.jpWin}` : ''}`);
       trace.push(`Bonus 贏分 ${fg.win}${fg.capped ? `（封頂前 ${fg.raw}）` : ''}（${f(fg.win / BET)} 倍）`);
+    } else if (fg && HF && fg.type !== 'OH') {
+      const H = C.hf.hs;
+      trace.push(`P-04 起始 ${fg.start} 框 → 每框抽 P-05 安全帽率組；${fg.spins} 手（有加框即補回 ${H.spins} 次；上限 ${H.max_frames} 框）`);
+      trace.push(`逐手加框：${fg.hands.map((h, i) => `#${i + 1} 帽 ${h.hats.length}${h.add.length ? '＋' + h.add.length + ' 框' : ''}`).join('、')} → 最終 ${fg.nFrames} 框${fg.capStopped ? '（K-019 封頂停止出帽）' : ''}`);
+      trace.push(`P-06 ${HHOUSE[fg.type]}金額：${fg.vals.map((v) => v.d).join(' + ')} = ${credits(fg.credits)}（${f(fg.credits / BET)} 倍）`);
+    } else if (fg && HF) {
+      fg.houses.forEach((H, i) => trace.push(`第 ${i + 1} 房 ${HHOUSE[H.mat]}${H.replay ? `（宮殿重玩第 ${H.round} 次，鑰匙率 ×${f(H.kp / C.hf.oh.key_p[3], 3)}）` : ''}：起始 ${H.carryN} 框 → ${H.mats.length} 框 · 鑰匙 ${H.keys}/${H.need} ${H.pass ? '晉級' : '止步'} · ${H.hands.length} 手${H.hands.some((h) => h.bonus) ? `（+1 手 ${H.hands.filter((h) => h.bonus).length} 次）` : ''}${H.pool != null ? ` · P-11 獎項池 #${H.pool}` : ''} · 小計 ${credits(H.sub)}`));
+      trace.push(`Open House 合計 ${credits(fg.credits)}（${f(fg.credits / BET)} 倍）· 到達第 ${fg.reached} 房${fg.replays ? `、宮殿重玩 ${fg.replays} 次` : ''}`);
+    } else if (fg && FC) {
+      trace.push(`表 F-1 → 保底手 = 第 ${fg.br + 1} 手；初始 ${C.fc.spins} 局，本手 SC ≥ ${C.fc.rgate} 加 ${C.fc.radd} 局（G-ML-2）→ 實際 ${fg.spins} 手（加 ${fg.spins - C.fc.spins} 局）`);
+      (fg.timeline || []).forEach((t) => trace.push(`第 ${t.i + 1} 手：表 F-3 輪帶組 #${t.rs}${t.guar ? `；保底手 表 F-4 模式 ${t.pat}（換 Reels_5）` : ''}；SC ${t.ups.length} 顆${t.ups.length ? '〔' + t.ups.map((u) => `格${u.ix}${u.over ? ' 金框再中 +' + C.fc.over : '→' + FCLV[u.lv].slice(0, 2)}`).join('、') + '〕' : ''}；線獎 ${t.line}${t.re ? '；加 1 局' : ''}`));
+      trace.push(`結算框：${FCLV.map((l, i) => `${l.slice(0, 2)} ${fg.lv[i]}`).join(' · ')} → 木箱 ${credits(fg.chestSum.wood)} ＋ 銀箱 ${credits(fg.chestSum.silver)} ＋ 金箱 ${credits(fg.chestSum.gold)}`);
+      if (fg.nGold >= C.fc.evMin) trace.push(`金箱 ${fg.nGold} 個 ≥ ${C.fc.evMin} → 表 F-8 事件 ${['Normal（維持）', 'Super', 'Ultra'][fg.event]}${fg.event > 0 ? `：抽一個分數 × ${fg.nGold} = ${credits(fg.eventWin)}（取代原金箱總分，G-ML-4）` : ''}`);
+      trace.push(`FG 贏分 = 線獎 ${credits(fg.lineWin)} ＋ 金框再中 ${credits(fg.overWin)} ＋ 開箱 ${credits(fg.chest)} ＝ ${credits(fg.win)}（${f(fg.win / BET)} 倍）`);
     } else if (fg && HC) {
       trace.push(`表 F-0 → 強度「${fg.strength}」· 權重組「${fg.variant}_${(fg.strength || '').toUpperCase()}」`);
       trace.push(`FG 迴圈 ${fg.spins} 手（初始 ${C.hSpins} + 本手 SC≥3 加手）· 累計落 SC ${fg.addSc} 顆`);
@@ -349,7 +485,7 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
     let g = '<table><tr><th></th>' + grid.map((_, i) => `<th>R${i + 1}</th>`).join('') + '</tr>';
     for (let y = 0; y < C.ROWS; y++) g += `<tr><td>${y + 1}</td>${grid.map((col) => `<td class="num">${esc(col[y])}</td>`).join('')}</tr>`;
     g += '</table>';
-    const lite = JSON.parse(JSON.stringify(res)); delete lite.grid; if (lite.fg) delete lite.fg.timeline;
+    const lite = JSON.parse(JSON.stringify(res)); delete lite.grid; if (lite.fg) { delete lite.fg.timeline; if (FC) delete lite.fg.settle; if (HF) { delete lite.fg.hands; (lite.fg.houses || []).forEach((h) => delete h.hands); } }
     $('#pane-spin').innerHTML = `<h3>seed ${res.seed} · 總贏分 ${credits(res.totalWin)}（${f(res.totalWin / BET)} 倍 · ${res.winType}）</h3>
       ${g}<h3>抽表軌跡</h3><ol style="margin:0 0 8px;padding-left:18px;font-size:12px;color:var(--ink2)">${trace.map((t) => `<li>${t}</li>`).join('')}</ol>
       <h3>最近 ${history.length} 局（點擊重現）</h3><div class="hist">${history.slice().reverse().map((h) => `<button data-seed="${h.seed}"><span>#${h.seed}</span><span>${h.fg ? 'FG ' + h.fg + ' · ' : ''}${f(h.win / BET)} 倍</span></button>`).join('')}</div>
@@ -366,7 +502,7 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
   $('#game').appendChild(app.canvas);
   const TX = await SlotArt.load(PIXI, 256, [W, H], cfg.art);
   const WILDC = cfg.board.wild || 'WW';
-  const SPECIAL = CL ? [cfg.fg.trigger.tiger, cfg.fg.trigger.dragon] : HC ? ['SC', 'BS'] : ['SC', 'SS'];
+  const SPECIAL = CL ? [cfg.fg.trigger.tiger, cfg.fg.trigger.dragon] : HC ? ['SC', 'BS'] : HF ? Object.values(HMAT) : FC ? ['SC'] : ['SC', 'SS'];
   const FONT = '"Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",sans-serif';
   const txt = (s, o) => new PIXI.Text({ text: s, style: { fontFamily: FONT, fontSize: 20, fill: '#f3ece4', ...o } });
   const goldTxt = (s, size, o) => txt(s, { fontSize: size, fontWeight: '900', fill: '#ffe08a', stroke: { color: '#5a2a00', width: Math.max(3, size / 8) }, dropShadow: { color: '#000', blur: 6, distance: 2, alpha: 0.6 }, ...o });
@@ -462,7 +598,7 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
     rs.use.forEach((fl, i) => {
       const b = new PIXI.Graphics().roundRect(12 + i * 37, 96, 32, 40, 6).fill({ color: fl ? 0xb04a12 : 0x1e5a3c }).stroke({ width: 1, color: 0xffe08a, alpha: 0.6 });
       leftP.addChild(b);
-      const t = txt(`R${i + 1}\n${CL || HC ? '組' + fl : fl ? '換' : '基'}`, { fontSize: 12, align: 'center', fill: '#fff', lineHeight: 15 }); t.anchor.set(0.5); t.position.set(28 + i * 37, 116); leftP.addChild(t);
+      const t = txt(`R${i + 1}\n${FC ? '帶' + fl : CL || HC || HF ? '組' + fl : fl ? '換' : '基'}`, { fontSize: 12, align: 'center', fill: '#fff', lineHeight: 15 }); t.anchor.set(0.5); t.position.set(28 + i * 37, 116); leftP.addChild(t);
     });
     const lines = CL ? [
       `理論 MG ${f(E.reelsets[rs.idx].mg_rtp)}%`,
@@ -471,6 +607,24 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
       done ? `虎 ${res.trig.cnt[0]} ＋ 龍 ${res.trig.cnt[1]}` : '虎 ＋ 龍 ＝ …',
       `≥${C.trig.mixed} 混合 / ≥${C.trig.gate} 同種（G-TD-3）`,
       done && res.fg ? `→ ${res.fg.group}${res.fg.mystery ? '（隨機）' : ''}` : '',
+    ] : HF ? [
+      RSNAME[rs.idx] || '',
+      `理論 MG ${f(E.reelsets[rs.idx].mg_rtp)}%`,
+      `觸發率 ${f(E.reelsets[rs.idx].trig, 3)}%`,
+      done ? C.hf.mats.map((m, i) => `${HNAME[m]}${res.nMat[i]}`).join(' ') : '建材 ＝ …',
+      `≥${C.trig.min} 顆 Open House`,
+      done && res.fg ? `→ ${res.fg.label}` : '',
+      ``,
+      `seed ${res.seed}`,
+    ] : FC ? [
+      rs.desc || '',
+      `理論 MG ${f(E.reelsets[rs.idx].mg_rtp)}%`,
+      `觸發率 ${f(E.reelsets[rs.idx].trig, 3)}%`,
+      done ? `SC ${res.nSC} 顆` : 'SC ＝ …',
+      `≥ ${C.fc.minSC} 顆進 FG`,
+      done && res.fg ? `→ ${res.fg.group}（${FCZ[res.fg.group] || ''}）` : '',
+      ``,
+      `seed ${res.seed}`,
     ] : HC ? [
       `MG RTP ${f(E.rtp_main, 1)}%（抽樣）`,
       `觸發率 ${f(E.reelsets[rs.idx].trig, 3)}%`,
@@ -747,6 +901,185 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
     await tween(L, { alpha: 0 }, 300); app.stage.removeChild(L); L.destroy({ children: true });
   }
 
+
+  // ═════════ frame-chest 場景（神燈寶藏：SC 掛框 → 升級 → 開箱）═════════
+  // 只讀 SpinResult：每手盤面、框升級、加局、開箱金額全部來自 fg.timeline／fg.settle（數學流已決定）。
+  const FC_COL = [0x1d1a2e, 0x9a5b2a, 0xb8c4d6, 0xf2c14e], FC_NAME = ['', '銅框', '銀框', '金框'], FC_BOX = { wood: '木箱', silver: '銀箱', gold: '金箱' };
+  async function playFrameChest(res) {
+    const fg = res.fg, turbo = speed < 1;
+    const L = new PIXI.Container(); app.stage.addChild(L); L.alpha = 0;
+    L.addChild(new PIXI.Graphics().rect(0, 0, W, H).fill({ color: 0x07051a, alpha: 0.98 }));
+    await tween(L, { alpha: 1 }, 250);
+    const head = goldTxt(`免費遊戲 · ${fg.group}（${FCZ[fg.group] || ''}）`, 40); head.anchor.set(0.5); head.position.set(W / 2, 44); L.addChild(head);
+    const sub2 = txt(`進場 SC ${res.nSC} 顆（表 F-2）· 初始 ${C.fc.spins} 局 · 本手 SC ≥ ${C.fc.rgate} 加 ${C.fc.radd} 局 · 保底手 = 第 ${fg.br + 1} 手（表 F-1／F-4）· 金框再中 +${C.fc.over}`, { fontSize: 14, fill: '#d6cbe8' });
+    sub2.anchor.set(0.5); sub2.position.set(W / 2, 80); L.addChild(sub2);
+    const cell = 104, gx = 150, gy = 120;
+    const pos = (ix) => { const r = Math.floor(ix / C.ROWS), y = ix % C.ROWS; return { x: gx + r * cell + cell / 2, y: gy + y * cell + cell / 2 }; };
+    const tiles = [];
+    for (let ix = 0; ix < C.R * C.ROWS; ix++) {
+      const q = pos(ix), g = new PIXI.Graphics(), s = new PIXI.Sprite(TX.SC); s.anchor.set(0.5); s.width = s.height = 78; s.position.set(q.x, q.y); s.alpha = 0;
+      const t = txt('', { fontSize: 13, fill: '#fff', fontWeight: '700' }); t.anchor.set(0.5); t.position.set(q.x, q.y + cell / 2 - 14);
+      L.addChild(g); L.addChild(s); L.addChild(t); tiles.push({ g, s, t, q, lv: -1 });
+    }
+    const paint = (ix, lv, flash) => {
+      const T0 = tiles[ix]; T0.lv = lv;
+      T0.g.clear().roundRect(T0.q.x - cell / 2 + 4, T0.q.y - cell / 2 + 4, cell - 8, cell - 8, 12).fill({ color: lv ? 0x2a1f4a : 0x120e24 })
+        .stroke({ width: lv ? 6 : 2, color: lv ? FC_COL[lv] : 0x3d3566, alpha: lv ? 1 : 0.6 });
+      T0.t.text = FC_NAME[lv] || '';
+      if (flash) { T0.g.scale.set(1); }
+    };
+    (fg.start || []).forEach((lv, ix) => paint(ix, lv));
+    const info = new PIXI.Container(); info.position.set(gx + C.R * cell + 40, gy); L.addChild(info);
+    info.addChild(new PIXI.Graphics().roundRect(0, 0, 360, C.ROWS * cell, 14).fill({ color: 0x000000, alpha: 0.45 }).stroke({ width: 1, color: 0xd9a23a, alpha: 0.5 }));
+    const remL = txt('剩餘局數', { fontSize: 14, fill: '#e8cfa0' }); remL.position.set(16, 12); info.addChild(remL);
+    const remT = goldTxt(String(C.fc.spins), 50); remT.position.set(16, 30); info.addChild(remT);
+    const winL = txt('累計（線獎＋金框再中）', { fontSize: 14, fill: '#e8cfa0' }); winL.position.set(170, 12); info.addChild(winL);
+    const winA = goldTxt('0', 34); winA.position.set(170, 36); info.addChild(winA);
+    const log = txt('', { fontSize: 13, fill: '#e9ddcf', lineHeight: 20, wordWrap: true, wordWrapWidth: 330 }); log.position.set(16, 100); info.addChild(log);
+    let acc = 0;
+    for (const st of fg.timeline) {
+      // 本手盤面：SC 用神燈圖示短暫顯示在格上；其他符號只寫在資訊板
+      const scIx = st.ups.map((u) => u.ix);
+      tiles.forEach((T0, ix) => { T0.s.alpha = scIx.includes(ix) ? 1 : 0; });
+      acc += st.line + st.over; winA.text = credits(acc);
+      remT.text = String(st.remain);
+      log.text = [`第 ${st.i + 1} 手 · 表 F-3 輪帶組 #${st.rs}${st.guar ? ` · 保底手（模式 ${st.pat}）` : ''}`,
+        st.ups.length ? `SC ${st.ups.length} 顆${st.re ? ' → 加 1 局' : ''}` : '本手無 SC',
+        st.over ? `金框再中 ${st.ups.filter((u) => u.over).length} 次 +${credits(st.over)}` : '',
+        st.line ? `線獎 ${st.ways.map((w) => `${w.sym}×${w.len}`).join(' ')} = ${credits(st.line)}` : ''].filter(Boolean).join('\n');
+      for (const u of st.ups) {
+        if (u.over) { const v = goldTxt('+' + C.fc.over, 22); v.anchor.set(0.5); v.position.set(tiles[u.ix].q.x, tiles[u.ix].q.y - 30); L.addChild(v); tween(v, { y: v.y - 30, alpha: 0 }, 700).then(() => { L.removeChild(v); v.destroy(); }); }
+        else paint(u.ix, u.lv, true);
+        if (!turbo) await tween(tiles[u.ix].g.scale, { x: 1, y: 1 }, 60);
+      }
+      await wait(st.ups.length ? 520 : 260);
+    }
+    tiles.forEach((T0) => (T0.s.alpha = 0));
+    // 結算：逐格開箱
+    log.text = `結算：${['銅', '銀', '金'].map((n, i) => `${n}框 ${fg.lv[i + 1]}`).join(' · ')}`;
+    const sumT = goldTxt('', 30); sumT.anchor.set(0.5); sumT.position.set(W / 2, gy + C.ROWS * cell + 52); L.addChild(sumT);
+    let chest = 0;
+    for (const x of fg.settle) {
+      if (x.event != null) {
+        await banner(`金箱 ${x.n} 個　特殊事件 ${['', 'SUPER', 'ULTRA'][x.event]}　每箱 ${credits(x.each)}${x.label ? '（' + x.label + '）' : ''}`, '#ffd36b', 1100, 30);
+        chest += x.each * x.n - x.replaced; sumT.text = `開箱 ${credits(chest)}`; continue;
+      }
+      const q = tiles[x.ix].q, v = goldTxt((x.label ? x.label + ' ' : '') + credits(x.v), 15, { fill: x.kind === 'gold' ? '#ffe08a' : x.kind === 'silver' ? '#e4ecf7' : '#f0c8a0' });
+      v.anchor.set(0.5); v.position.set(q.x, q.y); L.addChild(v);
+      tiles[x.ix].t.text = FC_BOX[x.kind];
+      chest += x.v; sumT.text = `開箱 ${credits(chest)}`;
+      await wait(turbo ? 40 : 110);
+    }
+    sumT.text = `FG 贏分 ${credits(fg.win)}（${f(fg.win / BET)} 倍）＝ 線獎 ${credits(fg.lineWin)} ＋ 金框再中 ${credits(fg.overWin)} ＋ 開箱 ${credits(fg.chest)}`;
+    const tier = SlotCore.winType(fg.win, BET);
+    if (['BIG', 'MEGA', 'SUPER', 'GOLDEN'].includes(tier)) await banner(`${tier} WIN　${f(fg.win / BET)} 倍`, null, 900);
+    await wait(turbo ? 300 : 1000);
+    await tween(L, { alpha: 0 }, 300); app.stage.removeChild(L); L.destroy({ children: true });
+  }
+
+  // ═════════ huff-house 場景（House Spin 加框 ／ Open House 四房闖關）═════════
+  // 只讀 SpinResult：數學（出帽、加框、鑰匙、升級、金額）來自 fg 劇本；格位來自 present() 的演出流。
+  async function playHuff(res) {
+    const fg = res.fg, isOH = fg.type === 'OH';
+    const L = new PIXI.Container(); app.stage.addChild(L); L.alpha = 0;
+    L.addChild(new PIXI.Graphics().rect(0, 0, W, H).fill({ color: 0x0b0a14, alpha: 0.93 }));
+    await tween(L, { alpha: 1 }, 250);
+    const head = goldTxt(fg.label, 42); head.anchor.set(0.5); head.position.set(W / 2, 44); L.addChild(head);
+    const sub2 = txt('', { fontSize: 14, fill: '#d8cfe8' }); sub2.anchor.set(0.5); sub2.position.set(W / 2, 80); L.addChild(sub2);
+    const cell = 96, gx = W / 2 - (5 * cell) / 2 - 130, gy = 128;
+    const pos = (idx) => ({ x: gx + (idx % 5) * cell + cell / 2, y: gy + Math.floor(idx / 5) * cell + cell / 2 });
+    for (let i = 0; i < 15; i++) { const q = pos(i); L.addChild(new PIXI.Graphics().roundRect(q.x - cell / 2 + 4, q.y - cell / 2 + 4, cell - 8, cell - 8, 10).fill({ color: 0x1c1a2e }).stroke({ width: 1, color: 0x6a5f9a, alpha: 0.6 })); }
+    const layer = new PIXI.Container(); L.addChild(layer);
+    const info = new PIXI.Container(); info.position.set(gx + 5 * cell + 36, 128); L.addChild(info);
+    info.addChild(new PIXI.Graphics().roundRect(0, 0, 280, 288, 14).fill({ color: 0x000000, alpha: 0.45 }).stroke({ width: 1, color: 0x9a8fd0, alpha: 0.5 }));
+    const lab1 = txt('剩餘次數', { fontSize: 14, fill: '#d8cfe8' }); lab1.position.set(16, 14); info.addChild(lab1);
+    const remT = goldTxt('', 52); remT.position.set(16, 34); info.addChild(remT);
+    const keyT = txt('', { fontSize: 16, fill: '#ffe08a', fontWeight: '700' }); keyT.position.set(140, 50); info.addChild(keyT);
+    const flash = txt('', { fontSize: 15, fill: '#9fe0ff', fontWeight: '700', wordWrap: true, wordWrapWidth: 250, lineHeight: 21 }); flash.position.set(16, 104); info.addChild(flash);
+    const spinT = txt('', { fontSize: 13, fill: '#a99fc8' }); spinT.position.set(16, 258); info.addChild(spinT);
+    const sumT = goldTxt('', 30); sumT.anchor.set(0.5); sumT.position.set(W / 2, gy + 3 * cell + 52); L.addChild(sumT);
+    const sumSub = txt('', { fontSize: 14, fill: '#d8cfe8' }); sumSub.anchor.set(0.5); sumSub.position.set(W / 2, gy + 3 * cell + 88); L.addChild(sumSub);
+    const mkFrame = (idx, mat) => {
+      const c = new PIXI.Container(), q = pos(idx); c.position.set(q.x, q.y);
+      const s = new PIXI.Sprite(TX['H_' + mat]); s.anchor.set(0.5); s.width = s.height = cell - 14; c.addChild(s); c.sp = s; c.mat = mat;
+      layer.addChild(c); return c;
+    };
+    const setMat = (c, mat) => { c.sp.texture = TX['H_' + mat]; c.mat = mat; };
+    const icon = async (idx, name, ms = 260) => {
+      const q = pos(idx), s = new PIXI.Sprite(TX[name]); s.anchor.set(0.5); s.width = s.height = cell * 0.5; s.position.set(q.x + cell * 0.22, q.y - cell * 0.22); s.alpha = 0; layer.addChild(s);
+      await tween(s, { alpha: 1 }, 100); await wait(ms); return s;
+    };
+    const pop = async (c) => { c.scale.set(0.2); await tween(c.scale, { x: 1, y: 1 }, 220, ease.back); };
+    const settle = async (frames, vals) => {
+      let tot = 0;
+      for (let i = 0; i < frames.length; i++) {
+        const v = vals[i], q = frames[i].position, jp = typeof v.d === 'string';
+        const t = goldTxt(jp ? v.d : credits(v.c), jp ? 22 : 18, jp ? { fill: '#ff6b5b' } : {}); t.anchor.set(0.5); t.position.set(q.x, q.y + cell * 0.28); layer.addChild(t);
+        tot += v.c; await tween(frames[i].scale, { x: 1.12, y: 1.12 }, 80); tween(frames[i].scale, { x: 1, y: 1 }, 120);
+        if (jp) await banner(`${v.d}　+${credits(v.c)}`, '#ff6b5b', 500, 44); else await wait(110);
+      }
+      return tot;
+    };
+    if (!isOH) {
+      const Hs = C.hf.hs;
+      sub2.text = `起始 ${fg.start} 框（P-04）· 每手每框依安全帽率出帽 → 相鄰空格加框、次數補回 ${Hs.spins} · 上限 ${Hs.max_frames} 框 · K-019 漸進封頂`;
+      const frames = fg.pos.slice(0, fg.start).map((i) => mkFrame(i, fg.type));
+      for (const c of frames) await pop(c);
+      remT.text = String(Hs.spins); keyT.text = `${frames.length} 框`;
+      for (let k = 0; k < fg.hands.length; k++) {
+        const h = fg.hands[k]; spinT.text = `第 ${k + 1} 手`;
+        const hats = [];
+        for (const f of h.hats) hats.push(await icon(fg.pos[f], 'HAT', 120));
+        for (const idx of h.addIdx) { const c = mkFrame(idx, fg.type); frames.push(c); await pop(c); }
+        flash.text = h.hats.length ? `安全帽 ${h.hats.length} 頂${h.add.length ? ` → 加 ${h.add.length} 框，次數補回 ${Hs.spins}` : '（已達上限，不加框）'}` : '本手沒有安全帽';
+        keyT.text = `${frames.length} 框`; remT.text = String(h.left);
+        await wait(h.hats.length ? 420 : 300);
+        hats.forEach((s) => layer.removeChild(s));
+      }
+      if (fg.capStopped) { flash.text = `K-019 漸進封頂：框數達門檻後停止出帽（${fg.nFrames} 框）`; await wait(700); }
+      flash.text = `結算：每框依 ${HHOUSE[fg.type]}金額表（P-06）抽值`;
+      const tot = await settle(frames, fg.vals);
+      sumT.text = `${fg.label} ${credits(tot)}（${f(tot / BET)} 倍）`; sumSub.text = `${fg.nFrames} 框 · ${fg.spins} 手`;
+    } else {
+      const O = C.hf.oh;
+      let cum = 0;
+      for (let hi = 0; hi < fg.houses.length; hi++) {
+        const Hh = fg.houses[hi];
+        layer.removeChildren();
+        sub2.text = `第 ${hi + 1} 房　${HHOUSE[Hh.mat]}${Hh.replay ? `（重玩第 ${Hh.round} 次）` : ''} · 集滿 ${Hh.need} 把鑰匙晉級 · 鑰匙率 ${f(100 * Hh.kp, 1)}% · 安全帽率 ${f(100 * C.hf.oh.hat_p[C.hf.lvl[Hh.mat]], 0)}% · 同手 ≥${O.plus_one_hats} 頂 +1 手`;
+        await banner(`${HHOUSE[Hh.mat]}${Hh.replay ? '　重玩' : ''}`, null, 400, 52);
+        const frames = Hh.pos0.map((idx, i) => mkFrame(idx, Hh.mat0[i]));
+        for (const c of frames) await pop(c);
+        const keyed = new Set(); keyT.text = `鑰匙 0 / ${Hh.need}`; remT.text = String(O.spins);
+        for (let k = 0; k < Hh.hands.length; k++) {
+          const h = Hh.hands[k]; spinT.text = `第 ${k + 1} 手`;
+          const tmp = [];
+          for (const fi of h.keyFrames) { keyed.add(fi); const s = await icon(Hh.pos[fi], 'KEY', 140); s.x = pos(Hh.pos[fi]).x - cell * 0.22; }
+          for (const u of h.ups) {
+            tmp.push(await icon(Hh.pos[u.from], 'HAT', 100));
+            if (u.add) { const c = mkFrame(u.idx, u.mat); frames.push(c); await pop(c); }
+            else { setMat(frames[u.to], u.mat); await pop(frames[u.to]); }
+          }
+          const ups = h.ups.filter((u) => !u.add).length, adds = h.ups.length - ups;
+          flash.text = [h.keyFrames.length ? `鑰匙 +${h.keyFrames.length}` : '', h.hats.length ? `安全帽 ${h.hats.length} 頂（升級 ${ups}${adds ? `、加框 ${adds}` : ''}）` : '', h.bonus ? '同手 ≥3 頂 → +1 手！' : ''].filter(Boolean).join('　') || '本手沒有收穫';
+          keyT.text = `鑰匙 ${h.keys} / ${Hh.need}`; remT.text = String(h.left);
+          await wait(h.keyFrames.length || h.hats.length ? 420 : 280);
+          tmp.forEach((s) => layer.removeChild(s));
+        }
+        flash.text = `結算 ${HHOUSE[Hh.mat]}：每框依自身等級抽金額${Hh.pool != null ? `（宮殿 ≥${C.hf.pools.threshold} 框 → P-11 獎項池 #${Hh.pool}）` : ''}`;
+        const sub = await settle(frames, Hh.vals); cum += sub;
+        sumT.text = `累計 ${credits(cum)}（${f(cum / BET)} 倍）`; sumSub.text = `本房 ${credits(sub)} · ${Hh.pass ? '集滿鑰匙 → 只保留出過鑰匙的框晉級' : `鑰匙 ${Hh.keys}/${Hh.need} 未集滿 → 結束`}`;
+        await wait(800);
+      }
+      sumSub.text = `到達第 ${fg.reached} 房${fg.replays ? ` · 宮殿重玩 ${fg.replays} 次` : ''} · 共 ${fg.spins} 手`;
+    }
+    if (fg.capped || res.capped) { sumSub.text = `MaxWin 封頂 ${credits(C.maxWin)} 倍（主遊戲 ＋ 玩法合計）`; await wait(900); }
+    const tier = SlotCore.winType(res.totalWin - res.mgWin, BET);
+    if (['BIG', 'MEGA', 'SUPER', 'GOLDEN'].includes(tier)) await banner(`${tier} WIN　${f((res.totalWin - res.mgWin) / BET)} 倍`, null, 900);
+    await wait(900);
+    await tween(L, { alpha: 0 }, 300); app.stage.removeChild(L); L.destroy({ children: true });
+  }
+
   // ═════════ 一局 ═════════
   let busy = false, autoLeft = 0;
   const randSeed = () => (crypto.getRandomValues(new Uint32Array(1))[0] >>> 0) || 1;
@@ -807,9 +1140,9 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
     if (res.fg) {
       stopPulse(); dimAll(0.3);
       const sp = cellsOf(res, (s) => SPECIAL.includes(s)); sp.forEach((c) => (c.alpha = 1)); pulse(sp);
-      await banner(CL ? `虎 ${res.trig.cnt[0]} ＋ 龍 ${res.trig.cnt[1]}${res.fg.mystery ? '　隨機觸發' : ''}　→　${res.fg.group} Bonus` : HC ? (res.fg.variant === 'Free' ? `SC ${res.nSC} 顆　進入免費遊戲` : `BS ${res.nBS} 顆　大轉盤 → ${VLABEL[res.fg.variant] || res.fg.variant}`) : `SC ${res.nSC} ＋ SS ${res.nSS} ＝ ${res.nSC + res.nSS}　進入免費遊戲`, null, turbo ? 300 : 900, 34);
+      await banner(CL ? `虎 ${res.trig.cnt[0]} ＋ 龍 ${res.trig.cnt[1]}${res.fg.mystery ? '　隨機觸發' : ''}　→　${res.fg.group} Bonus` : HC ? (res.fg.variant === 'Free' ? `SC ${res.nSC} 顆　進入免費遊戲` : `BS ${res.nBS} 顆　大轉盤 → ${VLABEL[res.fg.variant] || res.fg.variant}`) : HF ? (res.fg.type === 'OH' ? `建材 ${res.nMat.reduce((a, b) => a + b, 0)} 顆　→　OPEN HOUSE` : `${HNAME[res.fg.type]}觸發　→　${res.fg.label}`) : FC ? `神燈 SC ${res.nSC} 顆　→　免費遊戲（${res.fg.group}）` : `SC ${res.nSC} ＋ SS ${res.nSS} ＝ ${res.nSC + res.nSS}　進入免費遊戲`, null, turbo ? 300 : 900, 34);
       stopPulse(); dimAll(1);
-      await (CL ? playCoinLock(res) : HC ? playHouse(res) : playFG(res));
+      await (CL ? playCoinLock(res) : HC ? playHouse(res) : HF ? playHuff(res) : FC ? playFrameChest(res) : playFG(res));
       winT.text = credits(res.totalWin);
     }
     session.balance += res.totalWin; session.n++; session.bet += BET; session.win += res.totalWin;
@@ -838,7 +1171,24 @@ Go：${esc(JSON.stringify(r.go))}"><td style="white-space:normal">${esc(r.key)}<
   window.addEventListener('keydown', (e) => { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); spinOnce(); } });
 
   // 情境：搜尋會自然產生該結果的 seed
-  const SCN = HC ? [
+  const SCN = FC ? [
+    ...C.G.map((g) => [`FG ${g}（${FCZ[g] || ''}）`, (r) => r.fg && r.fg.group === g]),
+    ['FG 加局 ≥ 3', (r) => r.fg && r.fg.spins >= C.fc.spins + 3],
+    ['金框再中', (r) => r.fg && r.fg.overN > 0],
+    ['金箱 ≥ 4（F-8 事件）', (r) => r.fg && r.fg.nGold >= C.fc.evMin],
+    ['特殊事件 Super／Ultra', (r) => r.fg && r.fg.event > 0],
+    ['FG ≥ 200 倍', (r) => r.fg && r.fg.win >= 200 * BET],
+    ['近失：SC 5 顆', (r) => !r.fg && r.nSC === 5],
+    ['MG BIG ≥10 倍', (r) => r.mgWin >= 10 * BET && !r.fg],
+  ] : HF ? [
+    ...C.G.map((g) => [HFL[g], (r) => r.fg && r.fg.type === g]),
+    ['House Spin 滿 15 框', (r) => r.fg && r.fg.type !== 'OH' && r.fg.nFrames >= 15],
+    ['K-019 封頂停止', (r) => r.fg && r.fg.capStopped],
+    ['彩金（MINI 以上）', (r) => r.fg && r.fg.type !== 'OH', (p) => p.fg.vals.some((v) => typeof v.d === 'string')],
+    ['Open House 到宮殿', (r) => r.fg && r.fg.type === 'OH' && r.fg.reached >= 4],
+    ['近失：建材 5 顆未進 OH', (r) => !r.fg && r.nMat.reduce((a, b) => a + b, 0) === 5],
+    ['MG BIG ≥10 倍', (r) => r.mgWin >= 10 * BET && !r.fg],
+  ] : HC ? [
     ['SC 觸發免費遊戲', (r) => r.fg && r.fg.variant === 'Free'],
     ['大帽子 Mega Hat', (r) => r.fg && r.fg.variant === 'mega_hat'],
     ['推土機 Buzz Saw', (r) => r.fg && r.fg.variant === 'buzz_saw'],

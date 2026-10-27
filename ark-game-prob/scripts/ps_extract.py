@@ -36,7 +36,7 @@ SHEETS = {
     "brief": ["規格簡述"],
     "data": ["數據資料", "數據", "快測結果"],
     "flow": ["機率流程圖", "流程圖"],
-    "params": ["參數表", "參數"],
+    "params": ["參數表", "參數", "參照表"],   # 1.5.1：金猴爺／逸修機率表的參數分頁叫「參照表」
     "main_strip": ["Main Game Strip", "MainGameStrip", "主遊戲輪帶"],
     "free_strip": ["Free Game Strip", "免費遊戲輪帶"],
     "fake_strip": ["Free Fake Strip"],
@@ -45,6 +45,8 @@ SHEETS = {
     "notes": ["機率表注意事項"],
 }
 LABEL_RE = re.compile(r"^\s*表\s*([A-Za-z]{1,3})\s*-?\s*([\dA-Za-z\-]*)")
+# 1.6.0：沒有「表」字的標籤（例 freedom-star-burst Game Setting 分頁「M-1 | 說明」）；只收短字串、字母-數字開頭
+LABEL2_RE = re.compile(r"^\s*([A-Za-z]{1,2})-(\d{1,2}[A-Za-z]?)(?=\s|$|[|｜:：（(])")
 TOP_LABELS = {"基本資訊", "Odds表", "Odds 表", "Pay table"}
 NUM_LINE_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
@@ -76,7 +78,7 @@ def parse_params(ws) -> dict:
             s = _s(v)
             if not s:
                 continue
-            m = LABEL_RE.match(s)
+            m = LABEL_RE.match(s) or (LABEL2_RE.match(s) if len(s) <= 40 else None)
             if m:
                 return f"{m.group(1).upper()}-{m.group(2)}".rstrip("-"), c, s[m.end():].strip(" \u3000:：")
             if s in TOP_LABELS:
@@ -174,7 +176,11 @@ def recognize(params: dict) -> dict:
             # Pay table：Symbol | 3 | 4 | 5
             if bid in ("Odds表", "Odds 表", "Pay table") and head and any(h in ("Symbol", "符號") for h in head):
                 si = next(i for i, h in enumerate(head) if h in ("Symbol", "符號"))
-                ks = [i for i, h in enumerate(head) if re.fullmatch(r"\d+", h)]
+                ks = []                                   # 1.5.1：只取 Symbol 右邊連續的連線數欄；同列右側的 Bet Multiplier 1～10 不算（金猴爺參照表）
+                for i in range(si + 1, len(head)):
+                    if not re.fullmatch(r"\d+", head[i] or ""):
+                        break
+                    ks.append(i)
                 tier = ""
                 for row in body:
                     c = row["cells"]
@@ -184,7 +190,8 @@ def recognize(params: dict) -> dict:
                         K["paytable"].append({"tier": tier, "sym": c[si], "odds": {head[i]: c[i] for i in ks}})
                 continue
             # 表M-1 輪帶組：Index | R1..Rn | Weight | 說明 | TOTAL RTP | FG RTP
-            if head and "Index" in head and any(h.lower() == "weight" for h in head):
+            if head and "Index" in head and any(h.lower() == "weight" for h in head) and K["reelsets"] is None \
+                    and any(re.fullmatch(r"R\d+", h) for h in head):   # 1.5.1：要有 R 欄、只取第一張（F 系列 Index|multi|WEIGHT 不是輪帶組）
                 ii = head.index("Index"); wi = next(i for i, h in enumerate(head) if h.lower() == "weight")
                 ri = [i for i, h in enumerate(head) if re.fullmatch(r"R\d+", h)]
                 extra = {h: i for i, h in enumerate(head) if h and i not in (ii, wi) and i not in ri}
@@ -336,9 +343,22 @@ def parse_fasttest(lines: list[str]) -> dict:
     i = find("********** BASE INFO")
     if i >= 0:
         base = {}
-        for ln in L[i + 2:i + 12]:
+        NEW = {"MainGame": "Main", "SpecialGameTotal": "Free"}  # Go 快測範本新格式「名稱 - RTP HitRate Freq Multi PlayTimes RetriRate MaxMulti」
+        for ln in L[i + 1:i + 60]:
             t = ln.strip().split()
             if not t:
+                continue
+            if len(t) > 2 and t[1] == "-" and t[0] != "Game":
+                name = NEW.get(t[0], t[0])
+                v = t[2:] + ["-"] * 7
+                vals = [v[0], v[2], "-", v[3], v[4], v[5], v[6]]  # → 舊欄序 RTP Freq Trigger% Multi PlayTimes RetriRate MaxMulti
+                if name == "Total":
+                    base[name] = [t[2], "-", "-", "-", "-", "-", t[-1]]
+                    break
+                base[name] = vals
+                base.setdefault("_order", []).append(name)
+                continue
+            if t[0] == "Game" or "RTP" in t:
                 continue
             if t[0] in ("Main", "Free") and len(t) > 1 and t[1] == "Fea":
                 name, vals = t[0] + " Fea", t[2:]
@@ -594,6 +614,7 @@ def main() -> None:
     ap.add_argument("--game")
     ap.add_argument("--data-sheet", help="覆寫數據資料分頁名")
     ap.add_argument("--params-sheet", help="覆寫參數表分頁名")
+    ap.add_argument("--qt-report", help="1.6.0：外部快測報表（Go 快測範本 report_<ver>.txt）→ §2 數據資料；優先於 xlsx「數據資料」分頁")
     a = ap.parse_args()
     try:
         import openpyxl  # type: ignore
@@ -602,17 +623,31 @@ def main() -> None:
     xp = pathlib.Path(a.xlsx)
     if not xp.exists():
         C.fail("BAD_INPUT", f"找不到 {xp}")
-    wb = openpyxl.load_workbook(xp, data_only=True)
+    load_from = xp
+    if xp.suffix.lower() == ".xls":  # 1.6.0：舊版 .xls（BIFF）openpyxl 讀不了 → LibreOffice 轉暫存 xlsx；來源仍記原檔
+        import shutil, subprocess, tempfile
+        soffice = shutil.which("soffice") or shutil.which("libreoffice")
+        if not soffice:
+            C.fail("BAD_INPUT", f"{xp.name} 是 .xls，需要 LibreOffice（soffice）轉檔", "安裝 LibreOffice 或先另存 xlsx")
+        td = pathlib.Path(tempfile.mkdtemp(prefix="ps-xls-"))
+        subprocess.run([soffice, f"-env:UserInstallation=file://{td}/profile", "--headless", "--convert-to", "xlsx", "--outdir", str(td), str(xp)], capture_output=True, timeout=300)  # 獨立 profile：平行跑不互鎖
+        load_from = td / (xp.stem + ".xlsx")
+        if not load_from.exists():
+            C.fail("BAD_INPUT", f"{xp.name} 轉 xlsx 失敗", "手動另存 xlsx 後重跑")
+    wb = openpyxl.load_workbook(load_from, data_only=True)
     names = wb.sheetnames
 
     def pick(key, override=None):
         if override and override in names:
             return wb[override]
-        for cand in SHEETS[key]:
+        hit = None
+        for cand in SHEETS[key]:  # 1.6.0：可見分頁優先（隱藏分頁常是他款範本殘留，例 call-of-treasure 的隱藏「參數表」）
             for n in names:
                 if n.strip().lower() == cand.lower():
-                    return wb[n]
-        return None
+                    if wb[n].sheet_state == "visible":
+                        return wb[n]
+                    hit = hit or wb[n]
+        return hit
 
     out = pathlib.Path(a.out)
     slug = a.slug or out.name
@@ -625,7 +660,13 @@ def main() -> None:
     D["params"] = parse_params(ws)
     D["known"] = recognize(D["params"])
     ws = pick("data", a.data_sheet)
-    if ws is not None:
+    if a.qt_report:  # 1.6.0：xlsx 數據分頁常為空（還原局）→ 直接吃 ark-game-quicktest 的報表
+        rp = pathlib.Path(a.qt_report)
+        lines = rp.read_text(encoding="utf-8", errors="replace").splitlines()
+        D["raw_log"] = "\n".join(lines)
+        D["report"] = parse_fasttest(lines)
+        D["report_source"] = {"path": str(rp), "name": rp.name, "sha256_16": C.sha16(rp), "kind": "quicktest-report"}
+    elif ws is not None:
         lines = []
         for r in range(1, ws.max_row + 1):
             v = next((ws.cell(r, c).value for c in range(1, min(ws.max_column, 4) + 1) if ws.cell(r, c).value not in (None, "")), None)

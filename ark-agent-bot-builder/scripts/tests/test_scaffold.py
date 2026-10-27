@@ -213,3 +213,44 @@ def test_skill_md_asset_table_matches_reality():
     actual = {f.name for f in (init / "assets" / "steering").glob("*.md")}
     missing = sorted(claimed - actual)
     assert not missing, f"SKILL.md 聲稱有但實際不存在的 asset：{missing}（實際有：{sorted(actual)}）"
+
+
+# ── 3.2.0：BRAIN.md 由本 skill 委派 ark-agent-init 產；根層不放 raw/ ──
+
+@pytest.fixture()
+def scaffold(tmp_path):
+    out = tmp_path / "demo"
+    r = subprocess.run([sys.executable, str(SCRIPTS / "build_agent.py"), str(out),
+                        "--name", "demo-bot", "--codename", "小虎", "--admin-chat-id", "123"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    return out
+
+
+def test_every_agent_dir_gets_brain(scaffold):
+    """agents.yaml 的每個 dir（含根目錄）都有 BRAIN.md ＝ 五層判準＋角色段。
+
+    🔴 背景：ark_bot_agent 注入 BRAIN.md 卻不產它、ark-agent-init 只認 team.yaml →
+       bot 的 BRAIN.md 一直靠手抄（nana-bot 帶著 leader 私有路徑上線）。
+    """
+    agents = yaml.safe_load((scaffold / "agents.yaml").read_text(encoding="utf-8"))
+    for key, a in agents.items():
+        brain = scaffold / a.get("dir", ".") / ".kiro" / "steering" / "BRAIN.md"
+        assert brain.exists(), f"{key}（{a.get('dir')}）缺 BRAIN.md"
+        text = brain.read_text(encoding="utf-8")
+        assert "## 五層資源" in text and "## 本角色知識背景" in text, key
+        assert "{private_kb}" not in text and "{role_section}" not in text, key
+
+
+def test_brain_private_kb_uses_bot_name_at_root(scaffold):
+    """根目錄私有櫃以 bot 名稱命名（knowledge/<bot>/），子 agent 用自己的 dir。"""
+    root = (scaffold / ".kiro/steering/BRAIN.md").read_text(encoding="utf-8")
+    assert "`knowledge/demo-bot/wiki/`" in root
+    admin = (scaffold / "agents/admin-agent/.kiro/steering/BRAIN.md").read_text(encoding="utf-8")
+    assert "`agents/admin-agent/knowledge/wiki/`" in admin and "Admin 知識背景" in admin
+
+
+def test_no_root_level_knowledge_raw(scaffold):
+    """五層紅線：根層 knowledge/ 不放 raw/（舊 raw/memory-archive/ 已作廢）；記憶歸檔在 memory/archive/。"""
+    assert not (scaffold / "knowledge" / "raw").exists()
+    assert (scaffold / "memory" / "archive").is_dir()

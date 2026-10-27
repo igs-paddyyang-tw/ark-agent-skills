@@ -28,7 +28,7 @@ TYPES = ["spec", "design", "plan", "spec-onepager", "design-onepager",
 
 
 def _run(argv, cwd):
-    return subprocess.run([sys.executable, str(BUILD), *argv],
+    return subprocess.run([sys.executable, "-X", "utf8", str(BUILD), *argv],
                           capture_output=True, text=True, cwd=str(cwd))
 
 
@@ -69,7 +69,7 @@ def test_skeleton_fails_doc_lint(project, dtype):
     docs = sorted((p for p in _all_docs(project) if p.name != "_index.md"),
                   key=lambda p: p.stat().st_mtime)
     target = docs[-1]
-    r = subprocess.run([sys.executable, str(DOC_LINT), str(target)],
+    r = subprocess.run([sys.executable, "-X", "utf8", str(DOC_LINT), str(target)],
                        capture_output=True, text=True)
     assert r.returncode == 2, f"{dtype} 骨架未被 doc_lint 擋下（exit {r.returncode}），應為 2：\n{r.stdout}"
 

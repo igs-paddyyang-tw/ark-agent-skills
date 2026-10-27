@@ -1,0 +1,21 @@
+# __REPO__
+
+由 ark-web-game `wg_client_init.py` 產生（範本來源見 `.wg-client.json`）。
+
+```bash
+pnpm install
+pnpm -r typecheck && pnpm -r test && pnpm -r build
+pnpm --filter __GAME__ dev        # ?service=ws&url=ws://127.0.0.1:8787/ws&dev  連 Go Server（-dev）
+```
+
+| 位置 | 內容 |
+|---|---|
+| `packages/shared-types` | 契約型別（由 `schemas/` 產生；`pnpm schema:sync-check`） |
+| `packages/ark-wire` | ark-go wire 編解碼、ArkConn、`test/mock-ark.mjs`（測試用 Server） |
+| `packages/game-service` | GameService：WsService、HttpService、ReplayService、Recorder |
+| `games/__GAME__` | 遊戲：runtime（Boot／Clock／Tween）、GameController（present-events/1）、轉輪、Presenter |
+
+下一步（ark-web-game references/client-vertical-slice.md）：
+1. `src/game.config.ts` 填符號與聽牌規則；
+2. 依 `feature.script` 寫專屬 Presenter，登記到 `src/presenters/index.ts`；
+3. 填 `e2e/e2e.config.json`（Go Server 路徑、強制情境、Stage 遊戲包），建置後 `pnpm --filter __GAME__ e2e --aidev <aidev 根>`（含 trace-parity）。

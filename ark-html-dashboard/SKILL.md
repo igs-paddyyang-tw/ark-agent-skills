@@ -12,15 +12,18 @@ description: |
   博奕遊戲面板請參考 references/gaming-preset.md。
   不適用於靜態 PNG 圖表（請使用 ark-chart-generator）。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.2"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: view
+  form: instruction
+  domain: general
   outputs:
     - format: html
       audience: human
-  depends_on: [ark-html-report]
+  depends_on:
+    - { name: ark-html-report, version: "^1.0.0" }
   author: paddyyang
 ---
 

@@ -22,8 +22,10 @@ DIRS = [
     ".kiro/steering",
     "knowledge/shared/wiki",
     "knowledge/shared/raw",
-    "knowledge/raw/memory-archive",
+    # 🔴 不建根層 knowledge/raw/：五層紅線「根層不放 raw/wiki」；記憶歸檔在 memory/archive/
+    #    （舊 knowledge/raw/memory-archive/ 已作廢，ark_bot_agent 程式不再讀寫它）
     "memory/daily",
+    "memory/archive",
     "artifacts/reports",
     "skills",
 ]
@@ -75,6 +77,48 @@ def _scaffold_knowledge(out: Path) -> list[str]:
             ("schema.md", "index.md", "log.md", "wiki/overview.md")]
 
 
+def _find_agent_init() -> Path | None:
+    """找同一個 skills 庫裡的 ark-agent-init/scripts/build_kiro.py（BRAIN.md 由它產，不另寫一份）。"""
+    for base in (ASSETS.parent.parent, Path.cwd()):
+        cand = base / "ark-agent-init" / "scripts" / "build_kiro.py"
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _write_brains(out: Path, bot_name: str) -> list[str]:
+    """依 agents.yaml 為根目錄與每個 agent 產 BRAIN.md（五層判準＋角色段；已存在不覆寫）。
+
+    🔴 2026-10-27：ark_bot_agent 會注入 BRAIN.md 卻不產它，而 ark-agent-init 的 build_kiro
+    只認 team.yaml —— bot 的 BRAIN.md 一直靠手抄範本（nana-bot 帶著 leader 私有路徑上線）。
+    這裡委派 build_kiro._write_brain，判準內容與角色選法跟 team 完全同一份。
+    """
+    init = _find_agent_init()
+    agents_yaml = out / "agents.yaml"
+    if init is None or not agents_yaml.exists():
+        return []
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_ark_build_kiro", init)
+    bk = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bk)
+    import yaml
+    agents = yaml.safe_load(agents_yaml.read_text(encoding="utf-8")) or {}
+    created, seen = [], set()
+    for key, a in agents.items():
+        a = a or {}
+        wd = str(a.get("dir", "."))
+        if wd in seen:          # default 與 manager 同在根目錄，只產一份
+            continue
+        seen.add(wd)
+        # 根目錄的私有櫃以 bot 名稱命名（knowledge/<bot>/）；子 agent 用目錄名比對角色範本
+        name = bot_name if wd == "." else Path(wd).name
+        role = a.get("role", "manager" if wd == "." else "worker")
+        rel = bk._write_brain(out / wd / ".kiro" / "steering", name, role, None, wd, out)
+        if rel:
+            created.append(rel)
+    return created
+
+
 def _find_wiki_engine() -> Path | None:
     """找同一個 skills 庫裡的 ark-wiki-engine/scripts/build_wiki.py。"""
     for base in (ASSETS.parent.parent, Path.cwd()):
@@ -108,6 +152,7 @@ def build(out: Path, subs: dict[str, str]) -> list[str]:
         (out / dst_name).write_text(content, encoding="utf-8")
         created.append(dst_name)
 
+    created += _write_brains(out, subs.get("{BOT_NAME}", out.name))
     return created
 
 
@@ -135,7 +180,7 @@ def main() -> int:
     print("  1. 裝套件（🔴 extras 不可省，否則四層搜尋與排程會靜默降級）：")
     print("     uv pip install --python .venv/bin/python "
           "'<ark_bot_agent-*.whl>[search,skills]'")
-    print("  2. 補人格：用 ark-agent-init 產 .kiro/steering（SOUL + AGENTS + 多 CLI 入口）")
+    print("  2. 補人格：用 ark-agent-init 產 .kiro/steering（SOUL + AGENTS + 多 CLI 入口；BRAIN.md 已產）")
     print("  3. 填 .env（TELEGRAM_BOT_TOKEN / GEMINI_API_KEY）")
     print("  4. 驗骨架：python validate_agent.py %s" % out)
     print("  5. 啟動：.venv/bin/python start.py  →  診斷：python -m ark_bot_agent paths")

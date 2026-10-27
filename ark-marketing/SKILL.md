@@ -7,15 +7,17 @@ description: |
   用戶獲取、留存策略、LiveOps、活動企劃、或任何遊戲行銷場景。
   不適用於：留存數據的 cohort／LTV 分析請用 ark-retention-analysis（本 skill 出的是策略與素材，不是數據結論）。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
-  category: domain
+  category: document
+  form: instruction
+  domain: game
   outputs:
     - format: md
       audience: both
   author: paddyyang
-  version: "1.0.0"
-  updated: 2026-05-16
+  version: "1.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-marketing

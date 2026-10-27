@@ -6,15 +6,17 @@ description: |
   cohort、玩家生命週期、D1/D7/D30、或任何需要分析玩家留存的場景。
   不適用於：留存策略與活動規劃請用 ark-marketing；指標計算公式請用 ark-kpi-calculator（本 skill 做的是分析）。
 metadata:
-  schema_version: 1
+  schema_version: "1.2"
   status: active
-  category: domain
+  category: document
+  form: instruction
+  domain: game
   outputs:
     - format: md
       audience: both
   author: paddyyang
-  version: "1.0.0"
-  updated: 2026-05-16
+  version: "1.0.1"
+  updated: 2026-10-20
 ---
 
 # ark-retention-analysis

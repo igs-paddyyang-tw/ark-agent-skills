@@ -1,0 +1,252 @@
+// Package ws 包裝單一 WebSocket 連線：讀寫 goroutine、有上限的送出佇列、
+// 與 Python 相容的關閉流程。
+//
+// 每條連線一個讀 goroutine（由呼叫端執行 ReadLoop）、一個寫 goroutine（內部）。
+// 送出佇列滿了就直接斷線：慢客戶端不能拖住桌的 goroutine。
+package ws
+
+import (
+	"encoding/json"
+	"errors"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/gorilla/websocket"
+
+	"__MODULE__/internal/ark-go/wire"
+)
+
+// 關閉碼沿用 Python（ArkSocketServer / GameSocket）。
+const (
+	CodeNormal       = 1000
+	CodeAliveTimeout = 408  // 心跳逾時
+	CodeKickSameID   = 409  // 同帳號在別處登入
+	CodeFlood        = 509  // 流量超限
+	CodeMaxConn      = 510  // 連線數已滿
+	CodeClosed       = 530  // CloseConnectionSignal：close 指令、封包格式錯誤、認證失敗
+	CodeSlowConsumer = 4001 // Go 新增：送出佇列滿
+	CodeDraining     = 4002 // Go 新增：伺服器排空，請客戶端重新 table.connect（待客戶端確認 N6）
+)
+
+// ErrClosed：連線已關閉。
+var ErrClosed = errors.New("ws: connection closed")
+
+// Options 是連線參數。
+type Options struct {
+	SendQueue    int           // 送出佇列長度，預設 256
+	WriteTimeout time.Duration // 單次寫入逾時，預設 10 秒
+	MaxMessage   int64         // 單則訊息上限（位元組），預設 64KB
+}
+
+func (o *Options) defaults() {
+	if o.SendQueue <= 0 {
+		o.SendQueue = 256
+	}
+	if o.WriteTimeout <= 0 {
+		o.WriteTimeout = 10 * time.Second
+	}
+	if o.MaxMessage <= 0 {
+		o.MaxMessage = 64 << 10
+	}
+}
+
+type outbound struct {
+	frame []byte
+	close *closeReq // 非 nil 代表送完 close 指令後關閉
+}
+
+type closeReq struct {
+	code   int
+	reason string
+}
+
+// Conn 是一條玩家 WebSocket 連線。所有方法並行安全。
+type Conn struct {
+	ws   *websocket.Conn
+	opts Options
+
+	send      chan outbound
+	done      chan struct{}
+	closeOnce sync.Once
+	closed    atomic.Bool
+
+	mu          sync.Mutex
+	closeCode   int
+	closeReason string
+
+	// OnOversize 在封包超過 9999 字元被拒絕送出時呼叫（告警用），可為 nil。
+	OnOversize func(p *wire.Packet)
+}
+
+// New 包裝一條已升級的 WebSocket 連線並啟動寫 goroutine。
+func New(c *websocket.Conn, opts Options) *Conn {
+	opts.defaults()
+	c.SetReadLimit(opts.MaxMessage)
+	conn := &Conn{
+		ws:   c,
+		opts: opts,
+		send: make(chan outbound, opts.SendQueue),
+		done: make(chan struct{}),
+	}
+	go conn.writeLoop()
+	return conn
+}
+
+// Send 把封包放進送出佇列；不阻塞。佇列滿了以 4001 關閉連線。
+func (c *Conn) Send(p *wire.Packet) error {
+	frame, err := wire.EncodeFrame(p)
+	if err != nil {
+		if errors.Is(err, wire.ErrTooLarge) && c.OnOversize != nil {
+			c.OnOversize(p)
+		}
+		return err
+	}
+	return c.enqueue(outbound{frame: frame})
+}
+
+func (c *Conn) enqueue(o outbound) error {
+	if c.closed.Load() {
+		return ErrClosed
+	}
+	select {
+	case c.send <- o:
+		return nil
+	case <-c.done:
+		return ErrClosed
+	default:
+		c.Close(CodeSlowConsumer, "send queue full")
+		return ErrClosed
+	}
+}
+
+// Close 依 Python 的順序關閉：先送 {"cmd":"close","data":{"code":..,"msg":..}}，
+// 再送 WebSocket close frame（同一個 code）。可重複呼叫，只有第一次生效。
+func (c *Conn) Close(code int, reason string) {
+	if !c.closed.CompareAndSwap(false, true) {
+		return
+	}
+	c.mu.Lock()
+	c.closeCode, c.closeReason = code, reason
+	c.mu.Unlock()
+
+	data := map[string]any{"code": code}
+	if reason != "" {
+		data["msg"] = reason
+	}
+	raw, _ := wire.MarshalASCII(data)
+	frame, _ := wire.EncodeFrame(&wire.Packet{Cmd: "close", Data: raw})
+	o := outbound{frame: frame, close: &closeReq{code: code, reason: reason}}
+	select {
+	case c.send <- o:
+	default:
+		// 佇列滿：不送 close 指令，直接關
+		c.shutdown(code, reason)
+	}
+}
+
+// CloseInfo 回傳關閉碼與原因（尚未關閉時 code=0）。
+func (c *Conn) CloseInfo() (int, string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.closeCode, c.closeReason
+}
+
+// Done 在連線完全關閉後 close。
+func (c *Conn) Done() <-chan struct{} { return c.done }
+
+// Closed 回報是否已開始關閉。
+func (c *Conn) Closed() bool { return c.closed.Load() }
+
+func (c *Conn) writeLoop() {
+	for {
+		select {
+		case o := <-c.send:
+			_ = c.ws.SetWriteDeadline(time.Now().Add(c.opts.WriteTimeout))
+			if err := c.ws.WriteMessage(websocket.TextMessage, o.frame); err != nil {
+				c.closed.Store(true)
+				c.shutdown(CodeNormal, "write error")
+				return
+			}
+			if o.close != nil {
+				c.shutdown(o.close.code, o.close.reason)
+				return
+			}
+		case <-c.done:
+			return
+		}
+	}
+}
+
+func (c *Conn) shutdown(code int, reason string) {
+	c.closeOnce.Do(func() {
+		if len(reason) > 120 { // close frame 的 reason 上限 123 位元組
+			reason = reason[:120]
+		}
+		msg := websocket.FormatCloseMessage(code, reason)
+		_ = c.ws.WriteControl(websocket.CloseMessage, msg, time.Now().Add(time.Second))
+		_ = c.ws.Close()
+		close(c.done)
+	})
+}
+
+// ReadLoop 持續讀取訊息、切包、解析，每個封包呼叫一次 onPacket。
+// 連線關閉或讀取錯誤時返回。onBad 在封包 JSON 解析失敗時呼叫（可為 nil）。
+func (c *Conn) ReadLoop(onPacket func(*wire.Packet), onBad func(body []byte, err error)) {
+	defer func() {
+		if c.closed.CompareAndSwap(false, true) {
+			// 對端先斷：沒有 close 指令要送
+			c.mu.Lock()
+			c.closeCode, c.closeReason = CodeNormal, "client closed"
+			c.mu.Unlock()
+			c.shutdown(CodeNormal, "client closed")
+			return
+		}
+		// 我方呼叫過 Close：等寫 goroutine 把 close 指令送完
+		select {
+		case <-c.done:
+		case <-time.After(c.opts.WriteTimeout):
+			c.shutdown(CodeNormal, "close timeout")
+		}
+	}()
+	var dec wire.Decoder
+	for {
+		_, msg, err := c.ws.ReadMessage()
+		if err != nil {
+			return
+		}
+		bodies, ferr := dec.Feed(msg)
+		for _, b := range bodies {
+			p, err := wire.UnmarshalPacket(b)
+			if err != nil {
+				if onBad != nil {
+					onBad(b, err)
+				}
+				continue
+			}
+			onPacket(p)
+			if c.closed.Load() {
+				return
+			}
+		}
+		if ferr != nil {
+			c.Close(CodeClosed, "package format error")
+			return
+		}
+		if int64(dec.Buffered()) > c.opts.MaxMessage {
+			c.Close(CodeClosed, "package too large")
+			return
+		}
+	}
+}
+
+// RawData 是把任意值轉成 ASCII JSON 的小工具，給回應的 Data 欄位用。
+func RawData(v any) (json.RawMessage, error) {
+	if v == nil {
+		return nil, nil
+	}
+	if r, ok := v.(json.RawMessage); ok {
+		return r, nil
+	}
+	return wire.MarshalASCII(v)
+}

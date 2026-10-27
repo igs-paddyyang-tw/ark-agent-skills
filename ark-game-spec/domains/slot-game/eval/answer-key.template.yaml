@@ -11,4 +11,4 @@ items:
   S03: {wild.present: "", wild.behavior: ""}
   S04: {scatter.trigger_count: "", scatter.trigger_target: ""}
   S05: {win.mechanism: ""}
-  S06: {free_spin.count_awarded: "", free_spin.retrigger: "", bonus.types_observed: []}
+  S06: {free_spin.count_awarded: "", free_spin.retrigger: "", bonus.types_observed: [], hold_spin.present: "", hold_spin.variants: [], stage_feature.present: "", stage_feature.stages: [], jackpot.tiers: []}

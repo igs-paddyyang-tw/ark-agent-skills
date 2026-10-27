@@ -6,28 +6,28 @@ Usage:
 
 產出：
     {base}/
+    ├── AGENTS.md                     # 專案根：團隊規範 SSOT（daemon 首次啟動也會產，policy once）
     ├── .kiro/                        # working_directory: "." 的 agent（通常是總機/manager）
     │   ├── agents/{admin}.json
     │   ├── prompts/route-message.md
     │   ├── prompts/service-check.md
     │   ├── settings/mcp.json
     │   ├── skills/                   # 空目錄（由 clone_skills.py 填充）
-    │   └── steering/
-    │       ├── AGENTS.md
+    │   └── steering/                 # 🔴 不放 AGENTS.md（見 SKILL.md「AGENTS.md 放哪」）
     │       ├── CODE.md
     │       ├── MEMORY.md
     │       ├── SOUL.md
     │       ├── TEAM.md
     │       └── USER.md
     └── agents/{name}-agent/
+        ├── AGENTS.md                 # 複本（agent 工作目錄根；與套件 1.2.19 daemon 落點一致）
         └── .kiro/
             ├── agents/{name}.json
             ├── prompts/daily-report.md
             ├── prompts/team-check.md
             ├── settings/mcp.json
             ├── skills/               # 空目錄（由 clone_skills.py 填充）
-            └── steering/
-                ├── AGENTS.md
+            └── steering/             # 🔴 不放 AGENTS.md
                 ├── CODE.md
                 ├── MEMORY.md
                 ├── SOUL.md
@@ -123,6 +123,9 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
             role_id=role_id,
         )
         created.extend(agent_created)
+        brain = _write_brain(kiro_dir / "steering", name, role, inst.get("template"), wd, base)
+        if brain:
+            created.append(brain)
 
     # ── B1b + B2：五類知識來源骨架 + knowledge_search_order ──
     created.extend(_build_knowledge_sources(cfg, base, instances))
@@ -383,16 +386,18 @@ def _build_steering(
             # 專案根 = steering_dir 上兩層（out/.kiro/steering → out）。
             # 🔴 不用 `base`：既有 base=steering_dir.parent^3 偏了一層（僅供 relative_to 顯示，非落點）。
             project_root = steering_dir.parent.parent
-            # AGENTS.fragment → 專案根 AGENTS.md 協作段（root SSOT；子 agent 併自己 steering/AGENTS.md 複本）
-            agents_target = (project_root / "AGENTS.md") if is_root else (steering_dir / "AGENTS.md")
-            if _merge_profile_section(agents_target, frags["agents"], "## ", always_fm=not is_root):
+            # AGENTS.fragment → 該 agent 工作目錄根的 AGENTS.md（root＝專案根 SSOT；子 agent＝自己根目錄的複本）
+            # 專案根 = steering_dir 上兩層，子 agent 同理是它自己的 wd 根。steering/ 一律不放 AGENTS.md
+            agents_target = project_root / "AGENTS.md"
+            if _merge_profile_section(agents_target, frags["agents"], "## "):
                 created.append(str(agents_target))
 
-    # AGENTS.md（從 assets 複製）
-    # 🔴 根目錄（is_root）不在 steering/ 產 AGENTS.md —— 根目錄的 .kiro/steering/AGENTS.md
-    #    與專案根 AGENTS.md 會「兩份都被 Kiro 載入」造成漂移。根目錄用專案根那份（SSOT）。
-    #    子 agent 仍在自己的 steering/ 放一份（複本，供該 agent 載入）。
-    agents_md = steering_dir / "AGENTS.md"
+    # AGENTS.md（從 assets 複製）—— 2.4.0 起子 agent 複本落在**工作目錄根**，不再放 steering/
+    # 🔴 steering/ 一律不放 AGENTS.md：與 wd 根那份「兩份都被載入」造成漂移；
+    #    舊版落 steering/ 時，人工搬到 wd 根後重跑又長回來（2026-10-25 review F-2）。
+    #    落點與 ark_team_agent 1.2.19 daemon 的 `_write_root_agents_md`（wd 根、policy once）一致。
+    #    根目錄（is_root）不在這裡產：專案根那份是 SSOT（daemon 首次啟動產，或手寫）。
+    agents_md = steering_dir.parent.parent / "AGENTS.md"
     if not is_root and not agents_md.exists():
         src = STEERING_ASSETS / "AGENTS.md"
         if src.exists():
@@ -432,6 +437,53 @@ def _build_steering(
         created.append(str(team_md.relative_to(base)))
 
     return created
+
+
+#: role → 角色段範本（與 ark_team_agent backend._template_role 同一張表；不認得的 role 也退 coder）
+_BRAIN_ROLE_MAP = {"admin": "admin", "leader": "leader", "worker": "coder", "manager": "admin"}
+
+
+def _brain_role_key(name: str, role: str, template: str | None) -> str:
+    """角色段選法與 daemon 相同：team.yaml `template` → instance 名去 `-agent` → role 對應。"""
+    roles_dir = STEERING_ASSETS / "brain-roles"
+    for key in (template, name.replace("-agent", "")):
+        if key and (roles_dir / f"{key}.md").exists():
+            return key
+    return _BRAIN_ROLE_MAP.get(role, "coder")
+
+
+def _write_brain(steering_dir: Path, name: str, role: str, template: str | None,
+                 wd: str, base: Path) -> str | None:
+    """產 BRAIN.md ＝ 五層判準（共用）＋本角色知識背景（依角色）。已存在不覆寫（policy once）。
+
+    🔴 為什麼 build_kiro 要產（2.5.0）：bot 套件會注入 BRAIN.md 卻不產它，nana-bot 只能手抄範本 →
+       帶著 leader 的私有路徑上線；team daemon 雖會產，但只有角色知識、沒有五層判準。
+       兩邊同一個檔名、兩種內容 → 統一為「判準＋角色」一份。角色段來自 team 套件的角色範本。
+    """
+    brain = steering_dir / "BRAIN.md"
+    if brain.exists():
+        return None
+    tpl = STEERING_ASSETS / "BRAIN.md"
+    if not tpl.exists():
+        return None
+    key = _brain_role_key(name, role, template)
+    role_file = STEERING_ASSETS / "brain-roles" / f"{key}.md"
+    if not role_file.exists():
+        role_file = STEERING_ASSETS / "brain-roles" / "_default.md"
+    # 角色範本是獨立文件（# 標題）→ 降一級嵌進「## 本角色知識背景」底下
+    role_lines = []
+    for line in role_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#"):
+            hashes = len(line) - len(line.lstrip("#"))
+            line = "#" * (hashes + 2) + line[hashes:]
+        role_lines.append(line)
+    private_kb = f"knowledge/{name}/wiki/" if wd == "." else f"{wd}/knowledge/wiki/"
+    text = (tpl.read_text(encoding="utf-8")
+            .replace("{private_kb}", private_kb)
+            .replace("{role_section}", "\n".join(role_lines).strip()))
+    steering_dir.mkdir(parents=True, exist_ok=True)
+    brain.write_text(text.rstrip() + "\n", encoding="utf-8")
+    return str(brain.relative_to(base))
 
 
 def _merge_profile_section(target: Path, fragment: str, anchor: str, always_fm: bool = False) -> bool:
@@ -967,12 +1019,8 @@ def validate_kiro(project_dir: Path) -> list[str]:
             except (json.JSONDecodeError, Exception) as e:
                 errors.append(f"⚠️ {prefix}/settings/mcp.json 格式錯誤: {e}")
 
-        # steering 必要檔案
-        # 🔴 根目錄（wd="."）不要求 steering/AGENTS.md —— 它用專案根 AGENTS.md（SSOT），
-        #    build_kiro 也刻意不在根 steering/ 產 AGENTS.md（避免兩份都被載入）。
-        required_steering = ("SOUL.md", "AGENTS.md", "MEMORY.md", "USER.md", "TEAM.md")
-        if wd == ".":
-            required_steering = ("SOUL.md", "MEMORY.md", "USER.md", "TEAM.md")
+        # steering 必要檔案 —— AGENTS.md 不在此列（2.4.0 起不放 steering/；佈局由 audit_agents_layout 統一檢查）
+        required_steering = ("SOUL.md", "BRAIN.md", "MEMORY.md", "USER.md", "TEAM.md")
         for fname in required_steering:
             if not (kiro_dir / "steering" / fname).exists():
                 errors.append(f"❌ {prefix}/steering/{fname} 缺少")
@@ -1017,6 +1065,15 @@ def validate_kiro(project_dir: Path) -> list[str]:
         for stem in stems:
             if not (PROMPTS_ASSETS / "work" / f"{stem}.md").exists():
                 errors.append(f"❌ role-prompts-map work['{role_id}'] 列了 '{stem}' 但 assets/prompts/work/{stem}.md 不存在")
+
+    # ── AGENTS.md 佈局（2.4.0）：專案根 SSOT＋子 agent wd 根複本＋steering 0 份 —— 規則與 audit_agents_layout.py 共用
+    #    「專案根缺 AGENTS.md」不在這裡擋：它由 daemon 首次啟動產（policy once，含目錄導覽），剛 build 完缺是正常；
+    #    build_kiro 若先寫一份，daemon 會因 once 跳過、反而蓋掉導覽內容。運作中的 workspace 用 audit_agents_layout.py 稽核
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from audit_agents_layout import check_layout  # noqa: E402
+    for issue in check_layout(project_dir, cfg.get("instances", {})):
+        if issue["agent"] != "(專案根)":
+            errors.append(f"❌ AGENTS.md 佈局 [{issue['agent']}] {issue['problem']} → {issue['fix']}")
 
     # ── B4：五類知識來源 + knowledge_search_order 驗證 ──
     errors.extend(_validate_knowledge_sources(cfg, project_dir))

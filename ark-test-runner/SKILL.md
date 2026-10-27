@@ -9,11 +9,13 @@ description: |
   或任何需要執行測試並產生報告的場景。
   本 skill 專責 line coverage（pytest --cov）。驗收條件覆蓋分析請用 ark-code-spec-validator。
 metadata:
-  version: "1.0.0"
-  schema_version: 1
+  version: "1.0.1"
+  schema_version: "1.2"
   status: active
-  updated: 2026-08-19
+  updated: 2026-10-20
   category: pipeline
+  form: instruction
+  domain: general
   outputs:
     - format: md
       audience: ai

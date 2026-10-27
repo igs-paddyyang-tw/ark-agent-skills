@@ -1,0 +1,81 @@
+{
+ "cases": [
+  {
+   "name": "case-0-auth",
+   "packet": {
+    "cmd": "auth",
+    "data": {
+     "ark_id": "wolf",
+     "ark_token": "dev"
+    },
+    "sn": 1
+   },
+   "frame": "0064{\"cmd\":\"auth\",\"data\":{\"ark_id\":\"wolf\",\"ark_token\":\"dev\"},\"sn\":1}"
+  },
+  {
+   "name": "case-1-alive",
+   "packet": {
+    "cmd": "alive"
+   },
+   "frame": "0015{\"cmd\":\"alive\"}"
+  },
+  {
+   "name": "case-2-spin",
+   "packet": {
+    "cmd": "spin",
+    "data": {
+     "bet": 240,
+     "requestId": "q-1"
+    },
+    "sn": 42,
+    "sys": "slot"
+   },
+   "frame": "0072{\"cmd\":\"spin\",\"data\":{\"bet\":240,\"requestId\":\"q-1\"},\"sn\":42,\"sys\":\"slot\"}"
+  },
+  {
+   "name": "case-3-spin",
+   "packet": {
+    "ret": "spin",
+    "data": {
+     "msg": "三隻小豬",
+     "status": 0
+    },
+    "sn": 42,
+    "sys": "slot"
+   },
+   "frame": "0088{\"ret\":\"spin\",\"data\":{\"msg\":\"\\u4e09\\u96bb\\u5c0f\\u8c6c\",\"status\":0},\"sn\":42,\"sys\":\"slot\"}"
+  },
+  {
+   "name": "case-4-result",
+   "packet": {
+    "cmd": "result",
+    "data": {
+     "i": 0,
+     "n": 2,
+     "part": "{\"a\":\"🐷 é\"}",
+     "roundId": "R1"
+    },
+    "sys": "slot"
+   },
+   "frame": "0106{\"cmd\":\"result\",\"data\":{\"i\":0,\"n\":2,\"part\":\"{\\\"a\\\":\\\"\\ud83d\\udc37 \\u00e9\\\"}\",\"roundId\":\"R1\"},\"sys\":\"slot\"}"
+  },
+  {
+   "name": "case-5-auth",
+   "packet": {
+    "ret": "auth",
+    "data": {
+     "msg": "not authed",
+     "status": -999
+    },
+    "sn": "s-7"
+   },
+   "frame": "0067{\"ret\":\"auth\",\"data\":{\"msg\":\"not authed\",\"status\":-999},\"sn\":\"s-7\"}"
+  }
+ ],
+ "max9999": {
+  "frameLen": 10003,
+  "header": "9999"
+ },
+ "source": "data/slot/huffnpuff-open-house/game/go-server/internal/ark-go/wire（EncodeFrame）",
+ "tooLarge10000": true
+}

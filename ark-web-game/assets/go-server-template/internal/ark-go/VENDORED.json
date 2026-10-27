@@ -1,0 +1,37 @@
+{
+ "commit": "71754cf8b",
+ "files": {
+  "dispatch/router.go": "b3a0db414f11798b569afd0f4c1321b241d8e16f75ed6f3a9a12c6730dc83c81",
+  "dispatch/server.go": "6a3c25048907757bce47c6eaaedd29faec3010394bc2139181901b3b9c700725",
+  "dispatch/server_test.go": "5b270eb7a8f7596cbde758a0bc20d4651350f7979d1d1e637a15a5cedf7e9984",
+  "guard/guard.go": "c59606f6617335a8a11edc0f7eca309a4217cd4c79acfd75912fbefadeeda938",
+  "guard/guard_test.go": "6c9f5ae02dd2614d9d89ea88b4337cf5a82a82fb917f2ac76133005bc35c229b",
+  "session/auth.go": "82629261772c038490eb8f108112c117b404f42d961601816299af58838dd992",
+  "session/registry.go": "851306a0c5b8f3e69049fdb8b300ab0347c51f3eb4163ad128529c7227ab26f5",
+  "session/session.go": "0b451e386fb10ebd1a95b7b785b8877b7815b5fe24403ff7ad1e3a223d1e11e6",
+  "session/token.go": "f543ef1e494e583864c9b81dce2e51aa0779d0f637b74d2f58e8981d2deefd7e",
+  "session/token_test.go": "62342142324051a36234b4bdf96541266f31ae9aa45b1c27bfc682d0483706aa",
+  "table/manager.go": "abb3f63d10a36ebd117ab2c0c28301510b67cf00f4ec1e9a098b1dc42dff4bd6",
+  "table/table.go": "72a63e7b8117c8da3486efe7f6792dff5cf49baa0343f5ad4634b5ebb86725ca",
+  "table/table_test.go": "6e11565d5623f6d2138d1c5c6ed37585ce071aac5506816250cfbd7bcef3cd5e",
+  "wire/wire.go": "a6a5f8f769647bbd71a24447d9ee9e1a34f616d2908a23aa8c2118d2ad05bfcf",
+  "wire/wire_test.go": "b8d417baaaee54ce3a506a4b9ca536dc6d6159f41767e8e727d263333c7a64fb",
+  "ws/conn.go": "69399c9f814f1f982e1dd45c50872c84425b5eaba9f87ff2dbf5a3b054d4e37c"
+ },
+ "mapping": {
+  "fish_go/internal/game/table": "internal/ark-go/table",
+  "fish_go/internal/platform/net/{wire,ws,session,dispatch,guard}": "internal/ark-go/{同名}"
+ },
+ "renamed": "2026-10-16 目錄 internal/fishgo → internal/ark-go（使用者指示；根層套件名 arkgo，子套件名不變）",
+ "source": "IGS-ARCADE-DIVISION-RD7/GoldenHoyeahFishServer@fish_go",
+ "sync_chain": [
+  {
+   "from": "github.com/igs-paddyyang/fish-bot/go-server/internal/ark-go",
+   "synced": "2026-10-16",
+   "to": "__MODULE__/internal/ark-go",
+   "transform": "匯入路徑改寫 + gofmt（tools/vendorsync）；其餘逐字相同"
+  }
+ ],
+ "synced": "2026-10-15",
+ "transform": "匯入路徑改寫（見 mapping）後執行 gofmt -w（改寫會打亂 import 排序）；除此之外與來源 commit 逐字相同"
+}

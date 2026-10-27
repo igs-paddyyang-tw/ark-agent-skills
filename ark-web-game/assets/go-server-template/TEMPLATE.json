@@ -1,0 +1,7 @@
+{
+ "from": "data/slot/huffnpuff-open-house/game/go-server",
+ "module": "aidev/slot/huffnpuff-open-house/go-server",
+ "synced": "2026-10-23",
+ "files": 35,
+ "note": "由 wg_server_init.py --sync-template 產生，勿手改；ark-go 同步後重跑"
+}
