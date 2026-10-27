@@ -25,8 +25,8 @@ metadata:
   depends_on:
     - { name: ark-md-report, version: "^1.0.0" }
   status: active
-  version: "1.1.1"
-  updated: 2026-10-20
+  version: "1.1.2"
+  updated: 2026-10-27
 ---
 
 # ark-prompt-spec-validator

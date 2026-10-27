@@ -6,6 +6,8 @@ description: |
   使用此 Skill 當使用者提及 Docker 部署、容器化、docker compose、
   Dockerfile、部署腳本、containerize、打包部署、
   或任何需要將專案容器化的場景。
+  不適用於：Kubernetes／雲端部署管線（本 skill 只到 docker compose）；本機常駐服務用 systemd user service；
+  新建整個應用骨架請用 ark-webapp-generator。
 metadata:
   schema_version: "1.2"
   status: active
@@ -16,13 +18,17 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "1.0.2"
-  updated: 2026-10-21
-  # 2026-10-21 實測：照本檔範本產 Python 專案（python:3.12-slim multi-stage）→ compose build／up -d →
-  # 35 秒內 healthy、/api/status 200。只驗了 Python 路徑；Node／Go 範本未實測
+  version: "1.1.0"
+  updated: 2026-10-27
+  # 實測：照本檔範本產最小專案 → compose build／up -d → healthy＋/api/status 200
+  #   2026-10-21 Python（python:3.12-slim）35 秒；2026-10-27 Node（node:22-slim，227MB）25 秒、
+  #   Go（golang:1.23 → alpine:3.20，13MB、uid 65534）15 秒
   tested_against:
     docker: "28.3.3"
     docker-compose: "2.39.1"
+    python-image: "3.12-slim"
+    node-image: "22-slim"
+    go-image: "golang:1.23 → alpine:3.20"
 ---
 
 # ark-docker-deploy
@@ -44,6 +50,11 @@ metadata:
 | `project_dir` | `str` | ✅ | — | 專案目錄 |
 | `services` | `list[str]` | ❌ | 自動偵測 | 服務清單（如 `["team-agent", "webbot"]`） |
 | `python_version` | `str` | ❌ | `"3.12"` | Python 版本 |
+| `node_version` | `str` | ❌ | `"22"` | Node 版本（需 18+，健康檢查用內建 fetch） |
+| `go_version` | `str` | ❌ | `"1.23"` | Go 版本（對齊 go.mod 的 `go` 指令） |
+| `entry` | `str` | ❌ | `"server.js"` | Node 入口檔 |
+| `main_pkg` | `str` | ❌ | `"."` | Go main 套件路徑（如 `./cmd/server`） |
+| `health_port` | `int` | ✅ | — | 健康檢查與對外 port（`/api/status`） |
 | `expose_ports` | `dict` | ❌ | `{}` | 服務對外 port（如 `{"api": 8000}`） |
 | `env_file` | `str` | ❌ | `".env"` | 環境變數檔案 |
 
@@ -107,6 +118,75 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 CMD ["python", "start.py"]
 ```
 
+### 步驟 2b：產出 Dockerfile（Node multi-stage）
+
+```dockerfile
+# ── Build Stage ──
+FROM node:{node_version}-slim AS builder
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+# TypeScript／打包專案：改 `RUN npm ci && npm run build`，runtime 只複製 dist/ 與 production 依賴
+
+# ── Runtime Stage ──
+FROM node:{node_version}-slim
+
+WORKDIR /app
+
+# 複製已安裝的依賴（.dockerignore 排除本機 node_modules，這裡只用 builder 裝的）
+COPY --from=builder /app/node_modules ./node_modules
+
+# 複製原始碼
+COPY . .
+
+ENV NODE_ENV=production
+
+# 健康檢查（node 18+ 內建 fetch，不另裝 curl）
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD node -e "fetch('http://localhost:{health_port}/api/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# 啟動
+CMD ["node", "{entry}"]
+```
+
+> `npm ci` 需要 `package-lock.json`；沒有就先在本機 `npm install --package-lock-only` 產一份並進版控。
+
+### 步驟 2c：產出 Dockerfile（Go multi-stage）
+
+```dockerfile
+# ── Build Stage ──
+FROM golang:{go_version} AS builder
+
+WORKDIR /src
+# go.sum* 用萬用字元：沒有外部依賴的專案沒有 go.sum，go.mod 命中即可
+COPY go.mod go.sum* ./
+RUN go mod download
+
+COPY . .
+# 靜態連結，runtime 不需要 libc
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/app {main_pkg}
+
+# ── Runtime Stage ──
+FROM alpine:3.20
+
+WORKDIR /app
+COPY --from=builder /out/app /app/app
+
+# 非 root 執行
+USER 65534
+
+# 健康檢查（alpine 內建 busybox wget，不另裝 curl）
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget -qO- http://localhost:{health_port}/api/status >/dev/null || exit 1
+
+# 啟動
+CMD ["/app/app"]
+```
+
+> `{main_pkg}` 預設 `.`；`cmd/server` 這類多 binary 專案填 `./cmd/server`。
+> 用 alpine 而不是 distroless：distroless 沒有 shell 與 wget，HEALTHCHECK 無法執行。
+
 ### 步驟 3：產出 docker-compose.yaml
 
 ```yaml
@@ -125,6 +205,8 @@ services:
       - ./data:/app/data          # 持久化資料
       - ./config:/app/config      # 配置檔
     healthcheck:
+      # 與 Dockerfile HEALTHCHECK 同一個指令：Python 用 curl；Node 用
+      # ["CMD", "node", "-e", "fetch(...)..."]；Go 用 ["CMD", "wget", "-qO-", "http://localhost:{health_port}/api/status"]
       test: ["CMD", "curl", "-f", "http://localhost:{health_port}/api/status"]
       interval: 30s
       timeout: 5s

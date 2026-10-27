@@ -41,9 +41,9 @@ DEFAULT_EXCLUSIVE_TRIGGERS = {
     "瀏覽器測試": "ark-browser-tool", "截圖": "ark-browser-tool",
     "寫 spec": "ark-superpowers", "產 spec": "ark-superpowers",
     "派工": "ark-project-planning", "共筆": "ark-doc-coauthoring",
-    "chatbot": "ark-agent-builder", "聊天機器人": "ark-agent-builder",
+    "chatbot": "ark-agent-bot-builder", "聊天機器人": "ark-agent-bot-builder",
     "博奕": "ark-html-dashboard", "老虎機": "ark-html-dashboard", "遊戲面板": "ark-html-dashboard",
-    "CLI 骨架": "ark-llm-cli",
+    "CLI 骨架": "ark-agent-cli",
     "驗證提詞": "ark-prompt-spec-validator", "prompt drift": "ark-prompt-spec-validator",
     "drift report": "ark-code-spec-validator",
 }

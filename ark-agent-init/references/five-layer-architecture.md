@@ -35,7 +35,7 @@
 |---|---|---|---|---|
 | 🧠 人格 | `.kiro/steering/SOUL.md` | 同左 | ✋ 人（`--profile` 可渲染） | ✅ |
 | 🧠 規範 SSOT | 根 `AGENTS.md`（子 agent 工作目錄根各一份複本；`steering/` 不放 —— 見 SKILL.md 頂部單一權威） | 同左 | ✋ 人／daemon | ✅ |
-| 🧠 判準 | `.kiro/steering/BRAIN.md` | 同左（`context_builder` 自動注入） | ✋ 人（build_kiro 尚不產） | ✅ |
+| 🧠 判準 | `.kiro/steering/BRAIN.md` | 同左（`context_builder` 自動注入） | 🤖 build_kiro 產（判準＋角色段，once）／✋ 人補 | ✅ |
 | 🧠 畫像／程式規範 | `.kiro/steering/USER.md`、`CODE.md` | 同左 | ✋ 人 | ✅／🔸 |
 | 📝 導覽 + 里程碑 | `.kiro/steering/MEMORY.md`（< 20 KB） | 同左 | ✋ 人 | ✅ |
 | 📝 持久事實 | `memory/memory.md` | 同左 | 🤖 `memory-distill`／consolidate | 🔸 |

@@ -478,3 +478,67 @@ def test_validate_flags_legacy_memory(project):
     assert "7 個日期事件分節" in out
     assert "KB > 20 KB" in out
     assert "worker-agent/.kiro：缺 memory/ 骨架" in out
+
+
+# ── 2.5.0：BRAIN.md ＝ 五層判準＋本角色知識背景 ──────────────────
+
+def _brain(project, wd: str) -> str:
+    return (_kiro_dir(project, wd) / "steering" / "BRAIN.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("name,inst", sorted(_instances().items()))
+def test_brain_has_judgment_and_role_sections(project, name, inst):
+    """每個 agent 都有 BRAIN.md，且同時有五層判準與角色段；佔位符與 leader 範例不得殘留。
+
+    🔴 背景：bot 套件注入 BRAIN.md 卻不產它（nana-bot 手抄範本、帶 leader 私有路徑上線），
+       team daemon 產的只有角色知識沒有判準 —— 同名兩種內容，2.5.0 統一。
+    """
+    text = _brain(project, inst["working_directory"])
+    assert "## 五層資源" in text and "## 本角色知識背景" in text
+    assert "{private_kb}" not in text and "{role_section}" not in text
+    assert "leader 範例" not in text
+
+
+def test_brain_role_section_follows_daemon_selection(project):
+    """角色段選法同 daemon：instance 名優先（leader-agent → leader、admin-agent → admin），
+    worker 沒有同名範本 → coder；leader 帶品質護欄、別人不帶。"""
+    leader = _brain(project, "agents/leader-agent")
+    worker = _brain(project, "agents/worker-agent")
+    admin = _brain(project, "agents/admin-agent")
+    assert "Leader 知識背景" in leader and "品質護欄" in leader
+    assert "品質護欄" not in worker and "品質護欄" not in admin
+    assert "Coder 知識背景" in worker
+    assert "Admin 知識背景" in admin
+
+
+def test_brain_private_kb_path_matches_shelf(project):
+    """私有櫃路徑與 _build_knowledge_sources 同規則：根目錄 → knowledge/<name>/；子 agent → <wd>/knowledge/。"""
+    assert "`knowledge/demo-agent/wiki/`" in _brain(project, ".")
+    assert "`agents/worker-agent/knowledge/wiki/`" in _brain(project, "agents/worker-agent")
+
+
+def test_brain_is_not_overwritten(project):
+    """policy once：手寫或 daemon 寫過的 BRAIN.md 重跑不覆寫。"""
+    f = _kiro_dir(project, "agents/worker-agent") / "steering" / "BRAIN.md"
+    f.write_text("# 手寫的 BRAIN\n", encoding="utf-8")
+    subprocess.run([sys.executable, str(BUILD), str(project / "team.yaml"), str(project)],
+                   capture_output=True, text=True, check=True)
+    assert f.read_text(encoding="utf-8") == "# 手寫的 BRAIN\n"
+
+
+def test_brain_template_field_wins(tmp_path):
+    """team.yaml 的 `template` 優先於 instance 名與 role（與 daemon P2-8 相同）。"""
+    cfg = yaml.safe_load(TEAM_YAML)
+    cfg["instances"]["worker-agent"]["template"] = "qa"
+    (tmp_path / "team.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding="utf-8")
+    subprocess.run([sys.executable, str(BUILD), str(tmp_path / "team.yaml"), str(tmp_path)],
+                   capture_output=True, text=True, check=True)
+    text = (tmp_path / "agents/worker-agent/.kiro/steering/BRAIN.md").read_text(encoding="utf-8")
+    assert "QA 知識背景" in text and "Coder 知識背景" not in text
+
+
+def test_validate_requires_brain(project):
+    (project / "agents/worker-agent/.kiro/steering/BRAIN.md").unlink()
+    r = subprocess.run([sys.executable, str(BUILD), "--validate", str(project)],
+                       capture_output=True, text=True)
+    assert r.returncode == 1 and "BRAIN.md" in r.stdout

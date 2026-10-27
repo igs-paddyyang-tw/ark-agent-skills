@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-10-27 (BRAIN.md 統一「判準＋角色」：ark-agent-init 2.5.0、bot-builder 3.2.0；docker-deploy 1.1.0 補 Node／Go)
+
+### BRAIN.md 同名兩種內容 → 統一（Paddy 定：方案 1）
+- 現況衝突：skill 範本＝**五層判準**（只能手抄）；ark_team_agent daemon 產的＝**角色知識**（無判準）；ark_bot_agent **注入卻不產** → nana-bot 手抄範本帶 leader 私有路徑上線
+- **ark-agent-init 2.5.0**：`build_kiro.py` 產 BRAIN.md ＝ 判準段（`assets/steering/BRAIN.md`，移除原混入的 leader 專屬「附註」「品質護欄」）
+  ＋ 角色段（新 `assets/steering/brain-roles/<role>.md`，源自 team 套件 10 個角色範本，leader 帶品質護欄；`_default.md` 待填骨架）；
+  選法同 daemon（`template` → instance 名 → role 對應），私有櫃路徑依 instance 渲染，**已存在不覆寫**；`--validate` 要求 BRAIN.md
+- **ark-agent-bot-builder 3.2.0**：依 agents.yaml 為根目錄與各 agent 委派 `_write_brain` 產 BRAIN.md（根目錄私有櫃以 bot 名命名）；
+  移除根層 `knowledge/raw/memory-archive`（違反「根層不放 raw/」紅線，bot 套件程式早已不讀寫）→ 改建 `memory/archive/`
+- 測試：init 新增 6 項（反證 10 項轉紅）、bot-builder 新增 3 項（反證 3 項轉紅）
+- 🟡 套件側（協助範圍、另案）：team 角色範本補判準段，讓 daemon 直接產合併版；bot `paths.py` docstring 仍寫 `raw/memory-archive`
+
+### ark-docker-deploy 1.1.0：補 Node／Go 範本並實機驗證
+- description 宣稱支援 Python／Node／Go，實際只有 Python 範本 → 補 Node（node:22-slim multi-stage、健康檢查用內建 fetch）與 Go（golang:1.23 → alpine:3.20、靜態連結、uid 65534、busybox wget 健檢）
+- 實測：Node 25 秒 healthy／227MB；Go 15 秒 healthy／13MB；`tested_against` 補三條路徑；description 補「不適用於」
+
+### 守門
+- ark-prompt-spec-validator 1.1.2：觸發詞擁有者表的複本指向已不存在的 `ark-agent-builder`／`ark-llm-cli`（bot-builder 被誤報 P1）→ 改正；
+  `test_taxonomy_vocab.py` 加擁有者一致＋存在檢查（反證轉紅）
+- manifest `skills-2026.10-r10`
+
+---
+
 ## 2026-10-27 (ark-github-cli 1.0.0：正式定版)
 
 - 0.x 卻 `status: active`、每次收尾都在用 → 定 **1.0.0**；CLI／stdout 契約與 0.2.3 相同，無破壞性變更（版本表註明，AL-103 通過）

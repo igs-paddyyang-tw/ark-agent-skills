@@ -10,7 +10,7 @@
 | `AGENTS.md`（workspace 根，**不在 steering/**）| 子 agent 複本由 build_kiro 產；專案根 SSOT 由 daemon 首次啟動產或手寫 | 全域規範 —— 落點見 SKILL.md 頂部單一權威 |
 | `.kiro/steering/CODE.md` | `assets/steering/CODE.md` | 程式碼規範（`fileMatch: src/**/*.py`）|
 | `.kiro/steering/MEMORY.md` | `assets/steering/MEMORY-template.md` | 工作記憶（含自我保護上限）|
-| `.kiro/steering/BRAIN.md` | `assets/steering/BRAIN.md` | 角色知識範本 |
+| `.kiro/steering/BRAIN.md` | `assets/steering/BRAIN.md` ＋ `assets/steering/brain-roles/<role>.md` | 五層判準＋本角色知識背景（`_write_brain`） |
 | `.kiro/steering/TEAM.md` | 套件 daemon 動態產生（`inclusion: manual`）| **不從 assets 取** |
 | `.kiro/agents/{role}.json` | `assets/agents/{admin-agent,agent}.json` | agent 定義 |
 | `.kiro/prompts/*.md` | `assets/prompts/*.md` | route-message / service-check / daily-report / team-check |

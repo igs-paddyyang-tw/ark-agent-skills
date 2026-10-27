@@ -27,8 +27,8 @@ REQUIRED_DIRS = [
     ".kiro/steering",
     "knowledge/shared/wiki",
     "knowledge/shared/raw",
-    "knowledge/raw/memory-archive",
     "memory/daily",
+    "memory/archive",
     "artifacts/reports",
 ]
 #: 知識庫五件套 —— 少了 schema.md，tags 白名單會是空集合（fail-closed，ingest 全擋）

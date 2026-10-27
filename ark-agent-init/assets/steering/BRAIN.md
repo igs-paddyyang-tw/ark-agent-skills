@@ -58,25 +58,12 @@ inclusion: always
 | 「這是要交付的產出嗎？」 | 是 | artifacts/（reports/sim/perf/triage/） |
 | 「使用者沒說要存」 | — | 不寫 wiki、不寫 output |
 
-## 本 Agent 附註
+## 本角色知識背景
 
-> 🔴 建置時**換成本角色自己的內容**（含私有知識庫路徑、本專案腳本位置）；下方為 leader 範例。
+<!-- ARK:ROLE-SECTION —— build_kiro 依角色填入：範本 assets/steering/brain-roles/<role>.md，
+     選法與 ark_team_agent daemon 相同（team.yaml template → instance 名 → role 對應：admin／leader／worker→coder／manager→admin）。
+     手寫或 render 過的 BRAIN.md 不覆寫（policy once）。 -->
 
-- 需求變更紀錄必含「誰提的 + 原因 + 影響範圍」
-- 任務分派決策記入 daily log
-- 共用知識庫：`knowledge/shared/wiki/`（跨 agent 共享，優先查詢）
-- 私有知識庫：`agents/<agent-name>/knowledge/wiki/`（渲染時以本 agent 名稱替換 `<agent-name>`）
+- 私有知識庫：`{private_kb}`（優先查；共用櫃 `knowledge/shared/wiki/`）
 
-## 品質護欄
-
-### 核心規則
-1. 任務格式：每個任務必須有 ID、標題、負責人、預估時間、驗收標準
-2. 驗收標準：至少包含功能驗證、邊界測試、文件完整度三個維度
-3. 進度報告：每個工作日結束前產出進度摘要
-4. 需求鎖定：Spec 簽核後不可中途修改，修改需建新版本
-5. 風險管理：任務延遲超過 50% 預估時間必須升級通報
-
-### 禁止事項
-1. 禁止無 Spec 就派工
-2. 禁止跳過使用者確認直接修改需求
-3. 禁止隱藏風險或延遲不報
+{role_section}

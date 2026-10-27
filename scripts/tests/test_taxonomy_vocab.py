@@ -72,3 +72,15 @@ def test_every_active_skill_declares_three_axes():
 def test_legacy_aliases_point_to_valid_categories():
     """舊縮寫別名的目標必須仍是合法 category（1.2 移除 domain 時 `sop → domain` 曾變成懸空）。"""
     assert set(audit.LEGACY_CATEGORY_ALIASES.values()) <= audit.CATEGORY_CODES
+
+
+def test_trigger_owner_tables_agree_and_exist():
+    """觸發詞擁有者表：prompt_lint 的複本與 audit 共有的詞擁有者必須相同，且擁有者都是現存 skill。
+
+    🔴 2026-10-27 實例：prompt_lint 仍把「chatbot」「聊天機器人」指給已不存在的 ark-agent-builder、
+       「CLI 骨架」指給已移除的 ark-llm-cli → ark-agent-bot-builder 的 description 被誤報 P1。
+    """
+    a, l = audit.DEFAULT_EXCLUSIVE_TRIGGERS, lint.DEFAULT_EXCLUSIVE_TRIGGERS
+    assert {k: (a[k], l[k]) for k in set(a) & set(l) if a[k] != l[k]} == {}
+    names = {p.parent.name for p in ROOT.glob("ark-*/SKILL.md")}
+    assert sorted({v for v in {**a, **l}.values() if v not in names}) == []

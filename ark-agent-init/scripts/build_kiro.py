@@ -123,6 +123,9 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
             role_id=role_id,
         )
         created.extend(agent_created)
+        brain = _write_brain(kiro_dir / "steering", name, role, inst.get("template"), wd, base)
+        if brain:
+            created.append(brain)
 
     # ── B1b + B2：五類知識來源骨架 + knowledge_search_order ──
     created.extend(_build_knowledge_sources(cfg, base, instances))
@@ -434,6 +437,53 @@ def _build_steering(
         created.append(str(team_md.relative_to(base)))
 
     return created
+
+
+#: role → 角色段範本（與 ark_team_agent backend._template_role 同一張表；不認得的 role 也退 coder）
+_BRAIN_ROLE_MAP = {"admin": "admin", "leader": "leader", "worker": "coder", "manager": "admin"}
+
+
+def _brain_role_key(name: str, role: str, template: str | None) -> str:
+    """角色段選法與 daemon 相同：team.yaml `template` → instance 名去 `-agent` → role 對應。"""
+    roles_dir = STEERING_ASSETS / "brain-roles"
+    for key in (template, name.replace("-agent", "")):
+        if key and (roles_dir / f"{key}.md").exists():
+            return key
+    return _BRAIN_ROLE_MAP.get(role, "coder")
+
+
+def _write_brain(steering_dir: Path, name: str, role: str, template: str | None,
+                 wd: str, base: Path) -> str | None:
+    """產 BRAIN.md ＝ 五層判準（共用）＋本角色知識背景（依角色）。已存在不覆寫（policy once）。
+
+    🔴 為什麼 build_kiro 要產（2.5.0）：bot 套件會注入 BRAIN.md 卻不產它，nana-bot 只能手抄範本 →
+       帶著 leader 的私有路徑上線；team daemon 雖會產，但只有角色知識、沒有五層判準。
+       兩邊同一個檔名、兩種內容 → 統一為「判準＋角色」一份。角色段來自 team 套件的角色範本。
+    """
+    brain = steering_dir / "BRAIN.md"
+    if brain.exists():
+        return None
+    tpl = STEERING_ASSETS / "BRAIN.md"
+    if not tpl.exists():
+        return None
+    key = _brain_role_key(name, role, template)
+    role_file = STEERING_ASSETS / "brain-roles" / f"{key}.md"
+    if not role_file.exists():
+        role_file = STEERING_ASSETS / "brain-roles" / "_default.md"
+    # 角色範本是獨立文件（# 標題）→ 降一級嵌進「## 本角色知識背景」底下
+    role_lines = []
+    for line in role_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#"):
+            hashes = len(line) - len(line.lstrip("#"))
+            line = "#" * (hashes + 2) + line[hashes:]
+        role_lines.append(line)
+    private_kb = f"knowledge/{name}/wiki/" if wd == "." else f"{wd}/knowledge/wiki/"
+    text = (tpl.read_text(encoding="utf-8")
+            .replace("{private_kb}", private_kb)
+            .replace("{role_section}", "\n".join(role_lines).strip()))
+    steering_dir.mkdir(parents=True, exist_ok=True)
+    brain.write_text(text.rstrip() + "\n", encoding="utf-8")
+    return str(brain.relative_to(base))
 
 
 def _merge_profile_section(target: Path, fragment: str, anchor: str, always_fm: bool = False) -> bool:
@@ -970,7 +1020,7 @@ def validate_kiro(project_dir: Path) -> list[str]:
                 errors.append(f"⚠️ {prefix}/settings/mcp.json 格式錯誤: {e}")
 
         # steering 必要檔案 —— AGENTS.md 不在此列（2.4.0 起不放 steering/；佈局由 audit_agents_layout 統一檢查）
-        required_steering = ("SOUL.md", "MEMORY.md", "USER.md", "TEAM.md")
+        required_steering = ("SOUL.md", "BRAIN.md", "MEMORY.md", "USER.md", "TEAM.md")
         for fname in required_steering:
             if not (kiro_dir / "steering" / fname).exists():
                 errors.append(f"❌ {prefix}/steering/{fname} 缺少")
