@@ -223,7 +223,38 @@
   HF.KEY = wrap(`<circle cx="70" cy="100" r="34" fill="none" stroke="url(#gk)" stroke-width="14"/><path d="M104 100 H176 M150 100 V126 M168 100 V120" stroke="url(#gk)" stroke-width="14" stroke-linecap="round"/>`, goldGrad('gk'));
   HF.HAT = wrap(`<path d="M30 132 Q100 30 170 132Z" fill="#ffc107" stroke="#7a5a08" stroke-width="5"/><rect x="20" y="128" width="160" height="22" rx="10" fill="#ffb300" stroke="#7a5a08" stroke-width="5"/><rect x="92" y="64" width="16" height="64" fill="#fff3b0" opacity=".6"/>`);
 
-  const SETS = { milefo: S, tiger_dragon: TD, three_pigs: TP, huffnpuff_open_house: HF };
+  // ───── magic_lamp（神燈寶藏）：通用寶物造型（不仿原廠美術）；名稱 = 規格書符號代碼 ─────
+  const ML = {};
+  const gem = (id, c1, c2, label) => wrap(`${plate('b' + id, 'g' + id)}
+    <path d="M100 38 L150 78 L130 150 L70 150 L50 78Z" fill="url(#j${id})" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M50 78 L150 78 M100 38 L84 78 L100 150 L116 78Z" stroke="#fff" stroke-width="2" fill="none" opacity=".55"/>
+    <text x="100" y="186" font-family="${FONT}" font-size="22" text-anchor="middle" fill="#ffe9a0" font-weight="700">${label}</text>`,
+    frame('#3a2a6a', '#120a2a', 'b' + id) + goldGrad('g' + id) + `<linearGradient id="j${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>`);
+  ML.M1 = wrap(`${plate('bML1', 'gML1')}
+    <path d="M44 118 Q100 150 156 118 L146 150 Q100 170 54 150Z" fill="url(#gML1)" stroke="#7a4b0a" stroke-width="4"/>
+    <path d="M60 116 Q100 60 140 116Z" fill="url(#gML1)" stroke="#7a4b0a" stroke-width="4"/><circle cx="100" cy="66" r="10" fill="#ff6b5b" stroke="#7a1a12" stroke-width="3"/>
+    <path d="M40 104 L60 116 M160 104 L140 116" stroke="#7a4b0a" stroke-width="6" stroke-linecap="round"/>
+    <text x="100" y="190" font-family="${FONT}" font-size="22" text-anchor="middle" fill="#ffe9a0" font-weight="700">王冠</text>`,
+    frame('#8f1d3a', '#2a0612', 'bML1') + goldGrad('gML1'));
+  ML.M2 = gem('ML2', '#ff5f6d', '#8b0a1a', '紅寶石');
+  ML.M3 = gem('ML3', '#4facfe', '#0b2a6b', '藍寶石');
+  ML.M4 = gem('ML4', '#47e891', '#0b5a2e', '綠寶石');
+  ML.M5 = wrap(`${plate('bML5', 'gML5')}
+    <path d="M70 60 L130 60 L122 92 Q150 112 140 150 L60 150 Q50 112 78 92Z" fill="url(#gML5)" stroke="#7a4b0a" stroke-width="4"/>
+    <rect x="64" y="146" width="72" height="12" rx="5" fill="#b9770e"/>
+    <text x="100" y="192" font-family="${FONT}" font-size="22" text-anchor="middle" fill="#ffe9a0" font-weight="700">金杯</text>`,
+    frame('#1f6f8b', '#06232e', 'bML5') + goldGrad('gML5'));
+  ML.AA = card('A', '#2e7d5b', '#0e3326'); ML.KK = card('K', '#2b5aa8', '#0c1f45');
+  ML.QQ = card('Q', '#8e3b8e', '#2e0f33'); ML.JJ = card('J', '#9a5a12', '#331c03');
+  ML.WW = S.WW;
+  ML.SC = wrap(`<circle cx="100" cy="100" r="88" fill="url(#mlsc)" stroke="#fff3b0" stroke-width="6"/>
+    <path d="M40 120 Q60 96 100 100 Q140 100 150 86 L168 76 Q160 96 148 104 Q140 132 100 134 Q60 134 40 120Z" fill="url(#gSCl)" stroke="#7a4b0a" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M86 100 Q100 78 114 100" fill="url(#gSCl)" stroke="#7a4b0a" stroke-width="3"/><path d="M98 76 Q92 56 104 40 Q112 58 102 76Z" fill="#ffb347" opacity=".9"/>
+    <rect x="72" y="134" width="56" height="10" rx="4" fill="#b9770e"/>
+    <text x="100" y="178" font-family="${FONT}" font-size="24" text-anchor="middle" fill="#fff3b0" font-weight="900">神燈</text>`,
+    `<radialGradient id="mlsc" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#6a3fbf"/><stop offset="1" stop-color="#1a0b3a"/></radialGradient>` + goldGrad('gSCl'));
+
+  const SETS = { milefo: S, tiger_dragon: TD, three_pigs: TP, huffnpuff_open_house: HF, magic_lamp: ML };
 
   // 背景（廟宇紅金 + 雲紋）
   function background(w, h) {

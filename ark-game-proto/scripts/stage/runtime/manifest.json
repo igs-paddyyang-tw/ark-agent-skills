@@ -8,6 +8,8 @@
     "core/tween.js",
     "core/sim.js",
     "@src/go-rand.js",
+    "service/wire.js",
+    "service/arkconn.js",
     "service/result.js",
     "service/service.js",
     "slot/logic.js",

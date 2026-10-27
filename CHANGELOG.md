@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-10-27 (aidev 網頁遊戲與還原局優化回貢：5 個 skill 升版＋新增 ark-web-game)
+
+來源：aidev-team-agent 2026-10-22～23 實戰（豬來蓋福、神燈寶藏網頁正式版；Go 世代 26 款還原局）。
+
+- **ark-web-game 0.9.1（新增）**：網頁遊戲 ⑦⑧ 工程——單局結果契約、Go 網路層 wire 協定與 WsService、⑧ 抽離 SOP（game.js → Go prob.Game）、Go Server 範本（34 檔）、素材打包（WebP／ogg＋m4a／manifest）、正式 Client 範本、Docker 發佈
+- **ark-game-proto 1.3.0 → 1.7.0**：引擎回放試玩（⑦-lite，`engine_trace`）、連線版 `service/wire.js`、神燈寶藏 adapter、還原局拍板包 `--no-play`、description 縮到 PL-020 限度內
+- **ark-game-prob 1.4.8 → 1.6.0**：`ps_extract`／`ps_diff` 支援 hoyeah 機率表與裁決、匯入 qt-report
+- **ark-game-quicktest 2.1.5 → 2.2.1**：路線 B（用 ⑧ Go Server 機率模組模擬）、路線 C（C++ 快測 → Go 移植、Go 世代線上重跑）、`references/cpp-port-sop.md`、`restore-stages-sop.md`；frontmatter 併入上游 schema 1.2 與依賴範圍
+- **ark-game-spec 2.6.1 → 2.7.0**：佈局契約 v3.7
+- **ark-wiki-engine 3.0.2 → 3.0.3**：`wiki_index` 舊索引目錄刪不掉（共用資料夾、同步碟）時改名，不中斷建置；新增 `test_index_no_delete.py`（無 fcntl 的平台自動跳過）
+
+**測試**：spec 57、quicktest 31、prob 92、proto 31、web-game 14 全過；wiki-engine 在 Windows 有 17 項失敗，與上游 3.0.2 原版在同一台機器的失敗完全相同（`wiki_index.py` 用 fcntl，索引建置只能在 Linux／WSL 跑），非本次引入。audit P0／P1 = 0。
+
+---
+
 ## 2026-10-21 (ark-docker-deploy 1.0.2：實機驗證)
 
 - 照 SKILL.md 範本產 Python 專案（python:3.12-slim multi-stage）→ `docker compose build`／`up -d` → 35 秒內 healthy、`/api/status` 200，

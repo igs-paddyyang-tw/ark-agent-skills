@@ -1,0 +1,110 @@
+package session
+
+import (
+	"sync"
+)
+
+// Registry 記錄本 pod 的所有連線，並以 ArkID 索引已認證的連線。
+type Registry struct {
+	mu     sync.RWMutex
+	all    map[uint64]*Session
+	byArk  map[string]map[uint64]*Session
+	authed int
+}
+
+// NewRegistry 建立空的 Registry。
+func NewRegistry() *Registry {
+	return &Registry{all: map[uint64]*Session{}, byArk: map[string]map[uint64]*Session{}}
+}
+
+// Add 加入新連線。
+func (r *Registry) Add(s *Session) {
+	r.mu.Lock()
+	r.all[s.ID] = s
+	r.mu.Unlock()
+}
+
+// Remove 移除連線。
+func (r *Registry) Remove(s *Session) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.all[s.ID]; !ok {
+		return
+	}
+	delete(r.all, s.ID)
+	if id := s.ArkID(); id != "" {
+		if m := r.byArk[id]; m != nil {
+			if _, ok := m[s.ID]; ok {
+				delete(m, s.ID)
+				r.authed--
+			}
+			if len(m) == 0 {
+				delete(r.byArk, id)
+			}
+		}
+	}
+}
+
+// markAuthed 把已綁定身分的連線加入 ArkID 索引，回傳同帳號的其他連線。
+func (r *Registry) markAuthed(s *Session) []*Session {
+	id := s.ArkID()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.all[s.ID]; !ok {
+		return nil
+	}
+	m := r.byArk[id]
+	if m == nil {
+		m = map[uint64]*Session{}
+		r.byArk[id] = m
+	}
+	var others []*Session
+	for _, o := range m {
+		others = append(others, o)
+	}
+	m[s.ID] = s
+	r.authed++
+	return others
+}
+
+// ByArkID 回傳某帳號在本 pod 的連線。
+func (r *Registry) ByArkID(arkID string) []*Session {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var out []*Session
+	for _, s := range r.byArk[arkID] {
+		out = append(out, s)
+	}
+	return out
+}
+
+// Each 走訪所有連線（快照，不持鎖呼叫 fn）。
+func (r *Registry) Each(fn func(*Session)) {
+	r.mu.RLock()
+	list := make([]*Session, 0, len(r.all))
+	for _, s := range r.all {
+		list = append(list, s)
+	}
+	r.mu.RUnlock()
+	for _, s := range list {
+		fn(s)
+	}
+}
+
+// Count 回傳（全部連線數, 已認證連線數）。
+func (r *Registry) Count() (int, int) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.all), r.authed
+}
+
+// AuthedIDs 回傳本 pod 所有已認證的 ArkID。
+func (r *Registry) AuthedIDs() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, 0, len(r.byArk))
+	for id := range r.byArk {
+		out = append(out, id)
+	}
+	return out
+}

@@ -53,6 +53,8 @@ def main() -> None:
     ap.add_argument("--game")
     ap.add_argument("--config", help="選配：快測設定檔 JSON → 跑 ps_diff")
     ap.add_argument("--map", help="ps_diff 對照規則 yaml")
+    ap.add_argument("--params-sheet", help="xlsx 模式：參數表分頁名（傳給 ps_extract；1.5.1）")
+    ap.add_argument("--qt-report", help="xlsx 模式：外部快測報表 report_<ver>.txt 填 §2（傳給 ps_extract；1.6.0）")
     ap.add_argument("--xlsx-view", action="store_true", help="qt 模式：另產公版 prob-spec.xlsx（= --excel probtable）")
     ap.add_argument("--excel", nargs="*", help="產 Excel View 軌：kinds 空=all；可指定 probtable/diff/lint/qtreport/review")
     ap.add_argument("--versions", nargs="+", help="--excel versions 用的多版本設定檔")
@@ -81,7 +83,7 @@ def main() -> None:
     elif a.xlsx:
         slug = a.slug or pathlib.Path(a.xlsx).stem.split("_")[0]
         out_dir, _ = C.resolve_out(a.out, a.dest, slug)
-        args = ["--xlsx", a.xlsx, "--out", str(out_dir), "--slug", slug] + (["--game", a.game] if a.game else [])
+        args = ["--xlsx", a.xlsx, "--out", str(out_dir), "--slug", slug] + (["--game", a.game] if a.game else []) + (["--params-sheet", a.params_sheet] if a.params_sheet else []) + (["--qt-report", a.qt_report] if a.qt_report else [])
         steps["extract"] = step("ps_extract.py", args)
         pargs = ["--data", str(out_dir / "prob-data.json"), "--dest", str(out_dir), "--slug", slug]
         steps["probspec"] = step("ps_probspec.py", pargs)

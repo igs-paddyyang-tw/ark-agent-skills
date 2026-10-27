@@ -1,17 +1,17 @@
 ---
 name: ark-game-proto
 description: |
-  機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：遊戲開發製程 C 段的「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。
-  deterministic：① proto_build 把 prob-spec.md（ark-game-prob 1.4+ 格式）經玩法 adapter 編成 game-config.json（每個參數帶表編號來源、規格缺口 gaps、§2 驗證目標）；
-  ② 產單檔 index.html：PixiJS 轉輪 / 連線 / FG 或 Bonus 演出 + 驗證台（L1 精算對 §2、L2 Web Worker 蒙地卡羅、規格缺口回驗、Go 對照、單局抽表軌跡、seed 重現、情境搜尋）；
-  ③ --go-config 規格書 ⇄ Go 快測設定檔逐鍵對照並補規格書缺的值；④ go_parity 以 Go math/rand 逐位元移植與 Go 快測引擎同 seed 逐局對照。
-  內建玩法模型：collect-mult（彌勒佛）、coin-lock（金幣鎖格、JACKPOT）、house-collect（吉屋出豬）、huff-house（四建材觸發 House Spin ＋ Open House 闖關；Float64 數學流）。
-  1.1 起附「正式演出版型」Stage（scripts/stage）：Proto 遊戲包 game.js（數學零修改）→ PixiJS 8 演出 + Pixi HUD，結果只經 GameService 取得
-  （Local 瀏覽器內引擎 / Http 經 slot-bot 接 Go 機率 Server / Replay 重播），SpinResult JSON Schema、整數金額。
+  機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：製程 C 段「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。
+  ① proto_build 把 prob-spec.md 經玩法 adapter 編成 game-config.json（參數帶表編號來源、規格缺口 gaps、§2 驗證目標）；
+  ② 單檔 index.html：轉輪／連線／FG 或 Bonus 演出＋驗證台（L1 精算、L2 蒙地卡羅、缺口回驗、Go 對照、單局軌跡、seed 重現、情境搜尋）；
+  ③ --go-config 規格書 ⇄ Go 快測設定檔逐鍵對照；④ go_parity 以 Go math/rand 與 Go 快測引擎同 seed 逐局對照。
+  內建玩法模型：collect-mult、coin-lock、house-collect、huff-house、frame-chest。
+  另附「正式演出版型」Stage（scripts/stage）：game.js（數學零修改）→ PixiJS 8 演出＋HUD，結果只經 GameService 取得
+  （Local／Http／Ws／Replay），SpinResult JSON Schema、整數金額；引擎回放試玩（⑦-lite）。
   使用此 skill 當提及：機率雛型、slot 雛型、H5 雛型、PixiJS slot、演出驗證機率、規格書做成可玩版本、試玩機率、
-  規格缺口、規格書對 Go 引擎、逐局對照、seed 重現、FG 演出、Bonus 演出、驗證台、正式演出版型、Stage、試玩改 PixiJS、GameService、SpinResult、接 Go Server。
-  不適用於：寫機率規格書本身（→ ark-game-prob）、跑 Go 快測 / 三向 verdict（→ ark-game-quicktest）、正式上線前端或美術、
-  一般網頁 / dashboard（→ ark-html-dashboard）；Stage 不含帳務 / session（slot-bot server 負責）。
+  規格缺口、規格書對 Go 引擎、逐局對照、seed 重現、FG 演出、Bonus 演出、驗證台、正式演出版型、Stage、試玩改 PixiJS、GameService、SpinResult、引擎回放試玩。
+  不適用於：寫機率規格書（→ ark-game-prob）、Go 快測／三向 verdict（→ ark-game-quicktest）、
+  連線協定、Go Server、⑧ 抽離、正式 Client 與素材打包（→ ark-web-game）、一般網頁／dashboard（→ ark-html-dashboard）。
 metadata:
   schema_version: "1.2"
   status: active
@@ -19,8 +19,8 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "1.3.0"
-  updated: 2026-10-20
+  version: "1.7.0"
+  updated: 2026-10-22
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }
@@ -68,6 +68,7 @@ metadata:
 | `references/go-parity.md` | 逐局對照原理（RNG 移植、抽值順序、封頂語意）與排錯 | 對照出差異時 |
 | `assets/slot-proto-arch.svg` | 架構圖 | 文件 / 簡報 |
 | `scripts/stage/` | **Stage 正式演出版型（1.1）**：`runtime/`（core / service / slot / features，載入順序見 `runtime/manifest.json`）、`schema/spin-result.schema.json`、`stage_build.py`（資料夾 / `--single` 單檔 / `--serve`）、`tests/`（stage_test.js、test_stage_build.py、mock_server.js、smoke.js）| 做正式演出、遷移 Proto 試玩、接 Server；先讀 `references/stage-architecture.md` |
+| `scripts/engine_trace.py`、`engine_trace_batch.py`、`scripts/stage/replay/game.js` | **引擎回放試玩（⑦-lite，1.6）**：把 slot_math_squad 的 Go 快測引擎複本加鉤子（GameCheck 記盤面、GameProcess 後記贏分、反射關道具卡／BB／保底）跑 N 局 → `proto-stage-trace/1` 軌跡 → 通用回放遊戲包循環播放；批次版依 `data/slot/_catalog/catalog.yaml` 每款挑引擎，20 萬局 RTP 不在 80～110% 不出試玩 | 還沒有規格書／⑥ 的線上遊戲，先要一個「數學 = 快測引擎」的可玩版 |
 | `references/stage-architecture.md`、`stage-game-pack.md`、`stage-api.md` | Stage 分層與檔案、遊戲包契約與遷移指南、slot-bot HTTP 契約 | 對應工作 |
 | `golden/stage-demo/game.js` | Stage 無版權示範遊戲包（Ways + 鎖格重轉、佔位美術）| Stage 回歸基準 |
 | `golden/milefo/`、`golden/tiger-and-dragon/`、`golden/three-pigs/`、`golden/huffnpuff-open-house/` | 各模型的輸入 md、Go 設定檔、parity 記錄、期望 config（huff 另附 rtp-report.json） | 回歸測試基準 |
@@ -76,7 +77,7 @@ metadata:
 
 ```
 手上有什麼？
-├─ prob-spec.md（1.4+）且玩法已有 adapter（milefo / tiger_dragon / three_pigs / huffnpuff_open_house）
+├─ prob-spec.md（1.4+）且玩法已有 adapter（milefo / tiger_dragon / three_pigs / huffnpuff_open_house / magic_lamp）
 │   python scripts/proto_build.py --md <prob-spec.md> --adapter <a> --out output/slot-proto/<slug> [--go-config <Go 設定檔>]
 │   └─ 開 index.html：L1 全 PASS → 規格書數學完整；有 FAIL → 看「規格缺口」分頁
 ├─ 新遊戲、玩法近似既有模型 → 照 references/adapter-guide.md 寫 adapters/<slug>.py（只寫表格語意 + GAPS）
@@ -95,7 +96,15 @@ metadata:
 │   → output/slot/<slug>/game/pixi-client/single/index.html（單檔）＋ data/.../stage-build.json 清冊（佈局契約 v3 ⑦；任意路徑用 --game --out）
 │   └─ 開 index.html：?seed= 重現、?rng=go 用 Go Float64 流；除錯「強制」分頁 = 搜尋真 seed；「服務」分頁錄製 / 重播軌跡
 ├─ 驗：node scripts/stage/tests/stage_test.js --game <新> --orig <原>（結果一致 / 契約 / 分層 / Http）；smoke.js 截圖 0 error
-└─ 接 Server：node scripts/stage/tests/mock_server.js --game <game.js> → ?service=http&base=…&game=…&dev=1；契約 references/stage-api.md
+├─ 接 Server（HTTP）：node scripts/stage/tests/mock_server.js --game <game.js> → ?service=http&base=…&game=…&dev=1；契約 references/stage-api.md
+└─ 接 Server（ark-go WS，1.5.0）：stage.yaml service: {kind: ws}（或 ?service=ws&url=ws://…/ws&ark_id=…&dev=1）；mock：node scripts/stage/tests/mock_ws.js；
+   網路、斷線續玩、協定協商、分包發布的規則在 ark-web-game（references/wire-protocol.md、delivery.md）
+
+只有 Go 快測引擎、還沒規格書（⑦-lite 引擎回放）
+├─ 單款：python scripts/engine_trace.py --engine <slot_math_squad>/SLOT/<款>/<引擎> --n 2000 --sim 200000 --out data/slot/<slug>/game/replay
+│   → stage_build.py --game scripts/stage/replay/game.js --odds data/slot/<slug>/game/replay/trace.json --out output/slot/<slug>/game/replay/single --single
+├─ 全部：python scripts/engine_trace_batch.py --catalog data/slot/_catalog/catalog.yaml --msq <slot_math_squad> --repo . --report <json>
+└─ 限制：數學 = 引擎（可能是調參版，不等於線上）；特色遊戲只顯示贏分摘要；符號用代碼標籤。正式 ⑦ 仍走規格書 → ⑥ → Stage
 ```
 
 ## 守門
@@ -121,7 +130,7 @@ metadata:
 - **數學 RNG 與演出 RNG 分流**：假轉分數、聽牌、出場順序、復活這類演出抽選不吃數學流。
 - **抽值順序 = Go 引擎順序**：改順序會破壞逐局對照；新模型照 Go 程式的呼叫順序寫。
 - **驗證台不是正式前端**：美術是程式產生的 SVG 佔位圖、無音效、無帳務；不仿任何原廠美術 / 商標。
-- **Stage 是正式演出版型，但不含帳務 / session**：餘額只顯示 GameService 回傳值（Http 模式由 slot-bot server 權威）；美術來自遊戲包素材，競品裁圖只供內部參考、不入 skill 與 data。
+- **Stage 是正式演出版型，但不含帳務 / session**：餘額只顯示 GameService 回傳值（Http／Ws 模式由 Server 權威；連線方式與帳務歸屬見 ark-web-game）；美術來自遊戲包素材，競品裁圖只供內部參考、不入 skill 與 data。
 - **Stage 數學零修改**：遊戲包的 `CFG` 與玩法 logic 與來源逐字相同，演出層零抽值；兩者由 `stage_test.js` 的 parity-src 與 layering 兩項檢查把關。
 - **不做 Go 快測**：L2 約 1M 手/秒，千萬手級驗收仍走 ark-game-quicktest。
 
@@ -129,6 +138,13 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.7.0 | 2026-10-23 | review_build 還原局與正式 Client（十階段 S-4 試行，神燈寶藏）：`--no-play`（R-3：不收 ⑦ 單檔、不連 ⑥ 驗證台、不收 ⑥⑦ 驗收截圖，兩者內嵌線上機率等級參數）、`--exclude-link <glob>`（例 prob/prob-spec*、docs/reports/*live*）、`--client-checks <e2e 資料夾>`（⑧-C 正式 Client e2e 報告合併為 checks/client-e2e.json＋截圖 WebP）、`--play-url`（測試環境試玩網址） |
+| 1.6.2 | 2026-10-22 | engine_trace：`--config`（QT_CONFIG 傳給引擎＝線上機率 config）、`--keep`（保底／天井為線上基本規則時不被 __trialTune 關掉）、`LoadProbSetting*`、多回傳值取贏分、`go:debug randseednop=0`；smoke 點擊逾時 60 s。W1 26 款 ⑦ 一律改用線上 config 重產 |
+| 1.6.1 | 2026-10-22 | description 縮到 894 字元（prompt_lint PL-020，原 1,157 > 1,024）：連線、Go Server、⑧ 抽離、正式 Client 觸發詞移交 ark-web-game；內容不變 |
+| 1.6.0 | 2026-10-22 | **引擎回放試玩（⑦-lite）**：`engine_trace.py`（Go 引擎複本注入鉤子：所有 `GameCheck*` 記主遊戲盤面、`GameProcess` 後記贏分＋反射讀押注／特色欄位、`__trialTune` 關道具卡／Buy Bonus／保底，引擎崩則改原設定重跑並標記；押注欄位缺時讀 main.go 常數；go.mod 版本高於本機自動降版；下載不到的產圖模組換 stub；全 0 欄位裁掉）→ `proto-stage-trace/1`；`engine_trace_batch.py`（依總目錄挑引擎、RTP 80～110% 守門）；`stage/replay/game.js` 通用回放遊戲包；ReplayService `loop`；首批 18 款上線遊戲可玩 |
+| 1.5.0 | 2026-10-22 | 連線版（ark-web-game 計畫 P2）：`service/wire.js`（ark-go wire 編解碼，與 Go 黃金封包 `tests/fixtures/wire-golden.json` 逐字相同）、`service/arkconn.js`（auth、sn、推播、alive、逾時、自動重連；`ready()` 不另開連線避免同帳號互踢）、`WsService`（分段組回、缺段 fetch、426 協定協商、重試同 requestId、Schema 驗證）；Http／Ws 加 `ack`、`fetch`，init 帶 `protocol`；`Proto.playPending`（init 帶 pending → 先播再開放 SPIN）；module 演完 ack；啟動指標 `app.metrics.time_to_playable_ms`；`stage_build --bundles`（manifest.json＋經 ark-web-game `wg_release` 產 release.json）、`--service`／stage.yaml `service:`；`smoke.js --check-metrics`；mock `tests/mock_ws.js`；stage_test 新增 wire／arkconn／ws／pending。試點 huffnpuff 經 WS 連 game-server：端到端 9/9、WsService ⇄ LocalService 1 萬局 0 不一致 |
+| 1.4.1 | 2026-10-22 | `stage_build` 掃素材清單（node 載入 game.js）時也先注入 `odds` → 「沒有 odds 就丟錯」的遊戲包建得起來（試點：神燈寶藏 ⑦ 以 ⑥ `proto/game-config.json` 當 odds，數學唯一來源 = 規格書；⑦ ⇄ ⑥ 同亂數流逐局 220 萬手 0 不一致）；`test_odds_required_game_loads_with_odds` |
+| 1.4.0 | 2026-10-22 | 新玩法模型 `frame-chest`（神燈寶藏）：SC 落點掛框 → FG 同格再出 SC 升級（銅→銀→金，金框再中給額外獎）→ 結算逐格開木／銀／金箱 → 金箱 ≥4 抽表 F-8 特殊事件；L1 依「觸發盤條件分布」（權重 × 組觸發率選組，組內拒絕抽樣）跑整場 FG；adapter `magic_lamp`（讀 xlsx 原樣表 F-1～F-8、§1 規格簡述原文、§4 參數備註「表 M-1 線上權重」R-8 裁定；§2 空 → targets_extra 讀 rtp-report ＋ 同次 ChanceReport）；`goparity/frame-chest_trace.go`（全域 math/rand：Seed 自檢、引擎 stdout 導 DevNull）Go 逐局 2,200 萬手 0 不一致；slot-core 新增 `mg.all_board`（Go 停輪前空抽一次，對齊 RNG 流）；app.js L1／L2／缺口自動回驗（fc_spins、fc_event）／單局軌跡／FG 開箱演出／情境；美術套 `magic_lamp`；core_test frame-chest 一致性檢查；`tests/cdp.js` Linux root 自動加 `--no-sandbox`。線上機率不進 golden：`test_magic_lamp_frame_chest` 在含 `data/slot/magic-lamp` 的 repo 內才跑 |
 | 1.3.0 | 2026-10-20 | 佈局契約 v3.5「拍板包不與各階段產出重疊」：`review_build` 新增 `publish_docs`（定版家 md 旁產同名 html＋`content-src` 戳記，冪等、不覆寫他工具的成對 html）、`clean_review`（白名單外舊檔清掉，含 v1.2.4 的 docs/、prob-spec.html、proto.html 複製品）、`linked_items`（成品改 `../<stage>/…` 相對連結，不複製）、清冊多 `links`、來源改相對 repo 路徑、`--export <資料夾>` 產可帶走包（拒寫 data/）、結案報告不進送審包、`broken_links` 斷連結檢查；golden 拍板書 03 章連結改指定版家 |
 | 1.2.5 | 2026-10-19 | 佈局契約 v3.4 十階段：`review_build` 階段表改為 ⑨ 送審拍板（拍板書各章拍板欄全部填完才算完成，否則顯示「⏳ 送審中」）＋ ⑩ 上線成效（偵測 ark-game-report `docs/reports/*-d<N>.html／.json`，相容舊 `perf-review`）；導覽頁、拍板書第 1 章與附錄文字「九階段」→「十階段」；golden `review-book/` 同步 |
 | 1.2.4 | 2026-10-19 | 拍板包導覽修正（依網頁地圖分析）：外部成品（prob-spec、驗證台、快測報告、交付單、報告）全部複製進 `review/`、md 轉可讀頁（`review/docs/`，頁首「← 回拍板書」），整包可傳可離線；書內成品連結一律開新分頁（書留原分頁），複製進來的 HTML（試玩版除外）加浮動「← 回拍板書」（新分頁 → 關分頁；直接開檔 → 回書）；拍板書新增自動第 1 章「現況：一頁看完」（結論、各章拍板欄狀態、成品、驗收、九階段）；附錄改為網頁地圖＋驗收逐項＋報告；HuffNPuff 改用 ark-book 1.1 `storybook` 風格 |

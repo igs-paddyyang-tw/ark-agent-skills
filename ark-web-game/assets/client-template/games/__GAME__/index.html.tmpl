@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>__NAME__</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #10131c; color: #eef; font-family: system-ui, "Noto Sans TC", sans-serif; overflow: hidden; }
+    #app { position: fixed; inset: 0; }
+    #boot { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; font-size: 15px; }
+    #boot[data-state="playable"] { display: none; }
+    #boot[data-state="error"] { color: #ff8a80; pointer-events: auto; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="boot" data-state="idle">載入中…</div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+package arkgo_test
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// TestVendoredUnmodified 守門：標準網路模組的複本不得就地修改（ADR-005）。
+//
+// 🔴 就地修改會讓我方與 fish_go 團隊的網路層悄悄分岔 —— 正是 ADR-005 要消除的協定分岔。
+// 也擋「新增了檔案卻沒登記」與「登記了卻被刪掉」兩種靜默漂移。
+func TestVendoredUnmodified(t *testing.T) {
+	raw, err := os.ReadFile("VENDORED.json")
+	if err != nil {
+		t.Fatalf("讀 VENDORED.json: %v", err)
+	}
+	var m struct {
+		Files map[string]string `json:"files"`
+	}
+	if err = json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("解析 VENDORED.json: %v", err)
+	}
+	if len(m.Files) == 0 {
+		t.Fatal("VENDORED.json 沒有任何檔案 —— 命中 0 當錯誤")
+	}
+
+	seen := map[string]bool{}
+	err = filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || filepath.Dir(path) == "." {
+			return err
+		}
+		path = filepath.ToSlash(path) // VENDORED.json 用 /；Windows 走訪得到 \ → 統一後再比對
+		seen[path] = true
+		want, ok := m.Files[path]
+		if !ok {
+			t.Errorf("%s 不在 VENDORED.json —— 複本不得新增檔案", path)
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(b)
+		if got := hex.EncodeToString(sum[:]); got != want {
+			t.Errorf("%s 被就地修改（sha256 %s… ≠ 登記 %s…）—— 要改請回 fish_go 分支改再同步", path, got[:12], want[:12])
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for path := range m.Files {
+		if !seen[path] {
+			t.Errorf("%s 登記在 VENDORED.json 但檔案不存在", path)
+		}
+	}
+}

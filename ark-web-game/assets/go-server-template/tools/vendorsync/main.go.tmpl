@@ -1,0 +1,133 @@
+// vendorsync 把標準網路模組 ark-go 的複本同步進 internal/ark-go（ADR-005：複本不得就地修改）。
+//
+//	go run ./tools/vendorsync -src ../../../references/ark-go
+//
+// 做的事（且只做這些）：
+//  1. 複製 -src 底下全部 .go 檔與 VENDORED.json
+//  2. 改寫匯入路徑：<上游 module>/internal/ark-go → <本 module>/internal/ark-go，再 gofmt
+//  3. 重算每個檔案的 sha256，寫回 internal/ark-go/VENDORED.json（保留上游 source / commit，追加本次 transform 紀錄）
+//
+// internal/ark-go/vendored_test.go（TestVendoredUnmodified）會擋下同步之後的任何手改。
+package main
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"go/format"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+)
+
+const dstDir = "internal/ark-go"
+
+func main() {
+	src := flag.String("src", "../../../references/ark-go", "ark-go 複本來源（data/references/ark-go）")
+	flag.Parse()
+
+	mod, err := moduleName("go.mod")
+	must(err)
+	upstreamJSON, err := os.ReadFile(filepath.Join(*src, "VENDORED.json"))
+	must(err)
+	var meta map[string]any
+	must(json.Unmarshal(upstreamJSON, &meta))
+
+	// 從來源檔案找出上游 module 路徑（…/internal/ark-go）
+	importRe := regexp.MustCompile(`"([^"]+)/internal/ark-go(/[a-z]+)?"`)
+	upstream := ""
+	files := map[string][]byte{}
+	must(filepath.WalkDir(*src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") {
+			return err
+		}
+		rel, _ := filepath.Rel(*src, p)
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		if m := importRe.FindSubmatch(b); m != nil && upstream == "" {
+			upstream = string(m[1])
+		}
+		files[filepath.ToSlash(rel)] = b
+		return nil
+	}))
+	if len(files) == 0 {
+		fail("來源沒有任何 .go 檔")
+	}
+	if upstream == "" {
+		fail("來源檔案找不到 …/internal/ark-go 匯入路徑")
+	}
+
+	must(os.RemoveAll(dstDir))
+	hashes := map[string]string{}
+	for rel, b := range files {
+		out := bytes.ReplaceAll(b, []byte(upstream+"/internal/ark-go"), []byte(mod+"/internal/ark-go"))
+		if f, err := format.Source(out); err == nil {
+			out = f
+		} else {
+			fail(fmt.Sprintf("gofmt %s: %v", rel, err))
+		}
+		dst := filepath.Join(dstDir, filepath.FromSlash(rel))
+		must(os.MkdirAll(filepath.Dir(dst), 0o755))
+		must(os.WriteFile(dst, out, 0o644))
+		if strings.Contains(rel, "/") { // 根層（doc.go、vendored_test.go）不登記，與上游 TestVendoredUnmodified 相同
+			sum := sha256.Sum256(out)
+			hashes[rel] = hex.EncodeToString(sum[:])
+		}
+	}
+
+	keys := make([]string, 0, len(hashes))
+	for k := range hashes {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	ordered := map[string]string{}
+	for _, k := range keys {
+		ordered[k] = hashes[k]
+	}
+	meta["files"] = ordered
+	chain, _ := meta["sync_chain"].([]any)
+	chain = append(chain, map[string]any{
+		"from":      upstream + "/internal/ark-go",
+		"to":        mod + "/internal/ark-go",
+		"synced":    time.Now().Format("2006-01-02"),
+		"transform": "匯入路徑改寫 + gofmt（tools/vendorsync）；其餘逐字相同",
+	})
+	meta["sync_chain"] = chain
+	out, err := json.MarshalIndent(meta, "", " ")
+	must(err)
+	must(os.WriteFile(filepath.Join(dstDir, "VENDORED.json"), append(out, '\n'), 0o644))
+	fmt.Printf("vendorsync：%d 檔，%s → %s\n", len(files), upstream, mod)
+}
+
+func moduleName(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, "module ") {
+			return strings.TrimSpace(strings.TrimPrefix(l, "module ")), nil
+		}
+	}
+	return "", fmt.Errorf("go.mod 沒有 module 行")
+}
+
+func must(err error) {
+	if err != nil {
+		fail(err.Error())
+	}
+}
+
+func fail(msg string) {
+	fmt.Fprintln(os.Stderr, "vendorsync:", msg)
+	os.Exit(1)
+}

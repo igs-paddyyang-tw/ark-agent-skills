@@ -48,7 +48,8 @@ def rt_url(s: str) -> str:
     return f"runtime/_src/{s[5:]}" if s.startswith("@src/") else f"runtime/{s}"
 PIXI = HERE.parent / "vendor" / "pixi.min.js"
 TEMPLATE = HERE / "index.template.html"
-VERSION = "1.1.0"
+VERSION = "1.5.0"
+WG_RELEASE = HERE.parents[2] / "ark-web-game" / "scripts" / "wg_release.py"   # 同層 skill（Release Manifest；1.5.0）
 
 
 def emit(data: dict, ok=True, code=None, msg=None):
@@ -59,14 +60,20 @@ def emit(data: dict, ok=True, code=None, msg=None):
     sys.exit(0 if ok else {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "MISSING_DEP": 8}.get(code, 1))
 
 
-def dump_config(game: pathlib.Path) -> dict:
+def dump_config(game: pathlib.Path, odds: pathlib.Path | None = None) -> dict:
+    """node 載入 game.js 取設定（素材清單）。odds（1.2.6）：先注入 globalThis.HUFF_ODDS，讓「必須有 odds」的遊戲包（例 magic-lamp）也載得起來。"""
+    import tempfile
+    pre = None
+    if odds is not None and odds.is_file():
+        pre = pathlib.Path(tempfile.mkdtemp()) / "odds.js"
+        pre.write_text("globalThis.HUFF_ODDS = " + odds.read_text(encoding="utf-8").strip() + ";", encoding="utf-8")
     js = (
-        "const {load}=require(process.argv[1]);const P=load(process.argv[2]);"
+        "const {load}=require(process.argv[1]);const P=load(process.argv[2],process.argv[3]?[process.argv[3]]:[]);"
         "const c=P.config;process.stdout.write(JSON.stringify({name:c.name,assets:c.assets||{},feature:(c.spec&&c.spec.feature&&c.spec.feature.type)||null,"
         "stage:c.stage||{},info:!!c.info}));"
     )
     try:
-        r = subprocess.run(["node", "-e", js, str(HERE / "tests" / "load.js"), str(game)], capture_output=True, text=True, encoding="utf-8", timeout=60)
+        r = subprocess.run(["node", "-e", js, str(HERE / "tests" / "load.js"), str(game), *([str(pre)] if pre else [])], capture_output=True, text=True, encoding="utf-8", timeout=60)
     except FileNotFoundError:
         emit({}, False, "MISSING_DEP", "需要 node 18+（讀 game.js 的素材清單）")
     if r.returncode != 0:
@@ -107,8 +114,64 @@ def webp_data_uri(path: pathlib.Path, quality: int, max_side: int) -> tuple[str,
     return f"data:{mime};base64," + base64.b64encode(raw).decode("ascii"), len(raw)
 
 
+def glob_re(pat: str):
+    import re
+    i, r = 0, ""
+    while i < len(pat):
+        if pat.startswith("**/", i):
+            r, i = r + "(?:.*/)?", i + 3
+        elif pat.startswith("**", i):
+            r, i = r + ".*", i + 2
+        elif pat[i] == "*":
+            r, i = r + "[^/]*", i + 1
+        else:
+            r, i = r + re.escape(pat[i]), i + 1
+    return re.compile("^" + r + "$")
+
+
+def write_bundles(out: pathlib.Path, srcs, dst_of: dict, bundles: dict, game_key: str, version: str, game_id: str) -> dict:
+    """1.5.0：依 stage.yaml bundles:（名稱 → {required, include: [素材相對路徑 glob]}）產
+    out/manifest.json（PixiJS Assets Manifest）＋ out/release.json（ark-web-game wg_release pack：每檔 sha256 對實際位元組）。
+    runtime／vendor／index.html／game.js／odds.js 自動歸入 boot（必要）。"""
+    pats = {n: [glob_re(x) for x in (b or {}).get("include", [])] for n, b in bundles.items()}
+    files: dict[str, list[str]] = {"boot": []}
+    man = {"bundles": []}
+    assigned = {}
+    for kind, src in srcs:
+        dst = dst_of.get(src)
+        if not dst:
+            continue
+        hit = [n for n, rs in pats.items() if any(r.match(src) for r in rs)]
+        if len(hit) > 1:
+            emit({"src": src, "bundles": hit}, False, "BAD_INPUT", f"素材 {src} 同時屬於 {hit}")
+        if hit:
+            assigned.setdefault(hit[0], []).append({"alias": src, "src": dst})
+            files.setdefault(hit[0], []).append(dst)
+    for n in bundles:
+        man["bundles"].append({"name": n, "assets": assigned.get(n, [])})
+    (out / "manifest.json").write_text(json.dumps(man, ensure_ascii=False, indent=1), encoding="utf-8")
+    boot = ["index.html", "game.js", "odds.js", "runtime/**", "vendor/**"]
+    cfg = {"boot": {"required": True, "include": boot}}
+    for n, b in bundles.items():
+        cfg[n] = {"required": bool((b or {}).get("required", False)), "include": sorted(set(files.get(n, [])))}
+    bj = out / "_bundles.json"
+    bj.write_text(json.dumps(cfg, ensure_ascii=False), encoding="utf-8")
+    if not WG_RELEASE.is_file():
+        return {"manifest": str(out / "manifest.json"), "release": None, "warning": "找不到 ark-web-game wg_release.py，未產 release.json"}
+    r = subprocess.run([sys.executable, "-X", "utf8", str(WG_RELEASE), "pack", "--dir", str(out), "--bundles", str(bj), "--game-id", game_id,
+                        "--game-key", game_key, "--version", version], capture_output=True, text=True, encoding="utf-8")
+    bj.unlink()
+    try:
+        res = json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception:
+        emit({"stderr": r.stderr[-500:]}, False, "BAD_INPUT", "wg_release pack 失敗")
+    if r.returncode != 0:
+        emit(res, False, "BAD_INPUT", "wg_release pack 失敗：" + "；".join(res.get("errors", []) or [str(res.get("fatal"))]))
+    return {"manifest": str(out / "manifest.json"), "release": res.get("release"), "releaseId": res.get("releaseId"), "bundles": res.get("bundles"), "unassigned": res.get("unassigned")}
+
+
 def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, single: bool, quality: int, max_side: int,
-          odds: pathlib.Path | None = None) -> dict:
+          odds: pathlib.Path | None = None, service: dict | None = None, bundles: dict | None = None, release_meta: dict | None = None) -> dict:
     """odds（1.1.2）：遊戲包的機率設定檔（例 quicktest/odds/odds_<ver>.json）→ 在 game.js 之前注入 globalThis.HUFF_ODDS；
     遊戲包有 odds 模式時（例 HuffNPuff game.js），瀏覽器內 LocalService 就吃正式機率。None 時輸出與 1.1.1 相同。"""
     if not game.is_file():
@@ -126,7 +189,7 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
             emit({}, False, "BAD_INPUT", f"odds 不是合法 JSON：{odds.name}（{e}）")
         odds_js = f"globalThis.HUFF_ODDS = {odds_txt};"
     man = json.loads((RUNTIME / "manifest.json").read_text(encoding="utf-8"))
-    cfg = dump_config(game)
+    cfg = dump_config(game, odds)
     scripts = list(man["scripts"])
     feat = cfg.get("feature")
     for f in (man.get("features", {}).get(feat, {}) or {}).get("scripts", []) if feat else []:
@@ -149,6 +212,8 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
         tag_s = "\n".join(f"<style>/* {s} */\n{(RUNTIME / s).read_text(encoding='utf-8')}\n</style>" for s in man["styles"])
         parts = [f"<script>/* vendor/pixi.min.js */\n{PIXI.read_text(encoding='utf-8')}\n</script>"]
         parts.append("<script>window.__STAGE_INLINE=" + json.dumps(inlined, ensure_ascii=False) + ";</script>")
+        if service:
+            parts.append("<script>window.__STAGE_SERVICE=" + json.dumps(service, ensure_ascii=False) + ";</script>")
         for s in scripts:
             parts.append(f"<script>/* {rt_url(s)} */\n{rt(s).read_text(encoding='utf-8')}\n</script>")
         if odds_js:
@@ -171,6 +236,7 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
         elif (out / "odds.js").exists():
             (out / "odds.js").unlink()
         root = out.resolve()
+        dst_of = {}
         for _kind, src in srcs:
             p = (assets_base / src).resolve()
             if not p.is_file():
@@ -184,9 +250,11 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
             dst.parent.mkdir(parents=True, exist_ok=True)
             if not dst.exists() or dst.stat().st_size != p.stat().st_size:
                 shutil.copy2(p, dst)
+            dst_of[src] = dst.relative_to(root).as_posix()
             copied += 1
         tag_s = "\n".join(f'<link rel="stylesheet" href="runtime/{s}">' for s in man["styles"])
         tag_j = "\n".join(['<script src="vendor/pixi.min.js"></script>'] + (["<script>window.__STAGE_INLINE=" + json.dumps(inlined, ensure_ascii=False) + ";</script>"] if inlined else [])
+                          + (["<script>window.__STAGE_SERVICE=" + json.dumps(service, ensure_ascii=False) + ";</script>"] if service else [])
                           + [f'<script src="{rt_url(s)}"></script>' for s in scripts]
                           + (['<script src="odds.js"></script>'] if odds_js else []) + ['<script src="game.js"></script>'])
     html = TEMPLATE.read_text(encoding="utf-8").replace("__TITLE__", str(cfg.get("name") or "Stage")).replace("__STYLES__", tag_s).replace("__SCRIPTS__", tag_j)
@@ -195,7 +263,10 @@ def build(game: pathlib.Path, out: pathlib.Path, assets_base: pathlib.Path, sing
     rep = {"out": str(out), "index": str(idx), "mode": "single" if single else "folder", "game": str(game), "name": cfg.get("name"),
            "feature": feat, "scripts": len(scripts), "assets": len(srcs), "copied": copied, "inlined": len(inlined) if single else 0,
            "missing": missing, "bytes": idx.stat().st_size, "inline_mb": round(inl_bytes / 1e6, 2),
-           "odds": str(odds) if odds is not None else None}
+           "odds": str(odds) if odds is not None else None, "service": service or None}
+    if bundles and not single:
+        rm = release_meta or {}
+        rep["release"] = write_bundles(out, srcs, dst_of, bundles, rm.get("game_key", "game"), rm.get("version", "0.0.0"), rm.get("game_id", rm.get("game_key", "game")))
     (out / "stage-build.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
     return rep
 
@@ -257,19 +328,24 @@ def slug_build(a) -> None:
     out = repo / "output" / "slot" / a.slug / "game" / "pixi-client"
     max_side = int(yml.get("max_side", a.max_side) or 0)
     odds = (data / str(yml["odds"])).resolve() if yml.get("odds") else None   # stage.yaml 的 odds:（相對本目錄；1.1.2）
-    single = build(game, out / "single", assets, True, int(yml.get("inline_quality", a.inline_quality)), max_side, odds)
-    if a.folder or a.serve:                                 # 資料夾版（http 服務用）：檔案多，需要時才產
-        build(game, out / "folder", assets, False, a.inline_quality, 0, odds)
+    service = yml.get("service") or None                   # 1.5.0：結果來源（local／http／ws）→ window.__STAGE_SERVICE；網址參數仍可覆寫
+    bundles = yml.get("bundles") or None                   # 1.5.0：分包 → folder/manifest.json＋release.json
+    rmeta = {"game_key": str(yml.get("game_key") or a.slug.split("-")[0]), "version": str(yml.get("version") or "0.0.0"), "game_id": a.slug}
+    single = build(game, out / "single", assets, True, int(yml.get("inline_quality", a.inline_quality)), max_side, odds, service)
+    folder = None
+    if a.folder or a.serve or bundles:                     # 資料夾版（http 服務、分包發布用）：檔案多，需要時才產
+        folder = build(game, out / "folder", assets, False, a.inline_quality, 0, odds, service, bundles, rmeta)
     man = {"schema": "proto-stage-build/1", "slug": a.slug, "skill": f"ark-game-proto {VERSION} stage", "game": game.relative_to(repo).as_posix(),
            "game_sha16": hashlib.sha256(game.read_bytes()).hexdigest()[:16],
            "odds": odds.relative_to(repo).as_posix() if odds else None, "odds_sha16": hashlib.sha256(odds.read_bytes()).hexdigest()[:16] if odds else None,
            "assets_base": str(assets), "assets": single["assets"], "missing": single["missing"],
-           "outputs": {"single": (out / "single" / "index.html").relative_to(repo).as_posix(), "single_bytes": single["bytes"], "folder": (out / "folder").relative_to(repo).as_posix() if (a.folder or a.serve) else None},
+           "outputs": {"single": (out / "single" / "index.html").relative_to(repo).as_posix(), "single_bytes": single["bytes"], "folder": (out / "folder").relative_to(repo).as_posix() if folder else None},
+           "service": service, "release": ({k: v for k, v in folder["release"].items() if k in ("releaseId", "bundles", "unassigned")} if folder and folder.get("release") else None),
            "runtime": "output 為重產物（不入 git）；依 data/slot/_schema/layout.md：data < 1 MB、圖檔不入 data"}
     (data / "stage-build.json").write_text(json.dumps(man, ensure_ascii=False, indent=1), encoding="utf-8")
     if single["bytes"] > a.budget_mb * 1e6:
         emit(man, False, "GATE_BLOCKED", f"單檔 {single['bytes'] / 1e6:.1f} MB 超過 {a.budget_mb} MB")
-    man["delivery"] = f"{man['outputs']['single']}（{single['bytes'] / 1e6:.2f} MB）{('＋ ' + man['outputs']['folder'] + '/') if man['outputs']['folder'] else ''}｜素材 {single['assets']}（缺 {len(single['missing'])}）｜清冊 {(data / 'stage-build.json').relative_to(repo).as_posix()}"
+    man["delivery"] = f"{man['outputs']['single']}（{single['bytes'] / 1e6:.2f} MB）{('＋ ' + man['outputs']['folder'] + '/') if man['outputs']['folder'] else ''}{('｜release ' + man['release']['releaseId']) if man.get('release') else ''}｜素材 {single['assets']}（缺 {len(single['missing'])}）｜清冊 {(data / 'stage-build.json').relative_to(repo).as_posix()}"
     if a.serve:
         print(json.dumps({"success": True, "data": man}, ensure_ascii=False), flush=True)
         serve(out / "folder", a.port)
@@ -286,6 +362,10 @@ def main():
     ap.add_argument("--assets-base")
     ap.add_argument("--odds", help="機率設定檔（odds_<ver>.json）→ 注入 globalThis.HUFF_ODDS（1.1.2）；--slug 時改讀 stage.yaml 的 odds:")
     ap.add_argument("--single", action="store_true")
+    ap.add_argument("--bundles", help="分包設定（yaml／json；格式同 stage.yaml bundles:）→ 資料夾版另產 manifest.json＋release.json（1.5.0）")
+    ap.add_argument("--service", help="結果來源 JSON（例 '{\"kind\":\"ws\",\"url\":\"/ws\"}'）→ window.__STAGE_SERVICE（1.5.0）")
+    ap.add_argument("--game-key", default="game")
+    ap.add_argument("--version", default="0.0.0")
     ap.add_argument("--inline-quality", type=int, default=82)
     ap.add_argument("--max-side", type=int, default=0)
     ap.add_argument("--budget-mb", type=float, default=15.0)
@@ -299,7 +379,14 @@ def main():
     game = pathlib.Path(a.game).resolve()
     out = pathlib.Path(a.out).resolve()
     base = pathlib.Path(a.assets_base).resolve() if a.assets_base else game.parent
-    rep = build(game, out, base, a.single, a.inline_quality, a.max_side, pathlib.Path(a.odds).resolve() if a.odds else None)
+    bundles = None
+    if a.bundles:
+        bp = pathlib.Path(a.bundles)
+        bundles = json.loads(bp.read_text(encoding="utf-8")) if bp.suffix == ".json" else load_stage_yaml(bp)
+        bundles = bundles.get("bundles", bundles) if isinstance(bundles.get("bundles"), dict) else bundles
+    service = json.loads(a.service) if a.service else None
+    rep = build(game, out, base, a.single, a.inline_quality, a.max_side, pathlib.Path(a.odds).resolve() if a.odds else None, service, bundles,
+                {"game_key": a.game_key, "version": a.version, "game_id": a.game_key})
     if a.single and rep["bytes"] > a.budget_mb * 1e6:
         emit(rep, False, "GATE_BLOCKED", f"單檔 {rep['bytes'] / 1e6:.1f} MB 超過 {a.budget_mb} MB（調 --inline-quality 或 --max-side）")
     rep["delivery"] = f"{rep['index']}｜{rep['mode']}｜素材 {rep['assets']}（缺 {len(rep['missing'])}）｜{rep['bytes'] / 1e6:.2f} MB"

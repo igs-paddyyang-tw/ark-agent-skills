@@ -212,6 +212,7 @@
       st.balance = result.balanceAfter;                 // 權威值
       st.busy = false;
       this.renderHud();
+      if (this.app.service.ack) this.app.service.ack(result.roundId);   // 演完確認（Http／Ws；失敗不擋，下次 init 會再帶 pending）
       if (st.auto) setTimeout(() => st.auto && !st.busy && this.spin(), 350 / (Proto.time.speed || 1));
     }
 
@@ -221,6 +222,9 @@
       st.spins++;
       this.lastResult = result;
       const { ev, g, res, draw } = toLegacy(result);
+      // 演出事件（present-events/1，1.5.0）：兩軌（Stage／正式 Client）同一份結果的事件序列必須相同；值只取自 SpinResult
+      const pe = (type, data) => app.events.emit('present', { type, roundId: result.roundId, ...data });
+      pe('round-start', { bet: result.bet });
       app.timeline.record('label', `局 ${result.roundId}｜停輪 ${result.reel.stops.join(',')}｜贏 ${result.totalWin}（${Proto.fmt.num(result.totalX, 2)}×）`);
       const ctx = { win: result.base.win, winX: result.base.winX, trigger: result.base.trigger, total: result.totalWin };
       if (this.pres.spin) app.timeline.play(this.pres.spin, ctx);
@@ -231,14 +235,21 @@
         onTease: (r, sec) => this.showTenpai(r, sec),
         onLand: (r) => { this.playSound((this.pres.sounds || {}).reelStop); if (extend && extend[r]) this.hideTenpai(); },
       });
+      pe('reels-stop', { stops: result.reel.stops.slice() });
       if (S.afterReels) await S.afterReels(this, g, ev, result);
       if (result.base.win > 0) {
+        pe('base-win', { win: result.base.win, ways: result.base.ways.length });
         await this.showWins(ev);
         if (this.pres.smallWin) app.timeline.play(this.pres.smallWin, ctx);
         if (this.reachesLadder(result.base.winX)) await this.winLadder(result.base.win);
         else await this.countBox(result.base.win, 0.5);
       }
-      if (result.feature) await this.runFeature(result, ev, g, res, draw, ctx);
+      if (result.feature) {
+        pe('feature-start', { feature: result.feature.type, spinsPlayed: result.feature.spinsPlayed });
+        await this.runFeature(result, ev, g, res, draw, ctx);
+        pe('feature-end', { win: result.feature.win });
+      }
+      pe('round-end', { totalWin: result.totalWin, balanceAfter: result.balanceAfter });
       st.history.unshift({ round: result.roundId, stops: result.reel.stops.join(','), win: result.totalWin, x: result.totalX, feat: result.feature ? result.feature.type : '' });
       if (st.history.length > 200) st.history.pop();
     }
@@ -537,7 +548,7 @@
         this.clearWins(); this.state.shownWin = 0; this.renderHud();
         this.view.spinStart();
         try {
-          const r = await svc.debug.force(typeof scene === 'function' && svc.kind === 'http' ? { label } : scene, { bet: this.bet });   // 函式情境送到 Server 時改送名稱
+          const r = await svc.debug.force(typeof scene === 'function' && (svc.kind === 'http' || svc.kind === 'ws') ? { label } : scene, { bet: this.bet });   // 函式情境送到 Server 時改送名稱
           this.state.balance = r.balanceBefore - this.bet; this.renderHud();
           await this.play(r);
           this.state.balance = r.balanceAfter;

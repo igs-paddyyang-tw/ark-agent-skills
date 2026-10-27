@@ -1,0 +1,90 @@
+package guard
+
+import (
+	"net/http"
+	"testing"
+	"time"
+)
+
+func TestFloodMeter_PythonAlgorithm(t *testing.T) {
+	m := &FloodMeter{Limit: 40, Continue: 3}
+	burst := func(n int) {
+		for i := 0; i < n; i++ {
+			m.Hit()
+		}
+	}
+	// 超過、超過、正常 → strikes 2→1，不斷線
+	burst(41)
+	if m.Tick() {
+		t.Fatal("1st")
+	}
+	burst(41)
+	if m.Tick() {
+		t.Fatal("2nd")
+	}
+	burst(10)
+	if m.Tick() {
+		t.Fatal("normal second must decrement")
+	}
+	// 再超過兩次 → strikes 3 → 斷線
+	burst(41)
+	if m.Tick() {
+		t.Fatal("strikes=2")
+	}
+	burst(41)
+	if !m.Tick() {
+		t.Fatal("strikes=3 must close")
+	}
+	// 剛好 40 不算超過
+	m2 := &FloodMeter{Limit: 40, Continue: 1}
+	for i := 0; i < 40; i++ {
+		m2.Hit()
+	}
+	if m2.Tick() {
+		t.Fatal("40 is allowed")
+	}
+}
+
+func TestBucket(t *testing.T) {
+	b := &Bucket{Rate: 2, Burst: 2}
+	now := time.Unix(0, 0)
+	first, second, third := b.Allow(now), b.Allow(now), b.Allow(now)
+	if !first || !second || third {
+		t.Fatal("burst")
+	}
+	if !b.Allow(now.Add(500 * time.Millisecond)) {
+		t.Fatal("refill")
+	}
+}
+
+func TestClientIP(t *testing.T) {
+	tp, err := ParseTrustedProxies("10.0.0.0/8, 192.168.1.5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := func(remote string, xff ...string) *http.Request {
+		r, _ := http.NewRequest("GET", "/", nil)
+		r.RemoteAddr = remote
+		for _, x := range xff {
+			r.Header.Add("X-Forwarded-For", x)
+		}
+		return r
+	}
+	cases := []struct {
+		name string
+		r    *http.Request
+		want string
+	}{
+		{"直連客戶端自帶 XFF 不採用", req("1.2.3.4:5555", "9.9.9.9"), "1.2.3.4"},
+		{"經 LB", req("10.1.2.3:80", "203.0.113.7"), "203.0.113.7"},
+		{"偽造的左段被忽略", req("10.1.2.3:80", "6.6.6.6, 203.0.113.7"), "203.0.113.7"},
+		{"多層可信代理", req("10.1.2.3:80", "203.0.113.7, 192.168.1.5", "10.9.9.9"), "203.0.113.7"},
+		{"沒有 XFF", req("10.1.2.3:80"), "10.1.2.3"},
+		{"XFF 格式錯誤", req("10.1.2.3:80", "garbage"), "10.1.2.3"},
+	}
+	for _, c := range cases {
+		if got := tp.ClientIP(c.r); got != c.want {
+			t.Errorf("%s: got %s want %s", c.name, got, c.want)
+		}
+	}
+}

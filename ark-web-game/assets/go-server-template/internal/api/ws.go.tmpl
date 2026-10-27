@@ -1,0 +1,150 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+
+	"__MODULE__/internal/ark-go/dispatch"
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/ark-go/wire"
+	"__MODULE__/internal/result"
+	"__MODULE__/internal/round"
+)
+
+// SysSlot 是本服務在 ark-go wire 協定上的 sys 名稱。
+const SysSlot = "slot"
+
+// ChunkChars 是結果分段的每段字元數。wire 單包上限 9,999 字元（4 位數長度前綴），
+// Open House 劇本常超過，所以 spin / force / fetch 回應超過上限時改分段送。
+const ChunkChars = 4000
+
+// MaxInline 是單包直接回結果的上限字元數（wire.MaxBody 扣掉外層 ret/sn/sys 包裝的餘裕）。測試可調小。
+var MaxInline = wire.MaxBody - 256
+
+// DevTokens 接受任何非空 token（開發用；正式用 ark-go session.RedisTokenStore）。
+type DevTokens struct{}
+
+// Verify 實作 session.TokenStore。
+func (DevTokens) Verify(_ context.Context, id, tok, _ string) (bool, error) {
+	return id != "" && tok != "", nil
+}
+
+// Renew 實作 session.TokenStore。
+func (DevTokens) Renew(context.Context, string, string, string) (bool, error) { return true, nil }
+
+// WS 把局服務掛到 ark-go 的玩家 WebSocket 埠。
+type WS struct {
+	Svc *round.Service
+	Log *slog.Logger
+}
+
+type wsErr struct {
+	Status  int    `json:"status"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+}
+
+func toWSErr(err error) wsErr {
+	ge := asErr(err)
+	return wsErr{Status: codeOf(ge), Code: ge.Code, Message: ge.Message, Data: ge.Data}
+}
+
+// NewServer 建立 ark-go dispatch.Server 並註冊 sys "slot" 指令（WS-003～WS-010）：
+//
+//	init  {protocol, runtimeApi, gameVersion}   → {status:0, info}（info.pending、info.supported）；不相容 status 426
+//	balance                                    → {status:0, balance}
+//	spin  {bet, requestId}                     → {status:0, result} 或 {status:0, roundId, chunks:n, chars}＋ n 個 cmd "result" 分段
+//	ack   {roundId}                            → {status:0}
+//	fetch {roundId}                            → 同 spin
+//	action {roundId, choice, requestId}        → 同 spin（目前回 NOT_SUPPORTED）
+//	force {scene, bet, requestId}（dev）       → 同 spin
+func (x *WS) NewServer(cfg dispatch.Config, tokens session.TokenStore) *dispatch.Server {
+	r := dispatch.NewRouter()
+	parse := func(p *wire.Packet) req {
+		var in req
+		_ = json.Unmarshal(p.Data, &in)
+		return in
+	}
+	r.Handle(SysSlot, "init", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		info, err := x.Svc.Init(ctx, s.ArkID(), parse(p).init())
+		if err != nil {
+			return toWSErr(err), nil
+		}
+		return map[string]any{"status": 0, "info": info}, nil
+	})
+	r.Handle(SysSlot, "balance", func(ctx context.Context, s *session.Session, _ *wire.Packet) (any, error) {
+		b, err := x.Svc.Balance(ctx, s.ArkID())
+		if err != nil {
+			return toWSErr(err), nil
+		}
+		return map[string]any{"status": 0, "balance": b}, nil
+	})
+	r.Handle(SysSlot, "spin", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		in := parse(p)
+		res, err := x.Svc.Spin(ctx, s.ArkID(), in.Bet, in.RequestID)
+		if err != nil {
+			return toWSErr(err), nil
+		}
+		return x.deliver(s, res)
+	})
+	r.Handle(SysSlot, "ack", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		if err := x.Svc.Ack(ctx, s.ArkID(), parse(p).RoundID); err != nil {
+			return toWSErr(err), nil
+		}
+		return map[string]any{"status": 0}, nil
+	})
+	r.Handle(SysSlot, "fetch", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		res, err := x.Svc.Fetch(ctx, s.ArkID(), parse(p).RoundID)
+		if err != nil {
+			return toWSErr(err), nil
+		}
+		return x.deliver(s, res)
+	})
+	r.Handle(SysSlot, "action", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		in := parse(p)
+		res, err := x.Svc.Action(ctx, s.ArkID(), in.RoundID, in.Choice, in.RequestID)
+		if err != nil {
+			return toWSErr(err), nil
+		}
+		return x.deliver(s, res)
+	})
+	r.Handle(SysSlot, "force", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		in := parse(p)
+		if !x.Svc.Dev() {
+			return toWSErr(&round.Error{Code: round.ErrNotFound, Message: "dev 端點未開啟"}), nil
+		}
+		sc, err := x.Svc.ParseScene(in.Scene)
+		if err != nil {
+			return toWSErr(err), nil
+		}
+		res, err := x.Svc.Force(ctx, s.ArkID(), sc, in.Bet, in.RequestID)
+		if err != nil {
+			return toWSErr(err), nil
+		}
+		return x.deliver(s, res)
+	})
+	return dispatch.NewServer(cfg, r, &session.Authenticator{Tokens: tokens}, x.Log)
+}
+
+// deliver：結果放得進單包就直接回；放不進就先以 cmd "result" 依序送 n 段，再回 {chunks:n, chars}
+// （同一連線送出佇列 FIFO：用戶端收到回應時，n 段一定已全部到達，依 roundId 組回、以 chars 驗長度）。
+func (x *WS) deliver(s *session.Session, res *result.SpinResult) (any, error) {
+	b, err := wire.MarshalASCII(res)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) <= MaxInline {
+		return map[string]any{"status": 0, "result": json.RawMessage(b)}, nil
+	}
+	body := string(b)
+	n := (len(body) + ChunkChars - 1) / ChunkChars
+	for i := 0; i < n; i++ {
+		end := min((i+1)*ChunkChars, len(body))
+		if err := s.Send(SysSlot, "result", map[string]any{"roundId": res.RoundID, "i": i, "n": n, "part": body[i*ChunkChars : end]}); err != nil {
+			return nil, err
+		}
+	}
+	return map[string]any{"status": 0, "roundId": res.RoundID, "chunks": n, "chars": len(body)}, nil
+}

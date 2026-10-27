@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "web-game-release/1",
+  "title": "Release Manifest（一次發布；ark-web-game wg_release 產生）",
+  "description": "雜湊一律對實際下載的位元組計算；bundle hash = 依路徑排序的「path\\tsha256」行再取 sha256。同一檔案不得屬於兩個 bundle。只有 Release Pointer 可變，本檔發布後不可改。規則見 ark-web-game references/delivery.md。",
+  "type": "object",
+  "required": ["schema", "releaseId", "gameId", "gameVersion", "runtimeApi", "protocol", "bundles", "status"],
+  "properties": {
+    "schema": { "const": "web-game-release/1" },
+    "releaseId": { "type": "string", "pattern": "^[a-z0-9-]+-\\d+\\.\\d+\\.\\d+\\+[0-9a-f]{7}$" },
+    "gameId": { "type": "string", "minLength": 1 },
+    "gameVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "runtimeApi": { "type": "string" },
+    "protocol": { "type": "object", "required": ["result", "info", "wire"], "properties": { "result": { "type": "string" }, "info": { "type": "string" }, "wire": { "type": "string" } } },
+    "manifestHash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+    "bundles": { "type": "array", "items": { "type": "object", "required": ["name", "requiredForPlayable", "hash", "bytes", "files"],
+      "properties": {
+        "name": { "type": "string" }, "requiredForPlayable": { "type": "boolean" },
+        "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "bytes": { "type": "integer", "minimum": 0 },
+        "files": { "type": "array", "items": { "type": "object", "required": ["path", "sha256", "bytes"], "properties": { "path": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "bytes": { "type": "integer", "minimum": 0 } } } } } } },
+    "unassigned": { "type": "array", "items": { "type": "string" } },
+    "status": { "enum": ["candidate", "stable", "retired"] }
+  }
+}

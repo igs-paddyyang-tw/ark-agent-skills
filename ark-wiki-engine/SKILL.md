@@ -17,8 +17,8 @@ metadata:
   category: pipeline
   form: executor
   domain: general
-  version: "3.0.2"
-  updated: 2026-10-20
+  version: "3.0.3"
+  updated: 2026-10-27
   outputs:
     # wiki_query／wiki_context 的 JSON 契約歸 data（`json` 非合法 format，同 ark-db-query：不為單一 skill 放寬守門）
     - { format: data, audience: ai }

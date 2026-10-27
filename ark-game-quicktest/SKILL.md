@@ -19,8 +19,8 @@ metadata:
   category: process
   form: executor
   domain: game
-  version: "2.1.5"
-  updated: 2026-10-21
+  version: "2.2.1"
+  updated: 2026-10-27
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }
@@ -54,8 +54,10 @@ metadata:
 | `scripts/qt_run.py` | lint → 複製範本到 `engine/` → patch main.go（含 v1.2 的 odds 載入路徑跟版本、固定 seed `--seed`）/ game_process.go 常數 → `go run .` → qt_report | 跑快測 |
 | `scripts/qt_report.py` | `report_<ver>.txt` → `rtp-report.json` → md-report（三向 verdict）；v1.2 加 `template_caveats`（偵測範本已知偏差 F-1/F-2/F-5/F-6/F-7，md「範本已知偏差」節）；`--publish docs/reports/data` | 已有報告檔、只要驗證 |
 | `references/quicktest-contract.md` | quicktest.yaml（目標）/ odds.json 語意 / rtp-report.json / 三向規則 | 建目標檔、改 lint 時 |
-| `references/quicktest-targets.template.yaml` | quicktest.yaml 範本：單版 target_rtp／rtp_tolerance／feel，多版 `versions[]`（qt_report `--version-id`） | 新遊戲要建目標檔時複製改 |
 | `scripts/tests/` | golden：範本 `report_1.0.0.txt` 解析與三向、範本 odds 通過 lint、null/provenance 阻斷、決議填值 | 改腳本後 |
+| `references/quicktest-targets.template.yaml` | quicktest.yaml 範本：單版 target_rtp／rtp_tolerance／feel，多版 `versions[]`（qt_report `--version-id`） | 新遊戲要建目標檔時複製改 |
+| `scripts/port/`（2.2.0 路線 C）| C++ 快測 → Go 移植與 Go 世代 live 重跑：`cpp/cpp_trace.py`（g++ -m32 編原 C++、固定 seed、逐局追蹤）、`go/portkit`（SFMT19937 與 C++ 逐位元相同、MSVC rand、平行執行、Go 快測報表格式）、`cpp_parity.py`（同 seed 逐局對照）、`gen_config.py`（config-map → config json＋逐鍵來源標記 live／xlsx／engine／ruled／filled:*）；SOP `references/cpp-port-sop.md` | 舊遊戲（C++／Go 世代）重跑快測、還原線上機率 |
+| `references/restore-stages-sop.md`（2.2.1）| 還原局每款流程 ⓪→④→③⑤→⑥-lite→⑦ 與 W1 26 款累積規律（找對版本、目標 RTP 取法、砍分五型、保底／天井、引擎坑）；gen_config 多層輪帶、expr 可用 symbol_map | 舊遊戲批次還原到單機試玩 |
 
 ## 決策樹
 
@@ -75,6 +77,15 @@ metadata:
 │     ├─ 沒 go → engine/ 已就位，拿去 daemon 主機（~/.local/go）跑，再 qt_report --report engine/report_<ver>.txt
 │     └─ qt-report/<date>-quicktest-<slug>.md：verdict confirmed / inconclusive / rejected
 ├─ rejected → 看 Findings（P0 RTP 偏離 / null 偷渡；P1 體感區間）→ 調參重跑；confirmed → 審核後彙整
+├─ 路線 B（範本不支援的玩法；十階段定版 C-6）：不客製範本，直接用 ⑧ Go Server 的機率模組模擬（同一份程式，Server 與快測不分岔）
+│     ├─ cd data/slot/<slug>/game/go-server && go run ./cmd/sim -n 20000000 -seed <seed> -workers 8 -json <報告.json>
+│     ├─ 轉範本報告格式：python data/slot/<slug>/quicktest/_tuning/sim_to_qt_report.py → qt-report/report_<ver>.txt → qt_report 三向 verdict
+│     ├─ 機率模組改動後回歸：go run ./cmd/sim … -check quicktest/qt-report/sim-kb-final.json（或 rtp-report.json），逐欄相同才算沒改壞
+│     └─ 首例 huffnpuff-open-house（機率模組 internal/prob/huff；Server 範本與抽離 SOP 見 ark-web-game）
+├─ 路線 C（2.2.0；舊遊戲重跑）：C++ 快測 → Go 移植（逐局 0 不一致）或 Go 世代引擎改讀 json → 線上機率經 config-map 產生 config（每鍵標來源）→ 2,000 萬局 → qt_report
+│     ├─ python scripts/port/cpp_parity.py --cpp-src <C++ 專案> --engine data/slot/<slug>/quicktest/engine --config …/cpp-original.json --n 1000000 --out …/port/parity.json
+│     ├─ python scripts/port/gen_config.py --map …/_tuning/config-map.yaml --root data/slot/<slug> --engine …/cpp-original.json --out …/config/live.json
+│     └─ 上線款不改線上值；對不上 → 敏感度分析＋G-xx 待裁定（範例：cash-mania、forest-bash、cakebonanza；SOP references/cpp-port-sop.md）
 └─ 要機率規格書 / 參數表 / 隱性規則 → 用 **ark-game-prob**（`ps_run.py --qt data/quicktest/<slug>`）；本 skill 的 `qt_run --probspec` 會轉呼叫同層 ark-game-prob（未給 `--prob-out` 時落點交 ps_run 依 `ARK_GAME_ROOT` 決定）
 ```
 

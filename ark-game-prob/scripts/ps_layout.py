@@ -12,7 +12,7 @@
   L-STAMP    prob/、docs/、analysis/report/、spec/、quicktest/qt-report/、game/（契約 v3.5：定版家 md 旁的 html）下每個 .html：同名 .md 存在時，content-src 戳記的 sha 必須 = 該 md 的 sha16（綁錯對象 / 過期 → error；無戳記 → warning）
   L-SPEC     config-spec.yaml：<game>/spec/ 為規範位置（只在 quicktest/ → warning）；mode restore-live 時 $ref 全可解析、設定檔 sha 一致、鍵全覆蓋
   L-QT       quicktest/quicktest.yaml 需有 target_rtp；qt-report/rtp-report.json 存在；gate.verdict confirmed（rejected → error、inconclusive → warning）
-  L-DIFF     prob/config-diff.json：mismatch > 0 → error；沒有 → warning（還原模式建議跑 ps_run --config）
+  L-DIFF     prob/config-diff.json：mismatch > 0 → error；ruled > 0（已裁定且 pin 未失效，ark-game-prob 1.5.2）→ warning 列出；沒有 → warning（還原模式建議跑 ps_run --config）
   L-SIZE     體積守門（設計文件 §2，data/slot/<slug> 目標 < 1 MB）：*.exe/*.dll/*.bin 進 game → error；
              定版家總量（不含 game/、review/、*.html View 軌、_retired/；契約 v3.5）> 1 MB → warning；
              單檔 > 500 KB（排除 *.html View 軌與 _retired/）→ warning；quicktest/config/ 有 > 1 個 *.json（多版本設定檔，違反單一版本原則）→ error
@@ -20,6 +20,10 @@
              （不符 → error；只對帳交付件來源，不改 server code）；無 handoff.md → 不報（⑥ 選配）
   L-REVIEW   review/ 拍板包（契約 v3.3，選配）：總量 > 5 MB → error；二進位／影片 → error；有 review/ 但缺 index.html → warning；
              review-manifest.json 列的檔案（files）與連到的定版家成品（links，v3.5）不存在或 sha 不符 → warning（拍板包過期，送審前重跑 review_build）
+  L-REF      ref/ 參考資源層（契約 v3.6，選配）：有 ref/ 就要有 README.md＋manifest.json（缺 → error）；manifest 每個 transcribed／summarized
+             來源的 outputs 都要存在（error）；ref/ 下每個檔都要被某來源的 outputs 涵蓋（error）；只准文字格式 .md/.csv/.json/.yaml/.txt（原檔不進 data → error）；
+             ref 另計 > 1 MB → error；role／status／sensitivity 不在枚舉 → error；README 缺五區塊（來源總覽、版本地圖、判讀紀錄、未收清單、待確認）→ warning；
+             來源 repo 在本機時（--source-root 或 manifest.source_roots）重算 sha256 不符 → warning；review/ 清冊連到 ref/ → error
   L-RTP      docs/ 下（人寫的）md 提到的「Total RTP / 總 RTP」實測數字 ≠ rtp-report（±0.01 個百分點）→ warning（列檔名:行號；數字前後出現 golden／目標／理論／參數表者略過）
 
 用法: python ps_layout.py --game output/games/<slug> [--mode restore|design] [--write-md] [--strict]
@@ -29,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import pathlib
@@ -41,6 +46,12 @@ import ps_common as C  # noqa: E402
 STAMP_RE = re.compile(r"([\w\-.]+\.md)\s+sha256:([0-9a-f]{16})")
 RTP_RE = re.compile(r"(?:Total\s*RTP|總\s*RTP|總計\s*RTP)\D{0,30}?(\d{2,3}\.\d{1,4})\s*%", re.I)
 PROB_FILES = ("prob-spec.md", "prob-spec.meta.json", "prob-spec.html", "lint-report.json")
+REF_ROLES = {"main", "variant", "next", "history", "evidence", "live", "skip"}       # 契約 v3.6 ref_rules
+REF_STATUS = {"transcribed", "summarized", "referenced", "skipped"}
+REF_SENS = {"internal", "confidential-live"}
+REF_SECTIONS = ("來源總覽", "版本地圖", "判讀紀錄", "未收清單", "待確認")
+REF_TEXT_EXT = {".md", ".csv", ".json", ".yaml", ".yml", ".txt"}
+REF_KB = 1024
 
 
 def fm_get(md: str, key: str):
@@ -197,6 +208,8 @@ def check(game: pathlib.Path, mode: str) -> dict:
         facts["config_diff"] = summ
         if summ.get("mismatch"):
             add("L-DIFF", "prob/config-diff.json", f"規格 ⇄ 設定檔不一致 {summ['mismatch']} 條：機率人員裁定後改正，重跑 ps_run --config")
+        if summ.get("ruled"):
+            add("L-DIFF", "prob/config-diff.json", f"已裁定的已知差異 {summ['ruled']} 條（見 config-diff.md 🟦 列；值變了 pin 會失效回到 error）", "warning")
     else:
         add("L-DIFF", "prob/config-diff.json", "沒有規格 ⇄ 設定檔對照（ps_run --xlsx … --config <設定檔>）", "warning")
 
@@ -208,7 +221,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
     review = game / "review"
     gdir = game / "game"
     for f in game.rglob("*"):
-        if not f.is_file() or "_retired" in f.parts or review in f.parents:
+        if not f.is_file() or "_retired" in f.parts or review in f.parents or (game / "ref") in f.parents:   # v3.6：ref/ 另計（L-REF）
             continue
         suf = f.suffix.lower()
         if suf in BIN_EXT:
@@ -256,6 +269,85 @@ def check(game: pathlib.Path, mode: str) -> dict:
             if stale:
                 add("L-REVIEW", "review/review-manifest.json", f"{len(stale)} 個檔與清冊不符：" + ", ".join(stale[:5]) + "（送審前重跑 review_build）", "warning")
         facts["review"] = {"files": len(files), "total_kb": total // 1024, "stale": len(stale)}
+
+    # L-REF（契約 v3.6：ref/ 參考資源層）
+    ref = game / "ref"
+    if ref.is_dir():
+        ref_facts: dict = {}
+        man_p, rd_p = ref / "manifest.json", ref / "README.md"
+        if not rd_p.is_file():
+            add("L-REF", "ref/README.md", "有 ref/ 但缺 README.md（ref 卡：來源總覽、版本地圖、判讀紀錄、未收清單、待確認）")
+        else:
+            rtxt = rd_p.read_text(encoding="utf-8", errors="replace")
+            miss_sec = [s for s in REF_SECTIONS if s not in rtxt]
+            if miss_sec:
+                add("L-REF", "ref/README.md", "缺區塊：" + "、".join(miss_sec), "warning")
+        covered: set[str] = {"README.md", "manifest.json"}
+        if not man_p.is_file():
+            add("L-REF", "ref/manifest.json", "有 ref/ 但缺 manifest.json（來源清冊）")
+        else:
+            try:
+                man = json.loads(man_p.read_text(encoding="utf-8"))
+            except Exception as e:  # noqa: BLE001
+                add("L-REF", "ref/manifest.json", f"manifest 無法解析：{e}")
+                man = {}
+            srcs = man.get("sources") or []
+            roots = [pathlib.Path(r) for r in (man.get("source_roots") or {}).values()] if isinstance(man.get("source_roots"), dict) else []
+            ref_facts["sources"] = len(srcs)
+            by_role: dict[str, int] = {}
+            sha_bad = []
+            for s in srcs:
+                sid = s.get("id") or "?"
+                for k, allowed in (("role", REF_ROLES), ("status", REF_STATUS), ("sensitivity", REF_SENS)):
+                    if s.get(k) not in allowed:
+                        add("L-REF", f"ref/manifest.json#{sid}", f"{k}={s.get(k)} 不在枚舉 {sorted(allowed)}")
+                by_role[s.get("role")] = by_role.get(s.get("role"), 0) + 1
+                for o in s.get("outputs") or []:
+                    op = game / o
+                    try:
+                        orel = op.resolve().relative_to(ref.resolve()).as_posix()
+                    except ValueError:
+                        orel = None                      # 指向 ref 外（例：legacy kb/xlsx/、quicktest/engine/）
+                    if not op.exists():
+                        if s.get("status") in ("transcribed", "summarized"):
+                            add("L-REF", f"ref/manifest.json#{sid}", f"outputs 不存在：{o}")
+                        continue
+                    if orel is not None:
+                        covered.add(orel if op.is_file() else orel.rstrip("/") + "/")
+                if s.get("sha256") and s.get("path") and roots:
+                    for r in roots:
+                        sp = r / s["path"]
+                        if sp.is_file():
+                            if hashlib.sha256(sp.read_bytes()).hexdigest() != s["sha256"]:
+                                sha_bad.append(sid)
+                            break
+            ref_facts["by_role"] = by_role
+            if sha_bad:
+                add("L-REF", "ref/manifest.json", f"來源 sha256 與現檔不符（來源已改，需重新收錄）：" + ", ".join(sha_bad[:10]), "warning")
+        ref_bytes, orphan, badfmt = 0, [], []
+        for f in sorted(ref.rglob("*")):
+            if not f.is_file():
+                continue
+            r_rel = f.relative_to(ref).as_posix()
+            ref_bytes += f.stat().st_size
+            if f.suffix.lower() not in REF_TEXT_EXT:
+                badfmt.append(r_rel)
+            if r_rel not in covered and not any(r_rel.startswith(c) for c in covered if c.endswith("/")):
+                orphan.append(r_rel)
+        if badfmt:
+            add("L-REF", "ref/", "非文字格式（原檔不進 data，轉錄成 md/csv/json）：" + ", ".join(badfmt[:10]))
+        if orphan:
+            add("L-REF", "ref/", f"{len(orphan)} 個檔未登錄在 manifest outputs：" + ", ".join(orphan[:10]))
+        if ref_bytes > REF_KB * 1024:
+            add("L-REF", "ref/", f"ref/ {ref_bytes // 1024} KB > {REF_KB} KB：非主版內容移到 output/slot/<slug>/extract/")
+        rv_man = game / "review" / "review-manifest.json"
+        if rv_man.is_file():
+            rvm = json.loads(rv_man.read_text(encoding="utf-8"))
+            leak = [x.get("source") or x.get("path") for x in (rvm.get("links") or []) + (rvm.get("files") or []) if str(x.get("source") or x.get("path") or "").replace("../", "").startswith("ref/")]
+            if leak:
+                add("L-REF", "review/review-manifest.json", "拍板包連到 ref/（ref 永不進 review）：" + ", ".join(map(str, leak[:5])))
+        ref_facts["total_kb"] = ref_bytes // 1024
+        facts["ref"] = ref_facts
 
     # L-SERVER（⑥ 交付守門：server/handoff.md 的來源 sha 必須與現檔一致；只對帳不改 server code）
     handoff = gamedir / "handoff.md" if (gamedir / "handoff.md").is_file() else server / "handoff.md"

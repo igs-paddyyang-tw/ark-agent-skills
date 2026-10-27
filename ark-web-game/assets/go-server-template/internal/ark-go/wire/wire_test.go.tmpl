@@ -1,0 +1,157 @@
+package wire
+
+import (
+	"encoding/json"
+	"errors"
+	"strings"
+	"testing"
+)
+
+func TestEncodeFrame_PythonShape(t *testing.T) {
+	// Python：encodeRet('auth', {'status':0}, sn=7, sysname=None) → {"ret":"auth","data":{"status":0},"sn":7}
+	p := &Packet{Ret: "auth", Data: json.RawMessage(`{"status":0}`), SN: json.RawMessage(`7`)}
+	got, err := EncodeFrame(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"ret":"auth","data":{"status":0},"sn":7}`
+	if string(got) != "0041"+want {
+		t.Fatalf("got %q", got)
+	}
+	if len(want) != 41 {
+		t.Fatalf("test fixture length %d", len(want))
+	}
+}
+
+func TestEncodeFrame_NonASCIIEscaped(t *testing.T) {
+	data, _ := MarshalASCII(map[string]string{"name": "金虎爺😀"})
+	got, err := EncodeFrame(&Packet{Cmd: "marquee", Data: data, Sys: Sys("game")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(got)
+	for _, c := range []byte(s) {
+		if c >= 0x80 {
+			t.Fatalf("non-ASCII byte in %q", s)
+		}
+	}
+	u := "\\" + "u"
+	want := u + "91d1" + u + "864e" + u + "723a" + u + "d83d" + u + "de00"
+	if !strings.Contains(s, want) {
+		t.Fatalf("escape mismatch: %s", s)
+	}
+	// 前綴 = 字元數 = 位元組數
+	body := s[HeaderLen:]
+	if s[:HeaderLen] != pad4(len(body)) {
+		t.Fatalf("header %s vs len %d", s[:HeaderLen], len(body))
+	}
+	// 解回來要等於原字串
+	var back struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(body), &back); err != nil || back.Data["name"] != "金虎爺😀" {
+		t.Fatalf("roundtrip: %v %v", err, back)
+	}
+}
+
+func pad4(n int) string {
+	s := "0000" + itoa(n)
+	return s[len(s)-4:]
+}
+
+func itoa(n int) string { b, _ := json.Marshal(n); return string(b) }
+
+func TestEncodeFrame_TooLarge(t *testing.T) {
+	big := strings.Repeat("a", MaxBody)
+	data, _ := json.Marshal(big)
+	_, err := EncodeFrame(&Packet{Cmd: "x", Data: data})
+	if !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("want ErrTooLarge, got %v", err)
+	}
+	// 剛好 9999 可以送
+	body := strings.Repeat("a", MaxBody)
+	if _, err := Frame([]byte(body)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDecoder_CountsRunesNotBytes(t *testing.T) {
+	// 客戶端用字元數：{"cmd":"a","data":"中"} 是 22 個字元、24 個位元組
+	body := `{"cmd":"a","data":"中"}`
+	msg := "0022" + body
+	var d Decoder
+	out, err := d.Feed([]byte(msg))
+	if err != nil || len(out) != 1 || string(out[0]) != body {
+		t.Fatalf("out=%q err=%v", out, err)
+	}
+}
+
+func TestDecoder_MultipleAndPartial(t *testing.T) {
+	a := `{"cmd":"alive"}`
+	b := `{"cmd":"w1","sys":"weapon","sn":3}`
+	stream := "0015" + a + "0034" + b
+	var d Decoder
+	// 拆成三段送
+	var got []string
+	for _, part := range []string{stream[:10], stream[10:22], stream[22:]} {
+		out, err := d.Feed([]byte(part))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, o := range out {
+			got = append(got, string(o))
+		}
+	}
+	if len(got) != 2 || got[0] != a || got[1] != b {
+		t.Fatalf("got %q", got)
+	}
+	if d.Buffered() != 0 {
+		t.Fatalf("leftover %d", d.Buffered())
+	}
+}
+
+func TestDecoder_BadHeader(t *testing.T) {
+	var d Decoder
+	_, err := d.Feed([]byte(`{"cmd":"auth"}`))
+	if !errors.Is(err, ErrBadHeader) {
+		t.Fatalf("want ErrBadHeader, got %v", err)
+	}
+}
+
+func TestDecoder_InvalidUTF8Dropped(t *testing.T) {
+	var d Decoder
+	out, err := d.Feed([]byte{'0', '0', '0', '1', 0xff})
+	if err != nil || out != nil || d.Buffered() != 0 {
+		t.Fatalf("out=%v err=%v buf=%d", out, err, d.Buffered())
+	}
+}
+
+func TestUnmarshalPacket(t *testing.T) {
+	p, err := UnmarshalPacket([]byte(`{"cmd":"w1","data":{"bet":100},"sn":12,"sys":"weapon"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Cmd != "w1" || p.SysName() != "weapon" || string(p.Data) != `{"bet":100}` {
+		t.Fatalf("%+v", p)
+	}
+	if n, ok := p.SNInt(); !ok || n != 12 {
+		t.Fatalf("sn %d %v", n, ok)
+	}
+	// 沒有 sys = default system；data null 視為沒有
+	p, _ = UnmarshalPacket([]byte(`{"cmd":"alive","data":null}`))
+	if p.Sys != nil || p.Data != nil {
+		t.Fatalf("%+v", p)
+	}
+	// sn 不是整數
+	p, _ = UnmarshalPacket([]byte(`{"cmd":"x","sn":"abc"}`))
+	if _, ok := p.SNInt(); ok {
+		t.Fatal("string sn must not parse")
+	}
+}
+
+func TestPacketMarshal_OmitsAbsent(t *testing.T) {
+	b, _ := (&Packet{Cmd: "close", Data: json.RawMessage(`{"code":408}`)}).MarshalJSON()
+	if string(b) != `{"cmd":"close","data":{"code":408}}` {
+		t.Fatalf("%s", b)
+	}
+}

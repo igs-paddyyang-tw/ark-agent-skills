@@ -1,0 +1,349 @@
+package table
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+	"math/rand/v2"
+	"sort"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"__MODULE__/internal/ark-go/dispatch"
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/ark-go/wire"
+)
+
+// TypeCheck 判斷玩家能否進入某廳館（Python 的 onTableTypeCheck 事件）。
+// 不允許時回傳 Python 相容的 status / msg（預設 7 'onTableTypeCheck not allow'）。
+type TypeCheck func(ctx context.Context, s *session.Session, tableType string, data json.RawMessage) (ok bool, status int, msg string)
+
+// Options 是桌管理的參數。
+type Options struct {
+	Limit     int           // 每桌人數，預設 4
+	TickEvery time.Duration // 預設 250ms（Python 魚群輪詢 0.25 秒）
+	HoldFor   time.Duration // 斷線保留座位時間，預設 30 秒；0 以下 = 不保留（同 Python）
+	Logger    *slog.Logger
+	// NewHooks 為每張新桌建立 Hooks（遊戲模組提供）；nil 時用 NopHooks。
+	NewHooks func(t *Table) Hooks
+	Check    TypeCheck
+	Now      func() time.Time
+}
+
+// Manager 管理本 pod 的所有桌。
+type Manager struct {
+	opts Options
+	log  *slog.Logger
+
+	mu      sync.Mutex
+	nextID  uint64
+	tables  map[string]*Table
+	counts  map[string]int    // table id → 入座人數（含保留中）
+	byArk   map[string]*Table // ark_id → 所在桌
+	hall    map[string]int    // 廳館 → 人數
+	stopped bool
+
+	stats struct{ panics atomic.Int64 }
+}
+
+// NewManager 建立 Manager。
+func NewManager(opts Options) *Manager {
+	if opts.Limit <= 0 {
+		opts.Limit = 4
+	}
+	if opts.TickEvery <= 0 {
+		opts.TickEvery = 250 * time.Millisecond
+	}
+	if opts.HoldFor == 0 {
+		opts.HoldFor = 30 * time.Second
+	}
+	if opts.Logger == nil {
+		opts.Logger = slog.Default()
+	}
+	if opts.Now == nil {
+		opts.Now = time.Now
+	}
+	return &Manager{opts: opts, log: opts.Logger, tables: map[string]*Table{}, counts: map[string]int{},
+		byArk: map[string]*Table{}, hall: map[string]int{}}
+}
+
+// Panics 回傳桌 panic 次數（metrics）。
+func (m *Manager) Panics() int64 { return m.stats.panics.Load() }
+
+// TableOf 回傳玩家所在的桌。
+func (m *Manager) TableOf(arkID string) *Table {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.byArk[arkID]
+}
+
+// HallCounts 回傳各廳館人數（給 pod 心跳，router 依此把桌配滿）。
+func (m *Manager) HallCounts() map[string]int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make(map[string]int, len(m.hall))
+	for k, v := range m.hall {
+		out[k] = v
+	}
+	return out
+}
+
+// Tables 回傳桌數。
+func (m *Manager) Tables() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.tables)
+}
+
+func (m *Manager) newTable(tableType string) *Table {
+	m.nextID++
+	t := &Table{
+		ID: strconv.FormatUint(m.nextID, 10), Type: tableType, Limit: m.opts.Limit,
+		m: m, log: m.log, inbox: make(chan func(), 256), done: make(chan struct{}),
+		seats: make([]*Seat, m.opts.Limit),
+	}
+	if m.opts.NewHooks != nil {
+		t.hooks = m.opts.NewHooks(t)
+	} else {
+		t.hooks = NopHooks{}
+	}
+	m.tables[t.ID] = t
+	go t.run(m.opts.TickEvery)
+	return t
+}
+
+// seated 由桌回報入座 / 離座（在桌 goroutine 內呼叫）。
+func (m *Manager) seated(t *Table, arkID string, delta int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.counts[t.ID] += delta
+	m.hall[t.Type] += delta
+	if m.hall[t.Type] <= 0 {
+		delete(m.hall, t.Type)
+	}
+	if delta > 0 {
+		m.byArk[arkID] = t
+	} else if m.byArk[arkID] == t {
+		delete(m.byArk, arkID)
+	}
+}
+
+func (m *Manager) tableClosed(t *Table) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.tables, t.ID)
+	delete(m.counts, t.ID)
+}
+
+// 狀態碼與 Python TableSystem 相同。
+func result(status int, msg string) map[string]any {
+	return map[string]any{"status": status, "msg": msg}
+}
+
+type tableReq struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+}
+
+// seat 嘗試讓 sess 坐進 t；回傳 Python 相容的結果。
+func (m *Manager) seat(ctx context.Context, t *Table, sess *session.Session) map[string]any {
+	var out map[string]any
+	err := t.call(ctx, func() {
+		if _, _, err := t.addSeat(sess, m.opts.Now()); err != nil {
+			out = result(2, "table is full")
+			return
+		}
+		out = map[string]any{"status": 0, "id": t.ID, "type": t.Type}
+	})
+	if err != nil {
+		return result(9, "table closed after join")
+	}
+	return out
+}
+
+// precheck：廳館檢查與「已在別桌」檢查。回傳 nil 代表可以繼續；held 為斷線保留中的原桌。
+func (m *Manager) precheck(ctx context.Context, sess *session.Session, tableType string, data json.RawMessage) (map[string]any, *Table) {
+	if m.opts.Check != nil {
+		if ok, st, msg := m.opts.Check(ctx, sess, tableType, data); !ok {
+			if st == 0 {
+				st, msg = 7, "onTableTypeCheck not allow"
+			}
+			return result(st, msg), nil
+		}
+	}
+	if t := m.TableOf(sess.ArkID()); t != nil {
+		// 斷線保留中、或同帳號新連線取代舊連線：回原桌
+		var mine bool
+		_ = t.call(ctx, func() {
+			s := t.SeatOf(sess.ArkID())
+			mine = s != nil && (s.Session == nil || s.Session != sess)
+		})
+		if mine {
+			return nil, t
+		}
+		return result(4, "player already in table"), nil
+	}
+	return nil, nil
+}
+
+// Any 加入某廳館任一有空位的桌，沒有就開新桌（Python cmd_any）。
+func (m *Manager) Any(ctx context.Context, sess *session.Session, data json.RawMessage) map[string]any {
+	var req tableReq
+	_ = json.Unmarshal(data, &req)
+	if st, held := m.precheck(ctx, sess, req.Type, data); st != nil {
+		return st
+	} else if held != nil {
+		return m.seat(ctx, held, sess)
+	}
+	for _, t := range m.candidates(req.Type) {
+		if out := m.seat(ctx, t, sess); out["status"] == 0 {
+			return out
+		}
+	}
+	return m.New(ctx, sess, data)
+}
+
+// candidates 依 Python 的排序挑有空位的桌（優先湊滿：人多的先，帶隨機）。
+func (m *Manager) candidates(tableType string) []*Table {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	type c struct {
+		t *Table
+		s float64
+	}
+	var list []c
+	for id, t := range m.tables {
+		if t.Type != tableType || m.counts[id] >= t.Limit || m.stopped {
+			continue
+		}
+		n := m.counts[id]
+		if n == 0 {
+			n = t.Limit
+		}
+		list = append(list, c{t, float64(n*t.Limit) / (float64(rand.IntN(t.Limit)+1) * 1.25)})
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].s < list[j].s })
+	if len(list) > 10 {
+		list = list[:10]
+	}
+	out := make([]*Table, len(list))
+	for i, x := range list {
+		out[i] = x.t
+	}
+	return out
+}
+
+// New 開一張新桌並入座（Python cmd_new）。
+func (m *Manager) New(ctx context.Context, sess *session.Session, data json.RawMessage) map[string]any {
+	var req tableReq
+	_ = json.Unmarshal(data, &req)
+	m.mu.Lock()
+	if m.stopped {
+		m.mu.Unlock()
+		return result(9, "table closed")
+	}
+	t := m.newTable(req.Type)
+	m.mu.Unlock()
+	return m.seat(ctx, t, sess)
+}
+
+// Join 加入指定桌（Python cmd_join）。
+func (m *Manager) Join(ctx context.Context, sess *session.Session, data json.RawMessage) map[string]any {
+	var req tableReq
+	_ = json.Unmarshal(data, &req)
+	if req.ID == "" {
+		return result(1, "table id is null")
+	}
+	m.mu.Lock()
+	t := m.tables[req.ID]
+	m.mu.Unlock()
+	if t == nil {
+		return result(3, "table not exists")
+	}
+	if st, held := m.precheck(ctx, sess, t.Type, data); st != nil {
+		return st
+	} else if held != nil {
+		return m.seat(ctx, held, sess)
+	}
+	return m.seat(ctx, t, sess)
+}
+
+// Leave 主動離桌（Python cmd_leave）。
+func (m *Manager) Leave(ctx context.Context, sess *session.Session, reason string) map[string]any {
+	t := m.TableOf(sess.ArkID())
+	if t == nil {
+		return map[string]any{"status": 0}
+	}
+	_ = t.call(ctx, func() {
+		if s := t.SeatOf(sess.ArkID()); s != nil && s.Session == sess {
+			t.removeSeat(s, reason)
+		}
+	})
+	return map[string]any{"status": 0}
+}
+
+// OnDisconnect 在連線結束時呼叫：保留座位；被同帳號踢掉（新連線接手）或排空時另外處理。
+func (m *Manager) OnDisconnect(sess *session.Session, code int, reason string) {
+	if sess.ArkID() == "" {
+		return
+	}
+	t := m.TableOf(sess.ArkID())
+	if t == nil {
+		return
+	}
+	hold := m.opts.HoldFor
+	_ = t.Do(func() {
+		s := t.SeatOf(sess.ArkID())
+		if s == nil || s.Session != sess {
+			return // 座位已被新連線接手
+		}
+		if hold <= 0 || code == 4002 { // 不保留、或排空
+			t.removeSeat(s, "disconnect: "+reason)
+			return
+		}
+		s.Session = nil
+		s.HeldTil = m.opts.Now().Add(hold)
+		t.hooks.OnDisconnect(t, s)
+	})
+}
+
+// Drain 排空：所有桌讓玩家離桌（OnLeave 結算寫回），之後不再開新桌。ctx 結束時返回。
+func (m *Manager) Drain(ctx context.Context) error {
+	m.mu.Lock()
+	m.stopped = true
+	list := make([]*Table, 0, len(m.tables))
+	for _, t := range m.tables {
+		list = append(list, t)
+	}
+	m.mu.Unlock()
+	for _, t := range list {
+		err := t.call(ctx, func() {
+			for _, s := range t.Seats() {
+				t.removeSeat(s, "server draining")
+			}
+			t.close()
+		})
+		if err != nil && ctx.Err() != nil {
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+// Register 註冊 sys "table" 的 any / new / join / leave。
+func (m *Manager) Register(r *dispatch.Router) {
+	r.Handle(SysName, "any", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		return m.Any(ctx, s, p.Data), nil
+	})
+	r.Handle(SysName, "new", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		return m.New(ctx, s, p.Data), nil
+	})
+	r.Handle(SysName, "join", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		return m.Join(ctx, s, p.Data), nil
+	})
+	r.Handle(SysName, "leave", func(ctx context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		return m.Leave(ctx, s, "leave"), nil
+	})
+}

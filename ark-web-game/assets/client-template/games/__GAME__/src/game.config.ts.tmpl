@@ -1,0 +1,19 @@
+// __NAME__ 遊戲設定（演出層；數值只來自 Server 的 GameInfo／SpinResult，這裡不放機率）
+export const GAME = {
+  key: '__KEY__',
+  name: __NAME_JSON__,
+  design: { w: 720, h: 1280 },
+  reels: { cols: 5, rows: 3, cellW: 126, cellH: 126, gap: 8, x: 36, y: 300 },
+  timing: { spinMin: 0.55, reelGap: 0.14, land: 0.18, winShow: 0.6, countUp: 0.5, featureStep: 0.45, featureIntro: 0.8 },
+  /** 符號：顯示名＋佔位色（未列的符號用名稱與雜湊色；正式美術到位前） */
+  symbols: {} as Record<string, [string, number]>,
+  /** 聽牌：這些符號在前面各軸累計 ≥ need 時，後面各軸延長 sec 秒（只在 base.trigger 局） */
+  tease: { symbols: [], need: 2, sec: 0.6 } as { symbols: string[]; need: number; sec: number },
+  /** 贏分等級門檻（倍數）→ 大獎演出 */
+  winTiers: [[15, 'BIG'], [40, 'MEGA'], [100, 'SUPER']] as [number, string][],
+  /** 素材清單：'none' = 佔位模式（還沒打包素材時）；打包後改 './assets/manifest.json'（wg_pack_assets，見 assets.yaml） */
+  assets: 'none',
+  /** 玩法要用的素材別名（抽到玩法時先確保所在 bundle） */
+  featureArt: [] as string[],
+};
+export type GameConfig = typeof GAME;

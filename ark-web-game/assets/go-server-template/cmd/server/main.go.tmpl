@@ -1,0 +1,114 @@
+// game-server：老虎機 Go Server（ark-web-game 範本；首例 Huff N' Puff Open House）。
+//
+//	go run ./cmd/server -odds configs/odds_trial-ref.json -addr :8787 -dev -seed 20261016
+//
+// 用戶端：pixi-client 開 index.html?service=http&base=http://localhost:8787&game=huffnpuff-open-house&dev=1
+// WebSocket（ark-go wire 協定）：ws://localhost:8787/ws，auth 後送 sys "slot" 指令（README §WebSocket）。
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+
+	"__MODULE__/internal/api"
+	"__MODULE__/internal/ark-go/dispatch"
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/prob"
+	_ "__MODULE__/internal/prob/__ENGINE__" // 註冊機率模組
+	"__MODULE__/internal/round"
+)
+
+func main() {
+	addr := flag.String("addr", ":8787", "監聽位址")
+	oddsPath := flag.String("odds", "../../quicktest/odds/odds_1.0.0.json", "odds 設定檔（quicktest 格式＋遊戲專屬區塊；預設 ④ 快測定案的正式 odds）")
+	gameID := flag.String("game", "__GAME__", "遊戲代號（URL 的 :gameId）")
+	engine := flag.String("engine", "__ENGINE__", "機率模組（internal/prob 註冊表名稱）")
+	dev := flag.Bool("dev", false, "開發模式：開 dev/force、DevWallet、任何 token 都可 auth")
+	seed := flag.Int64("seed", -1, "開發用固定 seed（玩家 i 用 seed+i）；-1 = 隨機")
+	balance := flag.Int("balance", 100000, "DevWallet 起始餘額")
+	internal := flag.Bool("internal", false, "開 /internal/v1/play（給 slot-bot server；只在內網開）")
+	redisAddr := flag.String("redis", "", "平台 Redis（token 驗證；空 = 只在 -dev 下以 DevTokens 驗證）")
+	verbose := flag.Bool("v", false, "debug log")
+	flood := flag.Int64("flood-limit", 0, "WS 每秒封包上限（0 = ark-go 預設 40；連續 3 秒超限以 509 關閉）。只在測試調高")
+	wsInline := flag.Int("ws-max-inline", 0, "WS 單包直接回結果的上限字元數（0 = 預設 9,743；調小可強制走分段，測試用）")
+	flag.Parse()
+
+	lv := slog.LevelInfo
+	if *verbose {
+		lv = slog.LevelDebug
+	}
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lv}))
+
+	g, err := prob.Open(*engine, *oddsPath)
+	if err != nil {
+		fail(log, "讀設定檔", err)
+	}
+	profile := g.Info().Profile
+	if profile == "trial-ref" {
+		log.Warn("使用試玩參考設定（trial-ref）：數值不是機率規格書決議值，只供網路層 / 用戶端開發與對帳", "odds", *oddsPath)
+	}
+	if !*dev && *redisAddr == "" {
+		fail(log, "設定", errors.New("非 -dev 模式需要 -redis（token 驗證）；帳務請接 slot-bot server（-internal）"))
+	}
+
+	opt := round.Options{GameID: *gameID, Dev: *dev}
+	if *seed >= 0 {
+		opt.Seed = seed
+	}
+	var tokens session.TokenStore = api.DevTokens{}
+	var store round.Store = round.NewMemStore()
+	if *redisAddr != "" {
+		rc := redis.NewClient(&redis.Options{Addr: *redisAddr})
+		tokens = &session.RedisTokenStore{Client: rc}
+		store = &round.RedisStore{C: rc, Prefix: "wg:" + *gameID}
+	}
+	// 錢包：開發用 DevWallet；正式環境換平台錢包轉接（拓撲 A）或走 -internal 由 slot-bot 結帳（拓撲 B）。
+	svc := round.New(g, round.NewDevWallet(*balance), store, opt)
+	if *wsInline > 0 {
+		api.MaxInline = *wsInline
+	}
+	ws := (&api.WS{Svc: svc, Log: log}).NewServer(dispatch.Config{FloodLimit: *flood}, tokens)
+
+	mux := http.NewServeMux()
+	(&api.HTTP{Svc: svc, Log: log, Internal: *internal}).Register(mux)
+	mux.Handle("/ws", ws)
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		if ws.Draining() {
+			http.Error(w, "draining", http.StatusServiceUnavailable)
+			return
+		}
+		fmt.Fprintln(w, "ok")
+	})
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go ws.Run(ctx)
+	srv := &http.Server{Addr: *addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		<-ctx.Done()
+		ws.Drain("server shutdown")
+		sctx, c := context.WithTimeout(context.Background(), 5*time.Second)
+		defer c()
+		_ = srv.Shutdown(sctx)
+	}()
+	log.Info("game-server 啟動", "addr", *addr, "game", *gameID, "odds", *oddsPath, "engine", *engine, "profile", profile, "dev", *dev,
+		"http", "/api/slot/"+*gameID+"/{init,spin,action,balance,ack,round/:id,dev/force}", "ws", "/ws")
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		fail(log, "listen", err)
+	}
+}
+
+func fail(log *slog.Logger, what string, err error) {
+	log.Error(what, "err", err)
+	os.Exit(1)
+}

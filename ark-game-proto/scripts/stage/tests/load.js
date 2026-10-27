@@ -4,10 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const RT = path.resolve(__dirname, '..', 'runtime');
-const ENGINE = ['../../src/go-rand.js', 'core/core.js', 'core/sim.js', 'slot/logic.js', 'features/鎖格重轉/logic.js', 'service/result.js', 'service/service.js'];
+const ENGINE = ['../../src/go-rand.js', 'core/core.js', 'core/sim.js', 'slot/logic.js', 'features/鎖格重轉/logic.js', 'service/wire.js', 'service/arkconn.js', 'service/result.js', 'service/service.js'];
 
 function load(gameFile, extra = []) {
-  const ctx = { console, setTimeout, clearTimeout, setInterval, clearInterval, performance, Math, Date, AbortController, fetch, URLSearchParams };
+  const ctx = { console, setTimeout, clearTimeout, setInterval, clearInterval, performance, Math, Date, AbortController, fetch, URLSearchParams, WebSocket: globalThis.WebSocket, TextDecoder };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   for (const f of [...ENGINE.map((x) => path.join(RT, x)), ...extra, ...(gameFile ? [gameFile] : [])]) {

@@ -1,0 +1,66 @@
+package session
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
+)
+
+func TestRedisTokenStore(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	st := &RedisTokenStore{Client: rdb, TTL: 100 * time.Second, CodeName: "tigershark"}
+	ctx := context.Background()
+
+	mr.Set("token_u1", "t1")
+	mr.Set("ArkServer:tigershark:u1:IsTestAcc", "True")
+
+	if ok, _ := st.Verify(ctx, "u1", "t1", ""); !ok {
+		t.Fatal("verify")
+	}
+	if ok, _ := st.Verify(ctx, "u1", "bad", ""); ok {
+		t.Fatal("wrong token")
+	}
+	if ok, _ := st.Verify(ctx, "nobody", "t1", ""); ok {
+		t.Fatal("missing key")
+	}
+
+	if ok, err := st.Renew(ctx, "u1", "t1", ""); !ok || err != nil {
+		t.Fatalf("renew %v %v", ok, err)
+	}
+	if ttl := mr.TTL("token_u1"); ttl != 100*time.Second {
+		t.Fatalf("token ttl %v", ttl)
+	}
+	if ttl := mr.TTL("ArkServer:tigershark:u1:IsTestAcc"); ttl != 100*time.Second {
+		t.Fatalf("IsTestAcc ttl %v", ttl)
+	}
+
+	// 別處登入換了 token：不續期、不覆寫
+	mr.Set("token_u1", "t2")
+	if ok, _ := st.Renew(ctx, "u1", "t1", ""); ok {
+		t.Fatal("must not renew replaced token")
+	}
+	if v, _ := mr.Get("token_u1"); v != "t2" {
+		t.Fatalf("token overwritten: %s", v)
+	}
+}
+
+func TestRedisTokenStoreKey(t *testing.T) {
+	st := &RedisTokenStore{}
+	if k := st.Key("u", "tok", ""); k != "token_u" {
+		t.Fatal(k)
+	}
+	if k := st.Key("u", "tok", "main"); k != "token_u" {
+		t.Fatal(k)
+	}
+	if k := st.Key("u", "tok", "web"); k != "token_u_web" {
+		t.Fatal(k)
+	}
+	st.MultiLogin = true
+	if k := st.Key("u", "tok", "web"); k != "token_u_tok" {
+		t.Fatal(k)
+	}
+}

@@ -158,3 +158,22 @@ def test_export(tmp_path):
     bad = subprocess.run([sys.executable, "-X", "utf8", str(TOOL), "--slug", "x", "--repo", str(repo), "--export", str(repo / "data" / "pack")],
                          capture_output=True, text=True, encoding="utf-8")
     assert bad.returncode == 2
+
+
+def test_ref_never_in_review(tmp_path):
+    """契約 v3.6：ref/ 參考資源層（含 🔒 live）不進拍板包，也不隨 --export 帶走。"""
+    repo = _repo(tmp_path)
+    d = repo / "data" / "slot" / "x"
+    (d / "ref" / "live").mkdir(parents=True)
+    (d / "ref" / "live" / "server-prob.json").write_text("{}", encoding="utf-8")
+    (d / "ref" / "docs").mkdir()
+    (d / "ref" / "docs" / "spec-docx.md").write_text("# 文字規格\n", encoding="utf-8")
+    dest = tmp_path / "pack"
+    r = subprocess.run([sys.executable, "-X", "utf8", str(TOOL), "--slug", "x", "--repo", str(repo), "--export", str(dest)],
+                       capture_output=True, text=True, encoding="utf-8")
+    assert r.returncode == 0, r.stdout
+    man = json.loads((d / "review" / "review-manifest.json").read_text(encoding="utf-8"))
+    assert not any("ref/" in lk["path"] for lk in man["links"])
+    assert "ref/" not in (d / "review" / "index.html").read_text(encoding="utf-8")
+    assert not (dest / "ref").exists()
+    assert not (d / "ref" / "docs" / "spec-docx.html").exists(), "publish_docs 不可在 ref/ 產 html"

@@ -9,6 +9,7 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fail++;
 const CL = C.model === 'coin-lock';
 const HC = C.model === 'house-collect';
 const HF = C.model === 'huff-house';
+const FC = C.model === 'frame-chest';
 
 // 1 決定性 + 演出 RNG 分流
 let same = true, n = 0;
@@ -57,6 +58,25 @@ if (CL) {
   ok(ohOk, `Open House：最後一房累計 = credits、下一房起始框 = 上一房鑰匙數（${nOH} 場）`);
   ok(posOk, '演出格位：每框一格、不重疊（演出流指派，不改數學）');
   ok(['ST', 'SK', 'BR', 'GD', 'OH'].every((t) => seen.has(t)), `五種玩法都出現：${[...seen].join('/')}`);
+} else if (FC) {
+  // 2 frame-chest：贏分 = 線獎 + 金框再中 + 開箱；開箱逐格和（含事件重算）= chest；框等級計數 = 15 格；手數 = 初始 + 加局；時間軸最後框盤 = 結算框盤
+  let k = 0, winOk = true, chestOk = true, lvOk = true, spinOk = true, tlOk = true; const seen = new Set(); let ev = 0;
+  for (let s = 1; s < 4e6 && (k < 500 || ev < 3); s++) {
+    const r = S.spin(C, s); if (!r.fg) continue;
+    const f = S.spin(C, s, { present: true }).fg; k++; seen.add(f.group); if (f.event > 0) ev++;
+    if (f.lineWin + f.overWin + f.chest !== f.win) winOk = false;
+    const cs = f.settle.reduce((a, x) => a + (x.event != null ? x.each * x.n - x.replaced : x.v), 0);
+    if (cs !== f.chest) chestOk = false;
+    if (f.lv.reduce((a, b) => a + b, 0) !== C.R * C.ROWS || f.settle.filter((x) => x.event == null).length !== C.R * C.ROWS - f.lv[0]) lvOk = false;
+    if (f.spins !== C.fc.spins + f.retrig * C.fc.radd || f.timeline.length !== f.spins) spinOk = false;
+    const last = f.timeline[f.timeline.length - 1].sit; if ([0, 1, 2, 3].some((l) => last.filter((v) => v === l).length !== f.lv[l])) tlOk = false;
+  }
+  ok(winOk, `FG 贏分 = 線獎 + 金框再中 + 開箱（${k} 場 FG）`);
+  ok(chestOk, '逐格開箱和（含 F-8 事件重算）= 開箱總分');
+  ok(lvOk, '框等級計數 = 15 格、開箱格數 = 有框格數');
+  ok(spinOk, '手數 = 初始局數 + 加局（時間軸逐手）');
+  ok(tlOk, '時間軸最後框盤 = 結算框盤');
+  ok(C.G.every((g) => seen.has(g)) && ev > 0, `四強度組都出現、特殊事件 ${ev} 場`);
 } else if (HC) {
   // 2 house-collect：FG 贏分拆解 = 線獎 + 房子結算 + 全滿額外；房子棟數 = 標記格 1/2/3 級數；大轉盤三變體與 Free 都會出現
   let k = 0, winOk = true, settleOk = true, countOk = true;
@@ -106,6 +126,14 @@ if (HF) {
     ok(t.multi && Math.abs(x.avg_win - t.multi) < 3 * x.avg_ci + 0.02 * t.multi, `${g} 均倍 ${x.avg_win.toFixed(2)} ±${x.avg_ci.toFixed(2)} vs ${t.multi}`);
   }
   ok(Math.abs(e.rtp_total - T.rtp_total) < 1, `總 RTP ${e.rtp_total.toFixed(3)} vs ${T.rtp_total} (±1)`);
+} else if (FC) {
+  // frame-chest：MG／觸發率解析對快測；FG 均倍抽樣（2×CI）；平均手數 ±1%；總 RTP ±1.5 pp
+  const X = cfg.targets.frame_chest || {};
+  ok(Math.abs(e.rtp_main - T.rtp_main) < 0.05, `MG RTP 精算 ${e.rtp_main.toFixed(4)} vs ${T.rtp_main}`);
+  ok(Math.abs(e.fg_rate / T.fg_rate - 1) < 0.01, `觸發率 ${e.fg_rate.toFixed(4)} vs ${T.fg_rate}`);
+  ok(Math.abs(e.fg_avg - T.fg_avg) < 2 * e.fg_avg_ci + 0.5, `FG 均倍 ${e.fg_avg.toFixed(2)} ±${e.fg_avg_ci.toFixed(2)} vs ${T.fg_avg}`);
+  ok(!X.spins || Math.abs(e.fc.spins / X.spins - 1) < 0.01, `FG 平均手數 ${e.fc.spins.toFixed(3)} vs ${X.spins}`);
+  ok(Math.abs(e.rtp_total - T.rtp_total) < 1.5, `總 RTP ${e.rtp_total.toFixed(3)} vs ${T.rtp_total} (±1.5)`);
 } else if (HC) {
   // house-collect：MG 抽樣、FG+Bonus 兩觸發線分開對；總 RTP 對 §2（±tol，§2 的 0.88pp = 95% CI）
   const tolHC = Math.max(T.tol || 0.88, 0.88);

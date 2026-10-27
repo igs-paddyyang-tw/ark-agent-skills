@@ -1,4 +1,4 @@
-# 遊戲產出佈局契約（game-layout contract v3.5）
+# 遊戲產出佈局契約（game-layout contract v3.7）
 
 > **單一來源（SSOT）**：一款遊戲從競品到上線的所有產出放哪，以本檔為準；機器可讀版是同目錄的 `game-layout.yaml`。
 > 擁有者：**ark-game-spec**（製程入口）。ark-game-prob（`ps_layout` 守門）、ark-game-quicktest、ark-game-proto 依本契約讀寫路徑。
@@ -7,6 +7,8 @@
 > v3.1（同日）：階段編號對齊知識庫九階段 SSOT（`knowledge/slot/raw/methodology/slot-pipeline-output-checklist.md`：⑦ 試玩版 Stage、⑧ Game Server、⑨ 上線成效）。
 > v3.3（2026-10-19）：新增定版家 `review/` 拍板包（另計 < 5 MB）——給人拍板／demo 的成品進 data，`output/` 只留中間檔、二進位、大素材（使用者決議；分析見專案 `docs/reports/review/2026-10-19-data-output-review-layout.md`）。
 > v3.5（2026-10-20）：**拍板包不與各階段產出重疊**（使用者決議）：每份文件的 md＋html 都放在它自己階段的目錄（review_build `publish_docs` 在 md 旁產同名 html，帶 `content-src` 戳記，ps_layout L-STAMP 驗）；`review/` 只放拍板書、`checks/` 與定版家放不下的自足單檔（`play.html`、`gdd-overview.html`），其餘成品以相對連結 `../<stage>/…` 指向定版家，不複製；清冊多一欄 `links`；要整包傳給人用 `review_build --export <資料夾>`。結案報告（`*closeout*`）不進送審包。設計見專案 `docs/designs/2026-10-20-review-pack-dedup-design.md`。
+> v3.6（2026-10-21，使用者決議）：新增 **`ref/` 參考資源層**（⓪ 收錄）：每款遊戲的原始參考資源（機率表、文字規格、編導規格、Client 摘要、線上機率）轉錄後放 `ref/`，只增不改；十階段從 ref 讀，蒸餾知識庫最後才做。原檔不進 data（正本留來源 repo，全量抽取放 `output/<domain>/<slug>/extract/`）；ref 額度另計 < 1 MB；`ref/` 永不進 `review/`。守門 `ps_layout` L-REF。設計見專案 `docs/designs/2026-10-21-game-ref-layout-design.md`。
+> v3.7（2026-10-22，ark-web-game 計畫 P1 任務 1.6）：⑧ 新增必交 **`game/trace-map.md` 抽選點對照表**（prob-spec §3 抽選點 → 參數 → Go 函式 → SpinResult 欄位 → 演出步驟；格式與檢查 `ark-web-game scripts/wg_trace_check.py`）；⑧ 負責 skill 由「規劃中 ark-game-code」改為 **ark-web-game**（Server 範本 `wg_server_init.py`、抽離 SOP）；⑦ `stage.yaml` 可加 `bundles:`、`service:`、`game_key`、`version`（stage_build 資料夾版另產 `manifest.json`＋`release.json`，屬 output）。
 > v3.4（2026-10-19）：閉環 **九→十階段**（使用者決議「送審＝上線前」）：`review/` 拍板包正式編為 **⑨ 送審拍板（上線前）**，原 ⑨ 上線成效改為 **⑩**（路徑與 skill 不變，仍為 ark-game-report）；stages 鍵 `拍板` → `⑨`、`⑨` → `⑩`。設計見專案 `docs/designs/2026-10-19-slot-pipeline-workflow-final-design.md`。
 
 ## 1. 兩個家與判準
@@ -32,9 +34,10 @@
 | ④ | Go 快測程式 | `quicktest/` | ark-game-quicktest |
 | ⑥ | 機率可視化驗證 | `proto/` | ark-game-proto（驗證台） |
 | ⑦ | 遊戲試玩版（Stage 正式演出版型） | `game/pixi-client/` | ark-game-proto 1.1（`stage_build`） |
-| ⑧ | Game Server | `game/go-server/` ＋ `game/handoff.md` | 工程（規劃中 skill `ark-game-code`） |
+| ⑧ | Game Server | `game/go-server/` ＋ `game/handoff.md` ＋ `game/trace-map.md`（v3.7） | ark-web-game（Server 範本、⑧ 抽離；承接原規劃 ark-game-code） |
 | ⑨ | 送審拍板（上線前；彙整 ②⑤⑥⑦⑧ 成品＋驗收＋拍板書） | `review/` | ark-game-proto（`review_build.py`）＋ ark-book（拍板書） |
 | ⑩ | 上線成效 | `report/report-d<N>.yaml`（設定）＋ `docs/reports/<資料日>-<slug>-d<N>.html／.json`（定版報告） | ark-game-report（D+7／D+14／D+30；結論由人確認）＋ math-reviewer |
+| ⓪ | 參考資源收錄（v3.6） | `ref/` | 專案 `scripts/knowledge/ref_ingest.py`（AI 收錄＋判讀紀錄） |
 | — | 本款專屬文件正本 | `docs/` | 各階段 |
 | — | 逆向知識卡（還原局） | `kb/` | 人工 ＋ `data/slot/_schema/tools/sg_*` |
 
@@ -45,6 +48,12 @@ data/slot/<slug>/
 ├── README.md                          遊戲卡（doc_role: index；模式、版本、①～⑩ 狀態）
 ├── LAYOUT.md · layout-report.json     ps_layout 產物（勿手改）
 ├── publish-manifest.json              gs_publish 的 sha 清冊
+├── ref/                          ⓪ 參考資源層（v3.6；額度另計 < 1 MB；只增不改；永不進 review/）
+│   ├── README.md                      ref 卡：來源總覽、版本地圖、判讀紀錄（R-id＋可重驗證據＋信心）、未收清單、待確認
+│   ├── manifest.json                  來源清冊：id、repo、commit、path、sha256、bytes、kind、version、role、status、sensitivity、outputs
+│   ├── prob-table/<ver-id>/           機率表轉錄（每分頁一個 csv；_formulas.csv；_sheets.json）
+│   ├── docs/ · design/ · client/      文字規格／檢核表、編導規格摘錄、Client 逆向摘要（md）
+│   └── live/                          🔒 線上 Server 機率（json＋README；只供 ⑧⑩ 對帳）
 ├── analysis/                     ①
 │   ├── game-analysis.yaml · kb-refs.yaml · evidence.jsonl
 │   ├── report/<date>-game-analysis-<run>.md
@@ -67,7 +76,8 @@ data/slot/<slug>/
 │   └── game-config.json · index.html · go-parity.* · gaps.md
 ├── game/                         ⑦⑧
 │   ├── pixi-client/              ⑦   PixiJS 試玩版遊戲包（ark-game-proto Stage：game.js、stage.yaml、stage-build.json、建置腳本）
-│   ├── go-server/                ⑧   Go Server 原始碼（雛型或正式）
+│   ├── go-server/                ⑧   Go Server 原始碼（ark-web-game 範本：internal/{ark-go,api,round,result,prob/<engine>}）
+│   ├── trace-map.md              ⑧   抽選點對照表（v3.7 必交；wg_trace_check）
 │   └── handoff.md＋.html         ⑧   工程交付單（設定檔 sha、prob-spec 版本、rtp-report sha、K 卡 → Go 映射；html 為 v3.5 View 軌）
 ├── review/                       ⑨ 送審拍板包（v3.3；額度另計 < 5 MB；送審前 review_build 發布）
 │   ├── index.html                     拍板書（ark-book book_build 產物：封面、書脊目錄、每個待拍板事項一章、附錄；成品以 ../<stage>/… 相對連結指向定版家，v3.5）
@@ -94,6 +104,7 @@ output/slot/<slug>/
 │   ├── pixi-client/              ⑦ Stage 建置輸出（single/index.html、folder/）
 │   └── go-server/                ⑧ Server 二進位與執行產物
 ├── proto/                        ⑥ 雛型建置中間檔
+├── extract/<ver-id>/             ⓪ ref 來源的全量抽取（含輪帶分頁；role: next 的版本只放這裡）
 ├── build/ · qt-runs/             ④ exe、試跑
 ├── sandbox/                      實驗、重跑驗證
 └── _retired/                     退役件
@@ -102,7 +113,7 @@ output/slot/<slug>/
 ## 5. 還原局（已上線遊戲）
 
 必有：`README.md`、`kb/`（spec · prob · code · qt-result · versions · methods ＋ `xlsx/` ＋ `paramcheck/` ＋ `notes/`）、`quicktest/engine/`、`quicktest/qt-report/`。
-選配：`prob/`（`ps_run --xlsx`）、`spec/config-spec.yaml`（`gs_run --stage restore`，mode: restore-live）、`docs/`。
+選配：`ref/`（v3.6，建議：新收錄一律走 ref）、`prob/`（`ps_run --xlsx`）、`spec/config-spec.yaml`（`gs_run --stage restore`，mode: restore-live）、`docs/`。
 `kb/` 由 `sg_lint.py` 守門；佈局由 `ps_layout --mode restore` 守門。
 
 ## 6. 跨遊戲的東西不放遊戲資料夾
@@ -113,6 +124,7 @@ output/slot/<slug>/
 | skill 規格／設計（例：pack 擴充） | 專案層 `docs/specs/`、`docs/designs/` |
 | 手法卡、方法論 | `knowledge/slot/` |
 | 競品素材本體（影片、裁圖、試玩） | 原始位置（例：`D:\kiro-cli\data\<競品>`），只在 `analysis/source/manifest.json` 登錄 |
+| 自家遊戲原檔（機率表 xlsx、Go 快測、Server 設定、編導規格） | 來源 repo（slot_math_squad、GoldenHoyeahServer、GoldenHoyeahSlotKnowledgeBase…），只在 `ref/manifest.json` 登錄；轉錄進 `ref/`（v3.6） |
 
 ## 7. 各 skill 的讀寫點
 
@@ -126,6 +138,7 @@ output/slot/<slug>/
 
 ## 8. 相容與遷移
 
+- v3.6：既有 `kb/xlsx/` 不搬；導入 ref 時在 `ref/manifest.json` 登錄為 legacy（`outputs` 指向 `kb/xlsx/`）。新收錄一律走 `ref/`。
 - 舊路徑在一個版本內仍可讀：`proto/stage/`（→ `game/pixi-client/`）、`server/`（→ `game/`；`server/handoff.md` → `game/handoff.md`）、`docs/report/`（→ `docs/reports/`）、`data/gdd/<slug>/`（→ `spec/gdd/` ＋ `output/slot/<slug>/gdd/`）、`artifacts/cva/<run>/`（→ `output/slot/<slug>/runs/`）。
 - 遷移只搬不刪；搬完跑 `ps_layout --game data/slot/<slug> --mode design`，error = 0 才算完成。
 - 本契約改版時同步 `game-layout.yaml`，並在 `data/slot/_schema/layout.md` 與 `knowledge/slot/raw/methodology/game-pipeline-layout.md` 更新指標。

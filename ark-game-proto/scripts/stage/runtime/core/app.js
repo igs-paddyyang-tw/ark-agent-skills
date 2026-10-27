@@ -3,7 +3,9 @@
 //  共用除錯分頁沿用 Proto 試玩模板：設定檢查、演出測試、演出記錄、素材替換；另加「服務」分頁（來源、seed、錄製 / 重播、連線統計）
 //  結果來源由網址參數決定（預設 local）：
 //    ?service=local&seed=123[&rng=go]  瀏覽器內引擎（LocalService；rng=go → Go math/rand Float64 數學流）
-//    ?service=http&base=https://…&game=<id>&token=…&dev=1   slot-bot server（HttpService）
+//    ?service=http&base=https://…&game=<id>&token=…&dev=1   Stage HTTP（HttpService）
+//    ?service=ws&url=wss://…/ws&ark_id=…&token=…&dev=1     ark-go WebSocket（WsService；ark-web-game references/wire-protocol.md）
+//    設定檔：stage.yaml 的 service:{kind,url,base,gameId,dev} → config.service；網址參數優先
 //    重播：除錯「服務」分頁載入 .trace.json（ReplayService）
 //  演出亂數（Timeline 的 random 步驟、粒子、震屏）一律用 app.rng = fx 流，不碰數學流
 // ============================================================
@@ -21,10 +23,24 @@
 
   Proto.createService = function (config, q = params()) {
     const S = Proto.svc;
-    const kind = q.service || (config.service && config.service.kind) || 'local';
+    const svcCfg = config.service || (typeof window !== 'undefined' && window.__STAGE_SERVICE) || {};   // stage.yaml service:（stage_build 注入）
+    const kind = q.service || svcCfg.kind || 'local';
+    if (kind === 'ws') {
+      const c = svcCfg;
+      const sess = (typeof window !== 'undefined' && window.ARK_SESSION) || {};
+      let url = q.url || c.url || '/ws';
+      if (typeof location !== 'undefined' && url.startsWith('/')) url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + url;
+      return new S.WsService({ url, gameId: q.game || c.gameId || config.slug || 'game', arkId: q.ark_id || sess.arkId || 'guest', token: q.token || sess.token || 'dev', dev: q.dev === '1' || !!c.dev,
+        onSlow: (on) => Proto.app && Proto.app.module && Proto.app.module.busyEl && (Proto.app.module.busyEl.hidden = !on) });
+    }
     if (kind === 'http') {
-      const c = config.service || {};
+      const c = svcCfg;
       return new S.HttpService({ base: q.base || c.base || '', gameId: q.game || c.gameId || config.slug || 'game', token: q.token || c.token, dev: q.dev === '1' || !!c.dev });
+    }
+    if (kind === 'replay') {                                     // 1.6.0：引擎回放試玩（軌跡內嵌在 config.service.trace）
+      const c = config.service || {};
+      if (!c.trace) throw new Error('service.kind = replay 需要 config.service.trace');
+      return new S.ReplayService(c.trace, { loop: c.loop !== false });
     }
     const seed = q.seed !== undefined ? Number(q.seed) : config.seed;
     return new S.LocalService(config.spec, { seed, rng: q.rng === 'go' ? 'go' : undefined, balance: (config.presentation || {}).startBalance ?? 100000 });
@@ -58,6 +74,10 @@
     app.stage.assets = app.assets;
     app.stage.audio = app.audio;
 
+    // 啟動指標（ark-web-game references/delivery.md §5）：boot → core_ready（素材）→ playable
+    const perf = typeof performance !== 'undefined' && performance.mark ? performance : null;
+    app.metrics = {};
+    if (perf) perf.mark('boot');
     // 結果來源
     app.service = new Proto.svc.Recorder(Proto.createService(config));
     try { app.info = await app.service.init(); } catch (e) { message(app, `無法連線遊戲服務：${e.code || ''} ${e.message || e}`); return; }
@@ -67,6 +87,7 @@
 
     app.ui.showLoading();
     await app.assets.load((d, t) => app.ui.progress(d, t));
+    if (perf) { perf.mark('core_ready'); app.metrics.core_ready_ms = Math.round(perf.now()); }
     if (app.assets.fileProtocolBlocked && app.assets.missing().some((a) => a.kind === 'image')) {
       message(app, '以 file:// 直接開啟時，瀏覽器不允許 WebGL 讀取本機圖片。\n\n請改用：\n  python stage_build.py … --serve（本機 http 服務）\n或建置內嵌版：--inline-assets\n\n（點此以佔位圖繼續）').onclick = function () { this.remove(); };
     }
@@ -83,9 +104,15 @@
 
     const issues = Proto.validate(app);
     app.issues = issues;
+    if (perf) {                                                       // 可玩＝素材、連線、遊戲模組都就緒（不含玩家按「開始」的等待）；自頁面開始計
+      perf.mark('playable');
+      app.metrics.time_to_playable_ms = Math.round(perf.now());
+      console.info('[stage] metrics', JSON.stringify(app.metrics));
+    }
     await app.ui.waitStart(app.assets.missing().length);
     if (issues.some((i) => i.level === 'error')) console.warn('設定檢查發現問題：', issues);
     if (app.module.start) app.module.start();
+    if (await Proto.playPending(app)) app.events.emit('pending-played');
     app.events.emit('started');
   };
 
@@ -110,6 +137,7 @@
       Proto.table(['項目', '值'], [
         ['來源', s.kind], ['seed', s.seed ?? '—'], ['已錄局數', rec.results ? rec.results.length : 0],
         ['餘額（Service）', Proto.fmt.int(app.module && app.module.state ? app.module.state.balance : 0)],
+        ['啟動指標', JSON.stringify(app.metrics || {})],
         ['Http 呼叫 / 重試', s.stats ? `${s.stats.calls} / ${s.stats.retries}（上次 ${s.stats.lastMs} ms）` : '—'],
         ['Http 錯誤', s.stats ? JSON.stringify(s.stats.errors) : '—'],
         ['FPS', fps], ['補間數', Proto.tween.count()], ['Renderer', r ? r.name || r.type : '—'],

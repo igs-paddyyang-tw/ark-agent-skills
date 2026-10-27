@@ -1,0 +1,51 @@
+package round
+
+import (
+	"context"
+	"sync"
+)
+
+// DevWallet 是開發用記憶體帳務（代替平台錢包或 slot-bot server）；每位玩家起始 Start credits。
+type DevWallet struct {
+	Start int
+	mu    sync.Mutex
+	bal   map[string]int
+	seen  map[string][2]int
+}
+
+// NewDevWallet 建立開發用帳務。
+func NewDevWallet(start int) *DevWallet {
+	return &DevWallet{Start: start, bal: map[string]int{}, seen: map[string][2]int{}}
+}
+
+func (w *DevWallet) get(p string) int {
+	if b, ok := w.bal[p]; ok {
+		return b
+	}
+	w.bal[p] = w.Start
+	return w.Start
+}
+
+// Balance 實作 Wallet。
+func (w *DevWallet) Balance(_ context.Context, p string) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.get(p), nil
+}
+
+// Settle 實作 Wallet（roundID 去重：同局重送不重複扣款）。
+func (w *DevWallet) Settle(_ context.Context, p, roundID string, bet, win int) (int, int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if v, ok := w.seen[p+"|"+roundID]; ok {
+		return v[0], v[1], nil
+	}
+	b := w.get(p)
+	if b < bet {
+		return 0, 0, errf(ErrInsufficient, "餘額不足")
+	}
+	a := b - bet + win
+	w.bal[p] = a
+	w.seen[p+"|"+roundID] = [2]int{b, a}
+	return b, a, nil
+}

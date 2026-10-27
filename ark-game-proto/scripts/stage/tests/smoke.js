@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Stage 冒煙測試（真瀏覽器）：開頁 → 開始 → 一般局 → 各強制情境 → 截圖、收頁面錯誤、帳務檢查、量 FPS
 //   node smoke.js --html <index.html 或其資料夾> [--out shots/] [--scenes '["feature",{"label":"Open House"}]' | all] [--speed 6] [--spins 3]
-//                 [--backend auto|playwright|cdp] [--browser <chrome/msedge>] [--mid 2500] [--query 'seed=7&rng=go']
+//                 [--backend auto|playwright|cdp] [--browser <chrome/msedge>] [--mid 2500] [--query 'seed=7&rng=go'] [--check-metrics]
+//   --check-metrics（1.5.0）：檢查啟動指標 Proto.app.metrics.time_to_playable_ms 已記錄（> 0）
+//   不給 --html 時用 golden/stage-demo 建一份資料夾版（臨時目錄）
 // 後端：auto = 有 Playwright 用 Playwright，否則用系統 Chrome / Edge（../../tests/cdp.js，DevTools 協定、零相依）。
 //   兩者都沒有 → 印 SKIP、exit 0（加 --strict 改 exit 2）。頁面一律經內建靜態伺服器載入（資料夾版需要 http）。
 // --scenes all = 內建情境「玩法局」＋ 遊戲包 presentation.stage.scenes 全部（函式情境在頁內依名稱取用）。
@@ -13,7 +15,13 @@ const cdp = require('../../tests/cdp.js');
 
 const a = process.argv.slice(2);
 const arg = (k, d) => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : d; };
-let html = path.resolve(arg('--html', ''));
+const checkMetrics = a.includes('--check-metrics');
+let html = arg('--html', '') ? path.resolve(arg('--html', '')) : '';
+if (!html) {                                                       // 沒給 --html：建 stage-demo 資料夾版
+  const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'stage-smoke-'));
+  require('child_process').execFileSync(process.env.PYTHON || 'python3', [path.join(__dirname, '..', 'stage_build.py'), '--game', path.join(__dirname, '..', '..', '..', 'golden', 'stage-demo', 'game.js'), '--out', tmp], { stdio: 'ignore' });
+  html = path.join(tmp, 'index.html');
+}
 if (fs.existsSync(html) && fs.statSync(html).isDirectory()) html = path.join(html, 'index.html');
 if (!fs.existsSync(html)) { console.error('需要 --html <index.html>'); process.exit(2); }
 const out = path.resolve(arg('--out', path.join(path.dirname(html), 'smoke-shots')));
@@ -55,7 +63,7 @@ async function open() {
   const check = (name, ok, detail) => { checks.push({ name, ok: !!ok, ...(detail ? { detail } : {}) }); console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${!ok && detail ? '：' + JSON.stringify(detail).slice(0, 300) : ''}`); };
   await p.goto(B.url + (query ? '?' + query.replace(/^\?/, '') : ''));
   await p.waitForSelector('.proto-start', { timeout: 60000 });
-  await p.click('.proto-start');
+  await p.click('.proto-start', { timeout: 60000 });  // 1.6.2：高負載下預設 30 s 會逾時
   await p.waitForFunction(() => !!(window.Proto && Proto.app && Proto.app.module && Proto.app.module.state), null, { timeout: 60000 });
   await p.evaluate((s) => Proto.setSpeed(s), speed);
   const game = await p.evaluate(() => `${Proto.app.config.name || Proto.app.config.slug} · ${Proto.app.service.kind}`);
@@ -64,6 +72,10 @@ async function open() {
     await p.waitForFunction(() => !Proto.app.module.state.busy, null, { timeout: 120000 });
   }
   check(`一般局 ${spins} 局`, errs.length === 0, errs.length ? { errors: errs.slice(0, 3) } : null);
+  if (checkMetrics) {
+    const mt = await p.evaluate(() => Proto.app.metrics || {});
+    check(`啟動指標 time_to_playable_ms = ${mt.time_to_playable_ms}`, mt.time_to_playable_ms > 0, mt);
+  }
   await p.screenshot({ path: path.join(out, '00-base.png') });
   const scenes = scenesArg === 'all'
     ? ['feature', ...(await p.evaluate(() => ((Proto.app.module.pres.stage && Proto.app.module.pres.stage.scenes) || []).map(([l]) => l))).map((label) => ({ label }))]
@@ -103,7 +115,8 @@ async function open() {
     }
   }
   const fps = await p.evaluate(() => Proto.app.stage.fps());
-  const rep = { schema: 'proto-stage-smoke/2', game, html, backend: B.kind, browser: B.version, pass: checks.every((c) => c.ok), checks, scenes: res, fps: Math.round(fps * 10) / 10, errors: errs };
+  const metrics = await p.evaluate(() => Proto.app.metrics || null);
+  const rep = { schema: 'proto-stage-smoke/2', game, metrics, html, backend: B.kind, browser: B.version, pass: checks.every((c) => c.ok), checks, scenes: res, fps: Math.round(fps * 10) / 10, errors: errs };
   fs.writeFileSync(path.join(out, 'smoke.json'), JSON.stringify(rep, null, 1));
   await B.close();
   console.log(`${rep.pass ? '✅' : '❌'} smoke：${game}｜${B.kind} ${B.version}｜${checks.filter((c) => c.ok).length}/${checks.length} PASS｜FPS ${rep.fps}｜截圖 → ${out}`);

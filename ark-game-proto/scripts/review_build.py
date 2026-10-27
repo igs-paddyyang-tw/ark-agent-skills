@@ -117,6 +117,31 @@ def collect_check(rep_p: pathlib.Path, kind: str, rv: pathlib.Path, files: list)
     return rep
 
 
+def collect_client(src: pathlib.Path, rv: pathlib.Path, files: list) -> dict | None:
+    """⑧-C 正式 Client 驗收（S-4）：e2e 報告（pgp-e2e/1 的 *.json）合併成 checks/client-e2e.json，截圖（*.png，最多 8 張）轉 WebP。"""
+    reps = sorted(src.glob("e2e-*.json")) if src.is_dir() else []
+    if not reps:
+        return None
+    results, metrics, assets = [], {}, {}
+    for rp in reps:
+        r = json.loads(rp.read_text(encoding="utf-8"))
+        tag = rp.stem.replace("e2e-", "")
+        results += [{"name": f"[{tag}] {x.get('name')}", "ok": bool(x.get("ok"))} for x in r.get("results", [])]
+        metrics = r.get("metrics") or metrics
+        assets = r.get("assets") or assets
+    picked = []
+    for n in sorted(src.glob("*.png"))[:8]:
+        dst = rv / "checks" / f"client-{n.stem}.webp"
+        to_webp(n, dst, width=480)
+        picked.append(dst.name)
+        files.append((dst, n.as_posix()))
+    rep = {"schema": "client-e2e/1", "pass": bool(results) and all(x["ok"] for x in results), "results": results,
+           "metrics": metrics, "assets": assets, "reports": [p.name for p in reps], "review_shots": picked}
+    (rv / "checks" / "client-e2e.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    files.append((rv / "checks" / "client-e2e.json", src.as_posix()))
+    return rep
+
+
 def run_checks(repo: pathlib.Path, out: pathlib.Path) -> list[str]:
     log = []
     proto = out / "proto"
@@ -393,19 +418,25 @@ def clean_review(rv: pathlib.Path) -> list[str]:
     return removed
 
 
-def linked_items(data: pathlib.Path, rv: pathlib.Path) -> tuple[list[dict], list[dict]]:
-    """拍板書要連的定版家成品：相對連結（../<stage>/…），不複製。回傳（卡片清單, 清冊 links）。"""
+def linked_items(data: pathlib.Path, rv: pathlib.Path, skip_proto: bool = False, excludes: tuple[str, ...] = ()) -> tuple[list[dict], list[dict]]:
+    """拍板書要連的定版家成品：相對連結（../<stage>/…），不複製。回傳（卡片清單, 清冊 links）。
+    skip_proto：還原局（R-3）⑥ 驗證台內嵌線上機率等級參數，不連；excludes：相對定版家的 glob，符合者不連（例 docs/reports/*live*）。"""
     items: list[dict] = []
     links: list[dict] = []
 
     def add(p: pathlib.Path, title: str, desc: str, kind: str) -> None:
+        if (data / "ref") in p.parents:                       # 契約 v3.6：ref/ 參考資源層（含 🔒 live）永不進拍板包
+            return
+        rel = p.relative_to(data).as_posix()
+        if any(pathlib.PurePosixPath(rel).match(g) or pathlib.PurePosixPath(rel).with_suffix(".md").match(g) for g in excludes):
+            return
         href = pathlib.Path(os.path.relpath(p, rv)).as_posix()
         items.append({"href": href, "title": title, "desc": desc, "kind": kind, "meta": f"{kb(p.stat().st_size)} · sha {sha16(p)}"})
         links.append({"path": href, "sha256_16": sha16(p), "bytes": p.stat().st_size, "source": p.relative_to(data).as_posix()})
 
     for p, title, desc in ((data / "prob" / "prob-spec.html", "⑤ 機率規格書", "參數表、§2 快測數據、流程圖"),
                            (data / "proto" / "index.html", "⑥ 機率驗證台", "L1 精算 / L2 蒙地卡羅 / Go 逐局對照 / 演出（演出需網路載入 PixiJS）")):
-        if p.is_file():
+        if p.is_file() and not (skip_proto and p.parent.name == "proto"):
             add(p, title, desc, "app")
     for pat, label, kind in DOC_GLOBS:
         for md in sorted(data.glob(pat), reverse=kind == "report"):
@@ -444,6 +475,8 @@ def export_pack(repo: pathlib.Path, data: pathlib.Path, rv: pathlib.Path, links:
     shutil.copytree(rv, dest / "review", ignore=shutil.ignore_patterns(".book-build.html"))
     n = 0
     for lk in links:
+        if str(lk.get("source", "")).startswith("ref/"):    # 契約 v3.6：ref/ 不隨拍板包帶走
+            raise ValueError(f"--export 不可帶出 ref/：{lk.get('source')}")
         src = (rv / lk["path"]).resolve()
         dst = dest / src.relative_to(data.resolve())
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -693,6 +726,10 @@ def main() -> int:
     ap.add_argument("--quality", default="auto", choices=["auto", "standard", "lite"])
     ap.add_argument("--run-checks", action="store_true")
     ap.add_argument("--export", default=None, help="另產可帶走的完整拍板包到此資料夾（不得在 data/ 內）")
+    ap.add_argument("--no-play", action="store_true", help="還原局（R-3）：不收 ⑦ 單檔、不連 ⑥ 驗證台（兩者內嵌線上機率等級參數）")
+    ap.add_argument("--exclude-link", action="append", default=[], help="不連的定版家文件 glob（相對定版家，可多次；例 docs/reports/*live*）")
+    ap.add_argument("--client-checks", default=None, help="⑧-C 正式 Client e2e 報告資料夾（e2e-*.json＋截圖 *.png）")
+    ap.add_argument("--play-url", default=None, help="⑧-C 正式 Client 試玩網址（測試環境）；寫進拍板書成品清單")
     a = ap.parse_args()
     repo = pathlib.Path(a.repo).resolve()
     data, out = repo / "data" / a.domain / a.slug, repo / "output" / a.domain / a.slug
@@ -712,7 +749,7 @@ def main() -> int:
     arts = []
     # ⑦ 試玩單檔
     single = out / "game" / "pixi-client" / "single" / "index.html"
-    if single.is_file():
+    if single.is_file() and not a.no_play:
         shutil.copyfile(single, rv / "play.html")
         files.append((rv / "play.html", single.relative_to(repo).as_posix()))
         sb = single.parent / "stage-build.json"
@@ -729,8 +766,16 @@ def main() -> int:
         add_back(rv / "gdd-overview.html")
         files.append((rv / "gdd-overview.html", gdd_src.relative_to(repo).as_posix()))
     # ⑥⑦ 驗收
-    checks = {"⑥ 驗證台（browser_check）": collect_check(out / "proto" / "browser-check" / "browser-check.json", "proto", rv, files),
-              "⑦ 試玩版（smoke）": collect_check(out / "game" / "pixi-client" / "smoke-shots" / "smoke.json", "stage", rv, files)}
+    if a.no_play:                                              # 還原局（R-3）：⑥⑦ 建置內嵌線上機率等級參數，驗收截圖也不收
+        checks = {}
+    else:
+        checks = {"⑥ 驗證台（browser_check）": collect_check(out / "proto" / "browser-check" / "browser-check.json", "proto", rv, files),
+                  "⑦ 試玩版（smoke）": collect_check(out / "game" / "pixi-client" / "smoke-shots" / "smoke.json", "stage", rv, files)}
+    if a.client_checks:
+        checks["⑧-C 正式 Client（e2e）"] = collect_client(pathlib.Path(a.client_checks).resolve(), rv, files)
+    if a.play_url:
+        arts.append({"href": a.play_url, "title": "⑧-C 正式 Client 試玩（測試環境）", "desc": "Go Server＋正式 Client；網址只在測試期間開放",
+                     "meta": "外部網址"})
     # 超額且 auto → gdd 降 lite
     total = lambda: sum(f.stat().st_size for f, _ in files)  # noqa: E731
     if total() > REVIEW_KB * 1024 and gdd_src and a.quality == "auto" and quality == "standard":
@@ -743,7 +788,7 @@ def main() -> int:
                         "meta": f"{kb(g.stat().st_size)} · sha {sha16(g)}"})
     for x in arts:
         x["kind"] = "app"
-    linked, link_rows = linked_items(data, rv)                  # v3.5：定版家成品走相對連結，不複製
+    linked, link_rows = linked_items(data, rv, skip_proto=a.no_play, excludes=tuple(a.exclude_link))   # v3.5：定版家成品走相對連結，不複製
     arts += linked
     links = []
     when = dt.datetime.now().strftime("%Y-%m-%d %H:%M")

@@ -1,0 +1,4 @@
+# 二進位一律輸出到 output/slot/huffnpuff-open-house/game/go-server/bin
+/bin/
+*.exe
+*.trace.json

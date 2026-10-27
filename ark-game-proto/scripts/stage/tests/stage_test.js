@@ -239,6 +239,136 @@ async function run() {
     for (let i = 0; i < 2000; i++) { const a = await svc.spin({}), b = await svc2.spin({}); if (a.totalWin !== b.totalWin || JSON.stringify(a.reel) !== JSON.stringify(b.reel)) throw new Error(`第 ${i} 局 go 流不一致`); }
   });
 
+  // ---------- 1.5：三份契約 Schema（SpinResult、GameInfo、Release Manifest）----------
+  await tA('schema:contract', async () => {
+    const { validate } = require('./minischema');
+    const P = load(DEMO);
+    const svc = new P.svc.LocalService(P.config.spec, { seed: 3 });
+    const info = await svc.init();
+    eq(validate('game-info.schema.json', info).length, 0, JSON.stringify(validate('game-info.schema.json', info)));
+    const r = await svc.spin({});
+    eq(validate('spin-result.schema.json', r).length, 0, 'SpinResult');
+    eq(validate('game-info.schema.json', { ...info, pending: r }).length, 0, 'pending = SpinResult');
+    ok(validate('game-info.schema.json', { ...info, pending: { bad: 1 } }).length > 0, '壞 pending 應被拒');
+    const h = 'a'.repeat(64);
+    const rel = { schema: 'web-game-release/1', releaseId: 'huffnpuff-1.0.0+abc1234', gameId: 'huffnpuff-open-house', gameVersion: '1.0.0', runtimeApi: '^1.0.0',
+      protocol: P.svc.PROTOCOL, manifestHash: null, status: 'candidate', unassigned: [],
+      bundles: [{ name: 'boot', requiredForPlayable: true, hash: 'sha256:' + h, bytes: 3, files: [{ path: 'index.html', sha256: h, bytes: 3 }] }] };
+    eq(validate('release-manifest.schema.json', rel).length, 0, JSON.stringify(validate('release-manifest.schema.json', rel)));
+    const noHash = JSON.parse(JSON.stringify(rel)); delete noHash.bundles[0].hash;
+    ok(validate('release-manifest.schema.json', noHash).length > 0, '缺 hash 應被拒');
+    const badHash = JSON.parse(JSON.stringify(rel)); badHash.bundles[0].files[0].sha256 = 'xyz';
+    ok(validate('release-manifest.schema.json', badHash).length > 0, '雜湊格式錯應被拒');
+  });
+
+  // ---------- 1.5：ark-go wire 編解碼與 Go 黃金封包逐字相同 ----------
+  t('wire', () => {
+    const P = load(DEMO);
+    const G = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'wire-golden.json'), 'utf8'));
+    for (const c of G.cases) eq(P.wire.encode(c.packet), c.frame, c.name);
+    const dec = P.wire.createDecoder();
+    const all = G.cases.map((c) => c.frame).join('');
+    const got = [];
+    for (let i = 0; i < all.length; i += 7) got.push(...dec(all.slice(i, i + 7)));     // 半包、黏包
+    eq(got.length, G.cases.length, '切包數');
+    got.forEach((p, i) => eq(JSON.stringify(p), JSON.stringify(G.cases[i].packet), `第 ${i} 包內容`));
+    const pad = (n) => { const base = P.wire.encode({ cmd: 'x', data: '' }).length - 4; return { cmd: 'x', data: 'a'.repeat(n - base) }; };
+    eq(P.wire.encode(pad(9999)).length, G.max9999.frameLen, '9,999 字元邊界');
+    let code = null; try { P.wire.encode(pad(10000)); } catch (e) { code = e.code; }
+    eq(code, 'WIRE_TOO_LARGE'); ok(G.tooLarge10000, 'Go 端同樣拒送');
+    code = null; try { P.wire.createDecoder()('abcd{}'); } catch (e) { code = e.code; } eq(code, 'WIRE_BAD_HEADER');
+  });
+
+  // ---------- 1.5：ArkConn ⇄ mock ark-go（auth、sn、未認證、逾時、重連）----------
+  await tA('arkconn', async () => {
+    const { createMockWs } = require('./mock_ws');
+    let conn0 = null;
+    const m = createMockWs({ onConn: (c) => { conn0 = c; } });
+    await new Promise((r) => m.server.listen(0, r));
+    const url = `ws://127.0.0.1:${m.server.address().port}/ws`;
+    const P = m.P;
+    try {
+      let code = null;
+      const bad = new P.ArkConn({ url, auth: () => ({ ark_id: 'x', ark_token: 'bad' }) });
+      try { await bad.open(); } catch (e) { code = e.code; } eq(code, 'SESSION_EXPIRED', 'auth 失敗');
+      const c = new P.ArkConn({ url, auth: () => ({ ark_id: 'wolf', ark_token: 'dev' }), reconnect: { delays: [50, 50, 50] }, timeoutMs: 400 });
+      await c.open();
+      const a = await c.request('slot', 'balance'); eq(a.status, 0);
+      const b = await c.request('slot', 'balance'); ok(c.sn >= 3, 'sn 遞增');
+      void b;
+      eq((await c.request('slot', 'nope')).status, 404, '未知指令回 404 資料而非例外');
+      let rec = 0; c.on('', 'reconnected', () => rec++);
+      conn0.kill();                                                        // 模擬斷線
+      await new Promise((r) => setTimeout(r, 400));
+      eq(c.state, 'authed', '自動重連並重新 auth'); eq(rec, 1);
+      eq((await c.request('slot', 'balance')).status, 0, '重連後可用');
+      c.close();
+    } finally { m.server.close(); }
+  });
+
+  // ---------- 1.5：WsService（分段、缺段 fetch、426、重試同 requestId、ack／pending、與 Local 同結果）----------
+  await tA('ws', async () => {
+    const { createMockWs } = require('./mock_ws');
+    let conn0 = null;
+    const m = createMockWs({ seed: 777, maxInline: 600, onConn: (c) => { conn0 = c; } });
+    await new Promise((r) => m.server.listen(0, r));
+    const url = `ws://127.0.0.1:${m.server.address().port}/ws`;
+    const P = m.P, spec = P.config.spec, bet = P.slotLogic.prepare(spec).bet.def;
+    try {
+      const ws = new P.svc.WsService({ url, arkId: 'A', token: 'dev', dev: true, reconnect: { delays: [30, 30] } });
+      const local = new P.svc.LocalService(spec, { seed: 777, balance: 1e9 });
+      const info = await ws.init();
+      ok(info.seed === undefined && info.supported, 'init 不外洩 seed、帶 supported');
+      for (let i = 0; i < 200; i++) {
+        const a = await ws.spin({ bet }), b = await local.spin({ bet });
+        if (JSON.stringify(a.reel) !== JSON.stringify(b.reel) || a.totalWin !== b.totalWin || a.balanceAfter !== b.balanceAfter) throw new Error(`第 ${i} 局 Ws ≠ Local`);
+      }
+      ok(ws.stats.chunked > 0, `應有分段局（maxInline 600），實得 ${ws.stats.chunked}`);
+      // 缺段 → fetch 補拿
+      const m2 = createMockWs({ seed: 1, maxInline: 300, dropChunk: 0 });
+      await new Promise((r) => m2.server.listen(0, r));
+      const ws2 = new P.svc.WsService({ url: `ws://127.0.0.1:${m2.server.address().port}/ws`, arkId: 'B', token: 'dev' });
+      const r2 = await ws2.spin({ bet });
+      ok(r2.roundId && ws2.stats.fetched === 1, '缺段應 fetch 一次');
+      ws2.close(); m2.server.close();
+      // 426
+      const old = new P.svc.WsService({ url, arkId: 'C', token: 'dev', protocol: { result: 'proto-stage-result/2' } });
+      let code = null; try { await old.init(); } catch (e) { code = e.code; } eq(code, 'PROTOCOL_MISMATCH');
+      old.close();
+      // pending：spin 後未 ack → init 帶 pending；ack 後清除
+      const r3 = await ws.spin({ bet, requestId: 'p-1' });
+      eq((await ws.init()).pending.roundId, r3.roundId, 'init 帶 pending');
+      ok(await ws.ack(r3.roundId), 'ack'); eq((await ws.init()).pending, null, 'ack 後清除');
+      // 斷線重試：Server 結算後斷線 → 同 requestId 重送拿回同一局、只結算一次
+      const m3 = createMockWs({ seed: 5, dropAfterSpin: 1 });
+      await new Promise((r) => m3.server.listen(0, r));
+      const ws3 = new P.svc.WsService({ url: `ws://127.0.0.1:${m3.server.address().port}/ws`, arkId: 'D', token: 'dev', reconnect: { delays: [30, 30] }, retries: 2 });
+      const r4 = await ws3.spin({ bet, requestId: 'same' });
+      eq(m3.stats.settles, 1, '只結算一次'); ok(ws3.stats.retries >= 1, '應重試');
+      ok(r4.roundId, '拿到結果'); ws3.close(); m3.server.close();
+      // 錯誤碼
+      code = null; try { await ws.spin({ bet: 3 }); } catch (e) { code = e.code; } eq(code, 'INVALID_BET');
+      code = null; try { await ws.action({ roundId: r3.roundId }); } catch (e) { code = e.code; } eq(code, 'NOT_SUPPORTED');
+      const f = await ws.debug.force('feature', { bet }); ok(f.feature, 'force');
+      // Recorder 包 WsService：軌跡可給 ReplayService
+      const rec = new P.svc.Recorder(ws); await rec.init(); await rec.spin({ bet });
+      eq(rec.trace().results.length, 1); ok(await rec.ack(rec.trace().results[0].roundId), 'Recorder 轉送 ack');
+      void conn0; ws.close();
+    } finally { m.server.close(); }
+  });
+
+  // ---------- 1.5：pending 播放順序（app 規則：init 有 pending → 先播再開放 SPIN）----------
+  await tA('pending', async () => {
+    const P = load(DEMO);
+    const spec = P.config.spec, bet = P.slotLogic.prepare(spec).bet.def;
+    const local = new P.svc.LocalService(spec, { seed: 9, balance: 1e9 });
+    const r = await local.spin({ bet });
+    const fake = { kind: 'replay', init: async () => ({ balance: 1, pending: r }), ack: async (id) => { fake.acked = id; return true; } };
+    const played = [];
+    await P.playPending({ service: fake, info: await fake.init(), module: { play: async (x) => played.push(x.roundId), state: { balance: 0 }, renderHud() {} } });
+    eq(played[0], r.roundId, '先播 pending'); eq(fake.acked, r.roundId, '播完 ack');
+  });
+
   // 試點遊戲包的數值與玩法邏輯與原檔逐字相同（演出段除外）
   if (extraGame && ORIG) t('parity-src', () => {
     const seg = (f) => {

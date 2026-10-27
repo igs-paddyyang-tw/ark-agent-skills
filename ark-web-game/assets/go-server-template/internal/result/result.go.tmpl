@@ -1,0 +1,168 @@
+// Package result 是 SpinResult（proto-stage-result/1，與 pixi-client 的 Proto.stageResult.build 同欄位）的信封與驗證。
+//
+// 一局分兩層（ark-web-game references/result-contract.md）：機率模組產 Body（盤面、連線、玩法，金額已換整數），
+// 局服務用 Finish 補信封（roundId、requestId、局數、餘額、winType）。本套件不依賴任何遊戲。
+//
+// 金額一律整數 credit：Credits(x, bet) = floor(x × bet + 1e-6)（吸收浮點誤差，例 0.7 × 240）。
+// Schema：.kiro/skills/ark-game-proto/scripts/stage/schema/spin-result.schema.json
+package result
+
+import (
+	"fmt"
+	"math"
+)
+
+// Schema 是 SpinResult 版本字串。
+const Schema = "proto-stage-result/1"
+
+// SpinResult 是一局的權威結果（演出層只讀它）。欄位順序與 2026-10-16 版相同（JSON 輸出不變）。
+type SpinResult struct {
+	Schema        string   `json:"schema"`
+	RoundID       string   `json:"roundId"`
+	RequestID     *string  `json:"requestId"`
+	Round         int      `json:"round"`
+	Seed          *int64   `json:"seed"` // 一律 null（不外洩數學 seed）
+	Bet           int      `json:"bet"`
+	BetIndex      *int     `json:"betIndex"`
+	Mode          string   `json:"mode"`
+	Reel          Reel     `json:"reel"`
+	Base          Base     `json:"base"`
+	Feature       *Feature `json:"feature"`
+	TotalX        float64  `json:"totalX"`
+	TotalWin      int      `json:"totalWin"`
+	Capped        bool     `json:"capped"`
+	WinType       string   `json:"winType"`
+	BalanceBefore int      `json:"balanceBefore"`
+	BalanceAfter  int      `json:"balanceAfter"`
+	Fx            uint32   `json:"fx"`
+}
+
+// Reel 是停輪資訊（不含輪帶本身）。
+type Reel struct {
+	Combo int        `json:"combo"`
+	Stops []int      `json:"stops"`
+	Grid  [][]string `json:"grid"`
+	View  [][]string `json:"view"`
+}
+
+// Base 是主遊戲贏分；Extra 為遊戲專屬欄位（例 HuffNPuff：feat、scCount、scCnt）。
+type Base struct {
+	WinX    float64  `json:"winX"`
+	Win     int      `json:"win"`
+	Ways    []WayWin `json:"ways"`
+	Scatter any      `json:"scatter"`
+	Trigger bool     `json:"trigger"`
+	Extra   any      `json:"extra"`
+}
+
+// WayWin 是一條連線。
+type WayWin struct {
+	Sym   string   `json:"sym"`
+	Len   int      `json:"len"`
+	Ways  int      `json:"ways"`
+	Line  *int     `json:"line"`
+	WinX  float64  `json:"winX"`
+	Win   int      `json:"win"`
+	Cells [][2]int `json:"cells"`
+}
+
+// Feature 是玩法結果；Script 是演出劇本（機率模組 record 的原樣輸出），Draw 為進場抽選（遊戲自訂）。
+type Feature struct {
+	Type        string  `json:"type"`
+	Draw        any     `json:"draw"`
+	Group       *string `json:"group"`
+	WinX        float64 `json:"winX"`
+	Win         int     `json:"win"`
+	Capped      bool    `json:"capped"`
+	SpinsPlayed *int    `json:"spinsPlayed"`
+	Script      any     `json:"script"`
+	AwaitAction any     `json:"awaitAction"`
+}
+
+// Body 是機率模組產出的本體（金額已是整數 credit）。
+type Body struct {
+	Reel    Reel
+	Base    Base
+	Feature *Feature
+	TotalX  float64
+	Capped  bool
+	Fx      uint32
+}
+
+// In 是信封資訊（由局服務提供）。
+type In struct {
+	RoundID       string
+	RequestID     string
+	Round         int
+	Bet           int
+	BetIndex      int
+	BalanceBefore int
+}
+
+// Tiers 是 slot-bot M-16 贏分等級門檻（倍數）。
+var Tiers = []struct {
+	X    float64
+	Name string
+}{{100, "GOLDEN"}, {50, "SUPER"}, {25, "MEGA"}, {10, "BIG"}, {5, "SMALL"}, {1, "LIGHT"}, {0, "NORMAL"}}
+
+// Credits = floor(x × bet + 1e-6)。
+func Credits(x float64, bet int) int { return int(math.Floor(x*float64(bet) + 1e-6)) }
+
+// WinType 依倍數給等級。
+func WinType(win, bet int) string {
+	if win == 0 {
+		return "NO_WIN"
+	}
+	x := float64(win) / float64(bet)
+	for _, t := range Tiers {
+		if x >= t.X {
+			return t.Name
+		}
+	}
+	return "NORMAL"
+}
+
+// Finish 把本體加上信封，算 totalWin、winType、balanceAfter（= balanceBefore − bet + totalWin）。
+func Finish(b Body, in In) *SpinResult {
+	r := &SpinResult{
+		Schema: Schema, RoundID: in.RoundID, Round: in.Round, Bet: in.Bet, Mode: "base",
+		Reel: b.Reel, Base: b.Base, Feature: b.Feature, TotalX: b.TotalX, Capped: b.Capped, Fx: b.Fx,
+		BalanceBefore: in.BalanceBefore,
+	}
+	r.TotalWin = b.Base.Win
+	if b.Feature != nil {
+		r.TotalWin += b.Feature.Win
+	}
+	if in.RequestID != "" {
+		id := in.RequestID
+		r.RequestID = &id
+	}
+	if in.BetIndex >= 0 {
+		bi := in.BetIndex
+		r.BetIndex = &bi
+	}
+	r.WinType = WinType(r.TotalWin, in.Bet)
+	r.BalanceAfter = r.BalanceBefore - in.Bet + r.TotalWin
+	return r
+}
+
+// Validate 是輕量驗證（欄位語意與 schema 一致）。
+func Validate(r *SpinResult) error {
+	switch {
+	case r.Schema != Schema:
+		return fmt.Errorf("schema 必須是 %s", Schema)
+	case r.RoundID == "":
+		return fmt.Errorf("roundId 必填")
+	case r.Bet <= 0:
+		return fmt.Errorf("bet 必須 > 0")
+	case r.TotalWin < 0:
+		return fmt.Errorf("totalWin 不可為負")
+	case r.Feature != nil && r.TotalWin != r.Base.Win+r.Feature.Win:
+		return fmt.Errorf("totalWin ≠ base.win + feature.win")
+	case r.Feature == nil && r.TotalWin != r.Base.Win:
+		return fmt.Errorf("totalWin ≠ base.win（無玩法）")
+	case r.BalanceAfter != r.BalanceBefore-r.Bet+r.TotalWin:
+		return fmt.Errorf("balanceAfter ≠ balanceBefore − bet + totalWin")
+	}
+	return nil
+}

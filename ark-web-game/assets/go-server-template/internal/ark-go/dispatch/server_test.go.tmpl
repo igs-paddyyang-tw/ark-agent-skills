@@ -1,0 +1,295 @@
+package dispatch
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"log/slog"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/gorilla/websocket"
+
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/ark-go/wire"
+)
+
+// fakeTokens：token 表在記憶體。
+type fakeTokens struct {
+	mu sync.Mutex
+	m  map[string]string
+}
+
+func (f *fakeTokens) Verify(_ context.Context, id, tok, _ string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return id != "" && f.m[id] == tok, nil
+}
+func (f *fakeTokens) Renew(ctx context.Context, id, tok, p string) (bool, error) {
+	return f.Verify(ctx, id, tok, p)
+}
+
+type harness struct {
+	t   *testing.T
+	srv *Server
+	ts  *httptest.Server
+	url string
+}
+
+func newHarness(t *testing.T, cfg Config) *harness {
+	t.Helper()
+	tokens := &fakeTokens{m: map[string]string{"u1": "t1", "u2": "t2"}}
+	r := NewRouter()
+	r.Handle("weapon", "w1", func(_ context.Context, s *session.Session, p *wire.Packet) (any, error) {
+		return map[string]any{"who": s.ArkID(), "echo": json.RawMessage(p.Data)}, nil
+	})
+	r.Handle("weapon", "boom", func(context.Context, *session.Session, *wire.Packet) (any, error) {
+		panic("bug")
+	})
+	cfg.Tick = time.Hour // 測試裡手動呼叫 sweep
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv := NewServer(cfg, r, &session.Authenticator{Tokens: tokens}, logger)
+	ts := httptest.NewServer(srv)
+	t.Cleanup(ts.Close)
+	return &harness{t: t, srv: srv, ts: ts, url: "ws" + strings.TrimPrefix(ts.URL, "http")}
+}
+
+type tclient struct {
+	t   *testing.T
+	c   *websocket.Conn
+	dec wire.Decoder
+	q   []*wire.Packet
+}
+
+func (h *harness) dial() *tclient {
+	h.t.Helper()
+	c, _, err := websocket.DefaultDialer.Dial(h.url, nil)
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	h.t.Cleanup(func() { c.Close() })
+	return &tclient{t: h.t, c: c}
+}
+
+func (c *tclient) send(js string) {
+	c.t.Helper()
+	f, err := wire.Frame([]byte(js))
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	if err := c.c.WriteMessage(websocket.TextMessage, f); err != nil {
+		c.t.Fatal(err)
+	}
+}
+
+// next 讀下一個封包；連線關閉回傳 nil。
+func (c *tclient) next() *wire.Packet {
+	c.t.Helper()
+	for len(c.q) == 0 {
+		_ = c.c.SetReadDeadline(time.Now().Add(2 * time.Second))
+		_, msg, err := c.c.ReadMessage()
+		if err != nil {
+			return nil
+		}
+		bodies, err := c.dec.Feed(msg)
+		if err != nil {
+			c.t.Fatal(err)
+		}
+		for _, b := range bodies {
+			p, err := wire.UnmarshalPacket(b)
+			if err != nil {
+				c.t.Fatal(err)
+			}
+			c.q = append(c.q, p)
+		}
+	}
+	p := c.q[0]
+	c.q = c.q[1:]
+	return p
+}
+
+func (c *tclient) expectClose(code int) {
+	c.t.Helper()
+	for {
+		p := c.next()
+		if p == nil {
+			c.t.Fatalf("connection closed without close cmd %d", code)
+		}
+		if p.Cmd == "close" {
+			var d struct{ Code int }
+			_ = json.Unmarshal(p.Data, &d)
+			if d.Code != code {
+				c.t.Fatalf("close code %d, want %d (%s)", d.Code, code, p.Data)
+			}
+			return
+		}
+	}
+}
+
+func (c *tclient) auth(id, tok string) int {
+	c.send(`{"cmd":"auth","data":{"ark_id":"` + id + `","ark_token":"` + tok + `"},"sn":1}`)
+	p := c.next()
+	if p == nil || p.Ret != "auth" || p.Sys != nil {
+		c.t.Fatalf("auth reply %+v", p)
+	}
+	var r struct{ Status int }
+	_ = json.Unmarshal(p.Data, &r)
+	return r.Status
+}
+
+func TestNotAuthed(t *testing.T) {
+	h := newHarness(t, Config{})
+	c := h.dial()
+	c.send(`{"cmd":"w1","sys":"weapon","sn":5}`)
+	p := c.next()
+	if p.Ret != "w1" || p.SysName() != "weapon" || string(p.SN) != "5" || !strings.Contains(string(p.Data), `-999`) {
+		t.Fatalf("%+v %s", p, p.Data)
+	}
+	// 玩家埠沒有 watch / broadcast
+	c.send(`{"cmd":"watch"}`)
+	c.send(`{"cmd":"broadcast","data":{"sys":"default","cmd":"kick","id":"u2"}}`)
+	c.send(`{"cmd":"alive"}`)
+	if st := c.auth("u1", "t1"); st != 0 {
+		t.Fatalf("status %d", st)
+	}
+}
+
+func TestAuthAndDispatch(t *testing.T) {
+	h := newHarness(t, Config{})
+	c := h.dial()
+	if st := c.auth("u1", "t1"); st != 0 {
+		t.Fatalf("status %d", st)
+	}
+	c.send(`{"cmd":"w1","sys":"weapon","data":{"user_id":"u2","bet":10},"sn":2}`)
+	p := c.next()
+	if p.Ret != "w1" || string(p.SN) != "2" || !strings.Contains(string(p.Data), `"who":"u1"`) {
+		t.Fatalf("%+v %s", p, p.Data)
+	}
+	// panic 不影響連線；未註冊指令不回應
+	c.send(`{"cmd":"boom","sys":"weapon","sn":3}`)
+	c.send(`{"cmd":"nope","sys":"weapon","sn":4}`)
+	c.send(`{"cmd":"w1","sys":"weapon","sn":5}`)
+	if p := c.next(); p.Ret != "w1" || string(p.SN) != "5" {
+		t.Fatalf("%+v", p)
+	}
+	if h.srv.Stats.Panics.Load() != 1 || h.srv.Stats.UnknownCmd.Load() != 1 {
+		t.Fatalf("stats panics=%d unknown=%d", h.srv.Stats.Panics.Load(), h.srv.Stats.UnknownCmd.Load())
+	}
+	// 重送同一組帳號 token 回 0；換別人的身分回 1 且身分不變
+	if st := c.auth("u1", "t1"); st != 0 {
+		t.Fatal("re-auth same")
+	}
+	if st := c.auth("u2", "t2"); st != 1 {
+		t.Fatal("re-auth other must fail")
+	}
+}
+
+func TestAuthFailThreeTimesCloses(t *testing.T) {
+	h := newHarness(t, Config{})
+	c := h.dial()
+	for i := 0; i < 3; i++ {
+		if st := c.auth("u1", "bad"); st != 1 {
+			t.Fatalf("status %d", st)
+		}
+	}
+	c.expectClose(530)
+}
+
+func TestKickSameID(t *testing.T) {
+	h := newHarness(t, Config{})
+	a := h.dial()
+	if a.auth("u1", "t1") != 0 {
+		t.Fatal()
+	}
+	b := h.dial()
+	if b.auth("u1", "t1") != 0 {
+		t.Fatal()
+	}
+	a.expectClose(409)
+}
+
+func TestCloseCmd(t *testing.T) {
+	h := newHarness(t, Config{})
+	c := h.dial()
+	c.send(`{"cmd":"close","sn":9}`)
+	p := c.next()
+	if p.Ret != "close" || string(p.Data) != `"Bye"` {
+		t.Fatalf("%+v %s", p, p.Data)
+	}
+	c.expectClose(530)
+}
+
+func waitConns(t *testing.T, srv *Server, n int) {
+	t.Helper()
+	for i := 0; i < 100; i++ {
+		if total, _ := srv.Conns(); total == n {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("conns never reached %d", n)
+}
+
+func TestSweep(t *testing.T) {
+	h := newHarness(t, Config{FloodLimit: 5, FloodContinue: 1})
+	flood := h.dial()
+	idle := h.dial()
+	noauth := h.dial()
+	if flood.auth("u1", "t1") != 0 || idle.auth("u2", "t2") != 0 {
+		t.Fatal()
+	}
+	for i := 0; i < 6; i++ {
+		flood.send(`{"cmd":"alive"}`)
+	}
+	waitConns(t, h.srv, 3)
+	time.Sleep(50 * time.Millisecond) // 讓讀 goroutine 處理完
+	h.srv.sweep(context.Background(), time.Now())
+	flood.expectClose(509)
+
+	h.srv.sweep(context.Background(), time.Now().Add(15*time.Second)) // 超過認證期限 10 秒
+	noauth.expectClose(530)
+
+	h.srv.sweep(context.Background(), time.Now().Add(25*time.Second)) // 超過心跳 20 秒
+	idle.expectClose(408)
+}
+
+func TestSNEnforce(t *testing.T) {
+	h := newHarness(t, Config{SN: SNEnforce})
+	c := h.dial()
+	c.auth("u1", "t1")
+	c.send(`{"cmd":"w1","sys":"weapon","sn":10}`)
+	c.send(`{"cmd":"w1","sys":"weapon","sn":10}`) // 重送：丟棄
+	c.send(`{"cmd":"w1","sys":"weapon","sn":11}`)
+	if p := c.next(); string(p.SN) != "10" {
+		t.Fatalf("%s", p.SN)
+	}
+	if p := c.next(); string(p.SN) != "11" {
+		t.Fatalf("%s", p.SN)
+	}
+	if h.srv.Stats.SNRejected.Load() != 1 {
+		t.Fatal("sn rejected count")
+	}
+}
+
+func TestMaxConnsAndDrain(t *testing.T) {
+	h := newHarness(t, Config{MaxConns: 1})
+	a := h.dial()
+	waitConns(t, h.srv, 1)
+	b := h.dial()
+	b.expectClose(510)
+	h.srv.Drain("server draining")
+	a.expectClose(4002)
+	if _, _, err := websocket.DefaultDialer.Dial(h.url, nil); err == nil {
+		t.Fatal("draining server must refuse")
+	}
+}
+
+func TestBadHeaderCloses(t *testing.T) {
+	h := newHarness(t, Config{})
+	c := h.dial()
+	_ = c.c.WriteMessage(websocket.TextMessage, []byte(`{"cmd":"auth"}`))
+	c.expectClose(530)
+}

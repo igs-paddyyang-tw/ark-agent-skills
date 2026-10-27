@@ -93,6 +93,19 @@ def test_odds_injected_before_game(tmp_path):
     assert rc != 0
 
 
+def test_odds_required_game_loads_with_odds(tmp_path):
+    """1.4.1：素材清單掃描（node 載入 game.js）也先注入 odds → 「沒有 odds 就丟錯」的遊戲包（例 magic-lamp）建得起來；沒給 odds 仍明確失敗。"""
+    g = tmp_path / "game.js"
+    g.write_text(DEMO.read_text(encoding="utf-8").replace("(function () {\n  'use strict';",
+        "(function () {\n  'use strict';\n  if (!globalThis.HUFF_ODDS) throw new Error('需要 odds');", 1), encoding="utf-8")
+    odds = tmp_path / "odds.json"
+    odds.write_text(json.dumps({"ok": 1}), encoding="utf-8")
+    rc, d = run("--game", g, "--out", tmp_path / "s", "--single", "--odds", odds)
+    assert rc == 0 and d["success"], d
+    rc, d = run("--game", g, "--out", tmp_path / "n", "--single")
+    assert rc != 0 and not d["success"]
+
+
 @pytest.mark.skipif(not os.environ.get("SLOTPROTO_BROWSER"), reason="SLOTPROTO_BROWSER=1 才跑（真瀏覽器）")
 @pytest.mark.parametrize("single", [False, True])
 def test_smoke_real_browser(tmp_path, single):
@@ -106,3 +119,32 @@ def test_smoke_real_browser(tmp_path, single):
     assert r.returncode == 0, r.stdout[-1500:]
     rep = json.loads((tmp_path / "shots" / "smoke.json").read_text(encoding="utf-8"))
     assert rep["pass"] and not rep["errors"]
+
+
+def test_bundles_release_and_service(tmp_path):
+    """1.5.0：--bundles 產 manifest.json（PixiJS Assets）＋ release.json（ark-web-game wg_release，sha256 對實際位元組）；--service 注入結果來源。"""
+    g = tmp_path / "pack" / "play"
+    (g.parent / "art" / "core").mkdir(parents=True)
+    (g.parent / "art" / "oh").mkdir(parents=True)
+    png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0000000020001e221bc330000000049454e44ae426082")
+    (g.parent / "art" / "core" / "a.png").write_bytes(png)
+    (g.parent / "art" / "oh" / "b.png").write_bytes(png + b"x")
+    g.mkdir()
+    src = DEMO.read_text(encoding="utf-8").replace("assets: { images: {}, videos: {}, sounds: {} }", "assets: { images: { sym_H1: '../art/core/a.png', house: '../art/oh/b.png' }, videos: {}, sounds: {} }")
+    (g / "game.js").write_text(src, encoding="utf-8")
+    (tmp_path / "b.json").write_text(json.dumps({"demo-core": {"required": True, "include": ["../art/core/**"]}, "demo-oh": {"required": False, "include": ["../art/oh/*"]}}), encoding="utf-8")
+    out = tmp_path / "o"
+    rc, d = run("--game", g / "game.js", "--out", out, "--bundles", tmp_path / "b.json", "--game-key", "demo", "--version", "1.2.3", "--service", '{"kind":"ws","url":"/ws"}')
+    assert rc == 0, d
+    rel = d["data"]["release"]
+    assert rel["releaseId"].startswith("demo-1.2.3+") and rel["bundles"]["boot"]["required"] and rel["bundles"]["demo-oh"]["files"] == 1
+    man = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    assert [b["name"] for b in man["bundles"]] == ["demo-core", "demo-oh"] and man["bundles"][0]["assets"][0]["alias"] == "../art/core/a.png"
+    assert 'window.__STAGE_SERVICE={"kind": "ws", "url": "/ws"}' in (out / "index.html").read_text(encoding="utf-8")
+    wg = SKILL.parent / "ark-web-game" / "scripts" / "wg_release.py"
+    v = subprocess.run([sys.executable, "-X", "utf8", str(wg), "verify", "--dir", str(out), "--release", str(out / "release.json")], capture_output=True, text=True, encoding="utf-8")
+    assert v.returncode == 0, v.stdout
+    hit = next(out.rglob("b.png"))
+    hit.write_bytes(png + b"tampered")
+    v = subprocess.run([sys.executable, "-X", "utf8", str(wg), "verify", "--dir", str(out), "--release", str(out / "release.json")], capture_output=True, text=True, encoding="utf-8")
+    assert v.returncode == 1 and "b.png" in v.stdout

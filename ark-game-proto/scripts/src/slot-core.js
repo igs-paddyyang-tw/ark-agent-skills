@@ -110,6 +110,12 @@
         my2raw: mm.mystery2, MY1: sid.MY1, MY2: sid.MY2,
       };
     }
+    // MG 停輪前的額外權重抽（frame-chest：Go M0002 全盤事件 GetResultByWeight；結果恆 0 時只消耗一次亂數，對齊 RNG 流）
+    const ab = cfg.mg && cfg.mg.all_board;
+    if (ab) {
+      if (ab.result.some((x) => x !== 0)) throw new Error('mg.all_board：目前只支援結果全為 0（全盤事件未啟用）');
+      C.mgAllBoardT = wtable(ab.weight.map((w, i) => ({ i, w })));
+    }
     MODELS[C.model].compile(cfg, C);
     return C;
   }
@@ -201,6 +207,7 @@
     const fx = createRng((seed ^ 0x5bd1e995) >>> 0);
     // fdraw（huff）：Go SpinGrid 同序——轉輪組只在 >1 組時抽（Float64 pickW），停輪 floor(f × L)
     const rs = C.fdraw ? (C.reelsets.length > 1 ? C.reelsets[pickF(rng, C.rsW)] : C.reelsets[0]) : pick(rng, C.reelsetT);
+    if (C.mgAllBoardT) pick(rng, C.mgAllBoardT);   // Go mainGameProcess：抽轉輪組後、停輪前先抽全盤事件（結果 0 = 不觸發）
     const stops = [], grid = [];
     for (let r = 0; r < C.R; r++) {
       const strip = rs.reels[r], L = strip.length, st = C.fdraw ? floorF(rng, L) : rng.int(L);
@@ -230,6 +237,7 @@
     if (C.model === 'collect-mult') { res.nSC = tg.cnt[0]; res.nSS = tg.cnt[1]; }
     if (C.model === 'house-collect') { res.nSC = tg.cnt[0]; res.nBS = tg.cnt[1]; }
     if (C.model === 'huff-house') res.nMat = tg.cnt;
+    if (C.model === 'frame-chest') res.nSC = tg.cnt[0];
     if (tg.type >= 0 && !opts.mgOnly) res.fg = M.play(C, rng, res, !!opts.present);
     // MaxWin：MG + FG 合計封頂（fg.win 保留未封頂自然值）
     const raw = mg.win + (res.fg ? res.fg.win : 0), cap = C.maxWin ? C.maxWin * C.bet : Infinity;
@@ -725,6 +733,101 @@
     },
   };
 
+
+  // ═════════ frame-chest（神燈寶藏）：SC 落點掛框 → FG 中同格再出 SC 升級（銅→銀→金，金框再中給額外獎）→ 結算依框等級開木／銀／金箱 ═════════
+  // 抽值順序 = Go game_process.freeGameProcess：強度組（表 F-2，依進場 SC 數）→ 保底手（表 F-1）→ 逐手〔FG 輪帶組（表 F-3，依強度）→ 保底手才抽替換模式（表 F-4）→ 5 軸停輪〕
+  //   → 結算逐格（格位 idx = 軸 × 3 + 列，由 0 到 14）木／銀／金箱各抽一次 → 金箱 ≥ 門檻再抽特殊事件（表 F-8；事件 1、2 = 抽一個分數 × 金箱數，取代原金箱總分）
+  const FC_LV = ['', 'wood', 'silver', 'gold'];
+  MODELS['frame-chest'] = {
+    compile(cfg, C) {
+      const F = cfg.fg, sid = C.sid;
+      const toIds = (reels) => reels.map((r) => Int8Array.from(r.map((s) => (s in sid ? sid[s] : -1))));
+      const fstrips = {}; for (const k in F.strips) fstrips[k] = toIds(F.strips[k]);
+      const rsets = F.reelsets.map((r) => ({ ...r, reels: r.use.map((u, i) => fstrips[String(u)][i]) }));
+      const vt = (a) => wtable(a.map((x, i) => ({ ...x, i })));
+      C.fc = {
+        minSC: F.trigger.min, spins: F.spins, rgate: F.retrigger.gate, radd: F.retrigger.add, over: F.over_level,
+        typeT: F.type_by_sc.map((row) => wtable(row.w.map((w, i) => ({ i, w })))), typeSC: F.type_by_sc.map((row) => row.sc),
+        brT: wtable(F.bonus_round.map((w, i) => ({ i, w }))),
+        rsT: C.G.map((g) => wtable(rsets.map((r) => ({ r, w: r.w[g] || 0 })))), rsets,
+        guar: fstrips[String(F.guarantee.strip)], patT: wtable(F.guarantee.patterns.map((p, i) => ({ i, mask: p.mask, w: p.w }))),
+        chestT: { wood: vt(F.chests.wood), silver: vt(F.chests.silver), gold: vt(F.chests.gold) },
+        evMin: F.gold_event.min, evT: wtable(F.gold_event.w.map((w, i) => ({ i, w }))), evDist: F.gold_event.dists.map((d) => (d ? vt(d) : null)),
+        lb: cfg.board.line_bet || 1,
+      };
+    },
+    play(C, rng, res, rec) {
+      const F = C.fc, R = C.R, RW = C.ROWS, SC = C.SC;
+      const nSC = res.trig.cnt[0];
+      const k = F.typeSC.indexOf(nSC);
+      const type = pick(rng, F.typeT[k >= 0 ? k : (nSC < F.typeSC[0] ? 0 : F.typeT.length - 1)]).i;
+      const br = pick(rng, F.brT).i;
+      const sit = new Array(R * RW).fill(0);
+      for (let r = 0; r < R; r++) for (let y = 0; y < RW; y++) if (res.grid[r][y] === SC) sit[r * RW + y] = 1;
+      const start = rec ? sit.slice() : null;
+      let remain = F.spins, spins = 0, lineWin = 0, overWin = 0, overN = 0, retrig = 0, totalSC = 0;
+      const timeline = rec ? [] : null;
+      for (let i = 0; i < remain; i++) {
+        spins++;
+        const rs = pick(rng, F.rsT[type]).r;
+        const reels = rs.reels.slice();
+        let pat = -1;
+        if (i === br) { const p = pick(rng, F.patT); pat = p.i; p.mask.forEach((m, j) => { if (m) reels[j] = F.guar[j]; }); }
+        const grid = [], stops = [];
+        for (let r = 0; r < R; r++) { const st = reels[r], L = st.length, s0 = rng.int(L); stops.push(s0); const col = []; for (let y = 0; y < RW; y++) col.push(st[(s0 + y) % L]); grid.push(col); }
+        const ev = evalWays(C, grid, null);
+        let win = ev.win, scN = 0, ow = 0; const ups = [];
+        for (let r = 0; r < R; r++) for (let y = 0; y < RW; y++) if (grid[r][y] === SC) {
+          scN++; const ix = r * RW + y;
+          if (sit[ix] === 3) { ow += F.over * F.lb; overN++; ups.push({ ix, lv: 3, over: true }); }
+          else { sit[ix]++; ups.push({ ix, lv: sit[ix] }); }
+        }
+        win += ow; overWin += ow; lineWin += ev.win; totalSC += scN;
+        const re = scN >= F.rgate;
+        if (re) { remain += F.radd; retrig++; }
+        if (timeline) timeline.push({ i, rs: rs.idx, pat, guar: i === br, stops, grid: grid.map((c) => c.map((v) => C.SYM[v] || '?')), ways: ev.ways, line: ev.win, over: ow, ups, sit: sit.slice(), remain: remain - i - 1, re });
+      }
+      // 結算：逐格開箱（格位順序 = Go Situation 陣列順序）
+      let chest = 0; const gold = []; const lv = [0, 0, 0, 0]; const settle = rec ? [] : null;
+      const sum = { wood: 0, silver: 0, gold: 0 };
+      for (let ix = 0; ix < sit.length; ix++) {
+        const s = sit[ix]; lv[s]++;
+        if (!s) continue;
+        const kind = FC_LV[s], x = pick(rng, F.chestT[kind]), v = x.v * F.lb;
+        chest += v; sum[kind] += v;
+        if (s === 3) gold.push(v);
+        if (settle) settle.push({ ix, kind, v, label: x.label || '' });
+      }
+      let event = -1, eventWin = 0;
+      if (gold.length >= F.evMin) {
+        event = pick(rng, F.evT).i;
+        if (event > 0) {
+          const g0 = gold.reduce((a, b) => a + b, 0), x = pick(rng, F.evDist[event]);
+          eventWin = x.v * F.lb * gold.length; chest += eventWin - g0; sum.gold += eventWin - g0;
+          if (settle) settle.push({ event, each: x.v * F.lb, label: x.label || '', n: gold.length, replaced: g0 });
+        }
+      }
+      const win = lineWin + overWin + chest;
+      return { model: 'frame-chest', type, group: C.G[type], win, lineWin, overWin, overN, chest, chestSum: sum, lv, nGold: gold.length, event, eventWin,
+        spins, retrig, totalSC, br, ...(rec ? { start, timeline, settle } : {}) };
+    },
+    present(C, fx, res) {
+      const tags = [];
+      for (let r = 0; r < C.R; r++) for (let y = 0; y < C.ROWS; y++) if (res.grid[r][y] === C.SC) tags.push({ r, y, sym: 'SC' });
+      res.tags = tags; res.tease = false;
+    },
+    statsAdd(g, f) {
+      g.spins = (g.spins || 0) + f.spins; g.retrig = (g.retrig || 0) + (f.retrig ? 1 : 0);
+      g.gold4 = (g.gold4 || 0) + (f.nGold >= 4 ? 1 : 0); g.ev1 = (g.ev1 || 0) + (f.event === 1 ? 1 : 0); g.ev2 = (g.ev2 || 0) + (f.event === 2 ? 1 : 0);
+      g.lv = (g.lv || [0, 0, 0, 0]).map((v, i) => v + f.lv[i]); g.over = (g.over || 0) + f.overWin; g.line = (g.line || 0) + f.lineWin;
+      g.wood = (g.wood || 0) + f.chestSum.wood; g.silver = (g.silver || 0) + f.chestSum.silver; g.goldW = (g.goldW || 0) + f.chestSum.gold;
+    },
+    groupReport(x, b) {
+      return { spins: x.spins / x.n, retrig: (100 * x.retrig) / x.n, gold4: (100 * x.gold4) / x.n, ev1: (100 * x.ev1) / x.n, ev2: (100 * x.ev2) / x.n,
+        lv: (x.lv || [0, 0, 0, 0]).map((v) => v / x.n), over: x.over / x.n / b, line: x.line / x.n / b, wood: x.wood / x.n / b, silver: x.silver / x.n / b, goldW: x.goldW / x.n / b };
+    },
+  };
+
   // ═════════ 情境搜尋：「強制」= 找出真的會出這個結果的 seed（不改結果）═════════
   function findSeed(C, pred, start, limit) {
     let s = (start >>> 0) || 1;
@@ -938,6 +1041,45 @@
     return out;
   }
   const EXACT_FG = {
+
+    // frame-chest：MG 與觸發率逐停點解析；FG 與進場盤面（SC 位置）相關、框升級路徑相依 → 依「觸發盤」條件分布抽整場 FG（固定 seed、附 95% CI）。
+    // 條件分布：先以 權重 × 該組觸發率 抽 MG 轉輪組，再在該組內拒絕抽樣停輪直到 SC ≥ 門檻（= 真實觸發盤的分布）。
+    'frame-chest'(C, joint, base, opts) {
+      const N = opts.bonusN || 20000, b = C.bet, F = C.fc;
+      const rsW = base.reelsets.map((r) => r.w * r.trig);
+      const rng = createRng(0x1a3f);
+      const acc = C.G.map(() => ({ n: 0, s: 0, s2: 0, sp: 0, re: 0, g4: 0, e1: 0, e2: 0, lv: [0, 0, 0, 0] }));
+      const all = { n: 0, s: 0, s2: 0, sp: 0, re: 0, g4: 0, e1: 0, e2: 0, lv: [0, 0, 0, 0], over: 0, line: 0, wood: 0, silver: 0, gold: 0 };
+      let tries = 0;
+      for (let k = 0; k < N; k++) {
+        const rs = C.reelsets[pickF(rng, rsW)];
+        let grid, sc;
+        do {
+          tries++; grid = []; sc = 0;
+          for (let r = 0; r < C.R; r++) { const st = rs.reels[r], L = st.length, s0 = rng.int(L); const col = []; for (let y = 0; y < C.ROWS; y++) { const v = st[(s0 + y) % L]; col.push(v); if (v === C.SC) sc++; } grid.push(col); }
+        } while (sc < F.minSC);
+        const f = MODELS['frame-chest'].play(C, rng, { grid, trig: { cnt: [sc] } }, false);
+        for (const a of [acc[f.type], all]) {
+          a.n++; a.s += f.win; a.s2 += f.win * f.win; a.sp += f.spins; a.re += f.retrig ? 1 : 0; a.g4 += f.nGold >= 4 ? 1 : 0;
+          a.e1 += f.event === 1 ? 1 : 0; a.e2 += f.event === 2 ? 1 : 0; f.lv.forEach((v, i) => (a.lv[i] += v));
+        }
+        all.over += f.overWin; all.line += f.lineWin; all.wood += f.chestSum.wood; all.silver += f.chestSum.silver; all.gold += f.chestSum.gold;
+      }
+      const ci = (a) => { const m = a.s / a.n, sd = Math.sqrt(Math.max(a.s2 / a.n - m * m, 0)); return (1.96 * sd) / Math.sqrt(a.n) / b; };
+      const rate = base.fg_rate, grp = {};
+      C.G.forEach((g, t) => {
+        const a = acc[t];
+        grp[g] = a.n ? { n: a.n, share: (100 * a.n) / N, rate: (rate * a.n) / N, avg_win: a.s / a.n / b, avg_ci: ci(a), spins: a.sp / a.n, retrig: (100 * a.re) / a.n,
+          gold4: (100 * a.g4) / a.n, rtp: ((rate / 100) * a.s) / N / b * 100 } : { n: 0, share: 0, rate: 0 };
+      });
+      // 進場 SC 顆數分布（解析：joint 的 SC 顆數邊際）
+      const trigW = rate / 100, entry = {};
+      for (const key in joint) { const a = +key.split(',')[0]; if (a >= F.minSC) entry[a] = (entry[a] || 0) + (100 * joint[key]) / trigW; }
+      const m = all.s / N;
+      return { fg_avg: m / b, fg_avg_ci: ci(all), rtp_free: (100 * trigW * m) / b, groups: grp, entry, bonusN: N, tries,
+        fc: { spins: all.sp / N, retrig: (100 * all.re) / N, gold4: (100 * all.g4) / N, ev1: (100 * all.e1) / Math.max(all.g4, 1), ev2: (100 * all.e2) / Math.max(all.g4, 1),
+          lv: all.lv.map((v) => v / N), share: { line: all.line / all.s, over: all.over / all.s, wood: all.wood / all.s, silver: all.silver / all.s, gold: all.gold / all.s } } };
+    },
     // huff-house：觸發率解析（四維卷積）；House Spin 與盤面無關 → 直接抽樣；OH 依「觸發盤建材組成」條件分布抽樣（固定 seed、附 95% CI）
     'huff-house'(C, joint, base, opts) {
       const N = opts.bonusN || 20000, b = C.bet, K = C.hf.mats.length, grp = {};

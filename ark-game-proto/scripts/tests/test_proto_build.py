@@ -1,4 +1,5 @@
-"""ark-game-proto 建置測試：golden（彌勒佛 collect-mult、Tiger and Dragon coin-lock、Huff N' Puff huff-house）md → config → html。
+"""ark-game-proto 建置測試：golden（彌勒佛 collect-mult、Tiger and Dragon coin-lock、Huff N' Puff huff-house）md → config → html；
+神燈寶藏 frame-chest 用 repo 內 data/slot/magic-lamp（線上機率不進 golden）。
 
 需要 ark-game-prob 1.4+ 的 ps_mdview（ARK_GAME_PROB_SCRIPTS 或 .kiro/skills/ark-game-prob/scripts）。
 node 相關：快速 smoke 預設跑；完整 core_test（約 1 分鐘 / 款）設 SLOTPROTO_SLOW=1 才跑。
@@ -179,3 +180,41 @@ def test_three_pigs_node_core():
     r = subprocess.run(["node", str(HERE / "core_test.js"), str(GOLDEN / "three-pigs" / "game-config.json")],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=str(REPO_ROOT))
     assert r.returncode == 0, r.stdout[-1500:]
+
+
+# ───── frame-chest（神燈寶藏）：輸入是線上機率（ref/live 等級，confidential-live），不複製進 skill golden；
+#       在含 data/slot/magic-lamp 的 repo 內才跑（向上找 repo 根）。
+def _magic_lamp() -> pathlib.Path | None:
+    for p in [pathlib.Path.cwd(), *pathlib.Path.cwd().parents, *SCRIPTS.parents]:
+        d = p / "data" / "slot" / "magic-lamp"
+        if (d / "prob" / "prob-spec.md").exists() and (d / "quicktest" / "config" / "live-b.json").exists():
+            return d
+    return None
+
+
+ML = _magic_lamp()
+
+
+@pytest.mark.skipif(ML is None, reason="repo 內沒有 data/slot/magic-lamp（線上機率不進 golden）")
+def test_magic_lamp_frame_chest(tmp_path):
+    args = [sys.executable, "-X", "utf8", str(SCRIPTS / "proto_build.py"), "--md", str(ML / "prob" / "prob-spec.md"), "--adapter", "magic_lamp",
+            "--go-config", str(ML / "quicktest" / "config" / "live-b.json"), "--strict", "--config-only", "--out", str(tmp_path)]
+    r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
+    env = json.loads(r.stdout.strip().splitlines()[-1])
+    assert env["success"] and env["data"]["go_check"]["mismatch"] == 0 and env["data"]["go_check"]["match"] >= 36, env
+    cfg = json.loads((tmp_path / "game-config.json").read_text(encoding="utf-8"))
+    assert cfg["fg"]["model"] == "frame-chest" and cfg["art"] in _art_sets() and len(cfg["gaps"]) == 7
+    assert [x["w"] for x in cfg["reelsets"]][:2] == [106, 24], "表 M-1 應採 §4 參數備註的 R-8 線上權重"
+    assert cfg["fg"]["retrigger"]["gate"] == 3 and cfg["mg"]["all_board"]["weight"] == [10000]
+    if shutil.which("node"):
+        js = ("const S=require(process.argv[1]),C=S.compile(require(process.argv[2]));"
+              "const a=S.spin(C,16940,{present:true}),b=S.spin(C,16940);if(a.totalWin!==b.totalWin||!a.fg)process.exit(1);"
+              "const e=S.exact(C,{bonusN:4000});console.log(JSON.stringify({mg:e.rtp_main,trig:e.fg_rate,sp:e.fc.spins}))")
+        q = subprocess.run(["node", "-e", js, str(SCRIPTS / "src" / "slot-core.js"), str(tmp_path / "game-config.json")], capture_output=True, text=True)
+        assert q.returncode == 0, q.stderr
+        v, T = json.loads(q.stdout), cfg["targets"]
+        assert abs(v["mg"] - T["summary"]["rtp_main"]) < 0.05 and abs(v["trig"] / T["summary"]["fg_rate"] - 1) < 0.01
+        assert abs(v["sp"] / T["frame_chest"]["spins"] - 1) < 0.02
+    for p in (ML / "proto").glob("go-parity.*.json"):
+        x = json.loads(p.read_text(encoding="utf-8"))
+        assert x["mismatch"] == 0 and x["model"] == "frame-chest", p.name

@@ -1,0 +1,294 @@
+package table_test
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/gorilla/websocket"
+
+	"__MODULE__/internal/ark-go/dispatch"
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/ark-go/table"
+	"__MODULE__/internal/ark-go/wire"
+)
+
+type anyToken struct{}
+
+func (anyToken) Verify(_ context.Context, id, tok, _ string) (bool, error) {
+	return tok == "tok-"+id, nil
+}
+func (anyToken) Renew(context.Context, string, string, string) (bool, error) { return true, nil }
+
+// recHooks 記錄桌事件。
+type recHooks struct {
+	mu     *sync.Mutex
+	events *[]string
+}
+
+func (h recHooks) add(s string) { h.mu.Lock(); *h.events = append(*h.events, s); h.mu.Unlock() }
+func (h recHooks) OnJoin(t *table.Table, s *table.Seat, re bool) {
+	h.add(fmt.Sprintf("join %s seat%d re=%v", s.ArkID, s.Index, re))
+}
+func (h recHooks) OnDisconnect(t *table.Table, s *table.Seat) { h.add("disconnect " + s.ArkID) }
+func (h recHooks) OnLeave(t *table.Table, s *table.Seat, reason string) {
+	h.add("leave " + s.ArkID + " " + reason)
+}
+func (h recHooks) OnTick(*table.Table, time.Time) {}
+
+type env struct {
+	t      *testing.T
+	m      *table.Manager
+	url    string
+	mu     sync.Mutex
+	events []string
+}
+
+func newEnv(t *testing.T, hold time.Duration) *env {
+	e := &env{t: t}
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	e.m = table.NewManager(table.Options{HoldFor: hold, TickEvery: 20 * time.Millisecond, Logger: quiet,
+		NewHooks: func(*table.Table) table.Hooks { return recHooks{mu: &e.mu, events: &e.events} }})
+	r := dispatch.NewRouter()
+	e.m.Register(r)
+	r.Handle("weapon", "w1", table.Routed(e.m, func(t *table.Table, s *table.Seat, p *wire.Packet) (any, error) {
+		if string(p.Data) == `"boom"` {
+			panic("bug in game logic")
+		}
+		t.BroadcastExcept(s.ArkID, "weapon", "shoot", map[string]any{"ark_id": s.ArkID, "seat": s.Index})
+		return map[string]any{"status": 0, "seat": s.Index, "table": t.ID}, nil
+	}))
+	srv := dispatch.NewServer(dispatch.Config{}, r, &session.Authenticator{Tokens: anyToken{}}, quiet)
+	srv.OnClose = func(s *session.Session, code int, reason string) { e.m.OnDisconnect(s, code, reason) }
+	ts := httptest.NewServer(srv)
+	t.Cleanup(ts.Close)
+	e.url = "ws" + strings.TrimPrefix(ts.URL, "http")
+	return e
+}
+
+func (e *env) has(ev string) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for _, x := range e.events {
+		if x == ev {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *env) waitEvent(ev string) {
+	e.t.Helper()
+	for i := 0; i < 200; i++ {
+		if e.has(ev) {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.t.Fatalf("event %q not seen; events=%v", ev, e.events)
+}
+
+type client struct {
+	t   *testing.T
+	id  string
+	c   *websocket.Conn
+	dec wire.Decoder
+	q   []*wire.Packet
+}
+
+func (e *env) login(id string) *client {
+	e.t.Helper()
+	c, _, err := websocket.DefaultDialer.Dial(e.url, nil)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	e.t.Cleanup(func() { c.Close() })
+	cl := &client{t: e.t, id: id, c: c}
+	cl.send(`{"cmd":"auth","data":{"ark_id":"` + id + `","ark_token":"tok-` + id + `"}}`)
+	if p := cl.expect(func(p *wire.Packet) bool { return p.Ret == "auth" }); !strings.Contains(string(p.Data), `"status":0`) {
+		e.t.Fatalf("auth %s", p.Data)
+	}
+	return cl
+}
+
+func (c *client) send(js string) {
+	f, _ := wire.Frame([]byte(js))
+	if err := c.c.WriteMessage(websocket.TextMessage, f); err != nil {
+		c.t.Fatal(err)
+	}
+}
+
+// expect 讀到符合條件的封包為止（略過其他）。
+func (c *client) expect(match func(*wire.Packet) bool) *wire.Packet {
+	c.t.Helper()
+	for {
+		for len(c.q) > 0 {
+			p := c.q[0]
+			c.q = c.q[1:]
+			if match(p) {
+				return p
+			}
+		}
+		_ = c.c.SetReadDeadline(time.Now().Add(2 * time.Second))
+		_, msg, err := c.c.ReadMessage()
+		if err != nil {
+			c.t.Fatalf("%s: read: %v", c.id, err)
+		}
+		bodies, _ := c.dec.Feed(msg)
+		for _, b := range bodies {
+			p, _ := wire.UnmarshalPacket(b)
+			c.q = append(c.q, p)
+		}
+	}
+}
+
+func (c *client) any(hall string) map[string]any {
+	c.send(`{"cmd":"any","sys":"table","data":{"type":"` + hall + `"}}`)
+	p := c.expect(func(p *wire.Packet) bool { return p.Ret == "any" })
+	var m map[string]any
+	_ = json.Unmarshal(p.Data, &m)
+	return m
+}
+
+func TestFourPlayersShareTable(t *testing.T) {
+	e := newEnv(t, time.Second)
+	var cs []*client
+	var tableID any
+	for i := 0; i < 4; i++ {
+		c := e.login(fmt.Sprintf("u%d", i))
+		r := c.any("dino")
+		if r["status"].(float64) != 0 || r["type"] != "dino" {
+			t.Fatalf("%v", r)
+		}
+		if tableID == nil {
+			tableID = r["id"]
+		} else if r["id"] != tableID {
+			t.Fatalf("player %d at table %v, want %v", i, r["id"], tableID)
+		}
+		cs = append(cs, c)
+	}
+	// 第 1 個玩家看得到後面 3 個人入桌
+	for i := 1; i < 4; i++ {
+		id := fmt.Sprintf("u%d", i)
+		cs[0].expect(func(p *wire.Packet) bool {
+			return p.Cmd == "join" && p.SysName() == "table" && strings.Contains(string(p.Data), id)
+		})
+	}
+	// 第 5 人：開新桌
+	c5 := e.login("u4")
+	if r := c5.any("dino"); r["id"] == tableID {
+		t.Fatal("5th player must get a new table")
+	}
+	if got := e.m.HallCounts()["dino"]; got != 5 {
+		t.Fatalf("hall count %d", got)
+	}
+	// 遊戲指令在桌內執行、同桌廣播
+	cs[1].send(`{"cmd":"w1","sys":"weapon","sn":3}`)
+	if p := cs[1].expect(func(p *wire.Packet) bool { return p.Ret == "w1" }); !strings.Contains(string(p.Data), `"seat":1`) {
+		t.Fatalf("%s", p.Data)
+	}
+	cs[2].expect(func(p *wire.Packet) bool {
+		return p.Cmd == "shoot" && strings.Contains(string(p.Data), `"ark_id":"u1"`)
+	})
+	// 已在桌上再 any → status 4
+	if r := cs[0].any("dino"); r["status"].(float64) != 4 {
+		t.Fatalf("%v", r)
+	}
+	// 主動離桌：其他人收到 leave
+	cs[3].send(`{"cmd":"leave","sys":"table","sn":9}`)
+	cs[3].expect(func(p *wire.Packet) bool { return p.Ret == "leave" })
+	cs[0].expect(func(p *wire.Packet) bool { return p.Cmd == "leave" && strings.Contains(string(p.Data), "u3") })
+	e.waitEvent("leave u3 leave")
+}
+
+func TestDisconnectHoldsSeat(t *testing.T) {
+	e := newEnv(t, 2*time.Second)
+	a, b := e.login("a"), e.login("b")
+	ra := a.any("dino")
+	b.any("dino")
+	_ = a.c.UnderlyingConn().Close() // 網路斷線
+	e.waitEvent("disconnect a")
+	if e.has("leave a disconnect timeout") {
+		t.Fatal("seat must be held")
+	}
+	// 重連回原桌原座
+	a2 := e.login("a")
+	r := a2.any("dino")
+	if r["id"] != ra["id"] {
+		t.Fatalf("reconnect table %v want %v", r["id"], ra["id"])
+	}
+	e.waitEvent("join a seat0 re=true")
+	a2.send(`{"cmd":"w1","sys":"weapon"}`)
+	if p := a2.expect(func(p *wire.Packet) bool { return p.Ret == "w1" }); !strings.Contains(string(p.Data), `"seat":0`) {
+		t.Fatalf("%s", p.Data)
+	}
+	// b 斷線後逾時離桌
+	_ = b.c.UnderlyingConn().Close()
+	e.waitEvent("disconnect b")
+	time.Sleep(2200 * time.Millisecond)
+	e.waitEvent("leave b disconnect timeout")
+	a2.expect(func(p *wire.Packet) bool { return p.Cmd == "leave" && strings.Contains(string(p.Data), `"b"`) })
+}
+
+func TestKickedSessionDoesNotLoseSeat(t *testing.T) {
+	e := newEnv(t, time.Second)
+	a := e.login("a")
+	r1 := a.any("dino")
+	a2 := e.login("a") // 同帳號新連線 → 舊連線被踢
+	a.expect(func(p *wire.Packet) bool { return p.Cmd == "close" })
+	r2 := a2.any("dino")
+	if r2["status"].(float64) != 0 || r2["id"] != r1["id"] {
+		t.Fatalf("new session must take over seat: %v vs %v", r2, r1)
+	}
+	if e.has("leave a disconnect timeout") {
+		t.Fatal("seat must not be released")
+	}
+}
+
+func TestPanicEvacuatesTable(t *testing.T) {
+	e := newEnv(t, time.Second)
+	a, b := e.login("a"), e.login("b")
+	a.any("dino")
+	b.any("dino")
+	a.send(`{"cmd":"w1","sys":"weapon","data":"boom"}`)
+	e.waitEvent("leave a table error")
+	e.waitEvent("leave b table error")
+	b.expect(func(p *wire.Packet) bool { return p.Cmd == "close" })
+	if e.m.Panics() != 1 || e.m.Tables() != 0 {
+		t.Fatalf("panics=%d tables=%d", e.m.Panics(), e.m.Tables())
+	}
+}
+
+func TestDrain(t *testing.T) {
+	e := newEnv(t, time.Minute)
+	a := e.login("a")
+	a.any("dino")
+	if err := e.m.Drain(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	e.waitEvent("leave a server draining")
+	if r := a.any("dino"); r["status"].(float64) != 9 {
+		t.Fatalf("no new tables while draining: %v", r)
+	}
+	if len(e.m.HallCounts()) != 0 {
+		t.Fatalf("%v", e.m.HallCounts())
+	}
+}
+
+func TestRoutedNotInTable(t *testing.T) {
+	e := newEnv(t, time.Second)
+	a := e.login("a")
+	a.send(`{"cmd":"w1","sys":"weapon"}`)
+	if p := a.expect(func(p *wire.Packet) bool { return p.Ret == "w1" }); !strings.Contains(string(p.Data), "not in table") {
+		t.Fatalf("%s", p.Data)
+	}
+}

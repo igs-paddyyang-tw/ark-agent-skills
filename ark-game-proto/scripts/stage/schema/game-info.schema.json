@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "proto-stage-info/1",
+  "title": "GameInfo（init 回應；ark-game-proto Stage ⇄ Server）",
+  "description": "init 回傳的遊戲資訊。不得含數學 seed（Local 模式可帶，Server 模式不帶）、輪帶、權重。pending 為未 ack 的局（斷線續玩），supported 為 Server 支援的協定版本（協商用）。規則見 ark-web-game references/wire-protocol.md。",
+  "type": "object",
+  "required": ["schema", "service", "reels", "rows", "bets", "defaultBet", "balance", "pending"],
+  "properties": {
+    "schema": { "const": "proto-stage-info/1" },
+    "service": { "type": "string", "description": "local | http | ws | go | replay" },
+    "game": { "type": "string" },
+    "profile": { "type": "string", "description": "odds._meta.profile（例 kb-v1、trial-ref）" },
+    "reels": { "type": "integer", "minimum": 1 },
+    "rows": { "type": "integer", "minimum": 1 },
+    "symbols": { "type": "array", "items": { "type": "string" } },
+    "bets": { "type": "array", "items": { "type": "integer", "exclusiveMinimum": 0 }, "minItems": 1 },
+    "defaultBet": { "type": "integer", "exclusiveMinimum": 0 },
+    "betBase": { "type": "integer" },
+    "balance": { "type": "integer" },
+    "feature": { "type": ["string", "null"] },
+    "pending": { "oneOf": [{ "type": "null" }, { "$ref": "spin-result.schema.json" }] },
+    "supported": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } }, "description": "{ result: [...], info: [...], wire: [...] }" },
+    "rng": { "type": "string" },
+    "seed": { "type": ["integer", "null"], "description": "只在 Local 模式出現" }
+  }
+}

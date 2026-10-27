@@ -51,7 +51,8 @@ async function launch(opts = {}) {
   const srv = opts.root ? await serve(opts.root) : null;
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'proto-cdp-'));
   const br = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${prof}`, '--no-first-run', '--no-default-browser-check',
-    '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', 'about:blank'], { stdio: 'ignore' });
+    '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required',
+    ...(process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });   // Linux root（容器／CI）需 --no-sandbox 才開得起來
   let port = null;
   for (let i = 0; i < 80 && !port; i++) { await sleep(250); try { port = fs.readFileSync(path.join(prof, 'DevToolsActivePort'), 'utf8').split('\n')[0].trim(); } catch {} }
   if (!port) { try { br.kill(); } catch {} throw new CdpEnvError(`瀏覽器沒有開出 DevTools 埠（${exe}）`); }

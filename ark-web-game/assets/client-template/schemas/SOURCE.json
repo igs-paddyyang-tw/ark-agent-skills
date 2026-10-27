@@ -1,0 +1,9 @@
+{
+ "source": ".kiro/skills/ark-game-proto/scripts/stage/schema（aidev；兩軌共用契約正本）",
+ "synced": "2026-10-22",
+ "sha256": {
+  "game-info.schema.json": "cd23e07c81cea7bebc20f7dd6368aad3a22af8643da24869a2147024de4b5dbf",
+  "release-manifest.schema.json": "fede0bb824fe85f74b2d89bff9405175ad53be28f7741165aee1e57525f30288",
+  "spin-result.schema.json": "515e50c11a04d592ef1230c514effce926a273ff2c8f48692aee43d654cab6a5"
+ }
+}

@@ -115,6 +115,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-docx-tool` | 📝 指示 | 通用 | 當使用者想要建立、讀取、編輯或操作 Word 文件（.docx 檔案）時使用此技能。 |
 | `ark-game-prob` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、 ark-game-quicktest（Go 快測）… |
 | `ark-game-report` | ⚙️ 執行 | 🎮 遊戲 | Slot 新機上線成效報告 executor：把一款新機的上線表現做成標準格式報告（D+7 上線初判 / D+14 檢查點 / D+30 穩態定調）， 並帶出分析思維與策略方向。 |
+| `ark-web-game` | ⚙️ 執行 | 🎮 遊戲 | 網頁遊戲 ⑦⑧ 工程：把單機試玩版做成「Server 算結果、網路傳送、PixiJS Client 只演出」——單局結果契約、wire 協定與 WsService、⑧ 抽離（game.js → Go prob.Game 逐局 0 不一致）、Go Server 範本、素材打包與 Docker 發佈 |
 | `ark-game-spec` | ⚙️ 執行 | 🎮 遊戲 | 遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill， 與 ark-game-prob（機率規格書）、ark-game-quicktest（Go… |
 | `ark-marketing` | 📝 指示 | 🎮 遊戲 | 遊戲行銷與成長策略：ASO（應用商店優化）、CRO（轉換率優化）、 文案撰寫、社群行銷、UA（用戶獲取）、LiveOps 活動規劃。 |
 | `ark-md-report` | 📝 指示 | 通用 | 產出「給 AI 看」的結構化分析報告 Markdown（Content 軌），與 ark-html-report（View 軌）成對。 |

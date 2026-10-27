@@ -1,0 +1,64 @@
+// Package dispatch 把封包分派給業務 handler，並負責整條連線的生命週期
+// （升級、認證、心跳、流量封鎖、token 續期、排空）。
+//
+// 規則（docs/go-network-layer-design.md §4–§6）：
+//   - 認證前只收 default system 的 auth / alive / close；其他 sys 回 status -999（同 Python）
+//   - 認證後只分派「已註冊」的 (sys, cmd)；未註冊的只計數、不回應
+//   - handler 只能從 *session.Session 取得身分
+//   - 玩家埠沒有 watch / broadcast / info / echo
+package dispatch
+
+import (
+	"context"
+	"sync"
+
+	"__MODULE__/internal/ark-go/session"
+	"__MODULE__/internal/ark-go/wire"
+)
+
+// Handler 處理一則指令。reply 不為 nil 時送出 {"ret":cmd,"data":reply,"sn":..,"sys":..}；
+// 回傳 nil 代表不回應（例如交給桌 goroutine 之後再送）。
+type Handler func(ctx context.Context, s *session.Session, p *wire.Packet) (reply any, err error)
+
+type routeKey struct{ sys, name string }
+
+// Router 是 (sys, cmd) → Handler 的註冊表。註冊完成後才開始服務，之後唯讀。
+type Router struct {
+	mu   sync.RWMutex
+	cmds map[routeKey]Handler
+	rets map[routeKey]Handler
+}
+
+// NewRouter 建立空的 Router。
+func NewRouter() *Router {
+	return &Router{cmds: map[routeKey]Handler{}, rets: map[routeKey]Handler{}}
+}
+
+// Handle 註冊指令。sys 為空字串代表 default system（不建議業務使用）。
+func (r *Router) Handle(sys, cmd string, h Handler) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, dup := r.cmds[routeKey{sys, cmd}]; dup {
+		panic("dispatch: duplicate route " + sys + "." + cmd)
+	}
+	r.cmds[routeKey{sys, cmd}] = h
+}
+
+// HandleRet 註冊「客戶端回應伺服器指令」的處理（封包帶 ret 而非 cmd）。
+func (r *Router) HandleRet(sys, ret string, h Handler) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.rets[routeKey{sys, ret}] = h
+}
+
+func (r *Router) cmd(sys, cmd string) Handler {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.cmds[routeKey{sys, cmd}]
+}
+
+func (r *Router) ret(sys, ret string) Handler {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.rets[routeKey{sys, ret}]
+}

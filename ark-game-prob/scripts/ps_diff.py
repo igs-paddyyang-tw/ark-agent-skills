@@ -11,6 +11,9 @@
   matrix[<表>].<小標前綴>            組別×欄矩陣 → 每組 values  paytable.<符號>  → [x3,x4,x5]
   strips.<key>.<組>.lens            輪帶長度
 transform：star_to_neg（*2 → -2）、pct（×100）、int、first、drop_last、drop_lead2、lens（子陣列長度）、drop_zero_tail（去尾端 0）、ways_to_lines。
+裁定（1.5.2）：規則可帶 ruling: {id: R-8, winner: config|xlsx, by: <人>, date: <日>, pin: {xlsx: <sha16>, config: <sha16>}}；
+  兩邊值的 sha16（norm 後 JSON）與 pin 相同時狀態 = ruled（已知差異、已裁定，不算 mismatch、不擋）；值一變 pin 失效 → 回到 mismatch。
+  pin 由 --print-pins 印出（只印、不寫 map）。
 用法: python ps_diff.py --data data/prob/<slug>/prob-data.json --config <config.json> [--map <map.yaml>] [--out <dir>]
 交付格式：ps_diff <N> 條規則｜一致 a｜不一致 b｜缺 c → <out>/config-diff.md / .json；不一致 exit 3（--warn-only 降為 0）
 """
@@ -114,7 +117,10 @@ def get_path(cfg: dict, path: str):
     cur = cfg
     for part in path.split("."):
         if isinstance(cur, list):
-            cur = cur[int(part)]
+            try:
+                cur = cur[int(part)]
+            except (IndexError, ValueError):       # 1.5.1：路徑對不到（例：設定檔陣列較短）→ 視為缺 config，不讓整支崩潰
+                return None
         elif isinstance(cur, dict):
             cur = cur.get(part)
         else:
@@ -168,6 +174,11 @@ def norm(v):
     return v
 
 
+def vsha(v) -> str:
+    import hashlib
+    return hashlib.sha256(json.dumps(norm(v), ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
@@ -175,6 +186,7 @@ def main() -> None:
     ap.add_argument("--map", default=str(DEFAULT_MAP))
     ap.add_argument("--out", help="輸出目錄（預設 prob-data.json 所在目錄）")
     ap.add_argument("--warn-only", action="store_true")
+    ap.add_argument("--print-pins", action="store_true", help="印出每條不一致規則的 ruling.pin（供人裁定後寫回 map）")
     a = ap.parse_args()
     dp, cp, mp = pathlib.Path(a.data), pathlib.Path(a.config), pathlib.Path(a.map)
     for p in (dp, cp, mp):
@@ -201,29 +213,45 @@ def main() -> None:
             status = "missing-config"
         else:
             status = "match" if norm(xv) == norm(cv) else "mismatch"
+        ruling = r.get("ruling") or None
+        pin = {"xlsx": vsha(xv), "config": vsha(cv)}
+        if status == "mismatch" and ruling:
+            want = ruling.get("pin") or {}
+            status = "ruled" if (want.get("xlsx") == pin["xlsx"] and want.get("config") == pin["config"]) else "mismatch"
+            if status == "mismatch":
+                r = {**r, "note": (r.get("note", "") + f"｜裁定 {ruling.get('id', '?')} pin 失效（值已變，需重新裁定）").lstrip("｜")}
         if status == "match":
             n_ok += 1
         rows.append({"rule": r.get("id") or r["config"], "xlsx": r["xlsx"], "config": r["config"], "status": status,
-                     "xlsx_value": xv, "config_value": cv, "note": r.get("note", "")})
+                     "xlsx_value": xv, "config_value": cv, "note": r.get("note", ""),
+                     **({"ruling": ruling, "pin": pin} if ruling or status == "mismatch" else {})})
     mism = [r for r in rows if r["status"] == "mismatch"]
     miss = [r for r in rows if r["status"].startswith("missing")]
+    ruled = [r for r in rows if r["status"] == "ruled"]
     out = pathlib.Path(a.out) if a.out else dp.parent
     rep = {"contract": "1", "kind": "config-diff", "data": {"path": str(dp), "sha256_16": C.sha16(dp)}, "config": {"path": str(cp), "sha256_16": C.sha16(cp)},
-           "map": str(mp), "summary": {"rules": len(rows), "match": n_ok, "mismatch": len(mism), "missing": len(miss)}, "rows": rows}
+           "map": str(mp), "summary": {"rules": len(rows), "match": n_ok, "mismatch": len(mism), "missing": len(miss), "ruled": len(ruled)}, "rows": rows}
     C.atomic_write(out / "config-diff.json", json.dumps(rep, ensure_ascii=False, indent=1, default=str))
 
     def short(v):
         s = json.dumps(v, ensure_ascii=False, default=str)
         return s if len(s) <= 60 else s[:57] + "…"
     md = [f"# 規格 ⇄ 設定檔 對照（{data.get('game')}）", "", f"- xlsx：`{data['source']['name']}`（{data['source']['sha256_16']}）", f"- config：`{cp.name}`（{C.sha16(cp)}）", f"- map：`{mp.name}`",
-          f"- 結果：{len(rows)} 條規則｜一致 {n_ok}｜**不一致 {len(mism)}**｜缺 {len(miss)}", "",
+          f"- 結果：{len(rows)} 條規則｜一致 {n_ok}｜**不一致 {len(mism)}**｜缺 {len(miss)}｜已裁定 {len(ruled)}", "",
           "| 規則 | xlsx 選擇器 | config 鍵 | 狀態 | xlsx 值 | config 值 | 備註 |", "|---|---|---|---|---|---|---|"]
     for r in rows:
-        flag = {"match": "✅", "mismatch": "🔴", "missing-xlsx": "⚪ 缺 xlsx", "missing-config": "⚪ 缺 config", "missing-both": "⚪"}[r["status"]]
-        md.append(f"| {r['rule']} | `{r['xlsx']}` | `{r['config']}` | {flag} | {short(r['xlsx_value'])} | {short(r['config_value'])} | {r['note']} |")
+        flag = {"match": "✅", "mismatch": "🔴", "missing-xlsx": "⚪ 缺 xlsx", "missing-config": "⚪ 缺 config", "missing-both": "⚪", "ruled": "🟦 已裁定"}[r["status"]]
+        note = r["note"]
+        if r["status"] == "ruled":
+            g = r["ruling"]
+            note = f"{g.get('id', '')} 以 {g.get('winner', '?')} 為準（{g.get('by', '')} {g.get('date', '')}）｜{note}"
+        md.append(f"| {r['rule']} | `{r['xlsx']}` | `{r['config']}` | {flag} | {short(r['xlsx_value'])} | {short(r['config_value'])} | {note} |")
     md += ["", "> 不一致項請回規格或設定檔改，不要只改本報告；改完重跑 ps_extract（xlsx 變了）或直接重跑 ps_diff（config 變了）。"]
     C.atomic_write(out / "config-diff.md", "\n".join(md) + "\n")
-    deliver = f"ps_diff {len(rows)} 條規則｜一致 {n_ok}｜不一致 {len(mism)}｜缺 {len(miss)} → {out / 'config-diff.md'}"
+    deliver = f"ps_diff {len(rows)} 條規則｜一致 {n_ok}｜不一致 {len(mism)}｜缺 {len(miss)}｜已裁定 {len(ruled)} → {out / 'config-diff.md'}"
+    if a.print_pins:
+        for r in mism:
+            print(f"# {r['rule']}: ruling.pin = {json.dumps(r['pin'])}", file=sys.stderr)
     if mism and not a.warn_only:
         C.fail("GATE_BLOCKED", f"{len(mism)} 條規格 ⇄ 設定檔不一致", deliver, {"mismatch": mism})
     C.emit({**rep["summary"], "mismatch_rules": [r["rule"] for r in mism], "delivery": deliver}, {"stage": "ps_diff"})

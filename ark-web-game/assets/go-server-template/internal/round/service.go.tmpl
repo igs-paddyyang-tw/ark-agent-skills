@@ -1,0 +1,405 @@
+// Package round 是局服務（ark-web-game references/architecture.md 第 2 節的 ②）：遊戲無關。
+//
+//	押注檢查、數學流／演出流、局號、冪等、局紀錄（Store）、錢包結算（Wallet）、pending／ack、協定協商。
+//
+// 一局的順序（先寫紀錄、再結算；references/wire-protocol.md §4）：
+//
+//	查 requestId → 有就回原局（computed 的補結算）→ 押注檢查 → 上一局隱含 ack → Play → 局號 → 寫紀錄 computed
+//	→ Wallet.Settle(roundId 去重) → settled ＋ pending
+package round
+
+import (
+	"context"
+	crand "crypto/rand"
+	"encoding/binary"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"math/rand"
+	"slices"
+	"strconv"
+	"sync"
+	"time"
+
+	"__MODULE__/internal/prob"
+	"__MODULE__/internal/result"
+)
+
+// Error 是對外錯誤（HTTP 狀態碼與 WS status 同表，見 api.statusOf）。
+type Error struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+}
+
+func (e *Error) Error() string { return e.Code + ": " + e.Message }
+
+func errf(code, f string, a ...any) error { return &Error{Code: code, Message: fmt.Sprintf(f, a...)} }
+
+// 錯誤碼。
+const (
+	ErrInvalidBet      = "INVALID_BET"
+	ErrInsufficient    = "INSUFFICIENT_BALANCE"
+	ErrNotSupported    = "NOT_SUPPORTED"
+	ErrNotFound        = "NOT_FOUND"
+	ErrProtocol        = "PROTOCOL_MISMATCH"
+	ErrRoundInProgress = "ROUND_IN_PROGRESS" // 保留：目前採「下一局隱含 ack」，不回此碼
+	ErrServer          = "SERVER_ERROR"
+)
+
+// Supported 是本 Server 支援的協定版本（灰度期間可同時列新舊兩個主版號）。
+var Supported = map[string][]string{
+	"result": {result.Schema},
+	"info":   {InfoSchema},
+	"wire":   {"ark-wire/1"},
+}
+
+// InfoSchema 是 init 回應版本。
+const InfoSchema = "proto-stage-info/1"
+
+// Wallet 是帳務介面。正式環境由平台錢包或 slot-bot 實作；Settle 必須以 roundID 去重。
+type Wallet interface {
+	Balance(ctx context.Context, player string) (int, error)
+	// Settle 扣押注、加贏分，回傳（扣款前餘額, 結算後餘額）。同一 roundID 重送要回同一結果、不重複扣款。
+	Settle(ctx context.Context, player, roundID string, bet, win int) (before, after int, err error)
+}
+
+// ClientInit 是 init 請求（全部選填；沒帶 protocol 視為舊版 Client，不檢查）。
+type ClientInit struct {
+	Protocol    map[string]string `json:"protocol"`
+	RuntimeAPI  string            `json:"runtimeApi"`
+	GameVersion string            `json:"gameVersion"`
+}
+
+// Info 是 init 回應（proto-stage-info/1；不含 seed、輪帶、權重）。
+type Info struct {
+	Schema     string              `json:"schema"`
+	Service    string              `json:"service"`
+	Game       string              `json:"game"`
+	Profile    string              `json:"profile"`
+	Reels      int                 `json:"reels"`
+	Rows       int                 `json:"rows"`
+	Symbols    []string            `json:"symbols"`
+	Bets       []int               `json:"bets"`
+	DefaultBet int                 `json:"defaultBet"`
+	BetBase    int                 `json:"betBase"`
+	Balance    int                 `json:"balance"`
+	Feature    string              `json:"feature"`
+	Pending    *result.SpinResult  `json:"pending"`
+	Supported  map[string][]string `json:"supported"`
+	RNG        string              `json:"rng"`
+}
+
+// Options 是服務參數。
+type Options struct {
+	GameID string
+	Seed   *int64 // 開發用固定 seed（玩家 i 用 seed + i）；nil = 每個 session 隨機
+	Dev    bool   // 開 dev/force
+	Tries  int    // force 最多往後找幾局，預設 2,000,000
+}
+
+// Service 是一款遊戲的局服務。
+type Service struct {
+	G      prob.Game
+	Wallet Wallet
+	Store  Store
+	opt    Options
+	info   prob.Info
+	mu     sync.Mutex
+	sess   map[string]*Session
+}
+
+// Session 是一位玩家的數學流狀態（一條數學流貫穿整個 session，與 LocalService 相同）。
+type Session struct {
+	mu     sync.Mutex
+	Player string
+	Seed   int64
+	rng    *rand.Rand
+	fx     *prob.Mulberry32
+	round  int
+}
+
+// New 建立局服務；store 為 nil 時用 MemStore。
+func New(g prob.Game, w Wallet, st Store, opt Options) *Service {
+	if opt.Tries <= 0 {
+		opt.Tries = 2_000_000
+	}
+	if st == nil {
+		st = NewMemStore()
+	}
+	return &Service{G: g, Wallet: w, Store: st, opt: opt, info: g.Info(), sess: map[string]*Session{}}
+}
+
+// GameID 回傳遊戲代號。
+func (s *Service) GameID() string { return s.opt.GameID }
+
+// Dev 回報是否開啟 dev 端點。
+func (s *Service) Dev() bool { return s.opt.Dev }
+
+// Session 取得（或建立）玩家 session。
+func (s *Service) Session(player string) *Session {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ss, ok := s.sess[player]; ok {
+		return ss
+	}
+	var seed int64
+	if s.opt.Seed != nil {
+		seed = *s.opt.Seed + int64(len(s.sess))
+	} else {
+		var b [8]byte
+		_, _ = crand.Read(b[:])
+		seed = int64(binary.LittleEndian.Uint64(b[:]) >> 1)
+	}
+	ss := NewSession(player, seed)
+	s.sess[player] = ss
+	return ss
+}
+
+// NewSession 建立 session：數學流 = math/rand（Go 1 值流），演出流 = mulberry32(seed ^ FxXor)。
+func NewSession(player string, seed int64) *Session {
+	return &Session{Player: player, Seed: seed, rng: rand.New(rand.NewSource(seed)), fx: prob.NewMulberry32(uint32(seed) ^ prob.FxXor)}
+}
+
+// Play 跑下一局（數學流前進一局），不結帳。
+func (ss *Session) Play(g prob.Game) prob.Outcome {
+	return g.Play(ss.rng, func() uint32 { return prob.U32(ss.fx) })
+}
+
+// NewRoundID 產生局號：R<毫秒 base36>-<64 位元隨機 hex>。不含數學 seed（DD-104）。
+func NewRoundID() string {
+	var b [8]byte
+	_, _ = crand.Read(b[:])
+	return "R" + strconv.FormatInt(time.Now().UnixMilli(), 36) + "-" + hex.EncodeToString(b[:])
+}
+
+// CheckProtocol 依 Supported 檢查 Client 宣告的協定；沒宣告的項目不檢查。
+func CheckProtocol(ci ClientInit) error {
+	var bad []string
+	for k, v := range ci.Protocol {
+		sup, known := Supported[k]
+		if !known || !slices.Contains(sup, v) {
+			bad = append(bad, fmt.Sprintf("%s=%s（支援 %v）", k, v, sup))
+		}
+	}
+	if len(bad) > 0 {
+		slices.Sort(bad)
+		return &Error{Code: ErrProtocol, Message: fmt.Sprintf("協定不相容：%v，請更新用戶端", bad), Data: map[string]any{"supported": Supported}}
+	}
+	return nil
+}
+
+// Init 協商協定並回傳遊戲資訊（含 pending）。
+func (s *Service) Init(ctx context.Context, player string, ci ClientInit) (*Info, error) {
+	if err := CheckProtocol(ci); err != nil {
+		return nil, err
+	}
+	bal, err := s.Wallet.Balance(ctx, player)
+	if err != nil {
+		return nil, err
+	}
+	s.Session(player)
+	var pend *result.SpinResult
+	if id, err := s.Store.Pending(ctx, player); err == nil && id != "" {
+		if rec, err := s.Store.ByRound(ctx, player, id); err == nil && rec != nil && rec.State == Settled {
+			pend = rec.Result
+		}
+	}
+	in := s.info
+	return &Info{Schema: InfoSchema, Service: "go", Game: s.opt.GameID, Profile: in.Profile, Reels: in.Reels, Rows: in.Rows,
+		Symbols: in.Symbols, Bets: in.Bets, DefaultBet: in.DefaultBet, BetBase: in.BetBase, Balance: bal, Feature: in.Feature,
+		Pending: pend, Supported: Supported, RNG: "go-math-rand"}, nil
+}
+
+// Balance 回傳餘額。
+func (s *Service) Balance(ctx context.Context, player string) (int, error) {
+	return s.Wallet.Balance(ctx, player)
+}
+
+func (s *Service) checkBet(ctx context.Context, player string, bet int) (int, error) {
+	idx := slices.Index(s.info.Bets, bet)
+	if idx < 0 {
+		return -1, errf(ErrInvalidBet, "押注 %d 不在 %v", bet, s.info.Bets)
+	}
+	bal, err := s.Wallet.Balance(ctx, player)
+	if err != nil {
+		return -1, err
+	}
+	if bal < bet {
+		return -1, errf(ErrInsufficient, "餘額不足")
+	}
+	return idx, nil
+}
+
+// Spin 跑一局並結帳。同一 requestId 重送回同一結果、不重複扣款（含結算回應遺失後重送）。
+func (s *Service) Spin(ctx context.Context, player string, bet int, requestID string) (*result.SpinResult, error) {
+	return s.run(ctx, player, bet, requestID, nil)
+}
+
+// Force 開發用情境搜尋：沿數學流往後找自然轉出符合條件的局（跳過的局不計帳，結果從不修改）。
+func (s *Service) Force(ctx context.Context, player string, scene prob.Scene, bet int, requestID string) (*result.SpinResult, error) {
+	if !s.opt.Dev {
+		return nil, errf(ErrNotFound, "dev 端點未開啟")
+	}
+	return s.run(ctx, player, bet, requestID, scene)
+}
+
+// ParseScene 解析情境；未知 label 回 NOT_FOUND。
+func (s *Service) ParseScene(raw []byte) (prob.Scene, error) {
+	sc, ok, err := s.G.ParseScene(raw)
+	if err != nil {
+		return nil, &Error{Code: "BAD_REQUEST", Message: "scene 格式錯誤"}
+	}
+	if !ok {
+		return nil, errf(ErrNotFound, "沒有這個情境")
+	}
+	return sc, nil
+}
+
+func (s *Service) run(ctx context.Context, player string, bet int, requestID string, scene prob.Scene) (*result.SpinResult, error) {
+	if bet == 0 {
+		bet = s.info.DefaultBet
+	}
+	ss := s.Session(player)
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	if requestID != "" {
+		rec, err := s.Store.ByRequest(ctx, player, requestID)
+		if err != nil {
+			return nil, errf(ErrServer, "讀局紀錄：%v", err)
+		}
+		if rec != nil {
+			switch rec.State {
+			case Settled, Acked:
+				return rec.Result, nil
+			case Computed: // 上次已算完、結算結果不明 → 以同一局號補結算（Wallet 去重）
+				return s.settle(ctx, rec)
+			}
+		}
+	}
+	idx, err := s.checkBet(ctx, player, bet)
+	if err != nil {
+		return nil, err
+	}
+	if prev, _ := s.Store.Pending(ctx, player); prev != "" { // 玩家按下一局＝已看完上一局（隱含 ack）
+		_ = s.ack(ctx, player, prev)
+	}
+	var oc prob.Outcome
+	if scene == nil {
+		oc = ss.Play(s.G)
+	} else {
+		for i := 0; i < s.opt.Tries; i++ {
+			if m := ss.Play(s.G); s.G.Match(scene, m) {
+				oc = m
+				break
+			}
+		}
+		if oc == nil {
+			return nil, errf(ErrNotFound, "%d 局內找不到符合條件的局", s.opt.Tries)
+		}
+	}
+	ss.round++
+	roundID := NewRoundID()
+	if requestID == "" {
+		requestID = roundID
+	}
+	r := result.Finish(s.G.Body(oc, bet), result.In{RoundID: roundID, RequestID: requestID, Round: ss.round, Bet: bet, BetIndex: idx})
+	rec := &Record{Player: player, RequestID: requestID, RoundID: roundID, State: Computed, Result: r}
+	if err := s.Store.Put(ctx, rec); err != nil {
+		return nil, errf(ErrServer, "寫局紀錄：%v", err)
+	}
+	return s.settle(ctx, rec)
+}
+
+// settle 結算一筆 computed 紀錄。被拒（例：餘額不足）→ failed；其他錯誤 → 保持 computed（可重送補結算）。
+func (s *Service) settle(ctx context.Context, rec *Record) (*result.SpinResult, error) {
+	r := rec.Result
+	before, after, err := s.Wallet.Settle(ctx, rec.Player, rec.RoundID, r.Bet, r.TotalWin)
+	if err != nil {
+		var ge *Error
+		if errors.As(err, &ge) {
+			rec.State = Failed
+			_ = s.Store.Put(ctx, rec)
+			return nil, err
+		}
+		return nil, errf(ErrServer, "結帳失敗（可用同一 requestId 重送）：%v", err)
+	}
+	r.BalanceBefore, r.BalanceAfter = before, after
+	if err := result.Validate(r); err != nil {
+		return nil, errf(ErrServer, "結果驗證失敗：%v", err)
+	}
+	rec.State = Settled
+	if err := s.Store.Put(ctx, rec); err != nil {
+		return nil, errf(ErrServer, "寫局紀錄：%v", err)
+	}
+	_ = s.Store.SetPending(ctx, rec.Player, rec.RoundID)
+	return r, nil
+}
+
+// Ack 標記一局已演完；清除 pending。
+func (s *Service) Ack(ctx context.Context, player, roundID string) error {
+	ss := s.Session(player)
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	return s.ack(ctx, player, roundID)
+}
+
+func (s *Service) ack(ctx context.Context, player, roundID string) error {
+	rec, err := s.Store.ByRound(ctx, player, roundID)
+	if err != nil {
+		return errf(ErrServer, "讀局紀錄：%v", err)
+	}
+	if rec == nil || (rec.State != Settled && rec.State != Acked) {
+		return errf(ErrNotFound, "沒有已結算的局 %s", roundID)
+	}
+	if rec.State == Settled {
+		rec.State = Acked
+		if err := s.Store.Put(ctx, rec); err != nil {
+			return errf(ErrServer, "寫局紀錄：%v", err)
+		}
+	}
+	if p, _ := s.Store.Pending(ctx, player); p == roundID {
+		_ = s.Store.SetPending(ctx, player, "")
+	}
+	return nil
+}
+
+// Fetch 依局號取回已結算的結果（WS 分段缺漏時補拿）。
+func (s *Service) Fetch(ctx context.Context, player, roundID string) (*result.SpinResult, error) {
+	rec, err := s.Store.ByRound(ctx, player, roundID)
+	if err != nil {
+		return nil, errf(ErrServer, "讀局紀錄：%v", err)
+	}
+	if rec == nil || (rec.State != Settled && rec.State != Acked) {
+		return nil, errf(ErrNotFound, "沒有已結算的局 %s", roundID)
+	}
+	return rec.Result, nil
+}
+
+// Action 選擇型玩法續算（目前已註冊的遊戲都沒有玩家選擇步驟）。
+func (s *Service) Action(context.Context, string, string, any, string) (*result.SpinResult, error) {
+	return nil, errf(ErrNotSupported, "此玩法沒有玩家選擇步驟")
+}
+
+// PlayOnly 只算結果、不結帳（slot-bot server 持有帳務）：balanceBefore 由呼叫端提供，balanceAfter 僅供對帳。
+func (s *Service) PlayOnly(ctx context.Context, player string, bet int, requestID string, balanceBefore int) (*result.SpinResult, error) {
+	idx := slices.Index(s.info.Bets, bet)
+	if idx < 0 {
+		return nil, errf(ErrInvalidBet, "押注 %d 不在 %v", bet, s.info.Bets)
+	}
+	ss := s.Session(player)
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	key := "internal:" + requestID
+	if rec, err := s.Store.ByRequest(ctx, player, key); err == nil && rec != nil {
+		return rec.Result, nil
+	}
+	oc := ss.Play(s.G)
+	ss.round++
+	roundID := NewRoundID()
+	r := result.Finish(s.G.Body(oc, bet), result.In{RoundID: roundID, RequestID: requestID, Round: ss.round, Bet: bet, BetIndex: idx, BalanceBefore: balanceBefore})
+	if err := s.Store.Put(ctx, &Record{Player: player, RequestID: key, RoundID: roundID, State: Acked, Result: r}); err != nil {
+		return nil, errf(ErrServer, "寫局紀錄：%v", err)
+	}
+	return r, nil
+}

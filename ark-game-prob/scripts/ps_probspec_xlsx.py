@@ -87,7 +87,9 @@ def build(data: dict, out_dir: pathlib.Path, *, slug: str, author: str, date: st
     if base:
         L += B.xlsx_summary(rep, K, dv)
         rows = []
-        for name, zh in (("Main", "主遊戲"), ("Free", "免費遊戲"), ("Feature", "Feature"), ("GRAND", "GRAND"), ("Total", "總計")):
+        order = (("Main", "主遊戲"), ("Free", "免費遊戲"), ("Feature", "Feature"), ("GRAND", "GRAND"))
+        extra = tuple((n, n) for n in base.get("_order", []) if n not in ("Main", "Free", "Feature", "GRAND"))  # 1.6.0：新格式的各特色列
+        for name, zh in order + extra + (("Total", "總計"),):
             v = base.get(name)
             if not v:
                 continue

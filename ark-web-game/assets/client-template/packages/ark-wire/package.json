@@ -1,0 +1,9 @@
+{
+  "name": "@pgp/ark-wire",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./test/mock-ark": "./test/mock-ark.mjs" },
+  "scripts": { "typecheck": "tsc -p . --noEmit", "build": "tsc -p . --noEmit", "test": "vitest run" },
+  "devDependencies": { "@types/node": "22.20.5", "typescript": "5.9.3", "vitest": "3.2.7" }
+}
