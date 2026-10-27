@@ -34,7 +34,6 @@ except Exception:  # noqa: BLE001
 
 # F-7 修正：不硬編環境值。WEKNORA_API_URL 由 .env 提供，缺值即 BAD_INPUT。
 DEFAULT_TIMEOUT = float(os.getenv("ARK_WEKNORA_TIMEOUT", "180"))
-_KB_REGISTRY = Path(__file__).resolve().parent.parent / "kb_registry.json"
 
 
 class WeKnoraError(Exception):
@@ -71,10 +70,29 @@ def headers() -> dict:
 
 
 # ── KB 別名對照表（A + fallback）────────────────────────────────────────────
+def _registry_path() -> Path:
+    """kb_registry.json 的三層查找，先命中先用：
+
+    1. 環境變數 ARK_WEKNORA_KB_REGISTRY（部署端顯式覆蓋，最高優先）
+    2. 共用單一來源 knowledge/shared/weknora/kb_registry.json（W1 正解；
+       沿 __file__ 往上逐層找，容忍 skill 被 clone 到不同深度）
+    3. skill 內建佔位 <skill>/kb_registry.json（fallback，repo 自足）
+    """
+    env = os.environ.get("ARK_WEKNORA_KB_REGISTRY")
+    if env:
+        return Path(env)
+    for base in Path(__file__).resolve().parents:
+        cand = base / "knowledge" / "shared" / "weknora" / "kb_registry.json"
+        if cand.exists():
+            return cand
+    return Path(__file__).resolve().parent.parent / "kb_registry.json"
+
+
 def load_kb_registry() -> dict:
     try:
-        if _KB_REGISTRY.exists():
-            data = json.loads(_KB_REGISTRY.read_text(encoding="utf-8"))
+        p = _registry_path()
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
             # 過濾以 _ 開頭的註解鍵
             return {k: v for k, v in data.items() if not k.startswith("_")}
     except Exception:  # noqa: BLE001
