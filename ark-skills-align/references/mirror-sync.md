@@ -20,14 +20,18 @@
 上游內容 = `git archive HEAD`（只含已提交、已追蹤的檔）；歷史 = `git rev-list --all --objects` 的 blob 集合。
 比較時忽略 `__pycache__/` 與 `*.pyc`。
 
+**換行正規化（2.6.0）**：文字檔（不含 NUL）比對內容前把 CRLF 統一成 LF；查上游歷史時，本地檔的原始、LF、CRLF
+三種版本任一命中即算「上游曾有」。Windows checkout 的 CRLF 不再被誤判為 local-mod。含 NUL 的二進位檔只比原始位元組。
+
 | 檔案情況 | 本地 blob 在上游歷史？ | 判定 | apply 時 |
 |---|---|---|---|
-| 兩邊都有、內容相同 | — | same | 不動 |
+| 兩邊都有、內容相同（含只差 CRLF／LF） | — | same | 不動 |
 | 兩邊都有、內容不同 | 是 | stale | 換成上游 |
 | 兩邊都有、內容不同 | 否，且符合 `--keep` | keep | 保留本地 |
 | 兩邊都有、內容不同 | 否，且 skill 在 `--accept-upstream` | stale（人已審過） | 換成上游 |
 | 兩邊都有、內容不同 | 否 | **local-mod** | 整個 skill 不動，列出待審 |
 | 只有本地有、符合上游 `.gitignore` | — | ignored（測試產物等） | 不保留 |
+| 只有本地有、符合**消費端** `.gitignore`（含執行時產生的巢狀 `.gitignore`） | — | ignored-local（不列入報告） | **保留**（可能是 `.env`、本機設定） |
 | 只有本地有 | 是 | obsolete | 刪除 |
 | 只有本地有 | 否 | local-data | 保留 |
 | 只有上游有 | — | missing | 補上 |
@@ -57,6 +61,10 @@ python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --
 - `apply` 必須帶 `--yes`；不帶時等同 plan 並 exit 2。
 - 不做 git 操作；提交由呼叫端以 pathspec 執行（刪除大量檔時 pre-push 可能阻擋，屬預期）。
 - exit：0 正常；2 參數錯誤／未帶 `--yes`；3 上游不是 git repo。
+- Windows：git 輸出一律以 UTF-8 解碼；`check-ignore` 以 `-z`（NUL 分隔、位元組）收送 ——
+  文字模式會把 stdin 的 `
+` 轉成 `
+`，git 收到尾帶 `` 的路徑而全部比對不到。不需再設 `PYTHONUTF8=1`。
 
 ## 驗收
 

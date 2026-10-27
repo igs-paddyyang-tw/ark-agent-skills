@@ -1,6 +1,7 @@
 """mirror_sync.py 驗收（references/mirror-sync.md §驗收 1~7）—— 合成上游 repo 與 team 樹。"""
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -130,7 +131,8 @@ def test_apply_requires_yes_and_bad_upstream(env, tmp_path):
 
 def test_help_is_readonly(tmp_path):
     r = subprocess.run([sys.executable, str(SCRIPTS / "mirror_sync.py"), "--help"],
-                       cwd=tmp_path, capture_output=True, text=True)
+                       cwd=tmp_path, capture_output=True, text=True, encoding="utf-8",
+                       env={**os.environ, "PYTHONIOENCODING": "utf-8"})
     assert r.returncode == 0 and "mirror_sync" in r.stdout
     assert list(tmp_path.iterdir()) == []
 
@@ -144,6 +146,79 @@ def test_local_ignored_artifacts_not_preserved(env):
     [r] = M.run(up, team, [], None, do_apply=True)
     assert r.local_data == [], f"ignored 產物被當成本地資料：{r.local_data}"
     assert not (local / "scripts" / ".index").exists()
+
+
+def _crlf(data: bytes) -> bytes:
+    """先統一成 LF 再轉 CRLF（Windows 上 write_text 本身已寫出 CRLF，不可重轉成 \\r\\r\\n）。"""
+    return data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+
+
+def _to_crlf(root: Path) -> None:
+    for p in root.rglob("*"):
+        if p.is_file():
+            p.write_bytes(_crlf(p.read_bytes()))
+
+
+def test_crlf_only_difference_is_same(env):
+    """Windows checkout 的 CRLF 不算內容差異 → 與上游 HEAD 只差換行時不報告。"""
+    up, _, team = env
+    dst = team / ".kiro" / "skills" / "ark-demo"
+    for rel, data in _tracked_upstream(up).items():
+        (dst / rel).parent.mkdir(parents=True, exist_ok=True)
+        (dst / rel).write_bytes(_crlf(data))
+    assert M.run(up, team, [], None, do_apply=False) == []
+
+
+def test_crlf_stale_copy_is_stale_not_local(env):
+    """CRLF 的舊版複本：正規化後在上游歷史 → STALE（不可誤判 LOCAL）。"""
+    up, v1, team = env
+    local = _place(team, ".", v1)
+    _to_crlf(local)
+    [r] = M.run(up, team, [], None, do_apply=False)
+    assert r.status == "STALE" and r.local_mod == []
+    assert r.obsolete == ["scripts/old.py"]
+
+
+def test_binary_not_eol_normalized(env):
+    """含 NUL 的二進位檔不做換行正規化 —— 只差 CRLF 也算真差異。"""
+    up, v1, team = env
+    sk = up / "ark-demo"
+    (sk / "logo.bin").write_bytes(b"\x00img\nline\n")
+    _git(up, "add", "ark-demo/logo.bin")
+    _git(up, "commit", "-q", "-m", "bin")
+    local = _place(team, ".", sk)
+    shutil.rmtree(local / "scripts" / ".index")
+    (local / "logo.bin").write_bytes(b"\x00img\r\nline\r\n")
+    [r] = M.run(up, team, [], None, do_apply=False)
+    assert r.status == "LOCAL" and r.local_mod == ["logo.bin"]
+
+
+def test_consumer_gitignored_not_reported_but_preserved(env):
+    """消費端 .gitignore 命中的本地獨有檔（執行殘檔、.env）：不列本地資料，對齊後照樣保留。"""
+    up, v1, team = env
+    local = _place(team, ".", v1)
+    _git(team, "init", "-q")
+    (team / ".gitignore").write_text(".env\n", encoding="utf-8")
+    (local / "scripts" / "cache").mkdir()
+    (local / "scripts" / "cache" / ".gitignore").write_text("*\n", encoding="utf-8")
+    (local / "scripts" / "cache" / "idx.json").write_text("{}", encoding="utf-8")
+    (local / ".env").write_text("TOKEN=x\n", encoding="utf-8")
+    [r] = M.run(up, team, [], None, do_apply=True)
+    assert r.local_data == [], f"gitignored 檔被當成本地資料：{r.local_data}"
+    assert set(r.ignored_local) == {".env", "scripts/cache/.gitignore", "scripts/cache/idx.json"}
+    assert (local / ".env").read_text(encoding="utf-8") == "TOKEN=x\n", "gitignored 檔不可因對齊而刪"
+    assert (local / "scripts" / "cache" / "idx.json").exists()
+
+
+def test_unicode_path_in_upstream_history(env):
+    """上游歷史含中文檔名：讀 git 輸出不可因平台預設編碼（如 cp950）而中止。"""
+    up, v1, team = env
+    (up / "ark-demo" / "說明.md").write_text("中文\n", encoding="utf-8")
+    _git(up, "add", "-A")
+    _git(up, "commit", "-q", "-m", "unicode")
+    _place(team, ".", v1)
+    [r] = M.run(up, team, [], None, do_apply=False)
+    assert r.status == "STALE" and "說明.md" in r.missing
 
 
 def test_accept_upstream_overrides_reviewed_local(env):
