@@ -133,15 +133,16 @@ def test_concurrent_build_one_locked():
     **斷言一個沒有保證的競爭結果 = 常駐假警報**，而假警報的代價是
     維運開始習慣性忽略這條檢查。這裡改成由測試自己持鎖，競爭是確定的。
     """
-    import fcntl, hashlib, tempfile
+    import hashlib, tempfile
+    import wiki_index  # noqa: E402 —— 用其跨平台鎖封裝（POSIX fcntl / Windows msvcrt）
     key = hashlib.sha256(str(FIXTURE.resolve()).encode("utf-8")).hexdigest()[:16]
     lock_path = Path(tempfile.gettempdir()) / f"ark-wiki-index-{key}.lock"
     lock_path.touch(exist_ok=True)
     with open(lock_path, "w") as fd:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        wiki_index._acquire_lock(fd)
         code, payload = run("wiki_index.py", "build", "--wiki_dir", str(FIXTURE))
         assert code == 2 and payload["error"]["code"] == ErrorCode.BUILD_LOCKED, payload
-        fcntl.flock(fd, fcntl.LOCK_UN)
+        wiki_index._release_lock(fd)
 
     code, payload = run("wiki_index.py", "build", "--wiki_dir", str(FIXTURE))
     assert code == 0 and payload["ok"], payload

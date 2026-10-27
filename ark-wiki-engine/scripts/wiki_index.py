@@ -9,7 +9,7 @@
 
 1. **原子性**：先寫 `.index.tmp/`，全部完成才 `os.replace` 成 `.index/`。
    查詢端永遠看到完整索引，不會讀到半寫入的狀態。
-2. **互斥**：build 取 `.index.lock`（fcntl），第二個 build 直接回 BUILD_LOCKED。
+2. **互斥**：build 取 `.index.lock`（POSIX: fcntl / Windows: msvcrt），第二個 build 直接回 BUILD_LOCKED。
    15 個 instance 併發時不會互相寫壞。
 
 ## W0 範圍說明
@@ -21,7 +21,6 @@
 from __future__ import annotations
 
 import argparse
-import fcntl
 import hashlib
 import json
 import os
@@ -52,6 +51,37 @@ from _wikilib import (  # noqa: E402
 )
 
 parse_frontmatter = parse_frontmatter  # 明示：不再自帶一份（v2 有重複實作）
+
+
+# --- 跨平台檔案鎖（POSIX: fcntl / Windows: msvcrt）---
+# build 取 .index.lock 做併發互斥；兩平台用標準庫，零第三方依賴。
+try:
+    import fcntl  # POSIX（Linux / WSL / macOS）
+
+    def _acquire_lock(fd) -> None:
+        """非阻塞取獨佔鎖；取不到拋 BlockingIOError。"""
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def _release_lock(fd) -> None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
+except ModuleNotFoundError:  # Windows（無 fcntl）
+    import msvcrt
+
+    def _acquire_lock(fd) -> None:
+        """非阻塞取鎖；msvcrt 取不到拋 OSError，統一轉 BlockingIOError。"""
+        try:
+            fd.seek(0)
+            msvcrt.locking(fd.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError as e:
+            raise BlockingIOError(str(e)) from e
+
+    def _release_lock(fd) -> None:
+        try:
+            fd.seek(0)
+            msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass  # 鎖已釋放或檔案即將關閉，忽略
 
 
 def build_index(wiki_dir: Path) -> str:
@@ -222,7 +252,7 @@ def cmd_build(wiki_dir: Path, tokenizer_mode: str, backend: str, embed: bool) ->
     lock_path.touch(exist_ok=True)
     lock_fd = open(lock_path, "w")
     try:
-        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _acquire_lock(lock_fd)
     except BlockingIOError:
         lock_fd.close()
         emit_error(ErrorCode.BUILD_LOCKED,
@@ -263,7 +293,7 @@ def cmd_build(wiki_dir: Path, tokenizer_mode: str, backend: str, embed: bool) ->
         emit_json({"ok": True, "action": "build", "index_dir": str(idx), "manifest": manifest,
                    "meta": {"embed": embed and "not_implemented" or "skipped"}, "warnings": warns})
     finally:
-        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        _release_lock(lock_fd)
         lock_fd.close()
 
 

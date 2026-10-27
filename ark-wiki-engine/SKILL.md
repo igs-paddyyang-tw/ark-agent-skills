@@ -17,7 +17,7 @@ metadata:
   category: pipeline
   form: executor
   domain: general
-  version: "3.0.3"
+  version: "3.0.4"
   updated: 2026-10-27
   outputs:
     # wiki_query／wiki_context 的 JSON 契約歸 data（`json` 非合法 format，同 ark-db-query：不為單一 skill 放寬守門）
@@ -155,9 +155,9 @@ python $S/build_wiki.py   ./myproject demo --install-skill ./myproject/.kiro/ski
 ## 索引生命週期
 
 - **誰建**：`wiki_ingest.py` 落盤後自動 build，或 CI／排程定期 build。**agent 只讀**。
-- **原子性**：先寫 `.index.tmp/` 再 `os.replace`；同時取 lock，第二個 build 回 `BUILD_LOCKED`。
+- **原子性**：先寫 `.index.tmp/` 再 `os.replace`；同時取 lock（POSIX `fcntl`／Windows `msvcrt`，條件 import），第二個 build 回 `BUILD_LOCKED`。
 - **freshness**：比對 manifest `content_hash`；過期時 `index_fresh: false` + warning，**仍用舊索引回答**。
-- **查詢端不自動重建**：15 個 instance 併發會撞 lock 並拖慢查詢。要重建用 `--rebuild-if-stale` 或 `wiki_index.py build`。
+- **查詢端不自動重建**：15 個 instance 併發會撞 lock 並拖慢查詢。要重建用 `--rebuild-if-stale` 或 `wiki_index.py build`。（跨平台：四平台原生 Python ≥3.9 皆可、零依賴，見 `docs/designs/2026-10-27-wiki-engine-cross-platform.md`）
 
 ## 🔴 ingest 的授權邊界（executor 化弱化的地方）
 

@@ -49,6 +49,29 @@
 
 ---
 
+## 2026-10-27 (ark-wiki-engine 3.0.4：跨平台支援 Windows)
+
+`wiki_index.py` 原在模組頂層 `import fcntl`（POSIX-only），Windows 原生 Python 無此模組 →
+載入即 `ModuleNotFoundError`，連帶 17 項測試失敗。fcntl 實際只用於 build index 的併發互斥鎖。
+
+### 修正
+- `wiki_index.py`：`import fcntl` 改為條件 import —— POSIX 用 `fcntl.flock`、Windows 用
+  `msvcrt.locking`，封裝成 `_acquire_lock` / `_release_lock`，行為對等（非阻塞，取不到回 `BUILD_LOCKED`）。零第三方依賴
+- `tests/test_wiki_v3.py`：鎖測試改用 `wiki_index._acquire_lock/_release_lock` 封裝，三平台皆可跑（不再直接 import fcntl）
+- `SKILL.md`：新增「跨平台相容性」章節（四平台能力矩陣 + Windows 用法 + 網路磁碟限制）
+
+### 更正認知
+- **macOS 本就支援**（POSIX 有 fcntl）—— 先前「只能 Linux/WSL」的說法不精確；真正不支援的只有 Windows
+- llm-wiki-agent 的 Windows runtime 走自己的 `src/skills/wiki_skills/`（無 fcntl），不受此 bug 影響；本修正針對「直接使用本 skill scripts」的情境
+
+### 驗證
+- Linux/WSL 全測試 112 passed；反證鎖有效：手動持鎖後第二個 build 回 rc=2 + BUILD_LOCKED
+- 設計文件：`docs/designs/2026-10-27-wiki-engine-cross-platform.md`
+- 版號 3.0.3 → 3.0.4（patch，無契約變更）
+
+### 待辦（版本分岔）
+- 🔴 上游（本次合併前）3.0.3 vs `.kiro/skills/` 複本 3.0.3（schema 1.1 vs 1.2）分岔中 —— 複本領先上游兩版，複本的 3.0.4/3.0.3 改動尚未回流上游。本次跨平台修正做在上游 3.0.1 基礎上，與複本合併時需處理版號與 schema 差異
+
 ## 2026-10-27 (ark-github-cli 1.0.0：正式定版)
 
 - 0.x 卻 `status: active`、每次收尾都在用 → 定 **1.0.0**；CLI／stdout 契約與 0.2.3 相同，無破壞性變更（版本表註明，AL-103 通過）
@@ -308,7 +331,6 @@ audit P2 41 → **3**（剩 tested_against 2、孤兒 asset 1）；manifest `ski
 | `ark-weknora-cli` | 1.0.1 | active | 8 | 2026-10-15 `0067f75` feat: 消費端本地修改回貢 + mirror_sync --accept-upstream |
 | `ark-wiki-engine` | 3.0.1 | active | 22 | 2026-10-15 `4c4eb72` fix(ark-wiki-engine): ingest 沿用 raw frontmatter 的 title / re |
 | `ark-xlsx-tool` | 1.0.0 | active | 4 | 2026-09-17 `8c2811b` feat(skills-align): W0 版本基底 — 52 skill semver 回填 + release m |
-
 ---
 
 ## 2026-09-04 (executor 分類補登記 + 兩道守門對齊)
