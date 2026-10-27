@@ -59,6 +59,18 @@ metadata:
 - 只改 metadata 也算（升 patch）；腳本行為或契約變更升 minor；破壞性升 major
 - `updated` 記最後**內容**修改日 —— 別填批次操作日（會宣稱不存在的新鮮度）
 
+**守門（2026-10-27 補實作，比對基準＝repo 內上一班 `release/manifest.json` → audit 要在 `gen_manifest` 之前跑）：**
+
+| 規則 | 條件 | 嚴重度 |
+|---|---|---|
+| AL-102 `contract-changed-no-bump` | 版號同上一班、契約檔（`contract_files`，預設 scripts／schemas／*contract*／*schema*／hooks）hash 不同 | P1（至少升 minor） |
+| AL-108 `content-changed-no-bump` | 版號同上一班、契約沒變但 tree_hash 不同 | P2（升 patch） |
+| AL-103 `major-no-breaking` | major 比上一班大，但 skill 的 `CHANGELOG.md` 或 SKILL.md 版本段沒有「該版號＋Breaking／破壞」的一行 | P2 |
+| AL-106 `updated-before-contract` | `updated` 早於契約檔最後 commit 日 | P3（回貢流程 commit 必然晚於開發日，只提示） |
+
+> tree_hash 只算 **git 看得到的檔**（`git ls-files -co --exclude-standard`，照每層 .gitignore）；非 git 環境退回目錄掃描並排除 `__pycache__`／`.pytest_cache`／`node_modules`。
+> 原本全目錄掃描會把 `.pytest_cache` 算進去 —— 先跑測試再產 manifest，記下的就是被污染的值（r7 的 ark-agent-init 實例）。
+
 ### `tested_against` 的形狀（2026-09-17 提案）
 
 D-7 只定了「消費端型必填」，**沒有定值的格式**，而 audit 只檢查「有沒有值」。

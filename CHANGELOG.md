@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-27 (ark-skills-align 2.5.0：補實作 AL-102／103／106 ＋ tree_hash 不再吃 .pytest_cache)
+
+- **AL-102**（P1）契約檔變了版號沒升、**AL-108**（P2，新）內容變了版號沒升、**AL-103**（P2）major 無 Breaking 說明、**AL-106**（P3）updated 早於契約 commit ——
+  v2 規格（09-17）只登記代號，今天補實作；基準是 repo 內上一班 manifest，audit 要在 gen_manifest 前跑
+- 🔴 修 **tree_hash 被執行期產物污染**：原本全目錄掃描，`.pytest_cache`（自帶 `.gitignore: *`）被算進去 → 先跑測試再產 manifest 就記下錯的 hash
+  （r7 的 ark-agent-init 即是，乾淨 checkout 永遠對不上）。改為只算 `git ls-files -co --exclude-standard`；非 git 環境排除 `__pycache__`／`.pytest_cache`／`node_modules`，align_sync 同規則
+- AL-106 降 P3 的理由：回貢流程「消費端先開發、數天後才推上游」，commit 日必晚於真正修改日（game-proto 1.7.0：10-23 開發、10-27 回貢）
+- 新增 `scripts/tests/test_version_drift.py` 7 項（含污染回歸、未 commit 新檔要算進去）；反證：拿掉新邏輯 3 項轉紅
+- manifest 重產 **`skills-2026.10-r8`**（乾淨 hash，取代 r7 被污染的 ark-agent-init 值）
+
+---
+
 ## 2026-10-27 (ark-agent-init 2.4.0：AGENTS.md 落點單一權威)
 
 來源：nana-team 標準化時 AGENTS.md 落點被人工校正兩次 → review `kiro-cli/docs/designs/ark-agent-init-agents-md-placement-improvement.md`（F-1~F-4）。

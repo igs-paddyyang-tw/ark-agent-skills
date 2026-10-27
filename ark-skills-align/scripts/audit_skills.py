@@ -33,6 +33,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import semver  # noqa: E402  同目錄（align_sync 同法）
+import gen_manifest  # noqa: E402  tree_hash／contract_hash 與 manifest 同一套算法（不另寫一份）
 
 # schema v1.2（2026-10-20）：分類三軸 —— 規格 docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md
 #   category＝產出什麼（職能）、form＝agent 怎麼用、domain＝屬於哪個業務；產出格式沿用 outputs。
@@ -131,6 +132,36 @@ def valid_range(rng: str) -> bool:
     return rng in ("", "*") or all(_RANGE_CLAUSE.match(c) for c in rng.split())
 
 
+def _load_baseline_manifest(repo: Path) -> dict:
+    """上一班列車的 manifest（repo 內 ark-skills-align/release/manifest.json）—— AL-102／103 的比對基準。"""
+    mf = repo / "ark-skills-align" / "release" / "manifest.json"
+    try:
+        return (json.loads(mf.read_text(encoding="utf-8")) or {}).get("skills") or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _git_last_change(repo: Path, paths: list[Path]) -> str:
+    """paths 最後一次 commit 的日期（YYYY-MM-DD）；非 git repo 或沒有歷史 → ""。"""
+    if not paths:
+        return ""
+    import subprocess
+    r = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%ad", "--date=short", "--",
+                        *[str(p.relative_to(repo)) for p in paths]], capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def _has_breaking_note(skill_dir: Path, version: str) -> bool:
+    """major 升版要有 Breaking 說明：skill 的 CHANGELOG.md 或 SKILL.md「版本」段，同一行有該版號＋Breaking／破壞。"""
+    for f in (skill_dir / "CHANGELOG.md", skill_dir / "SKILL.md"):
+        if not f.exists():
+            continue
+        for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
+            if version in line and re.search(r"breaking|破壞", line, re.I):
+                return True
+    return False
+
+
 def find_dep_cycles(graph: dict[str, list[str]]) -> list[list[str]]:
     """回傳 depends_on 圖中的所有環（以排序後的成員去重）。"""
     cycles, seen = [], set()
@@ -191,6 +222,7 @@ def audit(repo: Path, triggers: dict):
         "missing-schema-version": "AL-021", "missing-updated": "AL-022",
         "deprecated-field": "AL-023", "legacy-category": "AL-024",
         "depends-on-cycle": "AL-030", "invalid-dep-range": "AL-031",
+        "content-changed-no-bump": "AL-108",
         "category-axis-mixed": "AL-025", "missing-form": "AL-026", "invalid-form": "AL-027",
         "missing-domain": "AL-028", "invalid-domain": "AL-029",
         # 版本系列（W1）
@@ -375,6 +407,40 @@ def audit(repo: Path, triggers: dict):
             if not semver.satisfies(versions[target], rng):
                 add("P0", "upstream-dep-unsatisfiable", name,
                     f"depends_on {target} 要求 {rng}，但上游現為 {versions[target]}")
+    # AL-102／103／108／106 版號漂移（v2 規格 AC-07 登記、2026-10-27 補實作）
+    #   基準 = repo 內上一班 manifest；新 skill 或非 active（manifest 不收）不比
+    baseline = _load_baseline_manifest(repo)
+    for name, info in active.items():
+        meta = ((info["fm"] or {}).get("metadata") or {})
+        base = baseline.get(name)
+        cur_ver = str(meta.get("version", "")).strip('"')
+        sk_dir = Path(info["path"]).parent  # info["path"] 是 SKILL.md 檔案，不是目錄
+        globs = meta.get("contract_files") or gen_manifest.DEFAULT_CONTRACT_GLOBS
+        if base and cur_ver and str(base.get("version")) == cur_ver:
+            if gen_manifest.contract_hash(sk_dir, globs) != base.get("contract_hash"):
+                add("P1", "contract-changed-no-bump", name,
+                    f"契約檔（scripts／schemas／*contract*／*schema*）與 {cur_ver} 發版時不同，版號卻沒升 —— 至少升 minor")
+            elif gen_manifest.tree_hash(sk_dir) != base.get("tree_hash"):
+                add("P2", "content-changed-no-bump", name,
+                    f"內容與 {cur_ver} 發版時不同，版號卻沒升 —— 升 patch（否則 index 會出現同版號兩個 hash）")
+        if base and cur_ver and semver.is_semver(cur_ver) and semver.is_semver(str(base.get("version", ""))):
+            if semver.parse(cur_ver)[0] > semver.parse(str(base["version"]))[0] \
+                    and not _has_breaking_note(sk_dir, cur_ver):
+                add("P2", "major-no-breaking", name,
+                    f"major 升版 {base['version']} → {cur_ver} 卻沒有 Breaking 說明（CHANGELOG.md 或 SKILL.md 版本段寫明遷移方式）")
+        # AL-106：updated（最後內容修改日）早於契約檔最後 commit —— 改了契約卻沒更新 updated
+        #   🟡 只報 P3：回貢流程是「消費端先開發、數天後才推上游」，commit 日必然晚於真正修改日
+        #   （2026-10-27 實例：game-proto 1.7.0 於 10-23 開發、10-27 回貢）。版號有沒有升由 AL-102／108 把關
+        updated = str(meta.get("updated", "")).strip()
+        if updated:
+            contract_paths = [p for p in sk_dir.rglob("*") if p.is_file()
+                              and "__pycache__" not in p.parts and p.suffix != ".pyc"
+                              and any(p in set(sk_dir.glob(g)) for g in globs)]
+            last = _git_last_change(repo, contract_paths)
+            if last and updated < last:
+                add("P3", "updated-before-contract", name,
+                    f"metadata.updated={updated} 早於契約檔最後 commit {last}（回貢延遲可忽略；若是上游直接改的就更新 updated）")
+
     # AL-030 依賴環：同步／安裝順序無解，也代表兩邊職責沒切乾淨（2026-10-20 game-prob ⇄ game-quicktest）
     for cyc in find_dep_cycles(graph):
         add("P1", "depends-on-cycle", cyc[0], "depends_on 成環：" + " → ".join(cyc))

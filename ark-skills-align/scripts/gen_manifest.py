@@ -4,7 +4,8 @@
 manifest = 這班列車每個 active skill 的 version/tree_hash/contract_hash/depends_on/status。
 index = 累積的 tree_hash → {skill, version, release}，供消費端把「不知道哪來的複本」反查成版本。
 
-tree_hash：sha256 於排序後的檔案清單（相對路徑 + 內容），排除 __pycache__/.pyc 與頂層 release/。
+tree_hash：sha256 於排序後的檔案清單（相對路徑 + 內容）；在 git repo 只算 git 看得到的檔（照 .gitignore），
+          另排除 __pycache__/.pytest_cache/node_modules/.pyc 與頂層 release/。
 contract_hash：只對 contract_files（預設 scripts/** schemas/** references/*contract*.md
                references/*schema*.md assets/hooks/**）算 —— 契約變了才算破壞性。
 
@@ -37,11 +38,33 @@ FM_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 HASH_EXCLUDE_DIRS = ("release",)
 
 
+#: 執行期產物目錄 —— 非 git 環境（消費端複本）時的明確排除；align_sync._tree_hash 用同一份清單
+JUNK_DIRS = {"__pycache__", ".pytest_cache", "node_modules"}
+
+
+def _git_listed(skill_dir: Path) -> list[Path] | None:
+    """git 管理的檔（已追蹤＋未被 .gitignore 忽略的新檔）；不在 git repo → None。
+
+    🔴 2026-10-27：原本 rglob 全掃，`.pytest_cache`（自帶 `.gitignore: *`、根 .gitignore 沒列）被算進 hash
+    —— 先跑測試再產 manifest，記下的就是被污染的 tree_hash，乾淨 checkout 永遠對不上。
+    `--exclude-standard` 會照每一層的 .gitignore 判斷，跟 git 看到的內容一致。
+    """
+    import subprocess
+    r = subprocess.run(["git", "-C", str(skill_dir), "ls-files", "-co", "--exclude-standard", "-z", "--", "."],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None
+    return [skill_dir / rel for rel in r.stdout.split("\0") if rel]
+
+
 def _iter_files(skill_dir: Path):
-    for p in sorted(skill_dir.rglob("*")):
-        if not p.is_file() or "__pycache__" in p.parts or p.suffix == ".pyc":
+    listed = _git_listed(skill_dir)
+    files = listed if listed is not None else [p for p in skill_dir.rglob("*") if p.is_file()]
+    for p in sorted(files):
+        rel = p.relative_to(skill_dir)
+        if not p.is_file() or JUNK_DIRS & set(rel.parts) or p.suffix == ".pyc":
             continue
-        if p.relative_to(skill_dir).parts[0] in HASH_EXCLUDE_DIRS:
+        if rel.parts[0] in HASH_EXCLUDE_DIRS:
             continue
         yield p
 
