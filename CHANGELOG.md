@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-27 (ark-skills-align 2.6.0：mirror_sync 修 Windows 編碼、換行誤判、gitignore 比對)
+
+> nana 回報（Windows 消費端對齊 aibi／aikb／aimkt／aiqa／aidev 時發現）。
+
+- **編碼**：`export_upstream`／`check-ignore` 的 git 輸出改以 UTF-8 解碼。原本 Windows 預設 cp950，遇中文路徑 → `stdout` 為 None → `AttributeError`，plan／apply 皆中止
+- **換行**：文字檔比對前 CRLF→LF；歷史比對加算 LF／CRLF 兩種版本。實測 aidev：舊版 8 個 LOCAL 全為誤報 → 新版 0
+- **gitignore**：`check-ignore` 改 `-z` 位元組收送（Windows 文字模式把 `
+` 轉 `
+`，原本上游 `.gitignore` 判定在 Windows 從未生效）；新增消費端 `.gitignore` 判定 —— 命中者不列本地資料、**apply 時保留**
+- 測試：`test_mirror_sync.py` 10 → 15（CRLF same／CRLF stale／二進位不正規化／消費端 gitignored 保留／中文路徑），Windows 不設 `PYTHONUTF8` 全過
+- 說明：`references/mirror-sync.md` 判定表與 Windows 注意事項
+
 ## 2026-10-27 (遊戲製程：素材版控分層 L1～L4（佈局契約 v3.8）＋網頁遊戲上線前資安；ark-web-game 0.11.1、game-proto 1.8.0、game-prob 1.7.0、game-spec 2.8.0)
 
 > aidev 回貢（豬來蓋福、神燈寶藏兩款實作與驗收）。
