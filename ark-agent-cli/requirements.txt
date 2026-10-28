@@ -1,0 +1,3 @@
+# 裝置層與 worker 只用標準庫。
+# 選角路由（roster.py 讀 agents.yaml）需要 PyYAML；不做選角路由時可不裝。
+PyYAML>=6.0

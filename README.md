@@ -75,7 +75,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
-| `ark-agent-cli` | 📝 指示 | 通用 | 統一 Agent CLI 閘道：封裝 kiro-cli / claude / gemini / codex 四種 CLI 為單一呼叫介面。 |
+| `ark-agent-cli` | ⚙️ 執行 | 通用 | 統一 Agent CLI 閘道 + 背景 sub-agent。 |
 | `ark-anomaly-detector` | 📝 指示 | 通用 | 產出 KPI 異常偵測模組 + 告警規則引擎 + MCP Tool + 排程整合。 |
 | `ark-browser-tool` | 📝 指示 | 通用 | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
 | `ark-chart-generator` | 📝 指示 | 通用 | 產出 chart_generator.py 標準化圖表 Skill，使用 Matplotlib 將結構化數據轉換為圖表， 輸出至 artifacts/charts 目錄。 |
@@ -139,6 +139,14 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-mobile-adb` | ⚙️ 執行 | 🎮 遊戲 | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。 |
 | `ark-skills-align` | ⚙️ 執行 | 通用 | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
 | `ark-weknora-cli` | ⚙️ 執行 | 通用 | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
+
+## 🗑️ 已移除（保留供遷移）
+
+> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
+
+| Skill | 遷移到 |
+|-------|--------|
+| `ark-ai-bot-builder` | — |
 
 <!-- END GENERATED CATALOGUE -->
 
