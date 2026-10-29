@@ -33,24 +33,21 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **53 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
+> **50 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
 
-> 輸出：MD 給 AI｜`category: process`｜13 個
+> 輸出：MD 給 AI｜`category: process`｜10 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
 | `ark-agent-role-profile` | 📝 指示 | 通用 | 以三檔位訪談（quick / standard / deep）引出 agent 的角色定位，產出結構化 `role-profile.yaml`（identity / stance / scope / … |
 | `ark-agent-team-design` | 📝 指示 | 通用 | 從業務目標設計 agent team 的編制：三檔位訪談（quick 套用編制樣板 / standard 6 題 / deep 交 ark-grill-me 拷問），產出 `team-spec.yam… |
 | `ark-code-spec-validator` | 📝 指示 | 通用 | 驗證 code 與 spec/design 文件的一致性，產出 Drift Report。 |
-| `ark-doc-coauthoring` | 📝 指示 | 通用 | 引導使用者透過結構化工作流共同撰寫文件。 |
 | `ark-game-quicktest` | ⚙️ 執行 | 🎮 遊戲 | C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， determin… |
 | `ark-grill-me` | 📝 指示 | 通用 | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
 | `ark-mcp-builder` | 📝 指示 | 通用 | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
-| `ark-planning-with-files` | 📝 指示 | 通用 | 持久化任務追蹤：複雜任務（3+ 步驟）自動建立 3-File Pattern（task_plan.md / findings.md / progress.md）， 防止 context 丟失、goal… |
-| `ark-project-planning` | 📝 指示 | 通用 | 標準化專案計畫流程。 |
 | `ark-prompt-spec-validator` | ⚙️ 執行 | 通用 | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
 | `ark-skill-creator` | 📝 指示 | 通用 | 建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。 |
 | `ark-spec-executor` | ⚙️ 執行 | 通用 | 讀取 ark-superpowers 產出的 plan.md（7 欄任務表 + AC-ID + 依賴），以 deterministic 腳本 解析契約 → DAG 排序 → 逐任務派給 runner … |
@@ -142,9 +139,12 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-cost-tracker` | 已併入 ark-pipeline-recipes（讀 references/cost-tracker.md） |
 | `ark-dashboard-health` | 已併入 ark-env-doctor（端點模式 `env_doctor.py --endpoints`；原文在 references/dashboard-health.md） |
 | `ark-data-contract` | 已併入 ark-pipeline-recipes（讀 references/data-contract.md） |
+| `ark-doc-coauthoring` | 已併入 ark-superpowers（「工作模式 → coauthor（互動共筆）」；原文在 references/modes/coauthor.md） |
 | `ark-etl-pipeline` | 已併入 ark-pipeline-recipes（讀 references/etl-pipeline.md） |
 | `ark-kpi-calculator` | 已併入 ark-pipeline-recipes（讀 references/kpi-calculator.md） |
 | `ark-llm-tools` | 已併入 ark-pipeline-recipes（讀 references/llm-tools.md） |
+| `ark-planning-with-files` | 已併入 ark-superpowers（「工作模式 → files（長任務持久化）」；原文在 references/modes/files.md） |
+| `ark-project-planning` | 已併入 ark-superpowers（「工作模式 → plan（流程與派工）」；原文在 references/modes/plan-workflow.md） |
 | `ark-translator` | 已併入 ark-pipeline-recipes（讀 references/translator.md） |
 | `ark-uml-generator` | 已併入 ark-superpowers（設計階段「設計圖（Mermaid）」；原文在 references/uml-diagrams.md） |
 

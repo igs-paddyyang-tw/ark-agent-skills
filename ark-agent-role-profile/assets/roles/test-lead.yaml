@@ -36,7 +36,7 @@ metrics:
   - { name: 放行建議附證據索引, target: "100%" }
   - { name: 上線後漏網 P0/P1, target: "0" }
 knowledge_domains: [驗收矩陣範本, 放行判準, 歷次放行決策與結果, 回歸範圍規則]
-skills: [ark-project-planning, ark-grill-me, ark-md-report, ark-planning-with-files]
+skills: [ark-superpowers, ark-grill-me, ark-md-report]
 examples:
   - kind: typical
     situation: 收到新版本與 GDD，要出測試計畫

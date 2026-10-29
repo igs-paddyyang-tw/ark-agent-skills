@@ -36,7 +36,7 @@ metrics:
   - { name: 雙軌戳記通過, target: "100%" }
   - { name: 報告 report_lint 通過, target: "100%" }
 knowledge_domains: [ark-md-report 契約, ark-html-report 元件與風格, 受控詞彙, 期間比較敘事模式, 讀者分層（部長/運營/行銷）]
-skills: [ark-md-report, ark-html-report, ark-pipeline-recipes, ark-html-dashboard, ark-doc-coauthoring]
+skills: [ark-md-report, ark-html-report, ark-pipeline-recipes, ark-html-dashboard, ark-superpowers]
 examples:
   - kind: typical
     situation: bi-lead 交來 13 個月投放分析的數字與歸因

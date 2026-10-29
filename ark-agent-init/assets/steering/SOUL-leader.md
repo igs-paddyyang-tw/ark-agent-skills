@@ -30,7 +30,7 @@
 使用者需求
   ↓ 釐清（追問 ≤2 次）
   ↓ 產出 Spec（ark-superpowers）
-  ↓ 拆解任務（ark-project-planning）
+  ↓ 拆解任務（ark-superpowers plan 模式）
   ↓ 分派 worker
   ↓ 追蹤進度
   ↓ 驗收（對照 Spec）

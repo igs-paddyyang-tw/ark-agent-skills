@@ -2,10 +2,10 @@
 name: ark-release-notes
 description: "當使用者需要從 git log 產出結構化 changelog 或版本說明時使用此技能。觸發條件包括：提及「changelog」「release notes」「版本說明」「變更日誌」，或要求整理近期 commit 為可讀的變更摘要。產出可作為日報素材或 GitHub Release 說明。不適用於完整 spec/design 文件撰寫——該場景請用 ark-superpowers。"
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
   schema_version: "1.2"
   status: active
-  updated: 2026-10-20
+  updated: 2026-10-29
   author: paddyyang
   category: document
   form: instruction
@@ -29,7 +29,7 @@ metadata:
 ## Negative Trigger
 
 - 完整 spec / design 文件 → 請用 `ark-superpowers`
-- 專案規劃文件 → 請用 `ark-project-planning`
+- 專案規劃文件 → 請用 `ark-superpowers`（plan 模式）
 
 ## 工作流程
 

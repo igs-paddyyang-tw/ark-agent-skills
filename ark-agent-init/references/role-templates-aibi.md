@@ -46,11 +46,11 @@
 # 與 role-skills-map.yaml 的 base_skills（8 個全員底座）疊加，不取代
 aibi_role_skills:
   aibi-manager:         [ark-db-query, ark-pipeline-recipes, ark-telegram-sender]
-  bi-lead:              [ark-project-planning, ark-doc-coauthoring]
+  bi-lead:              [ark-superpowers]
   semantic-keeper:      [ark-pipeline-recipes, ark-db-query]
   query-analyst:        [ark-db-query, ark-pipeline-recipes]
   insight-investigator: [ark-db-query, ark-pipeline-recipes, ark-retention-analysis]
-  report-narrator:      [ark-pipeline-recipes, ark-html-dashboard, ark-doc-coauthoring]
+  report-narrator:      [ark-pipeline-recipes, ark-html-dashboard, ark-superpowers]
   pulse-monitor:        [ark-db-query, ark-pipeline-recipes, ark-telegram-sender]
   viz-builder:          [ark-pipeline-recipes, ark-html-dashboard, ark-frontend-design]
 ```

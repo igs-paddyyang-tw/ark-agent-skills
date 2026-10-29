@@ -9,12 +9,15 @@ description: |
   使用此 Skill 當使用者提及 superpowers、工程標準化、標準化文件、
   寫 spec、規格文件、需求文件、設計文件、design doc、ADR、架構決策、
   執行計畫、execution plan、技術提案、系統設計、RFC、里程碑、
-  設計文件裡的圖（UML、序列圖、類別圖、ERD、流程圖、架構圖、Mermaid；原 ark-uml-generator 併入），
+  設計文件裡的圖（UML、序列圖、類別圖、ERD、流程圖、架構圖、Mermaid），
   或任何需要產出結構化工程決策文件的場景。
-  不適用於：與使用者一來一往共同起草請用 ark-doc-coauthoring；遊戲企劃文件請用 ark-game-spec；照 plan 執行請用 ark-spec-executor。
+  三種工作模式：plan —— 新需求、派工、拆任務、專案規劃、驗收交付；
+  coauthor —— 共筆、共同撰寫、一起起草提案或決策文件；
+  files —— planning with files、3-file pattern、任務追蹤、長任務跨 session 不忘記。
+  不適用於：遊戲企劃文件請用 ark-game-spec；照 plan 自動執行請用 ark-spec-executor；分析報告請用 ark-md-report。
 metadata:
-  version: "1.2.0"
-  replaces: [ark-uml-generator]
+  version: "1.3.0"
+  replaces: [ark-uml-generator, ark-project-planning, ark-doc-coauthoring, ark-planning-with-files]
   schema_version: "1.2"
   status: active
   updated: 2026-10-29
@@ -39,8 +42,23 @@ metadata:
 - 「執行計畫」、「execution plan」、「里程碑」
 - 「技術提案」、「technical proposal」、「系統設計」
 - 「review 文件」、「文件檢查」
+- plan 模式：「新功能」「新需求」「派工」「拆任務」「專案規劃」「project plan」
+- coauthor 模式：「共筆」「一起寫」「草擬提案」「決策文件」
+- files 模式：「planning with files」「3-file pattern」「任務追蹤」「長任務管理」「防止遺忘」
 
 ---
+
+## 工作模式（2026-10-29 起，原三個規劃類 skill 併入）
+
+產文件是預設模式；遇到下列情境改讀對應頁，**只讀需要的那一頁**：
+
+| 模式 | 什麼時候 | 讀這頁 | 與產文件的關係 |
+|---|---|---|---|
+| **plan** | 新需求進來要釐清 → 寫規格 → 拆任務 → 派工 → 追蹤 → 驗收（6 步流程） | [`references/modes/plan-workflow.md`](references/modes/plan-workflow.md) | Step 2「寫規格」回到本 skill 產 Spec／Plan |
+| **coauthor** | 使用者想一來一往共同起草（人主導，逐段精煉＋讀者測試） | [`references/modes/coauthor.md`](references/modes/coauthor.md) | 定稿後要落成 Spec／ADR 時回到產文件模式 |
+| **files** | 3 步以上的長任務，要跨 session 不忘記（task_plan／findings／progress 三檔） | [`references/modes/files.md`](references/modes/files.md) | 管「進度不丟」，不產正式文件 |
+
+> 各頁保留併入前的原文，提到 `ark-project-planning`／`ark-doc-coauthoring`／`ark-planning-with-files` 的地方都等於本 skill 的對應模式。
 
 ## 文件類型
 
@@ -360,7 +378,7 @@ ark-grill-me（拷問）→ 【ark-superpowers（產文件）】→ ark-spec-exe
 
 ### Pipeline 狀態
 
-**不適用於**：流程編排/派工請用 `ark-project-planning`；長任務 session 狀態持久化請用 `ark-planning-with-files`；互動式共筆（人主導逐段精煉）請用 `ark-doc-coauthoring`。
+**模式分流**：流程編排／派工 → plan 模式；長任務 session 狀態持久化 → files 模式；互動式共筆（人主導逐段精煉）→ coauthor 模式（見上方「工作模式」）。
 
 - **開頭**：讀取 `docs/pipeline/{feature}.yaml`，取得 `decision_summary_path` 作為輸入 context
 - **結尾**：更新 `phase: spec`，寫入 `spec_path` / `design_path` / `plan_path`

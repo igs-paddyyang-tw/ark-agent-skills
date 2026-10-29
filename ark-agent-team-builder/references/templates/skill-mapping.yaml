@@ -6,7 +6,6 @@ roles:
   manager:
     description: "訊息路由、任務調度、團隊管理"
     skills:
-      - ark-project-planning
       - ark-superpowers
 
   admin:
@@ -22,8 +21,6 @@ roles:
       - ark-superpowers
       - ark-grill-me
       - ark-spec-executor
-      - ark-project-planning
-      - ark-planning-with-files
 
   worker-ai-dev:
     description: "LLM 整合、Prompt 工程、MCP 開發"
@@ -70,4 +67,4 @@ shared:
   skills:
     - ark-wiki-engine
     - ark-code-spec-validator
-    - ark-doc-coauthoring
+    - ark-superpowers

@@ -72,8 +72,8 @@ DEFAULT_EXCLUSIVE_TRIGGERS = {
     "截圖": "ark-browser-tool",
     "寫 spec": "ark-superpowers",
     "產 spec": "ark-superpowers",
-    "派工": "ark-project-planning",
-    "共筆": "ark-doc-coauthoring",
+    "派工": "ark-superpowers",   # 2026-10-29 ark-project-planning 併入（plan 模式）
+    "共筆": "ark-superpowers",   # 2026-10-29 ark-doc-coauthoring 併入（coauthor 模式）
     "chatbot": "ark-agent-bot-builder",
     "聊天機器人": "ark-agent-bot-builder",
     "博奕": "ark-html-dashboard",

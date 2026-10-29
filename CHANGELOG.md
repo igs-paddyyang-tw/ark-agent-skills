@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-29 (列車 r14：盤點第二批 —— 三個規劃類 skill 併入 superpowers 的工作模式)
+
+> 計畫：kiro-cli `docs/plans/skills-batch2-m4-plan.md`（盤點 M-4）。active 53 → 50。
+
+- **ark-superpowers 1.3.0**：新增「工作模式」路由 —— **plan**（原 ark-project-planning 6 步流程：釐清→規格→拆解→派工→追蹤→驗收）、
+  **coauthor**（原 ark-doc-coauthoring 互動共筆＋讀者測試）、**files**（原 ark-planning-with-files 3-File Pattern）；
+  原文逐位元組搬到 `references/modes/{plan-workflow,coauthor,files}.md`，description 598 字（含三模式觸發詞），`replaces` 宣告 4 個舊名
+- **ark-project-planning 3.0.0、ark-doc-coauthoring 2.0.0、ark-planning-with-files 2.0.0 → deprecated stub**（保留 SKILL.md 與觸發詞）
+- **獨占觸發詞**「派工」「共筆」owner 改 ark-superpowers（audit_skills、prompt_lint 兩處）
+- **ark-prompt-spec-validator 1.2.0**：PL-017 豁免自己 `metadata.replaces` 列的舊名（與 audit AL-016／AL-032 同判準；superpowers 誤報 8→0）＋測試（反證：拿掉豁免 → 紅）
+- 改引用（patch）：ark-agent-init 2.6.3（role-skills-map、AIBI／gamedev 角色、SOUL-leader 範本）、ark-agent-role-profile 1.3.6、ark-agent-team-builder 3.1.6、ark-release-notes 1.0.2；ark-skills-align 2.8.0（觸發詞 owner）
+
+---
+
 ## 2026-10-29 (列車 r13：盤點第一批收尾 —— dashboard-health→env-doctor、uml→superpowers；check_consumers 認得 stub 型合併)
 
 > 計畫：kiro-cli `docs/plans/skills-batch1-m2-m3-plan.md`（盤點 M-2、M-3）。active 55 → 53。

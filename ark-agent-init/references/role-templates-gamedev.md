@@ -14,7 +14,7 @@
 ```yaml
 # 與 role-skills-map.md 的 base_skills（8 個全員底座）疊加，不取代
 gamedev_role_skills:
-  game-planner:   [ark-game-spec, ark-grill-me, ark-doc-coauthoring]
+  game-planner:   [ark-game-spec, ark-grill-me, ark-superpowers]
   math-designer:  [ark-game-spec, ark-game-prob, ark-game-proto, ark-pipeline-recipes]
   client-eng:     [ark-skill-creator, ark-code-review, ark-frontend-design]
   server-eng:     [ark-skill-creator, ark-code-review, ark-code-spec-validator]
@@ -22,8 +22,8 @@ gamedev_role_skills:
   game-qa:        [ark-test-runner, ark-code-review, ark-pipeline-recipes]
   liveops:        [ark-scheduler-generator, ark-pipeline-recipes, ark-release-notes]
   game-analyst:   [ark-pipeline-recipes, ark-retention-analysis]
-  producer:       [ark-project-planning, ark-planning-with-files]
-  narrative:      [ark-doc-coauthoring, ark-pipeline-recipes]
+  producer:       [ark-superpowers]
+  narrative:      [ark-superpowers, ark-pipeline-recipes]
 ```
 
 ---

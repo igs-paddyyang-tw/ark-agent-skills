@@ -36,7 +36,7 @@ metrics:
   - { name: 口徑衝突攔截率, target: "100%（進報告前）" }
   - { name: 分析報告一問一答, target: "100%" }
 knowledge_domains: [分析任務拆解模式, 指標語意契約索引, worker 能力邊界, 歷次分析先例]
-skills: [ark-project-planning, ark-wiki-engine, ark-md-report, ark-doc-coauthoring]
+skills: [ark-superpowers, ark-wiki-engine, ark-md-report]
 examples:
   - kind: typical
     situation: manager 轉來「6 月效率為什麼回吐」

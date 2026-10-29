@@ -27,7 +27,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.1.5"
+  version: "3.1.6"
   updated: 2026-10-29
 ---
 
@@ -206,8 +206,8 @@ python3 scripts/sync_skills.py --check    # 驗一致（doctor/CI 用）
 
 | 角色 | 該裝的專業技能方向 | 例（ark-agent-skills 內） |
 |------|-------------------|--------------------------|
-| manager（總機） | 通用執行力：RAG 查詢 + 規格/計畫 + 報告 | `ark-weknora-cli` `ark-superpowers` `ark-project-planning` `ark-md-report` |
-| leader（統籌） | 拆解/派工/驗收 | `ark-project-planning` `ark-grill-me` |
+| manager（總機） | 通用執行力：RAG 查詢 + 規格/計畫 + 報告 | `ark-weknora-cli` `ark-superpowers`（含 plan 模式） `ark-md-report` |
+| leader（統籌） | 拆解/派工/驗收 | `ark-superpowers`（plan 模式） `ark-grill-me` |
 | admin（維運） | 環境/健康/成本 | `ark-env-doctor`（含端點模式） `ark-pipeline-recipes`（cost-tracker） |
 | worker（職人） | **依領域**：資料/研究/報告… | 競品→`ark-web-scraper` `ark-marketing`；報告→`ark-pipeline-recipes`（圖表） `ark-html-report` |
 | 全員 COMMON | 知識查詢 | `ark-wiki-engine` |

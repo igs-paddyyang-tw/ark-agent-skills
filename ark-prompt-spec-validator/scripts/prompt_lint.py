@@ -40,7 +40,7 @@ DEFAULT_EXCLUSIVE_TRIGGERS = {
     "爬蟲": "ark-web-scraper", "反爬": "ark-web-scraper",
     "瀏覽器測試": "ark-browser-tool", "截圖": "ark-browser-tool",
     "寫 spec": "ark-superpowers", "產 spec": "ark-superpowers",
-    "派工": "ark-project-planning", "共筆": "ark-doc-coauthoring",
+    "派工": "ark-superpowers", "共筆": "ark-superpowers",  # 2026-10-29 規劃類併入 superpowers
     "chatbot": "ark-agent-bot-builder", "聊天機器人": "ark-agent-bot-builder",
     "博奕": "ark-html-dashboard", "老虎機": "ark-html-dashboard", "遊戲面板": "ark-html-dashboard",
     "CLI 骨架": "ark-agent-cli",
@@ -310,9 +310,13 @@ def lint_file(path: Path, dtype: str, cfg: dict, repo_skills: dict, rep: Report)
         if len(lines) > 500:
             add("PL-020", "P2", fm_lines + 501, f"SKILL.md 本體 {len(lines)} 行 > 500")
     if repo_skills:
+        # 自己 metadata.replaces 列的舊名豁免：「我取代了它」本來就要提到它
+        # （與 audit_skills AL-016／AL-032 同一判準；2026-10-29 規劃類併入 superpowers 時 8 筆誤報）
+        meta = fm.get("metadata") if isinstance(fm, dict) else None
+        replaced = {str(r).split(".")[0].strip() for r in ((meta or {}).get("replaces") or [])}
         for m in SKILL_REF_RE.finditer(text):
             name = m.group(1)
-            if name == my or name in {"ark-agent-skills", "ark-agent-cli"}:
+            if name == my or name in {"ark-agent-skills", "ark-agent-cli"} or name in replaced:
                 continue
             if name not in repo_skills:
                 add("PL-017", "P2", line_of(text, m.start()), f"引用的 skill 不存在於 repo：{name}", "medium")
