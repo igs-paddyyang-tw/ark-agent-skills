@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-29 (列車 r11：補版號債＋修兩個守門的根因)
+
+- **補版號債**（r10 之後未升版）：ark-weknora-cli 1.1.0（kb_registry 三層查找）、ark-agent-team-builder 3.1.3（去 BOM）、ark-agent-cli 2.2.1（補連 `references/v2-design.md`，原為孤兒檔）
+- 🔴 **「fingerprints.json 永遠別碰」的根因**：`ark-superpowers/scripts/build_fingerprints.py` 不解析參數，**連 `--help` 都重寫**這個被追蹤的檔（只差 generated 日期）
+  → 每跑一次 CLI 契約測試就弄髒工作樹，manifest 也記到被改過的 tree_hash（r10 的 superpowers 即是）。
+  修：superpowers 1.1.0 —— argparse、`--check`、內容沒變不寫檔；`test_cli_contract.py` 加「`--help` 不得改動 skill 目錄既有檔」（反證：換回舊版即紅）
+- **AL-103 誤報修正**（ark-skills-align 2.6.1）：Breaking 說明寫在新主版號的 `X.0.0` 那一行即可（agent-cli「2.0.0 — Breaking」原被 2.2.0 誤判）
+- audit P0／P1＝0、P2＝1（weknora tested_against 刻意留空）；manifest `skills-2026.10-r11` 在乾淨工作樹最後產出
+
+---
+
 ## 2026-10-29 (ark-agent-init 2.6.0：AGENTS.md 是 Ark Agent 架構單一來源，Claude／Codex 都讀得到)
 
 - 查證（官方文件）：**Codex** 原生讀 AGENTS.md（專案根往下每層一份、**無匯入語法**、合計上限 32 KiB；同層有 AGENTS.md 時 fallback 檔名讀不到 → **CODEX.md 無效**）；

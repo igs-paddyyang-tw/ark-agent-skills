@@ -27,8 +27,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.1.2"
-  updated: 2026-10-20
+  version: "3.1.3"
+  updated: 2026-10-29
 ---
 
 # ark-agent-team-builder

@@ -10,11 +10,11 @@ description: |
   「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」。
   不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-llm-tools）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.2.0"
+  version: "2.2.1"
   author: paddyyang
   schema_version: "1.2"
   status: active
-  updated: 2026-10-28
+  updated: 2026-10-29
   category: pipeline
   form: executor
   domain: general
@@ -57,6 +57,7 @@ sub-agent： agent_spawn.py spawn ──▶ detached agent_worker.py ──┬�
 | `references/case-aiqa-steward.md` | 實戰：aiqa 1 小時掛測 = exec 腳本 + steward sub-agent | 遊戲測試派工 |
 | `references/backends.md` | 四個 backend 的旗標與環境變數 | 換模型 / 路徑 |
 | `references/routing.md` | **選角路由**：roster 列名單 → manager（LLM）選 → spawn --route 驗證補 cwd；與 team 方法1 分界 | 要派給專家 |
+| `references/v2-design.md` | v1.0 分析 → v2.0 設計（背景 sub-agent 分段＋checkpoint、aiqa 管家案例）—— 為什麼這樣設計 | 改架構前先讀 |
 | `references/reporting-back.md` | **完成後怎麼回報主 agent 而主 agent 不等、不卡、不 timeout**（inbox / notify_cmd / to agent 三條） | 設計回報流程 |
 | `examples/tasks/aiqa-steward.md` `long-research.md` | task.md 範本（佔位用 `{…}`） | 起一個 job |
 | `scripts/tests/` | fake backend 全鏈：段數、nudge、blocked→resume、預算、cancel、exec+attach、one-shot、DRIVER_MISSING | 改腳本後 |
@@ -119,6 +120,9 @@ one-shot `data`：`{text, json_data, backend, model, elapsed_ms, timed_out, exit
 | `ARK_AGENT_INBOX_DIR` | `~/.ark/agent-inbox` | 終態通知 inbox 目錄（主 agent 每輪 `inbox --ack` 讀這裡） |
 
 ## 版本
+
+### 2.2.1（2026-10-29）
+- 文件：SKILL.md 資源表補連 `references/v2-design.md`（原本 agent 讀不到，audit orphan-asset）
 
 ### 2.2.0（2026-10-29）
 - 新增**終態回報機制**（sub-agent 完成後回報主 agent，而主 agent 不等、不卡、不 timeout）：`agent_notify.py` 三條推/拉路徑 —— ① `inbox`（worker 終態一律寫 `~/.ark/agent-inbox/<agent>.jsonl`，主 agent 每輪開頭 `agent_spawn.py inbox --ack` 毫秒讀取）② `--to cmd`（推 TG）③ `--to agent`（再叫醒主 agent 一次把 result.md 當新訊息餵它）。`agent_spawn.py inbox` 子命令、spawn/exec 加 `--notify-agent`；worker 所有終態（done/blocked/timeout/failed/cancelled）都回報。新增 `references/reporting-back.md`、2 個測試（report_back / spawn_returns_immediately）。詳見 reporting-back.md。

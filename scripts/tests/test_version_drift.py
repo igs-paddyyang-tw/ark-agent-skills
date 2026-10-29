@@ -108,3 +108,10 @@ def test_tree_hash_counts_new_untracked_files(repo):
     before = gen.tree_hash(d)
     (d / "scripts" / "new_tool.py").write_text("x = 1\n", encoding="utf-8")
     assert gen.tree_hash(d) != before
+
+
+def test_breaking_note_on_major_zero_covers_later_minors(repo):
+    """Breaking 寫在 2.0.0 那一行，後續 2.2.0 不必再寫（ark-agent-cli 實例）。"""
+    _write_skill(repo, "2.2.0", script="print(2)\n",
+                 extra_body="\n## 版本\n\n### 2.2.0\n- 新功能\n\n### 2.0.0（2026-10-28）— Breaking\n- stdout 改 envelope\n")
+    assert ("P2", "major-no-breaking") not in _rules(repo)

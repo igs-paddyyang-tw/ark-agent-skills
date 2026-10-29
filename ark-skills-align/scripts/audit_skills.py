@@ -152,12 +152,17 @@ def _git_last_change(repo: Path, paths: list[Path]) -> str:
 
 
 def _has_breaking_note(skill_dir: Path, version: str) -> bool:
-    """major 升版要有 Breaking 說明：skill 的 CHANGELOG.md 或 SKILL.md「版本」段，同一行有該版號＋Breaking／破壞。"""
+    """major 升版要有 Breaking 說明：skill 的 CHANGELOG.md 或 SKILL.md「版本」段，同一行有版號＋Breaking／破壞。
+
+    版號接受「目前版號」或「新主版號的 X.0.0」—— 破壞性變更發生在 X.0.0，之後的 X.1.0、X.2.0 不必再寫一次。
+    🔴 2026-10-29 修：原本只比目前版號，ark-agent-cli 寫了「2.0.0 — Breaking」卻因現在是 2.2.0 被誤報。
+    """
+    major_zero = f"{version.split('.')[0]}.0.0"
     for f in (skill_dir / "CHANGELOG.md", skill_dir / "SKILL.md"):
         if not f.exists():
             continue
         for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
-            if version in line and re.search(r"breaking|破壞", line, re.I):
+            if (version in line or major_zero in line) and re.search(r"breaking|破壞", line, re.I):
                 return True
     return False
 

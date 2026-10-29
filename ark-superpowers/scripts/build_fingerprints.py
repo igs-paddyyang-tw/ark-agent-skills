@@ -64,8 +64,32 @@ def build() -> dict:
             "lines": sorted(lines), "cells": sorted(cells)}
 
 
+def _without_date(d: dict) -> dict:
+    return {k: v for k, v in d.items() if k != "generated"}
+
+
 def main() -> int:
+    """重產 fingerprints.json；內容（不含 generated 日期）沒變就不寫檔。
+
+    🔴 2026-10-29：原本不解析參數，連 `--help` 都會重寫這個被追蹤的檔（只差日期）→
+       每跑一次 CLI 契約測試就弄髒工作樹，manifest 也會記到被改過的 tree_hash。
+    """
+    import argparse
+    ap = argparse.ArgumentParser(description="掃 templates/** 產 references/fingerprints.json（內容沒變不寫檔）")
+    ap.add_argument("--check", action="store_true", help="只檢查是否過期：過期 exit 1，不寫檔")
+    args = ap.parse_args()
     data = build()
+    if FINGERPRINTS.exists():
+        try:
+            old = json.loads(FINGERPRINTS.read_text(encoding="utf-8"))
+        except ValueError:
+            old = {}
+        if _without_date(old) == _without_date(data):
+            print(f"✅ fingerprints.json 已是最新（{len(data['lines'])} 行指紋 + {len(data['cells'])} cell 指紋），未寫檔")
+            return 0
+    if args.check:
+        print("❌ fingerprints.json 過期：請執行 python scripts/build_fingerprints.py")
+        return 1
     FINGERPRINTS.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"✅ fingerprints.json：{len(data['lines'])} 行指紋 + {len(data['cells'])} cell 指紋")
     return 0

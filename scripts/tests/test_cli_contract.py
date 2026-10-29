@@ -68,13 +68,34 @@ def _scripts() -> list[str]:
 SCRIPTS = _scripts()
 
 
+def _snapshot(skill_dir: Path) -> dict[str, tuple[int, int]]:
+    """skill 目錄內檔案的 (size, mtime_ns)，排除執行期產物（__pycache__／.pytest_cache）。"""
+    snap = {}
+    for p in skill_dir.rglob("*"):
+        if p.is_file() and not {"__pycache__", ".pytest_cache"} & set(p.parts):
+            st = p.stat()
+            snap[p.relative_to(skill_dir).as_posix()] = (st.st_size, st.st_mtime_ns)
+    return snap
+
+
 @pytest.mark.parametrize("rel", SCRIPTS)
 def test_help_is_safe_and_works(rel, tmp_path):
     """`<script> --help` → exit 0，且不在 cwd 產生任何檔案。"""
     script = REPO / rel.split("/")[0] / "scripts" / rel.split("/")[1]
+    skill_dir = REPO / rel.split("/")[0]
+    before = _snapshot(skill_dir)
     r = subprocess.run([sys.executable, str(script), "--help"],
                        cwd=tmp_path, capture_output=True, text=True, timeout=30)
     created = sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*"))
+    after = _snapshot(skill_dir)
+    changed = sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k))
+
+    # 🔴 2026-10-29：build_fingerprints.py 不解析參數，`--help` 直接重寫被追蹤的
+    #    references/fingerprints.json（只差 generated 日期）—— 舊檢查只看 cwd「新增」檔，抓不到「改到 repo 既有檔」。
+    #    這就是長年「fingerprints.json 永遠別碰」口耳規則的根因。
+    assert not changed, (
+        f"{rel} 執行 `--help` 改動了 skill 目錄裡的檔案：{changed[:8]}\n"
+        "🔴 help 是唯讀操作。這支沒解析參數就直接執行了主流程 —— 改用 argparse。")
 
     # ── 副作用：對每一支都適用，連 NEEDS_DEPS 也不例外 ──
     assert not created, (
