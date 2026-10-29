@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-29 (列車 r17：盤點 O-1 遊戲 skill 依 domain 分流＋O-2 description 減肥)
+
+> 計畫：kiro-cli `docs/plans/skills-o1-o2-domain-desc-plan.md`。
+
+- **O-1 實測**：安裝走角色表（align_sync：base ∪ 角色 ∪ extra），通用角色表本來就沒有遊戲 skill；現有遊戲 skill 複本全在遊戲相關專案。缺口只在「角色庫沒有宣告領域」：
+  - ark-agent-role-profile 1.4.0：角色檔加選填 `domain: general | game`（schema 受控詞彙）；game-designer、marketing 宣告 game；data-analyst 是通用角色 → 拿掉 ark-retention-analysis（遊戲專案用 extra 補）
+  - ark-skills-align 2.10.0：新守門 **AL-033 `general-role-game-skill`**（P2）——通用角色（role-skills-map、未宣告 game 的角色檔）列了遊戲 skill 即報；反證兩向（拿掉 marketing 的宣告 → 紅、停用規則 → 2 紅）
+  - 過期網址：ark-agent-init 2.7.0 `clone_skills` 的 `ark-kiro-skills`（靠 GitHub 轉址才通）→ `ark-agent-skills`；ark-agent-team-design 1.3.0 `gen_team` 的 manifest_url 少 `ark-skills-align/`（**實測 404**，align_sync 拿不到 manifest 會靜默只裝 extra）
+- **O-2**：11 個 description > 700 字 → 只改寫前段功能敘述，「使用此 skill 當…」觸發清單與「不適用於」**逐字保留**（腳本驗 11/11 尾段一致），原前段移到正文「功能總覽」不丟資訊。
+  1249→623（mobile-adb）、1060→601（game-spec）、其餘 9 個 ≤ 529；prompt_lint 無退步（PL-020 > 1024 字 2 筆消失）。各升 patch：agent-cli 2.4.1、book 1.1.3、game-prob 1.7.1、game-proto 1.8.1、game-quicktest 2.2.2、game-spec 2.9.1、github-cli 1.0.1、mobile-adb 2.5.2、weknora-cli 1.1.1、game-report 0.2.8、web-game 0.11.2
+- ⚠️ 已知未修：align_sync 依賴 manifest 的 `tiers_default`，但 gen_manifest 產的 manifest 沒有這個欄位 → 角色 skill 集合為空（目前只有 aidev 用 skills-matrix）；另立案
+
+---
+
 ## 2026-10-29 (列車 r16：ark-agent-cli 2.4.0 —— 吸收 ai-qa-agent prototype 的營運治理)
 
 > 來源：`ark-agent-cli-v2.4.zip`（以 main 2.2.1 為基準開發）。依 10-28 判準先 diff 確認基準 → **疊加不覆蓋**：保留 2.2.2 的 description 改指（否則回退成指向已 deprecated 的 ark-llm-tools，AL-032 會擋）。

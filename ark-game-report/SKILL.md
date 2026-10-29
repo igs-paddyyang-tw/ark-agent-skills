@@ -1,14 +1,7 @@
 ---
 name: ark-game-report
 description: |
-  Slot 新機上線成效報告 executor：把一款新機的上線表現做成標準格式報告（D+7 上線初判 / D+14 檢查點 / D+30 穩態定調），
-  並帶出分析思維與策略方向。一個入口 gr_run 串六段：init（report.yaml 設定）→ query（依 adapter 產 SQL，
-  交 ark-db-query 匯出標準資料集）→ probe（盤點拿得到哪些數據，產能力矩陣，缺的區塊自動降級）
-  → build（資料集 → 指標、歷史新機同期分位數、燈號 → report.json）→ insight（metrics × playbook：
-  發現、假設、要查什麼、建議方向、知識庫參考 → insights.md 與結論草稿）→ render（單檔 HTML，可離線開、轉 PDF）
-  → closeout（工作流最後產出：十階段結案報告，彙整 ①～⑩ 狀態、快測、⑨ 拍板、⑩ 成效 → ark-md-report 契約 md＋HTML）。
-  分析框架固定為六問加健康觀察：規模、玩家結構、黏著、深度、機率表現（實際 RTP vs 信賴帶、觸發率 vs 規格）、
-  增量與侵蝕；設定、adapter、playbook 都是 yaml，依實戰可取得的數據調整，不用改程式。只算數字與草擬，結論由人確認。
+  Slot 新機上線成效報告 executor（D+7／D+14／D+30）：取數 → 能力盤點 → 指標與歷史分位 → 洞察草稿 → 單檔 HTML，另含十階段結案報告；只算數字與草擬，結論由人確認。
   使用此 skill 當提及：上線成效、成效報告、新機表現、上線報告、D+7、D+30、7 日／30 日趨勢、押注佔比、試玩率、
   機台回訪率、留存、侵蝕率、新機吃舊機、實際 RTP 對帳、觸發率對帳、玩家分層、VIP 組成、成效分析思維、上線後要調什麼。
   不適用於：每日大螢幕觀測看板（現行 live-dashboard）、上線前的機率規格書（→ ark-game-prob）、
@@ -20,8 +13,8 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "0.2.7"
-  updated: 2026-10-21
+  version: "0.2.8"
+  updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -33,6 +26,17 @@ metadata:
 ---
 
 # ark-game-report — 老虎機上線成效報告
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> Slot 新機上線成效報告 executor：把一款新機的上線表現做成標準格式報告（D+7 上線初判 / D+14 檢查點 / D+30 穩態定調），
+> 並帶出分析思維與策略方向。一個入口 gr_run 串六段：init（report.yaml 設定）→ query（依 adapter 產 SQL，
+> 交 ark-db-query 匯出標準資料集）→ probe（盤點拿得到哪些數據，產能力矩陣，缺的區塊自動降級）
+> → build（資料集 → 指標、歷史新機同期分位數、燈號 → report.json）→ insight（metrics × playbook：
+> 發現、假設、要查什麼、建議方向、知識庫參考 → insights.md 與結論草稿）→ render（單檔 HTML，可離線開、轉 PDF）
+> → closeout（工作流最後產出：十階段結案報告，彙整 ①～⑩ 狀態、快測、⑨ 拍板、⑩ 成效 → ark-md-report 契約 md＋HTML）。
+> 分析框架固定為六問加健康觀察：規模、玩家結構、黏著、深度、機率表現（實際 RTP vs 信賴帶、觸發率 vs 規格）、
+> 增量與侵蝕；設定、adapter、playbook 都是 yaml，依實戰可取得的數據調整，不用改程式。只算數字與草擬，結論由人確認。
+
 
 一句話：**格式固定、資料可變、結論由人定。** 版面與分析框架標準化；能撈到什麼數據，就產出哪些區塊；
 數字與燈號由腳本算，發現與建議由 playbook 草擬，最後人工確認後才定版。

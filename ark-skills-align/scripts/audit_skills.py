@@ -17,6 +17,7 @@
  13. orphan-asset：references/assets 從 SKILL.md 不可達（P2）
  14. deprecated-field：metadata.consumed_by 已廢除（P3）
  15. ref-to-deprecated：active skill 的 depends_on／description／*.yaml 指向 deprecated stub（P1，AL-032）
+ 16. general-role-game-skill：通用角色（role-skills-map／未宣告 domain: game 的角色檔）列了遊戲 skill（P2，AL-033）
 
 用法：
   python audit_skills.py --repo /path/to/ark-agent-skills [--config audit_config.yml] [--json out.json]
@@ -227,7 +228,7 @@ def audit(repo: Path, triggers: dict):
         "orphan-asset": "AL-019", "referenced-test-missing": "AL-020",
         "missing-schema-version": "AL-021", "missing-updated": "AL-022",
         "deprecated-field": "AL-023", "legacy-category": "AL-024",
-        "depends-on-cycle": "AL-030", "invalid-dep-range": "AL-031", "ref-to-deprecated": "AL-032",
+        "depends-on-cycle": "AL-030", "invalid-dep-range": "AL-031", "ref-to-deprecated": "AL-032", "general-role-game-skill": "AL-033",
         "content-changed-no-bump": "AL-108",
         "category-axis-mixed": "AL-025", "missing-form": "AL-026", "invalid-form": "AL-027",
         "missing-domain": "AL-028", "invalid-domain": "AL-029",
@@ -510,6 +511,31 @@ def audit(repo: Path, triggers: dict):
                 add("P1", "ref-to-deprecated", name,
                     f"{where} 指向已 deprecated 的 {ref} —— {_to(ref)}"
                     "（stub 只剩轉址，mirror_sync 不會自動裝新 skill）")
+
+    # 3.5c AL-033 通用角色不得列 domain: game 的 skill（2026-10-29 加，盤點 O-1）
+    #
+    # 安裝走角色表（align_sync：base ∪ 角色 ∪ extra），所以「非遊戲團隊不裝遊戲 skill」
+    # 只要角色表守住就成立。掃兩處：role-skills-map 的 role_skills（全是通用角色）、
+    # role-profile 角色檔（`domain: game` 宣告者豁免）。遊戲專案要的遊戲 skill 走 extra 或遊戲角色。
+    game_skills = {n for n, i in active.items()
+                   if (((i["fm"] or {}).get("metadata") or {}).get("domain")) == "game"}
+    role_sources: list[tuple[str, str, list]] = []   # (位置, 角色, skills)
+    rsm = repo / "ark-agent-init" / "assets" / "role-skills-map.yaml"
+    if rsm.is_file():
+        data = yaml.safe_load(rsm.read_text(encoding="utf-8")) or {}
+        for role, lst in (data.get("role_skills") or {}).items():
+            role_sources.append((f"role-skills-map.yaml:{role}", "general", lst or []))
+    for f in sorted((repo / "ark-agent-role-profile" / "assets" / "roles").glob("*.yaml")):
+        data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+        role_sources.append((f"roles/{f.name}", str(data.get("domain") or "general"), data.get("skills") or []))
+    for where, dom, lst in role_sources:
+        if dom == "game":
+            continue
+        names = [s if isinstance(s, str) else (s or {}).get("name", "") for s in lst]
+        for s in sorted(set(names) & game_skills):
+            add("P2", "general-role-game-skill", where.split(":")[0].split("/")[0],
+                f"{where} 是通用角色卻列了遊戲 skill {s} —— 角色檔加 `domain: game`，"
+                "或從角色拿掉、由遊戲專案用 extra 補（非遊戲團隊才不會裝到）")
 
     # 3.6 scaffolder / executor 必須有端到端測試
     #

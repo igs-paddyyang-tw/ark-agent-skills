@@ -1,22 +1,17 @@
 ---
 name: ark-agent-cli
 description: |
-  統一 Agent CLI 閘道 + 背景 sub-agent。one-shot：`agent_cli.py` 封裝 kiro / claude / gemini / codex 為同一介面
-  （輸出清理、超時、JSON 抽取、model spec `backend/model`）。sub-agent：`agent_spawn.py` 把長時間任務丟到
-  背景分段執行——每段 fresh context + checkpoint 檔接續，worker 管預算 / 心跳 / nudge / 續跑，主對話只
-  spawn 與收 result.md；`exec` 另跑零 LLM 的背景腳本並可附掛給 sub-agent 當管家觀察（aiqa 1 小時掛測案例）。
-  2.4：prompt 走 stdin / 檔（不吃 Windows argv 上限）、sub-agent 預設 read-only 權限、空轉熔斷、已交接即砍、用量統計、
-  孤兒自動收尾、watchdog、gc——長時間 UX / quick test 可無人值守跑且成本可見。
+  統一 Agent CLI 閘道（kiro／claude／gemini／codex 同一介面）＋背景 sub-agent（分段執行、checkpoint 續跑、預設唯讀、空轉熔斷、用量統計、終態回報），主對話不被長任務卡住。
   使用此 skill 當提及：呼叫 agent、問 claude / kiro / gemini / codex、統一 LLM 後端、多模型切換、從命令列測 agent，
   或「開子 agent」「subagent」「背景跑」「跑一小時」「無人值守」「長任務不卡對話」「先回使用者再背景跑」
   「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」「UX 測試要跑很久」「sub-agent 燒 token」「job 死掉沒報告」。
   不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-pipeline-recipes 的 llm-tools 頁）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.4.0"
+  version: "2.4.1"
   author: paddyyang
   schema_version: "1.2"
   status: active
-  updated: 2026-10-30
+  updated: 2026-10-29
   category: pipeline
   form: executor
   domain: general
@@ -29,6 +24,15 @@ metadata:
 ---
 
 # ark-agent-cli
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> 統一 Agent CLI 閘道 + 背景 sub-agent。one-shot：`agent_cli.py` 封裝 kiro / claude / gemini / codex 為同一介面
+> （輸出清理、超時、JSON 抽取、model spec `backend/model`）。sub-agent：`agent_spawn.py` 把長時間任務丟到
+> 背景分段執行——每段 fresh context + checkpoint 檔接續，worker 管預算 / 心跳 / nudge / 續跑，主對話只
+> spawn 與收 result.md；`exec` 另跑零 LLM 的背景腳本並可附掛給 sub-agent 當管家觀察（aiqa 1 小時掛測案例）。
+> 2.4：prompt 走 stdin / 檔（不吃 Windows argv 上限）、sub-agent 預設 read-only 權限、空轉熔斷、已交接即砍、用量統計、
+> 孤兒自動收尾、watchdog、gc——長時間 UX / quick test 可無人值守跑且成本可見。
+
 
 ```text
 one-shot：  agent_cli.py ──▶ kiro | claude | gemini | codex ──▶ envelope{text, json_data}

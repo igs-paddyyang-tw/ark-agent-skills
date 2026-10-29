@@ -45,7 +45,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-agent-role-profile` | 📝 指示 | 通用 | 以三檔位訪談（quick / standard / deep）引出 agent 的角色定位，產出結構化 `role-profile.yaml`（identity / stance / scope / … |
 | `ark-agent-team-design` | 📝 指示 | 通用 | 從業務目標設計 agent team 的編制：三檔位訪談（quick 套用編制樣板 / standard 6 題 / deep 交 ark-grill-me 拷問），產出 `team-spec.yam… |
 | `ark-code-spec-validator` | 📝 指示 | 通用 | 驗證 code 與 spec/design 文件的一致性，產出 Drift Report。 |
-| `ark-game-quicktest` | ⚙️ 執行 | 🎮 遊戲 | C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime， determin… |
+| `ark-game-quicktest` | ⚙️ 執行 | 🎮 遊戲 | Go 快測膠合層（製程 C2 段）：config-spec → odds.json 骨架 → lint → 跑 Go 快測 → rtp-report 與三向 verdict（只回報數值不下結論）；機率… |
 | `ark-grill-me` | 📝 指示 | 通用 | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
 | `ark-mcp-builder` | 📝 指示 | 通用 | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
 | `ark-prompt-spec-validator` | ⚙️ 執行 | 通用 | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
@@ -64,7 +64,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-agent-init` | 📝 指示 | 通用 | 產出完整的 agent workspace 配置（steering、agents、prompts、skills、settings、 knowledge、memory），根據使用者指定的角色自動生成。 |
 | `ark-agent-team-builder` | 📝 指示 | 通用 | 產出 ark_team_agent 套件消費端的多 agent 團隊 daemon 骨架 —— 裝 wheel + 產設定檔， 不手搭架構（team daemon / 多 runtime / Kanb… |
 | `ark-docker-deploy` | 📝 指示 | 通用 | 產出容器化部署配置（Dockerfile + docker-compose.yaml + .dockerignore + 部署腳本）， 支援 Python / Node / Go 專案自動偵測，mul… |
-| `ark-web-game` | ⚙️ 執行 | 🎮 遊戲 | 網頁遊戲 ⑦⑧ 工程 skill：把「單機試玩版」做成「Server 算結果、網路傳送、PixiJS Client 只演出」的網頁遊戲。 |
+| `ark-web-game` | ⚙️ 執行 | 🎮 遊戲 | 網頁遊戲 ⑦⑧ 工程：把單機試玩版做成「Server 算結果、網路傳送、PixiJS Client 只演出」—— 結果契約、網路協定與斷線續玩、⑧ 數學抽離成 Go Server、交付與灰度。 |
 | `ark-webapp-generator` | 📝 指示 | 通用 | 產出完整的「webbot」應用骨架 —— 一個 lifespan 一次啟動四層： FastAPI Server + Web Chat UI、BaseSkill 插件系統、WorkflowEngine … |
 
 ## ③ 管線元件 Pipeline
@@ -73,7 +73,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
-| `ark-agent-cli` | ⚙️ 執行 | 通用 | 統一 Agent CLI 閘道 + 背景 sub-agent。 |
+| `ark-agent-cli` | ⚙️ 執行 | 通用 | 統一 Agent CLI 閘道（kiro／claude／gemini／codex 同一介面）＋背景 sub-agent（分段執行、checkpoint 續跑、預設唯讀、空轉熔斷、用量統計、終態回報），… |
 | `ark-browser-tool` | 📝 指示 | 通用 | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
 | `ark-community-cli` | ⚙️ 執行 | 🎮 遊戲 | 社群訊息蒐集與分析的 CLI skill：以標準 SOP 從 Discord（自家伺服器，bot 唯讀）與 X／Twitter（日本市場， X API v2 pay-per-use）取得訊息，統一 s… |
 | `ark-db-query` | ⚙️ 執行 | 通用 | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
@@ -89,7 +89,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
 | `ark-frontend-design` | 📝 指示 | 通用 | 產出獨特、生產級品質的前端介面，具備高設計水準；並可先產出完整設計系統 （色彩、字型、元件、間距規範 + CSS 變數）再據此開發，確保一致性。 |
-| `ark-game-proto` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：製程 C 段「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。 |
+| `ark-game-proto` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor（製程 C 段演出驗證）：編 game-config、單檔試玩＋驗證台、與 Go 快測逐局對照；另附正式演出版型 St… |
 | `ark-html-dashboard` | 📝 指示 | 通用 | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
 | `ark-html-report` | 📝 指示 | 通用 | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
 
@@ -99,12 +99,12 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
-| `ark-book` | 📝 指示 | 通用 | 教學產出專用 skill：把一個主題（skill 用法、流程、工具、案例）寫成「一本書」，雙軌輸出—— Content 軌 Markdown 章節給 AI 當知識庫（chunk 自足、frontmat… |
+| `ark-book` | 📝 指示 | 通用 | 教學產出：把主題寫成「一本書」，雙軌輸出（Markdown 章節給 AI ingest、單檔 HTML 書給人讀），內建教學引擎與守門腳本，登錄到圖書館目錄。 |
 | `ark-daily-news` | 📝 指示 | 通用 | 產出科技日報：MD-first 雙軌流程。 |
 | `ark-docx-tool` | 📝 指示 | 通用 | 當使用者想要建立、讀取、編輯或操作 Word 文件（.docx 檔案）時使用此技能。 |
-| `ark-game-prob` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、 ark-game-quicktest（Go 快測）… |
-| `ark-game-report` | ⚙️ 執行 | 🎮 遊戲 | Slot 新機上線成效報告 executor：把一款新機的上線表現做成標準格式報告（D+7 上線初判 / D+14 檢查點 / D+30 穩態定調）， 並帶出分析思維與策略方向。 |
-| `ark-game-spec` | ⚙️ 執行 | 🎮 遊戲 | 遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill， 與 ark-game-prob（機率規格書）、ark-game-quicktest（Go… |
+| `ark-game-prob` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書（prob-spec）executor（製程 C 段）：機率表 xlsx 或快測結果 → prob-spec.md（每個數字可回溯來源）＋ HTML／Excel 報告與守門；與 ark-ga… |
+| `ark-game-report` | ⚙️ 執行 | 🎮 遊戲 | Slot 新機上線成效報告 executor（D+7／D+14／D+30）：取數 → 能力盤點 → 指標與歷史分位 → 洞察草稿 → 單檔 HTML，另含十階段結案報告；只算數字與草擬，結論由人確認。 |
+| `ark-game-spec` | ⚙️ 執行 | 🎮 遊戲 | 遊戲規格書 executor（製程 A+B 段）：競品影片分析 → 機制分析 → 規格草稿與決議 → dev-ready spec／config-spec → GDD 素材總覽與交付夾；入口 gs_r… |
 | `ark-marketing` | 📝 指示 | 🎮 遊戲 | 遊戲行銷與成長策略：ASO（應用商店優化）、CRO（轉換率優化）、 文案撰寫、社群行銷、UA（用戶獲取）、LiveOps 活動規劃。 |
 | `ark-md-report` | 📝 指示 | 通用 | 產出「給 AI 看」的結構化分析報告 Markdown（Content 軌），與 ark-html-report（View 軌）成對。 |
 | `ark-pdf-tool` | 📝 指示 | 通用 | 處理 PDF 檔案的所有操作。 |
@@ -120,11 +120,11 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
 | `ark-env-doctor` | ⚙️ 執行 | 通用 | 當使用者遇到開發環境問題時使用此技能。 |
-| `ark-github-cli` | ⚙️ 執行 | 通用 | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
+| `ark-github-cli` | ⚙️ 執行 | 通用 | git／GitHub 統一閘道：讀（同步平台文件到 knowledge/github/、程式碼與 issue／PR 搜尋）＋寫（開發收尾：memory 瘦身、索引同步、具名 commit／push，有… |
 | `ark-grafana-query` | ⚙️ 執行 | 通用 | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
-| `ark-mobile-adb` | ⚙️ 執行 | 🎮 遊戲 | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。 |
+| `ark-mobile-adb` | ⚙️ 執行 | 🎮 遊戲 | Android／BlueStacks 裝置操作（Python CLI 直接包 adb）＋遊戲 AI QA（aiqa：測試清單生成、執行、報告、按鍵精靈式 macro、playtest 試玩報告）。 |
 | `ark-skills-align` | ⚙️ 執行 | 通用 | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
-| `ark-weknora-cli` | ⚙️ 執行 | 通用 | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
+| `ark-weknora-cli` | ⚙️ 執行 | 通用 | WeKnora 企業 RAG 知識庫的 CLI 閘道：智能體／知識庫問答（含 citation）、業務口徑路由與 SQL 決策（永不執行 BigQuery，交 ark-db-query）、知識寫入與更… |
 
 ## 🗑️ 已移除（保留供遷移）
 

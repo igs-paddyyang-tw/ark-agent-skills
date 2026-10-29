@@ -1,11 +1,7 @@
 ---
 name: ark-web-game
 description: |
-  網頁遊戲 ⑦⑧ 工程 skill：把「單機試玩版」做成「Server 算結果、網路傳送、PixiJS Client 只演出」的網頁遊戲。
-  涵蓋五件事：單局結果契約（RoundOutcome → SpinResult、抽選點對照表 trace-map）、網路（Go 網路層 wire 協定、
-  GameService／WsService／HttpService、冪等、斷線續玩、協定版本協商）、⑧ 抽離（把 ⑦ game.js 的數學移植成
-  Go prob.Game，逐局對帳 0 不一致）、Go Server 範本、交付（資源分包、Release Manifest、雜湊驗證、灰度回滾、
-  啟動指標）。每次使用都讀 knowledge/webgame 的知識頁，做完把新事實回寫知識庫、把新做法回寫 references 與 scripts。
+  網頁遊戲 ⑦⑧ 工程：把單機試玩版做成「Server 算結果、網路傳送、PixiJS Client 只演出」—— 結果契約、網路協定與斷線續玩、⑧ 數學抽離成 Go Server、交付與灰度。
   使用此 skill 當提及：網頁遊戲、web game、H5 遊戲、game.js 抽離、抽成 Go Server、⑧ Game Server、單機換連線、
   local 換 network、WsService、wire 協定、WebSocket 協定、SpinResult 傳輸、抽選點對照表、trace-map、斷線續玩、
   pending／ack、協定版本、Release Manifest、資源分包、bundle、灰度發布、回滾、time_to_playable、正式 Client、
@@ -19,8 +15,8 @@ metadata:
   category: scaffolder
   form: executor
   domain: game
-  version: "0.11.1"
-  updated: 2026-10-27
+  version: "0.11.2"
+  updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -31,6 +27,14 @@ metadata:
 ---
 
 # ark-web-game — 網頁遊戲 ⑦⑧ 工程
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> 網頁遊戲 ⑦⑧ 工程 skill：把「單機試玩版」做成「Server 算結果、網路傳送、PixiJS Client 只演出」的網頁遊戲。
+> 涵蓋五件事：單局結果契約（RoundOutcome → SpinResult、抽選點對照表 trace-map）、網路（Go 網路層 wire 協定、
+> GameService／WsService／HttpService、冪等、斷線續玩、協定版本協商）、⑧ 抽離（把 ⑦ game.js 的數學移植成
+> Go prob.Game，逐局對帳 0 不一致）、Go Server 範本、交付（資源分包、Release Manifest、雜湊驗證、灰度回滾、
+> 啟動指標）。每次使用都讀 knowledge/webgame 的知識頁，做完把新事實回寫知識庫、把新做法回寫 references 與 scripts。
+
 
 一句話：**結果在 Server 算完，Client 只演出；數學只有一份來源，第二份實作靠逐局對帳證明。**
 
@@ -124,6 +128,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 0.11.2 | 2026-10-29 | description 減肥（盤點 O-2）：前段功能敘述壓成一句，觸發清單與「不適用於」逐字保留；原前段移到正文「功能總覽」 |
 | 0.11.1 | 2026-10-27 | 資安進開發流程（Paddy：下次開發要注意資安）：決策樹加「資安」分支（開新遊戲、⑧ 測試環境、上線前三個檢查點）、守門表加資安兩列；`tools/sec_check.py` 進 client-template（新平台一開就有），`--game` 不再限兩款、可加 `--client` |
 | 0.11.0 | 2026-10-27 | 上線前資安三件（2026-10-23 資安快測 prod 4 FAIL → 0）：範本預設安全——`wg_server_init` 產的 Server 映像預設 CMD 不帶 `-dev`（fail closed）、client-template vite 正式 build 不產 source map（`PGP_SOURCEMAP=1` 才產）；兩款加 `compose.release.yaml`、nginx `security-headers.conf`＋`server_tokens off`；delivery §6 補 dev／release 分開與 nginx add_header 繼承陷阱；測試 17 |
 | 0.10.0 | 2026-10-27 | 素材版控分層（Paddy 拍板，佈局契約 v3.8）：`wg_pack_assets` 來源順序 override → --set → dir → env → generator，成品 WebP 與同名音效直通（兩款重打包 releaseId 不變、位元組相同），`--regen`／`--export` 凍結美術成品；兩款美術成品進 `data/slot/<slug>/art/`、共用音效進 `shared/sfx/`；`Dockerfile.client` 建置內打包（不依賴 output）；client-template assets.yaml 改 L2 寫法；delivery §6、client-vertical-slice §6 更新；測試 16 |

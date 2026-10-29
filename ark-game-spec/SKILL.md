@@ -1,13 +1,7 @@
 ---
 name: ark-game-spec
 description: |
-  遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill，
-  與 ark-game-prob（機率規格書）、ark-game-quicktest（Go 快測）三件套。一個入口 gs_run --stage 串各 stage：
-  video（影片→抽幀→contact sheet→唯讀 evidence）→ detect／analyze（多模態機制分析→game-analysis.yaml＋kb-refs＋報告）
-  → draft／decide／dev（規格草稿 spec_lint → ark-grill-me 決議 → game-spec.v1 → dev-spec 六檔，config-spec value=null）→ restore（已上線設定檔→config-spec $ref）→ publish（①② 定版件 run→data/slot/<slug>）
-  → gdd（xlsx 或 spec run → gdd-pack → 素材總覽.html；--export 企劃樣板交付夾）
-  → atlas（圖文規格書入圖書館）→ bundle（分析＋規格書→單檔 HTML）→ pack（domain pack lint）。
-  另含純提詞「從構想產 GDD」創作模式。僅 analyze／gs_review --llm 用 LLM，其餘 deterministic。
+  遊戲規格書 executor（製程 A+B 段）：競品影片分析 → 機制分析 → 規格草稿與決議 → dev-ready spec／config-spec → GDD 素材總覽與交付夾；入口 gs_run --stage，與 ark-game-prob、ark-game-quicktest 三件套。
   使用此 skill 當提及：遊戲規格書、規格書、GDD、遊戲企劃、素材總覽、企劃樣板、交付夾、合成一份 HTML、gdd-pack、圖騰對照表、競品影片分析、拆解競品機制、
   抽幀、contact sheet、evidence、機制規格草稿、Open Questions、decisions.yaml、dev-ready spec、config-spec、state machine、
   qa checklist、圖文規格書、遊戲 atlas、遊戲圖鑑、domain pack、新增遊戲類型、answer key、POC benchmark。
@@ -20,7 +14,7 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "2.9.0"
+  version: "2.9.1"
   updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
@@ -36,6 +30,16 @@ metadata:
 ---
 
 # ark-game-spec 2.x — 從競品／構想到正式遊戲規格書，一個 skill、十個 stage
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> 遊戲規格書 executor：遊戲開發製程 A+B 段「從競品／構想到正式遊戲規格書」的唯一產出 skill，
+> 與 ark-game-prob（機率規格書）、ark-game-quicktest（Go 快測）三件套。一個入口 gs_run --stage 串各 stage：
+> video（影片→抽幀→contact sheet→唯讀 evidence）→ detect／analyze（多模態機制分析→game-analysis.yaml＋kb-refs＋報告）
+> → draft／decide／dev（規格草稿 spec_lint → ark-grill-me 決議 → game-spec.v1 → dev-spec 六檔，config-spec value=null）→ restore（已上線設定檔→config-spec $ref）→ publish（①② 定版件 run→data/slot/<slug>）
+> → gdd（xlsx 或 spec run → gdd-pack → 素材總覽.html；--export 企劃樣板交付夾）
+> → atlas（圖文規格書入圖書館）→ bundle（分析＋規格書→單檔 HTML）→ pack（domain pack lint）。
+> 另含純提詞「從構想產 GDD」創作模式。僅 analyze／gs_review --llm 用 LLM，其餘 deterministic。
+
 
 一句話：**原本的影片理解、機制分析、1.x 規格、企劃 GDD、圖文 atlas 五個 skill，加上 domain pack 註冊庫的資料，
 合成一個以「交付物」命名的 skill**——企劃說「幫我出規格書」，agent 跑的是 `gs_run --stage …`，不需要知道底下是哪一支引擎。

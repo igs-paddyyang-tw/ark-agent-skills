@@ -1,21 +1,15 @@
 ---
 name: ark-book
 description: |
-  教學產出專用 skill：把一個主題（skill 用法、流程、工具、案例）寫成「一本書」，雙軌輸出——
-  Content 軌 Markdown 章節給 AI 當知識庫（chunk 自足、frontmatter 契約、受控 tags，可被 ark-wiki-engine ingest），
-  View 軌單檔 HTML 書給人閱讀（目錄、章節導覽、閱讀進度；七種可擴充風格 library/felt/neon/shonen/manga/console/storybook，與 ark-html-report 同一套 token 契約）。
-  每本書會登錄到 library/catalog.json，未來由圖書館網站以「一本一本的書」上架。
-  內建教學引擎（蒸餾自 hung-yi-lee-skill：先給問題再給方法、直覺先於形式、每章有 punchline、常見誤解、動手做、三句回顧）
-  與 deterministic 守門腳本：book_lint.py（契約與教學結構驗證）、book_build.py（MD→HTML 書 + 雙軌戳記）、
-  book_register.py（圖書館目錄登錄）。
+  教學產出：把主題寫成「一本書」，雙軌輸出（Markdown 章節給 AI ingest、單檔 HTML 書給人讀），內建教學引擎與守門腳本，登錄到圖書館目錄。
   使用此 skill 當使用者要求「寫一本書」「做教材」「教學文件」「新人手冊」「onboarding 教程」「把這個 skill 的用法寫成教學」
   「整理成一本可以放進圖書館的書」「教學網站」「給成員學的知識庫」，或任何要同時給 AI 與人讀的教學內容。
   分析報告（時點快照、有 verdict）請用 ark-md-report；單頁報告網頁請用 ark-html-report；本 skill 管「會被反覆閱讀與教學」的長期內容。
 metadata:
   author: paddyyang
   schema_version: "1.2"
-  version: "1.1.2"
-  updated: 2026-10-20
+  version: "1.1.3"
+  updated: 2026-10-29
   category: document
   form: instruction
   domain: general
@@ -31,6 +25,16 @@ metadata:
 ---
 
 # ark-book
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> 教學產出專用 skill：把一個主題（skill 用法、流程、工具、案例）寫成「一本書」，雙軌輸出——
+> Content 軌 Markdown 章節給 AI 當知識庫（chunk 自足、frontmatter 契約、受控 tags，可被 ark-wiki-engine ingest），
+> View 軌單檔 HTML 書給人閱讀（目錄、章節導覽、閱讀進度；七種可擴充風格 library/felt/neon/shonen/manga/console/storybook，與 ark-html-report 同一套 token 契約）。
+> 每本書會登錄到 library/catalog.json，未來由圖書館網站以「一本一本的書」上架。
+> 內建教學引擎（蒸餾自 hung-yi-lee-skill：先給問題再給方法、直覺先於形式、每章有 punchline、常見誤解、動手做、三句回顧）
+> 與 deterministic 守門腳本：book_lint.py（契約與教學結構驗證）、book_build.py（MD→HTML 書 + 雙軌戳記）、
+> book_register.py（圖書館目錄登錄）。
+
 
 把一個教學主題寫成一本書。核心原則：
 

@@ -1,12 +1,7 @@
 ---
 name: ark-game-quicktest
 description: |
-  C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime，
-  deterministic 做三件事——① qt_config：config-spec.yaml（P-002，value 一律 null）+ gdd-pack 符號賠率 + decisions → 範本契約的
-  odds_<ver>.json 骨架（結構定案、機率參數留 null，非 null 欄位必附來源）；② qt_lint：有 null 不准跑、無來源不准填、符號/輪帶/權重自洽；
-  ③ qt_run / qt_report：實例化範本、patch 常數、go run、把 report_<ver>.txt 解析成 rtp-report.json 並編成 ark-md-report（type: data），
-  verdict 走 P-003 三向（RTP ±容許、觸發率對照 P-005 體感區間、config-spec 無效值阻斷）。只回報數值不下結論。
-  v2.0：機率規格書（prob-spec / 參數表 / 隱性規則）職責已移至 ark-game-prob，`--probspec` 轉呼叫同層 ark-game-prob。
+  Go 快測膠合層（製程 C2 段）：config-spec → odds.json 骨架 → lint → 跑 Go 快測 → rtp-report 與三向 verdict（只回報數值不下結論）；機率規格書已移至 ark-game-prob。
   使用此 skill 當使用者或 agent 提及：快測、RTP 模擬、Monte Carlo、odds.json、輪帶權重、觸發率驗證、三向守門、
   spec_lint 第二向、快測報告、report_1.0.0.txt、config-spec 轉快測設定、跑 Go 快測、RTP 誤差、體感區間。
   不適用於：機率規格書與 prob-spec（→ ark-game-prob）、設計機率架構與 K 卡取捨（→ ark-game-prob）、
@@ -19,8 +14,8 @@ metadata:
   category: process
   form: executor
   domain: game
-  version: "2.2.1"
-  updated: 2026-10-27
+  version: "2.2.2"
+  updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }
@@ -32,6 +27,15 @@ metadata:
 ---
 
 # ark-game-quicktest — 規格 ↔ 快測範本 ↔ 驗證報告
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> C2 段「Go 快測」的膠合層：以機率工程師的 Go 快測範本（data/references/prob-workflow/quicktest-template）為 runtime，
+> deterministic 做三件事——① qt_config：config-spec.yaml（P-002，value 一律 null）+ gdd-pack 符號賠率 + decisions → 範本契約的
+> odds_<ver>.json 骨架（結構定案、機率參數留 null，非 null 欄位必附來源）；② qt_lint：有 null 不准跑、無來源不准填、符號/輪帶/權重自洽；
+> ③ qt_run / qt_report：實例化範本、patch 常數、go run、把 report_<ver>.txt 解析成 rtp-report.json 並編成 ark-md-report（type: data），
+> verdict 走 P-003 三向（RTP ±容許、觸發率對照 P-005 體感區間、config-spec 無效值阻斷）。只回報數值不下結論。
+> v2.0：機率規格書（prob-spec / 參數表 / 隱性規則）職責已移至 ark-game-prob，`--probspec` 轉呼叫同層 ark-game-prob。
+
 
 一句話：**範本是引擎，本 skill 保證兩頭對得回規格**——進去的 config 每個非 null 值都有決議來源，出來的報告每個數字都原樣可追，
 中間的玩法邏輯（`game_process.go`）由人改。RTP 是模擬結果不是輸入（P-002 / P-003）。

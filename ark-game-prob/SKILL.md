@@ -1,12 +1,7 @@
 ---
 name: ark-game-prob
 description: |
-  機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、
-  ark-game-quicktest（Go 快測）三件套。deterministic：① ps_extract 把機率人員的公版「機率表 xlsx」轉成 prob-data.json（每個數字附 分頁!儲存格 來源）；
-  ② ps_probspec 組公版六段 Content 軌 prob-spec.md + meta（xlsx 模式＝已上線還原、qt 模式＝quicktest 的 odds + rtp-report；人工區重產保留）；
-  ③ ps_html 產 View 軌 prob-spec.html（1.4 md-first：只讀 prob-spec.md 的契約表格 → 總覽 KPI、RTP 對 golden／目標、驗收守門、符號命中熱度、
-  輪帶組理論 vs 實測、參數表色階、流程圖、輪帶帶面；xlsx／qt／手寫 md 三種模式同一套 View，沒有 xlsx 也能出完整報告）；
-  ④ ps_lint 守門（數字不可回溯就擋；PS-HTML-EMPTY 空殼守門）；⑤ ps_diff 規格 xlsx ⇄ 快測設定檔逐鍵對照；⑥ ps_xlsx 第三 View 軌 Excel（機率表／審核簿／檢核表）。
+  機率規格書（prob-spec）executor（製程 C 段）：機率表 xlsx 或快測結果 → prob-spec.md（每個數字可回溯來源）＋ HTML／Excel 報告與守門；與 ark-game-spec、ark-game-quicktest 三件套。
   使用此 skill 當提及：機率規格書、prob-spec、機率表 xlsx 轉網頁／md、md 轉機率規格書網頁、手寫機率規格書、沒有 xlsx 的機率規格書、
   參數表、隱性規則、規格書公版六段、快測結果回填規格書、RTP 對 golden、規格和設定檔對不對、ps_lint、config-diff、K 卡對應表、
   機率表 Excel、審核簿、版本對照表、偏差檢核表、檢核表。
@@ -19,8 +14,8 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "1.7.0"
-  updated: 2026-10-27
+  version: "1.7.1"
+  updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -34,6 +29,15 @@ metadata:
 ---
 
 # ark-game-prob — 機率規格書：xlsx → md → html ⇄ 設定檔，md 是唯一的 View 來源
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> 機率規格書（prob-spec）executor：遊戲開發製程 C 段「機率」的唯一產出 skill，與 ark-game-spec（遊戲規格書）、
+> ark-game-quicktest（Go 快測）三件套。deterministic：① ps_extract 把機率人員的公版「機率表 xlsx」轉成 prob-data.json（每個數字附 分頁!儲存格 來源）；
+> ② ps_probspec 組公版六段 Content 軌 prob-spec.md + meta（xlsx 模式＝已上線還原、qt 模式＝quicktest 的 odds + rtp-report；人工區重產保留）；
+> ③ ps_html 產 View 軌 prob-spec.html（1.4 md-first：只讀 prob-spec.md 的契約表格 → 總覽 KPI、RTP 對 golden／目標、驗收守門、符號命中熱度、
+> 輪帶組理論 vs 實測、參數表色階、流程圖、輪帶帶面；xlsx／qt／手寫 md 三種模式同一套 View，沒有 xlsx 也能出完整報告）；
+> ④ ps_lint 守門（數字不可回溯就擋；PS-HTML-EMPTY 空殼守門）；⑤ ps_diff 規格 xlsx ⇄ 快測設定檔逐鍵對照；⑥ ps_xlsx 第三 View 軌 Excel（機率表／審核簿／檢核表）。
+
 
 一句話：**機率表是機率人員的工作面，規格書是三方的對話面，設定檔是引擎的輸入面**——本 skill 讓三者同一份數字、
 互相可驗（sha 戳記 + 逐鍵 diff），人只寫「簡述、設計目的、手法對應」這些判斷，不搬數字。

@@ -35,7 +35,7 @@ metrics:
   - { name: 指標定義入 wiki, target: "100%" }
   - { name: 查詢先小樣本驗證, target: "100%" }
 knowledge_domains: [指標定義, 資料表欄位語意, 查詢範本, 異常案例]
-skills: [ark-db-query, ark-pipeline-recipes, ark-retention-analysis]
+skills: [ark-db-query, ark-pipeline-recipes]   # 遊戲專案另加 ark-retention-analysis（domain: game，AL-033）
 examples:
   - kind: typical
     situation: 「上週留存怎麼樣」

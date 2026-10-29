@@ -43,7 +43,7 @@ def build_skills_matrix(spec: dict) -> dict:
         "upstream": {
             "repo": "https://github.com/igs-paddyyang-tw/ark-agent-skills.git",
             "release": "skills-2026.09-r2",   # 對齊列車;實際以最新為準
-            "manifest_url": "https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/release/manifest.json",
+            "manifest_url": "https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/ark-skills-align/release/manifest.json",
         },
         "tiers": {
             "base": {"policy": "same-version"},

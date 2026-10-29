@@ -1,23 +1,17 @@
 ---
 name: ark-github-cli
 description: |
-  git / GitHub 統一閘道，讀寫兩側：
-  【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取——
-  知識檢索順序（對齊 knowledge-management-spec 權威、信任度遞減、同分排序）：
-  private → 產品庫(如 hoyeah) → **github** → shared；weknora 是外部 RAG 不進 search_order。
-  【寫｜收尾提交】任何 git 寫入都走「開發收尾」：① 標記完成 ② memory 整理瘦身（daily ≤150 字、
-  memory.md ≤2000 tokens 歸檔）③ 同步 AGENTS.md / index.md ④ 具名 add → commit → pull --rebase → push。
-  commit 前有 deterministic 閘門：daily 未追加、memory 超限、索引漂移 → 不 commit。
+  git／GitHub 統一閘道：讀（同步平台文件到 knowledge/github/、程式碼與 issue／PR 搜尋）＋寫（開發收尾：memory 瘦身、索引同步、具名 commit／push，有 deterministic 閘門）。
   使用此 Skill 當使用者說「查平台規格」「套件文件怎麼寫」「同步 github 文件」「看 repo docs」
   「這個 issue 說什麼」，或「收尾」「收工」「wrap up」「提交今天的改動」「整理 memory」「同步 readme」
   「push」——凡是要碰 git 的場景。
   不適用於：知識蒸餾入 wiki 請用 ark-wiki-engine（本 skill 不寫 wiki/）；產 changelog 請用
   ark-release-notes；自家業務數字口徑查詢請用 ark-db-query。
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   schema_version: "1.2"
   status: active
-  updated: 2026-10-27
+  updated: 2026-10-29
   category: ops
   form: executor
   domain: general
@@ -30,6 +24,16 @@ metadata:
 ---
 
 # ark-github-cli — git 讀寫閘道（L2 知識 + 收尾提交）
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> git / GitHub 統一閘道，讀寫兩側：
+> 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取——
+> 知識檢索順序（對齊 knowledge-management-spec 權威、信任度遞減、同分排序）：
+> private → 產品庫(如 hoyeah) → **github** → shared；weknora 是外部 RAG 不進 search_order。
+> 【寫｜收尾提交】任何 git 寫入都走「開發收尾」：① 標記完成 ② memory 整理瘦身（daily ≤150 字、
+> memory.md ≤2000 tokens 歸檔）③ 同步 AGENTS.md / index.md ④ 具名 add → commit → pull --rebase → push。
+> commit 前有 deterministic 閘門：daily 未追加、memory 超限、索引漂移 → 不 commit。
+
 
 一個原則貫穿兩側：**呼叫 git 就是在做收尾**。讀側把平台權威文件拉到本地供 L2 檢索；
 寫側任何 commit 都必須先把工作狀態落盤（todo、memory、規範），閘門是腳本、判斷在 LLM。

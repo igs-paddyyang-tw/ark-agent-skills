@@ -28,8 +28,8 @@ metadata:
     - { name: ark-agent-role-profile, version: "^1.0.0" }
     - { name: ark-grill-me, version: "^1.0.0" }
   author: paddyyang
-  version: "1.2.2"
-  updated: 2026-10-20
+  version: "1.3.0"
+  updated: 2026-10-29
 ---
 
 # ark-agent-team-design

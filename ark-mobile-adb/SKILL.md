@@ -1,12 +1,7 @@
 ---
 name: ark-mobile-adb
 description: |
-  Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。裝置層：Python CLI 直接包 adb（不需 MCP / Node）：
-  doctor / connect / use / screenshot / thumb / crop / wait-stable / wait-pixel / locate / ocr / logcat / tap / batch / net，--json 回單一 envelope，adb offline 自動重連；Unity 畫面只走座標 + 模板 / 找色。aiqa：`aiqa_testgen` 把公司測試表 xlsx /
-  規格 / qa-checklist 轉成可執行 test-checklist（原子斷言 + oracle + Tier）並用模板展開；`aiqa_testgen refine` 讀 review 欄的人工審查意見套修正產下一版（AI 產→人工檢查→AI 修正迴圈）；`aiqa_run` 依 gamepack 在 BlueStacks 或
-  fake 裝置執行，AI 只讀數與答是非題、腳本判定；`aiqa_report` 產 test-report.md / xlsx / Mantis 草稿；`aiqa_macro`
-  record（錄人手點擊）/ replay（零 LLM、checkpoint）/ lint / explain（SOP）。playtest：`aiqa_playtest` 讀清單 md → 基本測試 + 自我探索（E1–E16）→
-  單檔 HTML 報告 + 下一輪回歸清單。
+  Android／BlueStacks 裝置操作（Python CLI 直接包 adb）＋遊戲 AI QA（aiqa：測試清單生成、執行、報告、按鍵精靈式 macro、playtest 試玩報告）。
   使用此 skill 當提及：BlueStacks / 模擬器 / Android 裝置操作、adb 連不上、遊戲畫面自動化、aiqa、AI QA、遊戲測試自動化、
   測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、gamepack 解耦 / 外部 pack 目錄 / --pack-dir、trigger / GM harness、掛測、穩定讀數 / count-up 讀數 / 資產對帳 / 連轉核帳 / ledger / economy batch / 逐手對帳 / 外部加幣誤判 / 核帳驅動建檔 / autobox / machine verify promote、測項人工回饋 / 審查意見 / refine 下一版、
   按鍵精靈 / 座標腳本 / 錄製重放 / macro、adb 太慢、座標點空、縮圖座標、找色、試玩報告、AI 試玩、新手體驗、
@@ -19,7 +14,7 @@ metadata:
   category: ops
   form: executor
   domain: game
-  version: "2.5.1"
+  version: "2.5.2"
   updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
@@ -31,6 +26,15 @@ metadata:
 ---
 
 # ark-mobile-adb — 裝置層 + aiqa + playtest
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。裝置層：Python CLI 直接包 adb（不需 MCP / Node）：
+> doctor / connect / use / screenshot / thumb / crop / wait-stable / wait-pixel / locate / ocr / logcat / tap / batch / net，--json 回單一 envelope，adb offline 自動重連；Unity 畫面只走座標 + 模板 / 找色。aiqa：`aiqa_testgen` 把公司測試表 xlsx /
+> 規格 / qa-checklist 轉成可執行 test-checklist（原子斷言 + oracle + Tier）並用模板展開；`aiqa_testgen refine` 讀 review 欄的人工審查意見套修正產下一版（AI 產→人工檢查→AI 修正迴圈）；`aiqa_run` 依 gamepack 在 BlueStacks 或
+> fake 裝置執行，AI 只讀數與答是非題、腳本判定；`aiqa_report` 產 test-report.md / xlsx / Mantis 草稿；`aiqa_macro`
+> record（錄人手點擊）/ replay（零 LLM、checkpoint）/ lint / explain（SOP）。playtest：`aiqa_playtest` 讀清單 md → 基本測試 + 自我探索（E1–E16）→
+> 單檔 HTML 報告 + 下一輪回歸清單。
+
 
 ```text
 規格 / 公司測試表 ──aiqa_testgen──▶ test-checklist（json + md）──aiqa_run──▶ run 目錄（截圖、observations、verdict）──aiqa_report──▶ test-report.md / xlsx / Mantis

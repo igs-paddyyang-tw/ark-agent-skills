@@ -1,22 +1,14 @@
 ---
 name: ark-weknora-cli
 description: |
-  WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行；
-  落地「WeKnora 管口徑、ark-db-query 管執行」
-  混合架構（設計文件 docs/reqs/2026-08-31-weknora-integration-design.md）。
-  問答分兩條清楚路徑：weknora_agent_chat.py（走 /agent-chat，帶 agent-id，agent 自找 KB，適合多步推理）、
-  weknora_knowledge_chat.py（走 /knowledge-chat，帶 kb-id 純 RAG，查自建知識庫用這支，含 citation）。
-  口徑路由：route_query.py（三層 escalation R-1/R-2/R-3）、weknora_sql_query.py（sql-only/direct + --endpoint
-  agent|knowledge + read-only SQL 守門 + citation 信任檢查）、metric_registry.py（口徑快取 seedling→mature）。
-  知識寫入：weknora_ingest.py（建 KB、新增 manual/file/url、更新、reparse、輪詢、驗證檢索）。
-  本 skill 永不執行 BigQuery，口徑查詢輸出決策 JSON 交由 ark-db-query 執行。
+  WeKnora 企業 RAG 知識庫的 CLI 閘道：智能體／知識庫問答（含 citation）、業務口徑路由與 SQL 決策（永不執行 BigQuery，交 ark-db-query）、知識寫入與更新。
   使用此 skill 當使用者要求「查 WeKnora」「問知識庫」「營收 / KPI / 儲值 / DAU 是多少」
   「查口徑」「這個指標怎麼算」「WeKnora sql-only」「路由這個查詢」「對數驗證」，
   或需要「把資料放上 WeKnora」「新增知識」「更新知識」「更新口徑」「上傳文件到知識庫」
   「建知識庫」「問智能體」「查知識庫」，或任何需要以業務口徑查數據 / 維護知識庫內容的場景。
   不適用於：SQL／BigQuery 等結構化查詢請用 ark-db-query；本機 wiki 頁面請用 ark-wiki-engine。
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   author: paddyyang
   schema_version: "1.2"
   category: ops
@@ -32,6 +24,18 @@ metadata:
 ---
 
 # ark-weknora-cli
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行；
+> 落地「WeKnora 管口徑、ark-db-query 管執行」
+> 混合架構（設計文件 docs/reqs/2026-08-31-weknora-integration-design.md）。
+> 問答分兩條清楚路徑：weknora_agent_chat.py（走 /agent-chat，帶 agent-id，agent 自找 KB，適合多步推理）、
+> weknora_knowledge_chat.py（走 /knowledge-chat，帶 kb-id 純 RAG，查自建知識庫用這支，含 citation）。
+> 口徑路由：route_query.py（三層 escalation R-1/R-2/R-3）、weknora_sql_query.py（sql-only/direct + --endpoint
+> agent|knowledge + read-only SQL 守門 + citation 信任檢查）、metric_registry.py（口徑快取 seedling→mature）。
+> 知識寫入：weknora_ingest.py（建 KB、新增 manual/file/url、更新、reparse、輪詢、驗證檢索）。
+> 本 skill 永不執行 BigQuery，口徑查詢輸出決策 JSON 交由 ark-db-query 執行。
+
 
 WeKnora CLI 閘道 skill（供 ark agent bash 呼叫）：**查詢（chat）+ 寫入（ingest）+ 口徑路由三合一**。
 問答分 agent-chat（智能體，帶 agent-id）與 knowledge-chat（知識庫純 RAG，帶 kb-id）兩條路徑，

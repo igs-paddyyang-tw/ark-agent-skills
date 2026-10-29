@@ -12,6 +12,7 @@
     "schema_version": { "const": 1 },
     "role_id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 40 },
     "base_role": { "type": "string", "pattern": "^([a-z0-9]+(-[a-z0-9]+)*|custom)$" },
+    "domain": { "type": "string", "enum": ["general", "game"], "description": "角色所屬領域（預設 general）。列了 domain: game 的 skill 就要宣告 game —— audit AL-033" },
 
     "identity": {
       "type": "object",

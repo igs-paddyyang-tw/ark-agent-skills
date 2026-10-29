@@ -1,6 +1,7 @@
 schema_version: 1
 role_id: game-designer
 base_role: game-designer
+domain: game            # 列了 domain: game 的 skill（AL-033）
 identity:
   name: null
   emoji: 🎲

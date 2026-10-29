@@ -1,13 +1,7 @@
 ---
 name: ark-game-proto
 description: |
-  機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：製程 C 段「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。
-  ① proto_build 把 prob-spec.md 經玩法 adapter 編成 game-config.json（參數帶表編號來源、規格缺口 gaps、§2 驗證目標）；
-  ② 單檔 index.html：轉輪／連線／FG 或 Bonus 演出＋驗證台（L1 精算、L2 蒙地卡羅、缺口回驗、Go 對照、單局軌跡、seed 重現、情境搜尋）；
-  ③ --go-config 規格書 ⇄ Go 快測設定檔逐鍵對照；④ go_parity 以 Go math/rand 與 Go 快測引擎同 seed 逐局對照。
-  內建玩法模型：collect-mult、coin-lock、house-collect、huff-house、frame-chest。
-  另附「正式演出版型」Stage（scripts/stage）：game.js（數學零修改）→ PixiJS 8 演出＋HUD，結果只經 GameService 取得
-  （Local／Http／Ws／Replay），SpinResult JSON Schema、整數金額；引擎回放試玩（⑦-lite）。
+  機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor（製程 C 段演出驗證）：編 game-config、單檔試玩＋驗證台、與 Go 快測逐局對照；另附正式演出版型 Stage。
   使用此 skill 當提及：機率雛型、slot 雛型、H5 雛型、PixiJS slot、演出驗證機率、規格書做成可玩版本、試玩機率、
   規格缺口、規格書對 Go 引擎、逐局對照、seed 重現、FG 演出、Bonus 演出、驗證台、正式演出版型、Stage、試玩改 PixiJS、GameService、SpinResult、引擎回放試玩。
   不適用於：寫機率規格書（→ ark-game-prob）、Go 快測／三向 verdict（→ ark-game-quicktest）、
@@ -19,8 +13,8 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "1.8.0"
-  updated: 2026-10-27
+  version: "1.8.1"
+  updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }
@@ -33,6 +27,16 @@ metadata:
 ---
 
 # ark-game-proto — 規格書直接編成可玩雛型，同一顆引擎演出給人看、精算給機器驗
+
+> **功能總覽**（原 description 前段，2026-10-29 移入正文）：
+> 機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor：製程 C 段「演出驗證」，接在 ark-game-prob（prob-spec.md）之後。
+> ① proto_build 把 prob-spec.md 經玩法 adapter 編成 game-config.json（參數帶表編號來源、規格缺口 gaps、§2 驗證目標）；
+> ② 單檔 index.html：轉輪／連線／FG 或 Bonus 演出＋驗證台（L1 精算、L2 蒙地卡羅、缺口回驗、Go 對照、單局軌跡、seed 重現、情境搜尋）；
+> ③ --go-config 規格書 ⇄ Go 快測設定檔逐鍵對照；④ go_parity 以 Go math/rand 與 Go 快測引擎同 seed 逐局對照。
+> 內建玩法模型：collect-mult、coin-lock、house-collect、huff-house、frame-chest。
+> 另附「正式演出版型」Stage（scripts/stage）：game.js（數學零修改）→ PixiJS 8 演出＋HUD，結果只經 GameService 取得
+> （Local／Http／Ws／Replay），SpinResult JSON Schema、整數金額；引擎回放試玩（⑦-lite）。
+
 
 一句話：**雛型是「第二個實作者」**——只讀 prob-spec.md 重做一次引擎；算得回 §2 快測數字、和 Go 引擎同 seed 逐局一致，
 才代表規格書寫得夠完整；算不回來的地方就是規格缺口（gaps），雛型把它標出來、推定、回驗、附 Go 證據。
