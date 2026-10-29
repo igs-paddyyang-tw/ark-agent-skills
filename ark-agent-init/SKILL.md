@@ -23,8 +23,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.5.0"
-  updated: 2026-10-27
+  version: "2.6.0"
+  updated: 2026-10-29
 ---
 
 # ark-agent-init
@@ -208,9 +208,9 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 | AI CLI | 預設入口檔（repo root，除非另註） | 載入時機 | 可當 agent-cli backend？ |
 |--------|-----------------------------------|----------|:---:|
 | **Kiro CLI** | `.kiro/steering/*.md`（`AGENTS.md`/`SOUL.md`/`MEMORY.md`…，依 `inclusion` 決定） | 每次對話自動載入 always 檔 | ✅ `kiro` |
-| **Claude Code** | `CLAUDE.md`（原生讀取，session 起始的 ground truth） | 每次 session 開頭 | ✅ `claude` |
-| **Codex CLI**（OpenAI） | `AGENTS.md` | 每次 session 開頭 | ✅ `codex` |
-| **Gemini CLI** | `GEMINI.md` | 每次 session 開頭 | ✅ `gemini` |
+| **Claude Code** | `CLAUDE.md`（不原生讀 AGENTS.md；支援 `@路徑` 匯入，最多 4 層、相對於匯入它的檔案） | 每次 session 開頭 | ✅ `claude` |
+| **Codex CLI**（OpenAI） | `AGENTS.md`（專案根往下每層一份：`AGENTS.override.md` → `AGENTS.md` → fallback 檔名；**無匯入語法**；合計上限 32 KiB） | 每次 session 開頭 | ✅ `codex` |
+| **Gemini CLI** | `GEMINI.md`（可用 `context.fileName` 改讀 `AGENTS.md`） | 每次 session 開頭 | ✅ `gemini` |
 | **Cursor** | `.cursor/rules/`（或舊版 `.cursorrules`） | 依規則檔 | ❌ IDE 外掛 |
 | **GitHub Copilot** | `.github/copilot-instructions.md` | 依設定 | ❌ IDE 外掛 |
 
@@ -223,33 +223,25 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 > 兩者是「配置 → 執行」的接力：init 產設定檔、agent-cli 呼叫讀了那些設定檔的 CLI。
 
 
-### SSOT 連結策略（建議預設）
+### SSOT 策略（2.6.0：匯入取代 symlink）
 
-以 **`AGENTS.md`（repo root）為單一真相來源**，其他 CLI 的入口檔連結過去：
+以 **`AGENTS.md`（workspace 根）為 Ark Agent 架構與規範的單一來源**，各工具這樣讀到它：
+
+| 工具 | 做法 | 為什麼 |
+|---|---|---|
+| **Codex** | 直接讀 `AGENTS.md`，**不建 `CODEX.md`** | Codex 原生讀 AGENTS.md；同層有 AGENTS.md 時 fallback 檔名讀不到 → CODEX.md 無效。無匯入語法 → AGENTS.md 要**自成一體**（架構說明直接寫進去），渲染後 < 32 KiB（build_kiro 測試守） |
+| **Claude Code** | `CLAUDE.md` 第一行 `@AGENTS.md`（再匯入 BRAIN／MEMORY），下方只寫 Claude 專屬；範本 `assets/CLAUDE.md` | 官方建議的寫法；比 symlink 好：Windows 不需特權、Claude 專屬內容有地方放。🔴 不在 CLAUDE.md 重寫 AGENTS 規則（實例：nana-bot 的 CLAUDE.md 摘要與 AGENTS.md 漂移成互相矛盾） |
+| **Kiro** | `.kiro/steering/` 自動載入；需要時放**指回根的 symlink** `.kiro/steering/AGENTS.md → ../../AGENTS.md` | 實體複本會兩份並存漂移（`audit_agents_layout.py` 認得指回根的 symlink） |
+| **Gemini 等** | 設定 `context.fileName` 改讀 `AGENTS.md` | — |
 
 ```bash
-# 1) SSOT：repo root 的 AGENTS.md（Codex / Cursor / Gemini 直接讀）
-#    內容 = 通用規範（steering/ 不放複本；要給 Kiro 另一個入口只能用下面 3) 的 symlink）
-
-# 2) Claude Code：symlink CLAUDE.md → AGENTS.md（一份內容，兩個入口）
-ln -s AGENTS.md CLAUDE.md
-
-# 3) Kiro CLI（選配）：.kiro/steering/AGENTS.md 只允許 symlink 回 root —— 實體複本會兩份並存漂移
-#    （audit_agents_layout.py 認得指回根的 symlink，不會誤判）
-ln -sf ../../AGENTS.md .kiro/steering/AGENTS.md   # 視專案結構決定方向
+# build_kiro 已產：專案根 AGENTS.md（assets/AGENTS.md 渲染）＋ CLAUDE.md（assets/CLAUDE.md）—— 已存在不覆寫
+# 選配：讓 Kiro 透過 steering 也讀到同一份
+ln -sf ../../AGENTS.md .kiro/steering/AGENTS.md
 ```
 
-**連結 vs 複製的取捨：**
-
-| 方式 | 優點 | 風險 |
-|------|------|------|
-| **symlink**（建議） | 改一處全部生效，永不漂移 | 跨 OS（Windows）symlink 支援差；有些 CI checkout 不還原 symlink |
-| **複製 + 守門** | 純檔案、跨平台穩 | 會漂移 → 需一支腳本／CI 檢查各入口檔內容一致 |
-| 各自維護 | — | 🔴 **禁止** —— 三份必然漂移，這正是本 skill 要解決的問題 |
-
-> 🔴 **判準（來自實例踩坑）**：一份事實寫多處時，其中一處會被忘記更新。
-> 用 symlink 讓「多入口」在檔案系統層就是「一份內容」；若環境不支援 symlink，
-> 就必須有守門腳本比對各入口檔的一致性 —— **不能靠人記得同步**。
+> 🔴 **判準**：一份事實寫多處，其中一處一定會被忘記更新。入口檔只做「指向同一份」，
+> 不做「各自摘要」；工具專屬差異集中在 AGENTS.md「各工具入口」節與 CLAUDE.md 專屬段。
 
 ### Kiro 的分層對應（本 skill 的特殊性）
 
@@ -398,89 +390,21 @@ agent 產出（報告等）放 `artifacts/`（底下可分 `reports/`），**不
 | hooks | 選填 | agentSpawn/postToolUse 等 |
 | welcomeMessage | 選填 | 切換到此 agent 時的提示 |
 
-### 2. AGENTS.md（全域行為準則，放 workspace 根）
+### 2. AGENTS.md（Ark Agent 架構＋共用規範的單一來源，放 workspace 根）
 
-定義「怎麼做事」— 放 workspace 根（見頂部單一權威），Kiro 自動載入（不需在 resources 引用）。
+**範本：`assets/AGENTS.md`**（2.6.0 起 build_kiro 在專案根產出，已存在不覆寫；子 agent 工作目錄根放逐字複本）。
+內容工具中立、自成一體（Codex 不支援匯入）：
 
-```markdown
-# {TeamName} 共用規範
+| 節 | 內容 |
+|---|---|
+| 這個 workspace 是什麼 | 型（team／bot）、入口 agent、編制（以 team.yaml／agents.yaml 為準）、IDE 工具共用目錄與交接方式 |
+| Ark Agent 五層架構 | 五層表（位置／誰寫／權限）＋技能 vs 腳本＋紅線；完整定義連 `references/five-layer-architecture.md` |
+| 開場與收尾 | 開場讀 BRAIN／MEMORY／最新 daily；收尾寫 daily |
+| 回覆、開發流程、記憶、知識庫、Git、反證、禁止事項 | 共用規範（工具中立寫法） |
+| 各工具入口 | Kiro／Claude Code／Codex／其他各怎麼讀到本檔；工具專屬寫法（Kiro 的 `fs_write`、`/context add`）只放這裡 |
 
-> 所有回覆使用**繁體中文**。事件寫 `memory/daily/`，判準級里程碑才進 `MEMORY.md`（見下方「記憶怎麼用」）。
-> All tools are trusted.
-
-## ⚠️ 最重要規則
-
-**收到任何訊息後，必須用 `reply(text)` 回覆使用者。這是唯一會送到 Telegram 的工具。**
-
-## 工具使用規則
-- fs_write 必填：command + path（絕對路徑）+ 對應內容欄位
-- 不確定路徑先用 fs_read 查目錄結構
-- 複雜任務逐一寫檔，每完成一個確認後再寫下一個
-
-### MCP 工具
-| 工具 | 用途 | 權限 |
-|------|------|------|
-| `reply(text)` | **回覆使用者（必用）** | 全員 |
-| `send_to_instance(instance, msg)` | 跨 agent 通訊 | 全員 |
-| `delegate_task(instance, task)` | 派工 | admin / leader |
-| `query_team_status()` | 查詢狀態 | 全員 |
-| `log_to_leader(text)` | 私下回報 leader | worker |
-| `broadcast_all(message)` | 廣播全員 | admin / leader |
-| `wiki_query(query, scope)` | 搜尋知識庫 | 全員 |
-
-## 回報格式
-✅ 工作成果：{做了什麼}
-📚 學習結果：{如有新知識}
-⚠️ 阻礙：{如有}
-📋 下一步：{建議}
-
-## 回覆使用者規則
-- **禁止開放式問句**（如「要我做 X 嗎？」）
-- **必須用編號選項**讓使用者快速決策：`1️⃣ {A}  2️⃣ {B}  3️⃣ {C}`
-- 簡單確認類不需選項，直接執行回報結果
-- 繁體中文、結論先行、≤ 150 字
-
-## AI 開發流程（SDD + Skill-Driven）
-① 找 Skill → ② 找知識庫 → ③ 建規格書 → ④ 開發 → ⑤ 驗證 → ⑥ 歸檔
-
-## 學習 SOP
-1. wiki_query 搜尋是否已有相關知識
-2. web_search × 2-3 次（不同角度）
-3. web_fetch 深讀 1-2 篇
-4. 整理 → knowledge/wiki/*.md（含 frontmatter）
-5. 過程記進 `memory/daily/`；只有判準級結論才在 MEMORY.md 加一行里程碑
-
-## 記憶怎麼用（🔴 單一權威 —— BRAIN／MEMORY／SOUL 都引用這裡）
-| 落點 | 角色 | 誰寫 |
-|---|---|---|
-| `.kiro/steering/MEMORY.md` | 導覽 + 判準級里程碑（每次注入，保持瘦身） | ✋ |
-| `memory/memory.md` | 持久事實四分節，≤ 2000 tokens | 🤖 `memory-distill`（不要手寫） |
-| `memory/daily/YYYY-MM-DD.md` | 事件流水 | 🤖 bot 自動／✋ team 收尾手寫 |
-| `memory/archive/YYYY-MM.md` | 舊事件歸檔，按需查 | 🤖 `memory-consolidate` |
-
-## 知識庫規則（Schema v3.0）
-- `raw/` 唯讀，不可修改
-- 修改 wiki 後必須同步 `index.md` + `log.md`
-- `log.md` append-only
-- 所有 wiki 頁面必須有 frontmatter
-
-## 禁止事項
-- 🚫 禁在回覆中暴露錯誤細節給使用者
-- 🚫 禁沒有規格書就開始寫 code（一次性 bug fix 除外）
-- 🚫 禁貼 raw stdout / stack trace
-
-## 終端回饋處理
-- 執行 command 後先分類錯誤（syntax/runtime/permission/not_found/timeout）
-- 失敗時明確說出「錯誤類型 + 關鍵信號 + 修復計畫」再動手
-
-## 失敗模式
-- 同一類錯誤連續 2 次 → 停止，換根本不同的方法
-- 禁止對同一錯誤做 3 次以上 incremental patch
-
-## 協作流程
-使用者 → leader（理解+分派）→ worker（執行）→ leader（整合）→ reply 使用者
-直接 @worker 時，worker 也直接 reply 使用者。
-```
+> 團隊模式的 MCP 工具（`reply`、`send_to_instance`、`delegate_task`…）放 `steering/TEAM.md`（inclusion: manual），AGENTS.md 只留一行指路。
+> 要改內容就改範本或專案根那份 —— **不要在 SKILL.md 或 CLAUDE.md 再抄一份**（多處各寫一份必然漂移）。
 
 ### 3. steering/MEMORY.md（記憶導覽）
 
@@ -830,9 +754,8 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 
 > `assets/memory/memory.md`：`memory/memory.md` 四分節骨架（環境慣例／工具怪癖／人與偏好／進行中長期事項），build_kiro 複製到每個 agent。
 
-> ⚠️ **尚缺 `AGENTS.md` 與 `USER.md` 的預設 asset**（待辦，見
-> `docs/plans/ark-agent-skills-bot-builder-optimization-plan.md` 的 P1-3）——
-> 目前這兩份要依 SKILL.md 上方的範本自行撰寫。
+> ✅ `AGENTS.md`、`CLAUDE.md` 範本 2.6.0 起在 `assets/`（專案根入口檔，build_kiro 產）。
+> ⚠️ 尚缺 `USER.md` 的預設 asset（待辦，見 `docs/plans/ark-agent-skills-bot-builder-optimization-plan.md` 的 P1-3）。
 
 ### references/（按需載入）
 

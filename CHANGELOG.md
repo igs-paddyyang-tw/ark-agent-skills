@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-10-29 (ark-agent-init 2.6.0：AGENTS.md 是 Ark Agent 架構單一來源，Claude／Codex 都讀得到)
+
+- 查證（官方文件）：**Codex** 原生讀 AGENTS.md（專案根往下每層一份、**無匯入語法**、合計上限 32 KiB；同層有 AGENTS.md 時 fallback 檔名讀不到 → **CODEX.md 無效**）；
+  **Claude Code** 只讀 CLAUDE.md，但支援 `@AGENTS.md` 匯入（官方建議做法，比 symlink 好：Windows 免特權、Claude 專屬內容有地方放）
+- 新增 `assets/AGENTS.md`：工具中立、自成一體 —— 這個 workspace 是什麼、**Ark Agent 五層架構**、開場與收尾、共用規範、**各工具入口**（Kiro 的 fs_write／`/context add` 只放這節）
+- 新增 `assets/CLAUDE.md`：`@AGENTS.md`＋BRAIN／MEMORY 匯入的薄殼，下方只放 Claude 專屬
+- `build_kiro.py`：專案根 AGENTS.md／CLAUDE.md 不存在才產（once）；子 agent 複本改為專案根那份的逐字複本；不產 CODEX.md
+- SKILL.md：「多 AI CLI 入口」改寫（匯入取代 symlink、Codex 規則）；「### 2. AGENTS.md」內嵌範例改指向範本（prompt_lint P1 22 → 0、SKILL.md 908 → 831 行）
+- 測試新增 6 項（自成一體＋< 32 KiB、共用段工具中立、CLAUDE.md 第一個匯入是 @AGENTS.md、不產 CODEX.md、子 agent 逐字複本、不覆寫）；反證 5 項轉紅
+- 實例：kiro-cli（nana-bot）同日改成同一結構（kiro-cli `65e282a`）
+
+> ⚠️ 本次**未重產 manifest**：audit 抓到 r10 之後他人 commit 的版號債（weknora-cli 契約變未升版 P1、team-builder／superpowers 內容變未升版、agent-cli major 無 Breaking 說明）。
+> 先重產會把未升版的 hash 記成新基準、把問題洗掉 —— 交主責 nana-bot 補版號後再發列車。
+
+---
+
 ## 2026-10-27 (ark-skills-align 2.6.0：mirror_sync 修 Windows 編碼、換行誤判、gitignore 比對)
 
 > nana 回報（Windows 消費端對齊 aibi／aikb／aimkt／aiqa／aidev 時發現）。

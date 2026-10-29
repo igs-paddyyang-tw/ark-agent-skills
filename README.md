@@ -140,14 +140,6 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-skills-align` | ⚙️ 執行 | 通用 | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
 | `ark-weknora-cli` | ⚙️ 執行 | 通用 | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
 
-## 🗑️ 已移除（保留供遷移）
-
-> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
-
-| Skill | 遷移到 |
-|-------|--------|
-| `ark-ai-bot-builder` | — |
-
 <!-- END GENERATED CATALOGUE -->
 
 ---

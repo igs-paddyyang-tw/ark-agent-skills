@@ -88,6 +88,9 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
 
     created: list[str] = []
 
+    # 2.6.0：專案根入口檔（AGENTS.md＝SSOT、CLAUDE.md＝@AGENTS.md 薄殼）先產，子 agent 複本從根複製
+    created.extend(_write_entry_files(base, team_name, cfg, instances))
+
     for name, inst in instances.items():
         inst = inst or {}
         role = inst.get("role", "worker")
@@ -121,6 +124,7 @@ def build_kiro(team_path: Path, output_base: Path | None = None,
             profile=inst_profile,
             is_root=is_root,
             role_id=role_id,
+            root_agents=base / "AGENTS.md",
         )
         created.extend(agent_created)
         brain = _write_brain(kiro_dir / "steering", name, role, inst.get("template"), wd, base)
@@ -294,6 +298,7 @@ def _build_agent_kiro(
     profile: str | None = None,
     is_root: bool = False,
     role_id: str | None = None,
+    root_agents: Path | None = None,
 ) -> list[str]:
     """產出單一 agent 的 .kiro/ 目錄。"""
     created: list[str] = []
@@ -305,7 +310,7 @@ def _build_agent_kiro(
     # 1. steering/
     steering_created = _build_steering(
         kiro_dir / "steering", name, role, description,
-        team_name, all_instances, is_admin, profile, is_root,
+        team_name, all_instances, is_admin, profile, is_root, root_agents,
     )
     created.extend(steering_created)
 
@@ -365,8 +370,9 @@ def _build_steering(
     is_admin: bool,
     profile: str | None = None,
     is_root: bool = False,
+    root_agents: Path | None = None,
 ) -> list[str]:
-    """產出 steering/ 下的所有檔案。"""
+    """產出 steering/ 下的所有檔案。`root_agents`：專案根 AGENTS.md（子 agent 複本的來源）。"""
     created: list[str] = []
     base = steering_dir.parent.parent.parent  # kiro_dir -> base
 
@@ -399,9 +405,9 @@ def _build_steering(
     #    根目錄（is_root）不在這裡產：專案根那份是 SSOT（daemon 首次啟動產，或手寫）。
     agents_md = steering_dir.parent.parent / "AGENTS.md"
     if not is_root and not agents_md.exists():
-        src = STEERING_ASSETS / "AGENTS.md"
-        if src.exists():
-            shutil.copy2(src, agents_md)
+        # 2.6.0：複本＝專案根 AGENTS.md（SSOT）逐字複製；根還沒有才退回預設文字
+        if root_agents is not None and root_agents.exists():
+            shutil.copy2(root_agents, agents_md)
         else:
             agents_md.write_text(_default_agents_md(), encoding="utf-8")
         created.append(str(agents_md.relative_to(base)))
@@ -919,6 +925,44 @@ def _default_user_md() -> str:
     )
 
 
+#: 專案根入口檔範本（2.6.0）：AGENTS.md 是 Ark Agent 架構與規範的單一來源；CLAUDE.md 只 @AGENTS.md 匯入＋Claude 專屬
+ENTRY_TEMPLATES = {"AGENTS.md": ASSETS_DIR / "AGENTS.md", "CLAUDE.md": ASSETS_DIR / "CLAUDE.md"}
+#: Codex 讀 AGENTS.md 的合計上限（project_doc_max_bytes 預設 32 KiB）—— 範本渲染後必須低於它
+CODEX_DOC_MAX_BYTES = 32 * 1024
+
+
+def _write_entry_files(base: Path, team_name: str, cfg: dict, instances: dict) -> list[str]:
+    """產專案根 AGENTS.md（SSOT）與 CLAUDE.md（薄殼）。已存在不覆寫（policy once）。
+
+    🔴 為什麼（2026-10-29）：Codex 原生讀 AGENTS.md 但**不支援匯入**、合計上限 32 KiB → 架構說明必須直接寫在 AGENTS.md；
+       Claude Code 只讀 CLAUDE.md 但支援 `@AGENTS.md` 匯入 → CLAUDE.md 做薄殼，不重寫規則（重寫必漂移）。
+       不產 CODEX.md：同層有 AGENTS.md 時 Codex 讀不到備用檔名。
+       ark_team_agent daemon 也會在根寫 AGENTS.md（AGENTS-root.md，once）—— 先跑 build_kiro 就用本範本。
+    """
+    entry_name, entry = next(((n, v or {}) for n, v in instances.items()
+                              if (v or {}).get("working_directory") == "."), (None, {}))
+    roster = "、".join(f"`{n}`（{(v or {}).get('role', 'worker')}）" for n, v in instances.items()) or "（未宣告）"
+    subs = {
+        "{project}": team_name,
+        "{agent_type}": "team",
+        "{entry}": entry_name or "（未宣告 working_directory: \".\" 的 agent）",
+        "{entry_desc}": str(entry.get("description", "")).strip() or "—",
+        "{roster_file}": "team.yaml",
+        "{roster}": roster,
+    }
+    created = []
+    for fname, tpl in ENTRY_TEMPLATES.items():
+        dst = base / fname
+        if dst.exists() or not tpl.exists():
+            continue
+        text = tpl.read_text(encoding="utf-8")
+        for k, v in subs.items():
+            text = text.replace(k, v)
+        dst.write_text(text, encoding="utf-8")
+        created.append(fname)
+    return created
+
+
 def _default_agents_md() -> str:
     return (
         "# 團隊共用行為準則\n\n"
@@ -1067,7 +1111,7 @@ def validate_kiro(project_dir: Path) -> list[str]:
                 errors.append(f"❌ role-prompts-map work['{role_id}'] 列了 '{stem}' 但 assets/prompts/work/{stem}.md 不存在")
 
     # ── AGENTS.md 佈局（2.4.0）：專案根 SSOT＋子 agent wd 根複本＋steering 0 份 —— 規則與 audit_agents_layout.py 共用
-    #    「專案根缺 AGENTS.md」不在這裡擋：它由 daemon 首次啟動產（policy once，含目錄導覽），剛 build 完缺是正常；
+    #    「專案根缺 AGENTS.md」不在這裡擋：2.6.0 起 build_kiro 會產，但既有 workspace 可能交給 daemon 首次啟動產（policy once）；
     #    build_kiro 若先寫一份，daemon 會因 once 跳過、反而蓋掉導覽內容。運作中的 workspace 用 audit_agents_layout.py 稽核
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from audit_agents_layout import check_layout  # noqa: E402

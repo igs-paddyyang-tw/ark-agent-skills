@@ -34,6 +34,7 @@
 | 層 | team（ark_team_agent） | bot（ark_bot_agent） | 誰寫 | 進 context |
 |---|---|---|---|---|
 | 🧠 人格 | `.kiro/steering/SOUL.md` | 同左 | ✋ 人（`--profile` 可渲染） | ✅ |
+| 🧠 工具入口 | 根 `AGENTS.md`（Codex 直讀）＋ `CLAUDE.md`（`@AGENTS.md` 薄殼）；不建 `CODEX.md` | 同左 | 🤖 build_kiro 產（once） | ✅ |
 | 🧠 規範 SSOT | 根 `AGENTS.md`（子 agent 工作目錄根各一份複本；`steering/` 不放 —— 見 SKILL.md 頂部單一權威） | 同左 | ✋ 人／daemon | ✅ |
 | 🧠 判準 | `.kiro/steering/BRAIN.md` | 同左（`context_builder` 自動注入） | 🤖 build_kiro 產（判準＋角色段，once）／✋ 人補 | ✅ |
 | 🧠 畫像／程式規範 | `.kiro/steering/USER.md`、`CODE.md` | 同左 | ✋ 人 | ✅／🔸 |

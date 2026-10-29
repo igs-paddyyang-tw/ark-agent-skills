@@ -269,7 +269,9 @@ def _audit(project) -> subprocess.CompletedProcess:
 
 
 def test_audit_reports_missing_root_ssot(project):
-    """稽核腳本（運作中的 workspace 用）要抓專案根缺 SSOT；validate 刻意不擋（daemon 首次啟動才產）。"""
+    """稽核腳本（運作中的 workspace 用）要抓專案根缺 SSOT；validate 刻意不擋。
+    2.6.0 起 build_kiro 會產根 AGENTS.md → 先刪掉它模擬「缺 SSOT」的 workspace。"""
+    (project / "AGENTS.md").unlink()
     r = _audit(project)
     out = json.loads(r.stdout)
     assert r.returncode == 1 and out["status"] == "fail"
@@ -542,3 +544,58 @@ def test_validate_requires_brain(project):
     r = subprocess.run([sys.executable, str(BUILD), "--validate", str(project)],
                        capture_output=True, text=True)
     assert r.returncode == 1 and "BRAIN.md" in r.stdout
+
+
+# ── 2.6.0：AGENTS.md 是 Ark Agent 架構單一來源；CLAUDE.md 只 @AGENTS.md 匯入；不產 CODEX.md ──
+
+def test_root_agents_md_is_self_contained_ssot(project):
+    """Codex 不支援匯入 → 根 AGENTS.md 必須直接含五層架構與各工具入口，且低於 Codex 32 KiB 上限、無殘留佔位符。"""
+    sys.path.insert(0, str(SCRIPTS))
+    import build_kiro as bk
+    text = (project / "AGENTS.md").read_text(encoding="utf-8")
+    for heading in ("## 這個 workspace 是什麼", "## Ark Agent 五層架構", "## 開場與收尾", "## 各工具入口"):
+        assert heading in text, heading
+    for ph in ("{project}", "{agent_type}", "{entry}", "{entry_desc}", "{roster}", "{roster_file}"):
+        assert ph not in text, ph
+    assert "`demo-agent`" in text, "入口 agent 要渲染成 team.yaml 裡 working_directory: . 的那個"
+    assert len(text.encode("utf-8")) < bk.CODEX_DOC_MAX_BYTES
+
+
+def test_agents_md_body_is_tool_neutral():
+    """Kiro 專屬寫法（fs_write、/context add）只能出現在「各工具入口」節，不能混在共用規範裡。"""
+    tpl = (SCRIPTS.parent / "assets" / "AGENTS.md").read_text(encoding="utf-8")
+    entry = tpl.index("## 各工具入口")
+    for kiro_only in ("fs_write", "fs_read", "/context add"):
+        assert tpl.find(kiro_only) > entry, f"{kiro_only} 出現在共用段"
+
+
+def test_claude_md_is_thin_shell_importing_agents(project):
+    """CLAUDE.md 第一個匯入必須是 @AGENTS.md，且不重寫共用規則段。"""
+    text = (project / "CLAUDE.md").read_text(encoding="utf-8")
+    imports = [ln.strip() for ln in text.splitlines() if ln.strip().startswith("@")]
+    assert imports and imports[0] == "@AGENTS.md"
+    for dup in ("## Ark Agent 五層架構", "## 記憶怎麼用", "## Git：共用工作樹"):
+        assert dup not in text, f"CLAUDE.md 重寫了 {dup}"
+
+
+def test_no_codex_md(project):
+    """同層有 AGENTS.md 時 Codex 讀不到備用檔名 → 不產 CODEX.md。"""
+    assert not (project / "CODEX.md").exists()
+
+
+def test_sub_agent_copy_equals_root_ssot(project):
+    """子 agent 的 AGENTS.md 是專案根那份的逐字複本。"""
+    root = (project / "AGENTS.md").read_bytes()
+    for name, inst in _instances().items():
+        if inst["working_directory"] != ".":
+            assert (project / inst["working_directory"] / "AGENTS.md").read_bytes() == root, name
+
+
+def test_entry_files_are_not_overwritten(project):
+    """policy once：手寫或 daemon 寫過的根 AGENTS.md／CLAUDE.md 重跑不覆寫。"""
+    for f in ("AGENTS.md", "CLAUDE.md"):
+        (project / f).write_text(f"# 手寫 {f}\n", encoding="utf-8")
+    subprocess.run([sys.executable, str(BUILD), str(project / "team.yaml"), str(project)],
+                   capture_output=True, text=True, check=True)
+    for f in ("AGENTS.md", "CLAUDE.md"):
+        assert (project / f).read_text(encoding="utf-8") == f"# 手寫 {f}\n"
