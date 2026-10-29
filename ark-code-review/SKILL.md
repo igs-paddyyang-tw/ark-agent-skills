@@ -1,93 +1,37 @@
 ---
 name: ark-code-review
 description: |
-  產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、
-  風格一致性驗證、安全性掃描、PR 審查報告產生。
-  使用此 Skill 當使用者提及程式碼審查、code review、PR 審查、
-  程式碼品質、lint、或任何需要檢查程式碼品質的場景。
-  不適用於：專案層級的弱點掃描與依賴漏洞請用 ark-security-audit；code 與 spec 的一致性請用 ark-code-spec-validator。
+  [DEPRECATED — 已併入 ark-quality-gates（lint 關（ruff＋語法），可直接執行；原產碼食譜在 references/recipes/code-review.md）]
+  原說明（保留觸發詞，讓舊說法仍導向新位置）：產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、 風格一致性驗證、安全性掃描、PR 審查報告產生。 使用此 Skill 當使用者提及程式碼審查、code review、PR 審查、 程式碼品質、lint、或任何需要檢查程式碼品質的場景。
 metadata:
-  version: "1.0.1"
+  version: "2.0.0"
   schema_version: "1.2"
-  status: active
-  updated: 2026-10-20
+  status: deprecated
+  updated: 2026-10-29
   category: pipeline
   form: instruction
   domain: general
-  outputs:
-    - format: md
-      audience: ai
   author: paddyyang
 ---
 
-# ark-code-review
+# ark-code-review（已併入 ark-quality-gates）
 
-產出 `src/skills/internal/code_review.py`，程式碼審查與品質檢查，可獨立運作。
+本 skill 原本只是「教你寫一個檢查模組」的產碼食譜。現在改由 **`ark-quality-gates`** 直接執行：
 
-## 觸發條件
-
-- 「程式碼審查」、「code review」、「PR 審查」
-- 「程式碼品質」、「lint」
-
-## 輸入參數
-
-| 參數 | 型別 | 必要 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| `file_paths` | `list[str]` | ✅ | — | 要審查的檔案路徑 |
-| `language` | `str` | ❌ | `"auto"` | 語言：`python` / `typescript` / `auto` |
-| `rules` | `list[str]` | ❌ | `[]` | 自訂規則（如 `"no-print"`, `"type-hints"`) |
-| `severity` | `str` | ❌ | `"all"` | 嚴重等級篩選：`error` / `warning` / `info` / `all` |
-
-## 產出指引
-
-### Skill 類別
-
-```python
-class CodeReviewSkill(BaseSkill):
-    skill_id = "code_review"
-    skill_type = SkillType.PYTHON
-    description = "程式碼審查與品質檢查"
-    version = "1.0.0"
-    input_schema = CodeReviewParams
+```bash
+python <ark-agent-skills>/ark-quality-gates/scripts/quality_gates.py --path . --json quality.json --md quality.md
 ```
 
-### 檢查項目
+原食譜原樣保留在 `ark-quality-gates/references/recipes/code-review.md`（要把檢查做成 bot 插件時才需要）。
 
-| 類別 | 檢查項目 |
-|------|---------|
-| 風格 | 命名慣例、縮排、行長度、import 排序 |
-| 品質 | 未使用變數、重複程式碼、複雜度過高 |
-| 安全 | 硬編碼密碼、SQL injection、eval 使用 |
-| 型別 | 缺少型別提示、型別不一致 |
-| 文件 | 缺少 docstring、過時的註解 |
+消費端若還沒有 `ark-quality-gates`（`mirror_sync` 不會自動安裝新 skill）：
 
-### 輸出格式
-
-```json
-{
-  "issues": [
-    {
-      "file": "src/main.py",
-      "line": 42,
-      "severity": "warning",
-      "category": "security",
-      "message": "硬編碼的 API Key",
-      "suggestion": "使用環境變數 os.getenv('API_KEY')"
-    }
-  ],
-  "summary": {
-    "total": 5,
-    "errors": 1,
-    "warnings": 3,
-    "info": 1
-  },
-  "score": 85
-}
+```bash
+cp -r <ark-agent-skills>/ark-quality-gates .kiro/skills/
 ```
 
-## 注意事項
+## 版本
 
-- `language: auto` 根據副檔名自動偵測
-- 安全性檢查包含常見的 OWASP Top 10 模式
-- `score` 為 0-100 分，100 為完美
-- 可搭配 `ark-agent-bot-builder` 在 TG Bot 中觸發審查
+| 版本 | 日期 | 變更 |
+|---|---|---|
+| 2.0.0 | 2026-10-29 | **Breaking**：併入 `ark-quality-gates`（可執行的 lint 關（ruff＋語法）），原食譜移至 `ark-quality-gates/references/recipes/code-review.md`，本目錄只留轉址 |

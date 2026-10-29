@@ -63,9 +63,9 @@ AUDIENCES = {"ai", "human", "both"}
 
 # 預設觸發詞衝突矩陣：獨占詞 → owner skill（可被 --config 覆寫/擴充）
 DEFAULT_EXCLUSIVE_TRIGGERS = {
-    "覆蓋率": "ark-test-runner",
-    "line coverage": "ark-test-runner",
-    "pytest --cov": "ark-test-runner",
+    "覆蓋率": "ark-quality-gates",
+    "line coverage": "ark-quality-gates",
+    "pytest --cov": "ark-quality-gates",
     "爬蟲": "ark-web-scraper",
     "反爬": "ark-web-scraper",
     "瀏覽器測試": "ark-browser-tool",

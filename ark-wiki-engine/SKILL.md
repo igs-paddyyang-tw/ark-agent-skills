@@ -9,7 +9,7 @@ description: |
   RAG、文件搜尋、知識圖譜、wiki ingest、匯入知識、wiki 健檢、受控詞彙、tag 白名單、
   報告蒸餾入庫、建 wiki 骨架、ingest 安全檢查、入庫消毒、prompt injection 偵測 ——
   即使只是「知識庫有沒有 XXX」也應呼叫本 skill 的 wiki_query.py，而非 team MCP 內建的。
-  不適用於：分析結論的 Markdown 產出請用 ark-md-report；人類視圖請用 ark-html-report；一般程式碼安全審計請用 ark-security-audit（本 skill 的 guard 只管入庫內容）。
+  不適用於：分析結論的 Markdown 產出請用 ark-md-report；人類視圖請用 ark-html-report；一般程式碼安全審計請用 ark-quality-gates（本 skill 的 guard 只管入庫內容）。
 metadata:
   schema_version: "1.2"
   status: active
@@ -17,8 +17,8 @@ metadata:
   category: pipeline
   form: executor
   domain: general
-  version: "3.0.4"
-  updated: 2026-10-27
+  version: "3.0.5"
+  updated: 2026-10-29
   outputs:
     # wiki_query／wiki_context 的 JSON 契約歸 data（`json` 非合法 format，同 ark-db-query：不為單一 skill 放寬守門）
     - { format: data, audience: ai }

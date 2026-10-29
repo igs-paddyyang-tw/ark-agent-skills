@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-10-29 (列車 r15：盤點第三批 M-5 —— 三個品質類食譜合併成可執行的 ark-quality-gates)
+
+> 規格：kiro-cli `docs/specs/ark-quality-gates-spec.md`（Paddy 選方案②）。active 50 → 48。
+
+- **新增 `ark-quality-gates` 1.0.0（form: executor）**：`scripts/quality_gates.py` 一支指令跑三道關，輸出 JSON＋Markdown，失敗 exit 1
+  - tests：`<python> -m pytest`（有 pytest-cov 加覆蓋率、`--fail-under`）；0 個測試 → skip 並明說
+  - lint：語法編譯檢查（標準庫，一定跑）＋ ruff（有裝才跑）
+  - security：內建規則用 AST 判函式呼叫（`model.eval()`、`ast.literal_eval` 不誤報）＋密鑰／SQL 拼接 regex；有裝加跑 bandit、pip-audit；`# nosec` 可標記刻意用法（略過數會顯示）
+  - 🔴 缺工具一律 skip＋安裝指令，`--strict` 時 skip 算失敗；11 項測試（反證：判定永遠 pass → 2 紅、shell 規則停用 → 1 紅）
+  - 實跑本庫：env-doctor、agent-cli 各 2 處 `shell=True`（執行使用者設定的指令，屬刻意用法，未改動，消費端可加 `# nosec`）
+- **ark-code-review、ark-security-audit、ark-test-runner → deprecated stub 2.0.0**；原產碼食譜逐位元組搬 `ark-quality-gates/references/recipes/`
+- **獨占觸發詞**「覆蓋率」「line coverage」「pytest --cov」owner 改 ark-quality-gates（audit_skills、prompt_lint）
+- 改引用（patch／minor）：ark-agent-init 2.6.4、ark-agent-role-profile 1.3.7（7 個角色）、ark-agent-team-builder 3.1.7、ark-browser-tool 3.0.2、ark-code-spec-validator 1.0.2、ark-mobile-adb 2.5.1、ark-web-scraper 1.0.2、ark-wiki-engine 3.0.5、ark-prompt-spec-validator 1.3.0、ark-skills-align 2.9.0
+
+---
+
 ## 2026-10-29 (列車 r14：盤點第二批 —— 三個規劃類 skill 併入 superpowers 的工作模式)
 
 > 計畫：kiro-cli `docs/plans/skills-batch2-m4-plan.md`（盤點 M-4）。active 53 → 50。

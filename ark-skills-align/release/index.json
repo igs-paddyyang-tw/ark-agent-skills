@@ -962,7 +962,7 @@
   "sha256:b6bc9db7bfa934eb1b7a58eec5ed17d84f55767e8964356ce58bdc274cab6031": {
     "skill": "ark-db-query",
     "version": "3.0.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:facd296d84e89699cc2ac347ffbdb5b0fd4bd2195c5e16432c2145e072445c97": {
     "skill": "ark-doc-coauthoring",
@@ -977,7 +977,7 @@
   "sha256:473f5b0b94759b1eeea2fb8cc638ff694ce2339f03996b123534c1a7d6fc7e3e": {
     "skill": "ark-docx-tool",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:cffbe98b398a90b2929369edb10a8795ab83135c37ac70260f4f01dc147fcbdf": {
     "skill": "ark-env-doctor",
@@ -992,7 +992,7 @@
   "sha256:9390ee89521f88fbf1d072cc7b686f0dac62aded01756f6fa885f7930418c69c": {
     "skill": "ark-frontend-design",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:d502ead28b15fce3d144052fc36c486ca1384988b061ee383edd2867e67571cb": {
     "skill": "ark-game-prob",
@@ -1022,12 +1022,12 @@
   "sha256:370e4511b9adf9a5aee52c1df0be2696b6bbaea9951b0ded2059cf5d80188405": {
     "skill": "ark-grafana-query",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:5cbe44ba023be6558a27a3b6d3960fb11806acfadd9125c9ad86fd758e082a2b": {
     "skill": "ark-grill-me",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:f8217a5a924536189b400a762568a4a28818f61a2f34fb52524b0f8fbf20c153": {
     "skill": "ark-html-dashboard",
@@ -1037,7 +1037,7 @@
   "sha256:478424210fccb40bd519fd4f7497beb50617b04bb89d4c110a6b26235bfd8d63": {
     "skill": "ark-html-report",
     "version": "1.3.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:5af2dad61c32e6928304d3f96b8ae282250a56bb9db5ab406cb0982eca020c8c": {
     "skill": "ark-kpi-calculator",
@@ -1052,12 +1052,12 @@
   "sha256:4869ad8c4d2867bef6af3cd01d913e1f424cc881169e916dc8befaa85d535848": {
     "skill": "ark-marketing",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:e9fa5b28373568d29906c6de83a67e3c6520b6631f56aa358e4a0098635a8d91": {
     "skill": "ark-mcp-builder",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:e25dab47fc945620e9692c532410b7bc6c2c0aa3462dd2d2e8cc8eff39228695": {
     "skill": "ark-md-report",
@@ -1072,7 +1072,7 @@
   "sha256:ca3f802aefb7ae4a8701e3f631e16cad4e8796a4722f43dd5615ed1f3e77c0c7": {
     "skill": "ark-pdf-tool",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:cea23c4b52016964c3929050e76df5d91117e54afe2aa8910c06ea7a5cec5d54": {
     "skill": "ark-planning-with-files",
@@ -1082,7 +1082,7 @@
   "sha256:5a4d9212db78b322713309d89ae7440bdc94ac1af2f7b6ae861b4623fcceb0d9": {
     "skill": "ark-pptx-tool",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:f40be4483645c606281943414266a68a61cb577a05074dcdb393dc3bd834e95e": {
     "skill": "ark-project-planning",
@@ -1112,7 +1112,7 @@
   "sha256:469360ea6772f1db43d1ae8a14df2b935638352f6b8605aebe56c455cd29e1fe": {
     "skill": "ark-skill-creator",
     "version": "2.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:0e96bcb5f642e9e3b0d17944d4da189dc5baa74ca1bea214932a550c99692308": {
     "skill": "ark-skills-align",
@@ -1132,7 +1132,7 @@
   "sha256:5c87712309e6c930bb86930ed02abbd942d4bd9574276173d1017e3d498114a4": {
     "skill": "ark-telegram-sender",
     "version": "2.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:1363950b38f7c6271b3631e8503c1c5cf349969f44755a5fe80e86a0cd41c0f7": {
     "skill": "ark-test-runner",
@@ -1172,7 +1172,7 @@
   "sha256:c2abdbea891c0d72df0385c14a52038753ed9fc26712d18abbdf455214814574": {
     "skill": "ark-xlsx-tool",
     "version": "1.0.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:6990b4f68d22b41dec674a1da359cd7f90d40bc16a356f02794a30ef875d24f1": {
     "skill": "ark-agent-bot-builder",
@@ -1192,22 +1192,22 @@
   "sha256:df7a1bd611ccb9b27e10b76c1584163ec73948542dd805d890487842f36d031d": {
     "skill": "ark-agent-team-design",
     "version": "1.2.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:fc3d5f211d7bca06eaeea869103601cc5f684a28cbf1b63fa95dae8e6cce43df": {
     "skill": "ark-book",
     "version": "1.1.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:1241dcca87f61af4788ebabd5f3bb29c6ce3e54614fad2e810ecb9699253f7bf": {
     "skill": "ark-community-cli",
     "version": "1.1.4",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:8096ccc7b5f1ea645d531452c8b9e4884815847c4438158947a2850274f89b2d": {
     "skill": "ark-daily-news",
     "version": "2.1.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:b6f88d786ee3101435f70d827a5ddf5755a896e0fe47023c5adc6acb4ceeca4d": {
     "skill": "ark-game-prob",
@@ -1242,7 +1242,7 @@
   "sha256:c6fe777aaeefea32ece9c171967d310d0c2fe8bc7cc73d9102cdcbd77ab79e6b": {
     "skill": "ark-md-report",
     "version": "1.0.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:2696fa0db4ca3d28506c5587b816ecb213157ee39562af400d7ce4eaf9839b3a": {
     "skill": "ark-prompt-spec-validator",
@@ -1257,7 +1257,7 @@
   "sha256:c0352d0d62bb03779789df6424bfafa703acf2bbd7df02431d4220db038bbae8": {
     "skill": "ark-spec-executor",
     "version": "2.0.3",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:d86c71f612fe5de8e9ec16db1e41198a44f0f1c9aeee1ff9ef7cf12c42e9d7ff": {
     "skill": "ark-superpowers",
@@ -1267,7 +1267,7 @@
   "sha256:71cf4178329f7774be691f5376908096e191c2090971427ac6858e242a3036c5": {
     "skill": "ark-webapp-generator",
     "version": "2.0.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:ee85d991b811590609202208aeb129d8e00978400f49b8e8796bb59c0f746ce1": {
     "skill": "ark-weknora-cli",
@@ -1337,7 +1337,7 @@
   "sha256:c5fd76bbc7c9badfb3a498a06c2308a954ed38cf9b3ad6765de9ab64007b3e6d": {
     "skill": "ark-game-quicktest",
     "version": "2.2.1",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:613d57951593868b0bd7745728d0b67de6c5b5c355934da2e14fcec052cbafd9": {
     "skill": "ark-game-spec",
@@ -1362,12 +1362,12 @@
   "sha256:378f7727bd23cfd3603b03b0d59dd654c1eb01607a2e779fd314be2453a2ec08": {
     "skill": "ark-github-cli",
     "version": "1.0.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:289c799c0d06f36376850cd4d2de014a485fd025b351cf6b44505b8da8978952": {
     "skill": "ark-agent-bot-builder",
     "version": "3.2.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:558a696be5a9c474b650ccbd30e763cc0ada51d36978997bbe0f8faef5719d45": {
     "skill": "ark-agent-init",
@@ -1377,7 +1377,7 @@
   "sha256:ac86490ae3ca114ddc919901819b4f3f34320fa7a84ba80dbfec117112bd6bcb": {
     "skill": "ark-docker-deploy",
     "version": "1.1.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:34f293268bf79917d900910e560fbeb3e04f5969e371eb68a456858bde4fd117": {
     "skill": "ark-prompt-spec-validator",
@@ -1387,12 +1387,12 @@
   "sha256:69d1facd4e6f15b52c5f44bcdb94691740e393fe461b2b09b785df4bfcdb9b87": {
     "skill": "ark-game-prob",
     "version": "1.7.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:9df15e5f488ad1715272f7ff40dde224bb5aaea3b043f189e387dd5493a0a3e8": {
     "skill": "ark-game-proto",
     "version": "1.8.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:f5ceeda57b6e1b26e611d80e4b51a13b08bcef843194715541f3729c84466282": {
     "skill": "ark-game-spec",
@@ -1432,7 +1432,7 @@
   "sha256:c86f782cfbaf40e43a93c50d8eefc0c4102d9a1238573867ba962eb951bb9289": {
     "skill": "ark-weknora-cli",
     "version": "1.1.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:051ad1e226c2dd5f4012f3dbe537838febfdb7a2be1c87ce8b33dca3e7f9b81d": {
     "skill": "ark-wiki-engine",
@@ -1442,7 +1442,7 @@
   "sha256:ddbefe0b455904a8007808b492b667f649309b1043d7646a2388b4091d4de941": {
     "skill": "ark-agent-cli",
     "version": "2.2.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:7aa34c8af7937c843710b26937152f6b7165acd802a5d337b2646b9d4041e4b5": {
     "skill": "ark-agent-init",
@@ -1462,22 +1462,22 @@
   "sha256:ff8b8250857b07cad92eb7ff440dd12e89c4b16207b552868482eb286acc193d": {
     "skill": "ark-game-spec",
     "version": "2.9.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:4c3bcec669b614c0b4807f8c8fbd7c657cf1e2d732559ef470af60e2a0cb0baf": {
     "skill": "ark-html-dashboard",
     "version": "1.0.3",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:7ee85a78dca50fb512972a08f474db98de43f49c1d0c7b31a63562ac69e3deb5": {
     "skill": "ark-pipeline-recipes",
     "version": "1.0.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:aa5e9ce7e332b1694a1dc039da9e720f3721934e100bd91cb04aa51b55937b7b": {
     "skill": "ark-retention-analysis",
     "version": "1.0.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:2303060c22d3bcde151ea3c51ba9aad6f2af3059ed616123b1dfe6a406531b4d": {
     "skill": "ark-skills-align",
@@ -1502,7 +1502,7 @@
   "sha256:f34d6160c46d4e16d56e452a730c004262fcfb76d134918aa82290e43932170f": {
     "skill": "ark-env-doctor",
     "version": "1.1.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:9a32ef24a0044dca3dfeb0093d3ea4038a1a8f9d835b862c1291fc0b946ea2bc": {
     "skill": "ark-skills-align",
@@ -1537,7 +1537,7 @@
   "sha256:6ea543b45ea6252b955f7e967cf9ad4c68df43df7cd3d5c791913d889a79d69e": {
     "skill": "ark-release-notes",
     "version": "1.0.2",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
   },
   "sha256:94bfe693f136db021a41afae698baaed9ae34a1ab1f04cec463e6dc33a9ac9e6": {
     "skill": "ark-skills-align",
@@ -1547,6 +1547,61 @@
   "sha256:2be72c58d7050f00dae1934ce93dc7a1c3e9e2b120a29a43f25abc23deb8d36c": {
     "skill": "ark-superpowers",
     "version": "1.3.0",
-    "release": "skills-2026.10-r14"
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:91c8b1c50938f6a91537d72c86bd9fc796ff838d6772745da9cdd48006260f7b": {
+    "skill": "ark-agent-init",
+    "version": "2.6.4",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:015dd4c64b059043e7a059a34dceb3b1d4b53bcdcf3e046cfe947350320528ab": {
+    "skill": "ark-agent-role-profile",
+    "version": "1.3.7",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:0ef4e3ebafc59c53b85ed274ab9230944d3b77b45db417dc168f8137c59dbbbb": {
+    "skill": "ark-agent-team-builder",
+    "version": "3.1.7",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:6fff984f4e908e1ffbd7253e14c21d01b2c537121da1f226a42794b4b8cd0f5f": {
+    "skill": "ark-browser-tool",
+    "version": "3.0.2",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:72e08d54a691387ad206d35bc78f187fc69eab557756f0f53b17a4ce604458bb": {
+    "skill": "ark-code-spec-validator",
+    "version": "1.0.2",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:7d199039d86e181768196ee7fedc6a59871187bd1ac9c74de564305b20628f59": {
+    "skill": "ark-mobile-adb",
+    "version": "2.5.1",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:27f4238f6573205db42203320bd65007807d8211fbeef10b0e1150e29a010b79": {
+    "skill": "ark-prompt-spec-validator",
+    "version": "1.3.0",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:6c2203e21a2e295739430ff7fe9a6e0d7fbf9a094e5b8673a3dbad69ded22668": {
+    "skill": "ark-quality-gates",
+    "version": "1.0.0",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:c967ab988bbdb683381f4455e971eb2f4186f750307b9c2409c189178069f6af": {
+    "skill": "ark-skills-align",
+    "version": "2.9.0",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:29653dd3167b104de2ff6e9023996e33eeb34585c1eff9e2cc2a6103fb7f2dd0": {
+    "skill": "ark-web-scraper",
+    "version": "1.0.2",
+    "release": "skills-2026.10-r15"
+  },
+  "sha256:c15a08aadd4073117e65d40330c6c42c7b7ab274e3f5558fc0db5db1535655eb": {
+    "skill": "ark-wiki-engine",
+    "version": "3.0.5",
+    "release": "skills-2026.10-r15"
   }
 }

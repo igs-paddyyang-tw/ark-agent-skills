@@ -8,12 +8,12 @@ description: |
   抓取網頁、擷取網頁內容、反爬、Cloudflare 繞過、大規模爬取、
   自適應爬蟲、Scrapling、或任何需要從網頁取得資料的場景。
   專責大規模網頁抓取、反爬處理。瀏覽器互動自動化/畫面擷取請用 ark-browser-tool。
-  不適用於：瀏覽器自動化操作請用 ark-browser-tool；測試自動化請用 ark-test-runner。
+  不適用於：瀏覽器自動化操作請用 ark-browser-tool；測試自動化請用 ark-quality-gates。
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
   schema_version: "1.2"
   status: active
-  updated: 2026-10-20
+  updated: 2026-10-29
   category: pipeline
   form: instruction
   domain: general

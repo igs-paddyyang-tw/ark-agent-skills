@@ -35,7 +35,7 @@ metrics:
   - { name: 驗收條件覆蓋, target: "100%" }
   - { name: 回歸漏網, target: "0 / 版" }
 knowledge_domains: [bug pattern, 測試技巧, CI 整合, 驗收案例庫]
-skills: [ark-test-runner, ark-security-audit, ark-code-review]
+skills: [ark-quality-gates]
 examples:
   - kind: typical
     situation: 收到「/api/reports 已完成，請驗收」

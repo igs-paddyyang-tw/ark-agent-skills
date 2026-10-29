@@ -33,12 +33,12 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **50 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
+> **48 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
 
-> 輸出：MD 給 AI｜`category: process`｜10 個
+> 輸出：MD 給 AI｜`category: process`｜11 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
@@ -49,6 +49,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-grill-me` | 📝 指示 | 通用 | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
 | `ark-mcp-builder` | 📝 指示 | 通用 | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
 | `ark-prompt-spec-validator` | ⚙️ 執行 | 通用 | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
+| `ark-quality-gates` | ⚙️ 執行 | 通用 | 一支指令跑三道品質關並產出報告：tests（pytest＋覆蓋率）、lint（語法檢查＋ruff）、 security（內建規則：硬編碼密鑰、eval／exec、shell=True、SQL 字串拼接… |
 | `ark-skill-creator` | 📝 指示 | 通用 | 建立新 Skill、修改和改善既有 Skill、測量 Skill 效能。 |
 | `ark-spec-executor` | ⚙️ 執行 | 通用 | 讀取 ark-superpowers 產出的 plan.md（7 欄任務表 + AC-ID + 依賴），以 deterministic 腳本 解析契約 → DAG 排序 → 逐任務派給 runner … |
 | `ark-superpowers` | 📝 指示 | 通用 | 產出工程標準化文件（Spec 規格、Design 設計/ADR、Execution Plan 執行計畫）， 基於 power-engineer-skills 框架，協助資深工程師與技術領導者 將技術決… |
@@ -68,19 +69,16 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ③ 管線元件 Pipeline
 
-> 輸出：結構化資料｜`category: pipeline`｜11 個
+> 輸出：結構化資料｜`category: pipeline`｜8 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
 | `ark-agent-cli` | ⚙️ 執行 | 通用 | 統一 Agent CLI 閘道 + 背景 sub-agent。 |
 | `ark-browser-tool` | 📝 指示 | 通用 | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
-| `ark-code-review` | 📝 指示 | 通用 | 產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、 風格一致性驗證、安全性掃描、PR 審查報告產生。 |
 | `ark-community-cli` | ⚙️ 執行 | 🎮 遊戲 | 社群訊息蒐集與分析的 CLI skill：以標準 SOP 從 Discord（自家伺服器，bot 唯讀）與 X／Twitter（日本市場， X API v2 pay-per-use）取得訊息，統一 s… |
 | `ark-db-query` | ⚙️ 執行 | 通用 | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
 | `ark-pipeline-recipes` | 📝 指示 | 通用 | 資料管線與 LLM 工具的產碼食譜集：照食譜在專案裡寫出標準模組（圖表、ETL 轉換與匯出、 KPI 計算、異常偵測與告警、LLM 成本追蹤、翻譯、LLM 摘要／分析／意圖解析、管線資料契約）。 |
-| `ark-security-audit` | 📝 指示 | 通用 | 產出 security_audit.py 安全性掃描 Skill，對專案進行程式碼安全性檢查與弱點偵測。 |
 | `ark-telegram-sender` | ⚙️ 執行 | 通用 | 通用 Telegram 發送 Skill：文字訊息（HTML 格式）、檔案附件、圖片。 |
-| `ark-test-runner` | 📝 指示 | 通用 | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
 | `ark-web-scraper` | 📝 指示 | 通用 | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
 | `ark-wiki-engine` | ⚙️ 執行 | 通用 | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
@@ -136,6 +134,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 |-------|--------|
 | `ark-anomaly-detector` | 已併入 ark-pipeline-recipes（讀 references/anomaly-detector.md） |
 | `ark-chart-generator` | 已併入 ark-pipeline-recipes（讀 references/chart-generator.md） |
+| `ark-code-review` | 已併入 ark-quality-gates（lint 關（ruff＋語法），可直接執行；原產碼食譜在 references/recipes/code-review.md） |
 | `ark-cost-tracker` | 已併入 ark-pipeline-recipes（讀 references/cost-tracker.md） |
 | `ark-dashboard-health` | 已併入 ark-env-doctor（端點模式 `env_doctor.py --endpoints`；原文在 references/dashboard-health.md） |
 | `ark-data-contract` | 已併入 ark-pipeline-recipes（讀 references/data-contract.md） |
@@ -145,6 +144,8 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-llm-tools` | 已併入 ark-pipeline-recipes（讀 references/llm-tools.md） |
 | `ark-planning-with-files` | 已併入 ark-superpowers（「工作模式 → files（長任務持久化）」；原文在 references/modes/files.md） |
 | `ark-project-planning` | 已併入 ark-superpowers（「工作模式 → plan（流程與派工）」；原文在 references/modes/plan-workflow.md） |
+| `ark-security-audit` | 已併入 ark-quality-gates（security 關（內建規則＋bandit／pip-audit），可直接執行；原產碼食譜在 references/recipes/security-audit.md） |
+| `ark-test-runner` | 已併入 ark-quality-gates（tests 關（pytest＋覆蓋率），可直接執行；原產碼食譜在 references/recipes/test-runner.md） |
 | `ark-translator` | 已併入 ark-pipeline-recipes（讀 references/translator.md） |
 | `ark-uml-generator` | 已併入 ark-superpowers（設計階段「設計圖（Mermaid）」；原文在 references/uml-diagrams.md） |
 

@@ -8,15 +8,15 @@ description: |
   驗收條件覆蓋、依賴分析、code 與文件不同步、或要求產出驗證報告；
   或提及「API 文件同步」「route 變更同步」「端點文件化」時。
   注意：本 skill 驗證的是 AC（驗收條件）是否有對應測試，
-  非程式碼 coverage。如需 coverage 分析，請用 ark-test-runner。
-  不適用於：單純的 code review 請用 ark-code-review；網頁抓取請用 ark-web-scraper。
+  非程式碼 coverage。如需 coverage 分析，請用 ark-quality-gates。
+  不適用於：單純的 code review 請用 ark-quality-gates；網頁抓取請用 ark-web-scraper。
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
   schema_version: "1.2"
   # 2026-09-14 T1 併入（--sync 模式）
   replaces: [ark-api-doc-sync]
   status: active
-  updated: 2026-10-20
+  updated: 2026-10-29
   category: process
   form: instruction
   domain: general

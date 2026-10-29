@@ -112,7 +112,7 @@ def main():
         body.append("- A-1：無需行動；下次 description 變更時重跑 L1+L2 回歸")
     body += ["", "## 邊界聲明", "",
              f"- 分析基準：{today}，git {sha}，scoring_version 1（L1 0.4 / L2 0.6；無 L2 時總分 = L1）",
-             "- 未涵蓋：程式碼與 spec 一致性（ark-code-spec-validator）、line coverage（ark-test-runner）、description 改寫（ark-skill-creator）",
+             "- 未涵蓋：程式碼與 spec 一致性（ark-code-spec-validator）、line coverage（ark-quality-gates）、description 改寫（ark-skill-creator）",
              "- 不適用情境：L2 `judge` 結果為 llm-distilled，不進總分；PL-013 指令矛盾為 heuristic（confidence medium），需人工確認",
              "- 時效：被驗證檔或其引用的 skill 任一變更後，本結論失效，應重跑", ""]
 

@@ -23,7 +23,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.6.3"
+  version: "2.6.4"
   updated: 2026-10-29
 ---
 
@@ -607,8 +607,8 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 | 全員必備（base_skills）| ark-grill-me, ark-superpowers, ark-spec-executor, ark-code-spec-validator, ark-wiki-engine, ark-prompt-spec-validator, ark-md-report, ark-html-report | 需求→文件→執行→驗證(code+prompt)→知識→報告（迴圈工程核心 + 產出）。權威清單見 `references/role-skills-map.md` 的 `base_skills:` |
 | Leader / PM | ark-superpowers（plan／coauthor 模式）, ark-grill-me | 規劃+共筆+設計圖 |
 | AI Dev | ark-skill-creator, ark-mcp-builder, ark-pipeline-recipes | Skill 開發+MCP+LLM |
-| Coder / 全端 | ark-skill-creator, ark-code-review, ark-webapp-generator, ark-db-query | 開發+審查+全端 |
-| QA / 測試 | ark-test-runner, ark-security-audit, ark-code-review | 品質保證 |
+| Coder / 全端 | ark-skill-creator, ark-quality-gates, ark-webapp-generator, ark-db-query | 開發+審查+全端 |
+| QA / 測試 | ark-quality-gates | 品質保證 |
 | DevOps | ark-docker-deploy, ark-env-doctor, ark-webapp-generator | 部署運維（排程已併入 webapp-generator） |
 | 數據分析 | ark-db-query, ark-pipeline-recipes, ark-retention-analysis | 數據工程 |
 | 市場研究 | ark-web-scraper, ark-pipeline-recipes | 資訊收集 |

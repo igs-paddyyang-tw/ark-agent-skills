@@ -11,7 +11,7 @@ description: |
   「提詞回歸測試」「LLM 評測」「prompt 評分」「模型品質」「模型切換前後效果對比」
   「多次取樣通過率」。不適用於：驗證 Python code 與 spec 一致性請用 ark-code-spec-validator；
   單一 skill 的建立與 description 優化請用 ark-skill-creator；整庫稽核請用 ark-skills-align；
-  pytest 單元測試請用 ark-test-runner。
+  pytest 單元測試請用 ark-quality-gates。
 metadata:
   author: paddyyang
   schema_version: "1.2"
@@ -25,7 +25,7 @@ metadata:
   depends_on:
     - { name: ark-md-report, version: "^1.0.0" }
   status: active
-  version: "1.2.0"
+  version: "1.3.0"
   updated: 2026-10-29
 ---
 

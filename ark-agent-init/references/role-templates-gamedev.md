@@ -16,10 +16,10 @@
 gamedev_role_skills:
   game-planner:   [ark-game-spec, ark-grill-me, ark-superpowers]
   math-designer:  [ark-game-spec, ark-game-prob, ark-game-proto, ark-pipeline-recipes]
-  client-eng:     [ark-skill-creator, ark-code-review, ark-frontend-design]
-  server-eng:     [ark-skill-creator, ark-code-review, ark-code-spec-validator]
+  client-eng:     [ark-skill-creator, ark-quality-gates, ark-frontend-design]
+  server-eng:     [ark-skill-creator, ark-quality-gates, ark-code-spec-validator]
   tech-artist:    [ark-frontend-design]
-  game-qa:        [ark-test-runner, ark-code-review, ark-pipeline-recipes]
+  game-qa:        [ark-quality-gates, ark-pipeline-recipes]
   liveops:        [ark-scheduler-generator, ark-pipeline-recipes, ark-release-notes]
   game-analyst:   [ark-pipeline-recipes, ark-retention-analysis]
   producer:       [ark-superpowers]

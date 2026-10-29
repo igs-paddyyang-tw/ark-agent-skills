@@ -31,8 +31,8 @@
 | 遇到的問題 | 先用的 skill | 屬性 |
 |---|---|---|
 | 環境跑不起來 / ModuleNotFoundError / venv | `ark-env-doctor` | role: admin/devops |
-| code 品質 / PR 審查 / lint / 安全掃描 | `ark-code-review` | role: coder/qa |
-| 跑測試 / 覆蓋率 | `ark-test-runner` | role: qa |
+| code 品質 / PR 審查 / lint / 安全掃描 | `ark-quality-gates` | role: coder/qa |
+| 跑測試 / 覆蓋率 | `ark-quality-gates` | role: qa |
 | 查資料庫 / BQ 取數 | `ark-db-query` | role: analyst/data-eng |
 | 資料清洗轉換 / 匯出檔案(md/csv/json) | `ark-pipeline-recipes`（etl-pipeline 頁） | role: analyst/data-eng |
 | 建新 skill / 改 skill / 測 skill 效能 | `ark-skill-creator` | role: ai-dev/coder |

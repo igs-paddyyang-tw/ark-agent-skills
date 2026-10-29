@@ -11,7 +11,7 @@ description: |
   確認 UI、E2E 驗證、localhost 預覽、craft tool、
   或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
   專責瀏覽器互動自動化、測試、截圖。大規模網頁抓取/反擷取請用 ark-web-scraper。
-  不適用於：網頁內容抓取/網頁擷取/web scraping 請用 ark-web-scraper；網頁自動化測試請用 ark-test-runner。
+  不適用於：網頁內容抓取/網頁擷取/web scraping 請用 ark-web-scraper；網頁自動化測試請用 ark-quality-gates。
 metadata:
   schema_version: "1.2"
   status: active
@@ -22,8 +22,8 @@ metadata:
     - format: md
       audience: ai
   author: paddyyang
-  version: "3.0.1"
-  updated: 2026-10-20
+  version: "3.0.2"
+  updated: 2026-10-29
 ---
 
 # ark-browser-tool
@@ -41,13 +41,13 @@ metadata:
 ## Negative Trigger（不適用，指路）
 
 - **網頁抓取 / web scraping / 擷取網頁內容 / 大規模抓取 / 反爬** → 請用 `ark-web-scraper`
-- **pytest / 測試覆蓋率 / coverage** → 請用 `ark-test-runner`
+- **pytest / 測試覆蓋率 / coverage** → 請用 `ark-quality-gates`
 
 ## 三方邊界（一句話各自定位）
 
 - **ark-web-scraper**：大規模網頁抓取 / 反爬（資料擷取為目的）
 - **ark-browser-tool**（本 skill）：瀏覽器互動 / 截圖 / E2E 視覺驗證
-- **ark-test-runner**：pytest 執行與 coverage
+- **ark-quality-gates**：pytest 執行與 coverage
 
 ## 核心理念
 

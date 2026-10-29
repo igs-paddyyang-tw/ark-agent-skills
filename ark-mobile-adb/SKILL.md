@@ -11,7 +11,7 @@ description: |
   測試清單生成、test-checklist、test-report、回填測試表、Mantis、gamepack 校準、gamepack 解耦 / 外部 pack 目錄 / --pack-dir、trigger / GM harness、掛測、穩定讀數 / count-up 讀數 / 資產對帳 / 連轉核帳 / ledger / economy batch / 逐手對帳 / 外部加幣誤判 / 核帳驅動建檔 / autobox / machine verify promote、測項人工回饋 / 審查意見 / refine 下一版、
   按鍵精靈 / 座標腳本 / 錄製重放 / macro、adb 太慢、座標點空、縮圖座標、找色、試玩報告、AI 試玩、新手體驗、
   探索測試、冒煙測試、清單 md 產報告 html、playtest。
-  不適用於：iOS、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-game-spec）、一般程式測試（→ ark-test-runner）。
+  不適用於：iOS、音效、繞過驗證 / 反作弊、競品影片分析（→ ark-game-spec）、一般程式測試（→ ark-quality-gates）。
 metadata:
   schema_version: "1.2"
   status: active
@@ -19,8 +19,8 @@ metadata:
   category: ops
   form: executor
   domain: game
-  version: "2.5.0"
-  updated: 2026-10-27
+  version: "2.5.1"
+  updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }

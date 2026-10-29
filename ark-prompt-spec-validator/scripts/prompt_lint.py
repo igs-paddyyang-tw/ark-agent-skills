@@ -36,7 +36,7 @@ OUTPUT_FORMATS = {"md", "html", "png", "pdf", "code", "data", "office"}
 AUDIENCES = {"ai", "human", "both"}
 
 DEFAULT_EXCLUSIVE_TRIGGERS = {
-    "覆蓋率": "ark-test-runner", "line coverage": "ark-test-runner", "pytest --cov": "ark-test-runner",
+    "覆蓋率": "ark-quality-gates", "line coverage": "ark-quality-gates", "pytest --cov": "ark-quality-gates",
     "爬蟲": "ark-web-scraper", "反爬": "ark-web-scraper",
     "瀏覽器測試": "ark-browser-tool", "截圖": "ark-browser-tool",
     "寫 spec": "ark-superpowers", "產 spec": "ark-superpowers",

@@ -19,7 +19,7 @@ tiers:
 agents:
   <專案>-agent: { role: manager, wave: 1 }   # 總機，跑 align、確認 apply（非 admin-agent）
   ops-leader:   { role: leader,  wave: 2 }
-  qa-worker:    { role: qa, wave: 3, extra: [ark-test-runner] }
+  qa-worker:    { role: qa, wave: 3, extra: [ark-quality-gates] }
 pins:                                     # 例外必附 reason（AL-201 驗不可滿足）
   ark-weknora-cli: { version: "1.4.2", reason: "等 W2 傳輸層驗證", until: 2026-10-01 }
 local_only: [ark-fish-daily-report]       # 專案自建，三段判準第①段「不可動」

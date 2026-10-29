@@ -13,7 +13,7 @@ roles:
     skills:
       - ark-env-doctor
       - ark-docker-deploy
-      - ark-security-audit
+      - ark-quality-gates
 
   leader:
     description: "需求分析、任務拆解、派工驗收"
@@ -39,9 +39,7 @@ roles:
   worker-qa:
     description: "測試策略、自動化測試、Code Review"
     skills:
-      - ark-test-runner
-      - ark-code-review
-      - ark-security-audit
+      - ark-quality-gates
 
   worker-data:
     description: "數據分析、KPI 追蹤、趨勢洞察"

@@ -36,7 +36,7 @@ metrics:
   - { name: 回報附測試證據, target: "100%" }
   - { name: 同錯誤重試次數, target: "≤ 2" }
 knowledge_domains: [框架 pattern, DB 設計決策, 測試策略, 環境踩坑]
-skills: [ark-code-review, ark-webapp-generator, ark-db-query, ark-skill-creator]
+skills: [ark-quality-gates, ark-webapp-generator, ark-db-query, ark-skill-creator]
 examples:
   - kind: typical
     situation: Leader 派「新增 /api/reports endpoint」並附 Spec

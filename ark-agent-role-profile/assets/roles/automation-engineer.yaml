@@ -35,7 +35,7 @@ metrics:
   - { name: CI flaky 率, target: "< 2%" }
   - { name: 回歸執行時間, target: "< 30 min" }
 knowledge_domains: [自動化框架 pattern, 測試資料生成, CI 設定, flaky 案例庫]
-skills: [ark-test-runner, ark-code-review, ark-docker-deploy]
+skills: [ark-quality-gates, ark-docker-deploy]
 examples:
   - kind: typical
     situation: 上版有 3 個 P1 bug 修復，要補回歸

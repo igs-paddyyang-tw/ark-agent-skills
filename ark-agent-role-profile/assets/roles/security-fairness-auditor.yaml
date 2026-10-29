@@ -35,7 +35,7 @@ metrics:
   - { name: 金流路徑審計覆蓋, target: "每版 100%" }
   - { name: 漏洞細節外洩, target: "0" }
 knowledge_domains: [攻擊面清單, 金流與結算路徑圖, 歷次漏洞（去敏後）, 修復模式]
-skills: [ark-security-audit, ark-code-review, ark-md-report]
+skills: [ark-quality-gates, ark-md-report]
 examples:
   - kind: typical
     situation: 新增結算 API 要審
