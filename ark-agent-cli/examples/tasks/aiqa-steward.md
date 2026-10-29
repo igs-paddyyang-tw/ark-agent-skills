@@ -1,3 +1,6 @@
+---
+access: read-only
+---
 # 目標
 
 在 BlueStacks 上對 {GAME}／{MACHINE} 做 {MINUTES} 分鐘的無人值守試玩監測：腳本負責連續旋轉與判定，你負責每段看少量截圖、記錄異常、確認腳本還活著。
@@ -21,8 +24,8 @@
 2. 讀最新的 observations.json：`spins`、`credit`、`stuck_frames`、`crash` 的最新值，與上一段 checkpoint 的 metrics 比較。
 3. 看 **最多 3 張** 最新截圖（run 目錄下最新的 step-*.png，或自己截 1 張）：畫面是否在遊戲中、有無彈窗 / 錯誤碼 / 黑屏 / 破圖。
 4. 跑一次 `doctor`，確認裝置沒 offline。
-5. 把異常寫進 notes（格式：`[HH:MM] 現象 — 證據路徑`），數字寫進 metrics。
-6. 寫 checkpoint。
+5. 把異常寫進 notes（格式：`[HH:MM] 現象 — 證據路徑`），數字寫進 metrics（`spins`、`credit`、`stuck_frames`）。
+6. 寫 checkpoint：`actions` = 本段讀檔 / 截圖 / doctor 的次數，`evidence_new` = 本段新存的截圖數。腳本還在跑但數字沒變也要如實寫 `actions`，不要編進展。
 
 ## 檢查點要看什麼（異常定義）
 

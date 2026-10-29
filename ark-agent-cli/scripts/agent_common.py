@@ -12,7 +12,7 @@ import uuid
 
 CONTRACT = "1"
 SKILL_VERSION = "2.2.0"
-PROTOCOL_VERSION = "subagent-protocol/1"
+PROTOCOL_VERSION = "subagent-protocol/1.1"
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "BUDGET_EXCEEDED": 4, "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8}
 HERE = pathlib.Path(__file__).resolve().parent
 SKILL_ROOT = HERE.parent
@@ -88,18 +88,25 @@ def append_jsonl(path: pathlib.Path, obj):
 
 
 # ---------------------------------------------------------------- backend 指令模板
-# 每個 backend：cmd（env 覆蓋）、one-shot 參數、prompt 怎麼給（argv | stdin）、模型 / json / 續接 / agent 旗標
+# 每個 backend：cmd（env 覆蓋）、one-shot 參數、prompt 餵法（stdin | file | argv）、模型 / json / 續接 / agent 旗標、access 映射。
+# prompt 一律優先 stdin（Windows argv 上限 ~32K，長 prompt 會 WinError 206）；不吃 stdin 的 backend 走 file：
+#   prompt 寫到檔，argv 只放一行「讀 <path> 並依其執行」。argv 只在測試 / 極短 prompt 用。
+ACCESS_LEVELS = ("read-only", "workspace", "full")
 BACKENDS = {
-    "kiro":   {"env": ["ARK_CLI_KIRO_CMD", "KIRO_CLI_PATH"], "default": "kiro-cli", "args": ["chat", "--no-interactive", "--trust-all-tools"],
-               "prompt": "argv", "model": ["--model", "{model}"], "json": [], "resume": ["--resume-id", "{session}"], "agent": ["--agent", "{agent}"]},
+    "kiro":   {"env": ["ARK_CLI_KIRO_CMD", "KIRO_CLI_PATH"], "default": "kiro-cli", "args": ["chat", "--no-interactive"],
+               "prompt": os.getenv("ARK_CLI_KIRO_PROMPT", "file"), "model": ["--model", "{model}"], "json": [], "resume": ["--resume-id", "{session}"], "agent": ["--agent", "{agent}"],
+               "access": {"read-only": ["--trust-tools=fs_read"], "workspace": ["--trust-tools=fs_read,fs_write,execute_bash"], "full": ["--trust-all-tools"]}},
     "claude": {"env": ["ARK_CLI_CLAUDE_CMD", "CLAUDE_CLI_CMD"], "default": "claude", "args": ["-p"],
-               "prompt": "argv", "model": ["--model", "{model}"], "json": ["--output-format", "json"], "resume": ["--resume", "{session}"], "agent": []},
-    "gemini": {"env": ["ARK_CLI_GEMINI_CMD", "GEMINI_CLI_CMD"], "default": "gemini", "args": ["--approval-mode", "yolo", "--prompt"],
-               "prompt": "argv", "model": ["-m", "{model}"], "json": ["--output-format", "json"], "resume": [], "agent": []},
-    "codex":  {"env": ["ARK_CLI_CODEX_CMD", "CODEX_CLI_CMD"], "default": "codex", "args": ["exec", "--sandbox", "workspace-write"],
-               "prompt": "argv", "model": ["-m", "{model}"], "json": [], "resume": [], "agent": []},
+               "prompt": "stdin", "model": ["--model", "{model}"], "json": ["--output-format", "json"], "resume": ["--resume", "{session}"], "agent": [],
+               "access": {"read-only": ["--allowedTools", "Read,Grep,Glob,LS"], "workspace": ["--allowedTools", "Read,Grep,Glob,LS,Write,Edit,Bash"], "full": ["--dangerously-skip-permissions"]}},
+    "codex":  {"env": ["ARK_CLI_CODEX_CMD", "CODEX_CLI_CMD"], "default": "codex", "args": ["exec", "--skip-git-repo-check"],
+               "prompt": "stdin", "stdin_marker": "-", "model": ["-m", "{model}"], "json": ["--json"], "resume": [], "agent": [],
+               "access": {"read-only": ["-s", "read-only"], "workspace": ["-s", "workspace-write"], "full": ["-s", "danger-full-access"]}},
+    "gemini": {"env": ["ARK_CLI_GEMINI_CMD", "GEMINI_CLI_CMD"], "default": "gemini", "args": [],
+               "prompt": "stdin", "model": ["-m", "{model}"], "json": ["--output-format", "json"], "resume": [], "agent": [],
+               "access": {"read-only": ["--approval-mode", "default"], "workspace": ["--approval-mode", "auto_edit"], "full": ["--approval-mode", "yolo"]}},
     "fake":   {"env": ["ARK_CLI_FAKE_CMD"], "default": f"{sys.executable} {HERE / 'fake_backend.py'}", "args": [],
-               "prompt": "stdin", "model": [], "json": [], "resume": [], "agent": []},
+               "prompt": "stdin", "model": [], "json": [], "resume": [], "agent": [], "access": {"read-only": [], "workspace": [], "full": []}},
 }
 
 
@@ -114,9 +121,12 @@ def backend_cmd(backend: str) -> list[str]:
 
 
 def build_argv(backend: str, prompt: str, model: str | None = None, json_output: bool = False, session: str | None = None,
-               agent: str | None = None, lean: bool = False) -> tuple[list[str], str | None]:
-    """→ (argv, stdin_text)。prompt 走 argv 或 stdin 依 backend。"""
+               agent: str | None = None, lean: bool = False, access: str = "read-only", allow_tools: list[str] | None = None,
+               prompt_file: pathlib.Path | None = None, force_argv: bool = False) -> tuple[list[str], str | None, pathlib.Path | None]:
+    """→ (argv, stdin_text, prompt_file)。餵法：spec.prompt ∈ stdin | file | argv；file 模式需 prompt_file（呼叫端給路徑）。"""
     spec = BACKENDS[backend]
+    if access not in ACCESS_LEVELS:
+        raise ValueError(f"access 需 {ACCESS_LEVELS}")
     argv = backend_cmd(backend) + list(spec["args"])
     if model and spec["model"]:
         argv += [a.replace("{model}", model) for a in spec["model"]]
@@ -126,11 +136,44 @@ def build_argv(backend: str, prompt: str, model: str | None = None, json_output:
         argv += [a.replace("{session}", session) for a in spec["resume"]]
     if agent and spec["agent"]:
         argv += [a.replace("{agent}", agent) for a in spec["agent"]]
+    acc = list(spec.get("access", {}).get(access, []))
+    if allow_tools and backend in ("kiro", "claude") and access != "full":
+        acc = ["--trust-tools=" + ",".join(allow_tools)] if backend == "kiro" else ["--allowedTools", ",".join(allow_tools)]
+    argv += acc
     if lean and backend == "claude":
         argv += ["--tools", ""]
-    if spec["prompt"] == "argv":
-        return argv + [prompt], None
-    return argv, prompt
+    mode = "argv" if force_argv else spec["prompt"]
+    if mode == "stdin":
+        if spec.get("stdin_marker"):
+            argv.append(spec["stdin_marker"])
+        return argv, prompt, None
+    if mode == "file":
+        if prompt_file is None:
+            import tempfile
+            fd, name = tempfile.mkstemp(prefix="ark-prompt-", suffix=".md"); os.close(fd); prompt_file = pathlib.Path(name)
+        pathlib.Path(prompt_file).write_text(prompt, encoding="utf-8")
+        return argv + [f"請先完整讀取檔案 {prompt_file}，它是你這一段的全部指令與資料；讀完後依其執行，不要回頭問。"], None, pathlib.Path(prompt_file)
+    return argv + [prompt], None, None
+
+
+def extract_usage(text: str, json_data=None) -> dict | None:
+    """從 CLI 輸出抽 usage（有就記，沒有回 None）：claude json.usage / codex --json turn.completed.usage / gemini stats。"""
+    cands = []
+    if isinstance(json_data, dict):
+        cands.append(json_data.get("usage")); cands.append((json_data.get("stats") or {}).get("usage") if isinstance(json_data.get("stats"), dict) else None)
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if line.startswith("{") and '"usage"' in line:
+            try:
+                o = json.loads(line); cands.append((o.get("usage") or (o.get("turn") or {}).get("usage")))
+            except Exception:  # noqa: BLE001
+                pass
+    for u in cands:
+        if isinstance(u, dict):
+            it = u.get("input_tokens") or u.get("prompt_tokens") or u.get("promptTokenCount") or 0
+            ot = u.get("output_tokens") or u.get("completion_tokens") or u.get("candidatesTokenCount") or 0
+            return {"input_tokens": int(it or 0), "output_tokens": int(ot or 0), "cost_usd": u.get("cost_usd") or json_data.get("total_cost_usd") if isinstance(json_data, dict) else u.get("cost_usd")}
+    return None
 
 
 _ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07")

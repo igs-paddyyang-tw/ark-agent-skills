@@ -26,6 +26,19 @@
  "resume_count": 0, "error": null, "exit_code": null}
 ```
 
+## 2.4.0 新欄位
+
+`access` / `allow_tools`（權限）、`idle_segments` / `idle_streak`（空轉熔斷）、`handoff_grace_s`（已交接後最多等幾秒）、`watchdog_cmd` / `watchdog_fail` / `watchdog_fails`、`usage{input_tokens, output_tokens, cost_usd, llm_calls}`（累計；每段另存 `segments/NNN.usage.json`）。
+events 新 kind：`killed(why=handoff_grace|timeout)`、`watchdog_fail`、`blocked(reason=idle|watchdog)`、`finalized(reason=worker_died|worker_exception|worker_exit_without_terminal_state|finalize_forced)`。
+
+## 崩潰補收尾（finalize）
+
+worker 的 `finally` 保證離開前一定是終態；worker 被外力殺掉（state=running 但 pid 已死 = 孤兒）時，`status` / `list` 會**自動** finalize：從既有 checkpoints 補 `result.md`、state → `failed(error=worker_died)`、殺 exec 殘留 `child_pid`、清 `cancel`、發 inbox。手動：`finalize --job`（孤兒）或 `--force`（殺活的 worker 強制收尾）。判活：Windows OpenProcess；POSIX `kill 0` + `/proc/<pid>/status` 殭屍視為死。
+
+## 回收
+
+`gc --days 7 --keep failed,blocked [--dry-run]`：刪到期且不在 keep 的終態 job 目錄（含 artifacts）。
+
 ## 狀態機
 
 ```

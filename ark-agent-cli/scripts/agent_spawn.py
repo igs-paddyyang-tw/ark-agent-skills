@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import time
@@ -49,7 +50,12 @@ def detach(job_id: str) -> int:
     argv = [sys.executable, str(C.HERE / "agent_worker.py"), "--job", job_id]
     kw = {"stdout": log, "stderr": subprocess.STDOUT, "stdin": subprocess.DEVNULL, "close_fds": True}
     if os.name == "nt":
-        kw["creationflags"] = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB（bot 若用 Job Object 管子進程，worker 才不會被一起殺）
+        kw["creationflags"] = 0x00000008 | 0x00000200 | 0x01000000
+        try:
+            return subprocess.Popen(argv, **kw).pid
+        except OSError:  # 無 breakaway 權限 → 退回原旗標
+            kw["creationflags"] = 0x00000008 | 0x00000200
     else:
         kw["start_new_session"] = True
     p = subprocess.Popen(argv, **kw)
@@ -78,9 +84,14 @@ def _alive(pid: int | None) -> bool:
             k.CloseHandle(h)
     try:
         os.kill(int(pid), 0)
-        return True
     except Exception:  # noqa: BLE001
         return False
+    try:  # 殭屍（父進程未 reap，容器內常見）視為已死
+        if "State:\tZ" in pathlib.Path(f"/proc/{pid}/status").read_text():
+            return False
+    except OSError:
+        pass
+    return True
 
 
 def public(j: dict) -> dict:
@@ -115,18 +126,38 @@ def cmd_spawn(a):
         load(a.attach_exec)
     job_id = C.new_job_id(a.name)
     d = jdir(job_id); (d / "segments").mkdir(parents=True); (d / "artifacts").mkdir()
-    task_copy = d / "task.md"; task_copy.write_text(task.read_text(encoding="utf-8"), encoding="utf-8")
+    task_text = task.read_text(encoding="utf-8")
+    task_copy = d / "task.md"; task_copy.write_text(task_text, encoding="utf-8")
+    declared = _task_access(task_text)
+    if declared and C.ACCESS_LEVELS.index(declared) < C.ACCESS_LEVELS.index(a.access):
+        a.access = declared  # 較嚴者優先
     j = {"job_id": job_id, "name": a.name, "type": "agent", "backend": a.backend, "model": a.model, "agent": a.agent, "cwd": str(pathlib.Path(a.cwd).resolve()) if a.cwd else None,
          "task_file": str(task_copy), "state": "queued", "created_at": C.now(), "segment": 0, "max_segments": a.max_segments, "max_minutes": a.max_minutes,
          "segment_minutes": a.segment_minutes, "segment_timeout_s": a.segment_timeout, "segment_gap_s": a.segment_gap,
-         "attached_exec": a.attach_exec, "notify_cmd": a.notify_cmd, "notify_agent": a.notify_agent, "protocol": C.PROTOCOL_VERSION, "skill_version": C.SKILL_VERSION, "last_checkpoint": None}
+         "attached_exec": a.attach_exec, "notify_cmd": a.notify_cmd, "notify_agent": a.notify_agent,
+         "access": a.access, "allow_tools": a.allow_tools.split(",") if a.allow_tools else None, "idle_segments": a.idle_segments,
+         "handoff_grace_s": a.handoff_grace, "watchdog_cmd": a.watchdog_cmd, "watchdog_fail": a.watchdog_fail,
+         "usage": {"input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_calls": 0}, "protocol": C.PROTOCOL_VERSION, "skill_version": C.SKILL_VERSION, "last_checkpoint": None}
     C.write_json(d / "job.json", j)
     pid = detach(job_id)
     C.emit({"job_id": job_id, "dir": str(d), "worker_pid": pid, "state": "queued",
             "next": [f"python agent_spawn.py status --job {job_id}", f"python agent_spawn.py wait --job {job_id} --timeout {a.max_minutes * 60}", f"python agent_spawn.py result --job {job_id}"]})
 
 
+def _task_access(text: str) -> str | None:
+    m = re.match(r"^---\n(.*?)\n---", text, re.S)
+    if not m:
+        return None
+    mm = re.search(r"^access:\s*([\w-]+)", m.group(1), re.M)
+    return mm.group(1) if mm and mm.group(1) in C.ACCESS_LEVELS else None
+
+
+SHELL_META = re.compile(r"[;&|`$<>]|\brm\s+-rf\b|\bdel\s+/[sq]\b|\bformat\b")
+
+
 def cmd_exec(a):
+    if not a.allow_shell and SHELL_META.search(a.cmd):
+        C.fail("BAD_INPUT", "cmd 含 shell 控制字元或危險指令，預設不允許", "確認指令是主 agent 自己組的（不是使用者訊息）後加 --allow-shell")
     job_id = C.new_job_id(a.name)
     d = jdir(job_id); d.mkdir(parents=True)
     j = {"job_id": job_id, "name": a.name, "type": "exec", "command": a.cmd, "cwd": str(pathlib.Path(a.cwd).resolve()) if a.cwd else None, "state": "queued",
@@ -136,16 +167,59 @@ def cmd_exec(a):
     C.emit({"job_id": job_id, "dir": str(d), "worker_pid": pid, "log": str(d / "exec.log"), "next": f"python agent_spawn.py wait --job {job_id}"})
 
 
+def _orphan(j: dict) -> bool:
+    return j.get("state") == "running" and not _alive(j.get("pid"))
+
+
+def _auto_finalize(j: dict) -> dict:
+    if _orphan(j):
+        import agent_worker as W
+        return W.finalize(j, "worker_died")
+    return j
+
+
+def cmd_finalize(a):
+    j = load(a.job)
+    if not a.force and not _orphan(j):
+        C.fail("BAD_INPUT", f"job 不是孤兒（state={j.get('state')}, worker_alive={_alive(j.get('pid'))}）", "確定要強制收尾加 --force（會殺 worker 並標 failed）")
+    if a.force and j.get("pid") and _alive(j.get("pid")):
+        try:
+            os.kill(int(j["pid"]), 9)
+        except Exception:  # noqa: BLE001
+            pass
+    import agent_worker as W
+    j = W.finalize(j, "finalize_forced" if a.force else "worker_died")
+    C.emit(public(j))
+
+
+def cmd_gc(a):
+    import shutil, time as _t
+    keep = set(a.keep.split(",")) if a.keep else set()
+    removed, kept = [], []
+    for p in sorted(C.JOBS_ROOT.glob("*/job.json")):
+        j = C.read_json(p) or {}
+        age_days = (_t.time() - p.stat().st_mtime) / 86400
+        if j.get("state") in TERMINAL and j.get("state") not in keep and age_days >= a.days:
+            removed.append(j.get("job_id"))
+            if not a.dry_run:
+                shutil.rmtree(p.parent, ignore_errors=True)
+        else:
+            kept.append(j.get("job_id"))
+    C.emit({"removed": removed, "kept": len(kept), "dry_run": a.dry_run, "days": a.days, "keep_states": sorted(keep)})
+
+
 def cmd_status(a):
-    C.emit(public(load(a.job)))
+    C.emit(public(_auto_finalize(load(a.job))))
 
 
 def cmd_list(a):
     rows = []
     for p in sorted(C.JOBS_ROOT.glob("*/job.json"), reverse=True):
         j = C.read_json(p)
+        if j:
+            j = _auto_finalize(j)
         if j and (not a.state or j.get("state") == a.state):
-            rows.append({k: j.get(k) for k in ("job_id", "name", "type", "state", "segment", "created_at", "finished_at")})
+            rows.append({k: j.get(k) for k in ("job_id", "name", "type", "state", "segment", "created_at", "finished_at")} | {"tokens": (j.get("usage") or {}).get("input_tokens", 0) + (j.get("usage") or {}).get("output_tokens", 0)})
     C.emit({"jobs": rows[: a.limit], "dir": str(C.JOBS_ROOT)})
 
 
@@ -243,10 +317,19 @@ def main():
     s.add_argument("--attach-exec"); s.add_argument("--notify-cmd")
     s.add_argument("--notify-agent", help="終態寫進哪個 agent 的 inbox（預設同 --agent）；inbox 永遠會寫")
     s.add_argument("--route", help="agent:<name>：讀 agents.yaml 驗證並自動填 --agent/--cwd")
+    s.add_argument("--access", default="read-only", choices=list(C.ACCESS_LEVELS), help="sub-agent 權限（預設 read-only；task.md frontmatter 宣告更嚴者優先）")
+    s.add_argument("--allow-tools", help="逗號分隔工具白名單（kiro/claude），覆蓋 access 的預設清單")
+    s.add_argument("--idle-segments", type=int, default=3, help="連續 N 段無進展 → blocked(idle)")
+    s.add_argument("--handoff-grace", type=float, default=60, help="checkpoint 已寫但 CLI 未退出 → N 秒後砍")
+    s.add_argument("--watchdog-cmd", help="每段開始前跑；非零 exit 連 --watchdog-fail 次 → blocked"); s.add_argument("--watchdog-fail", type=int, default=2)
     s.set_defaults(func=cmd_spawn)
     s = sub.add_parser("roster"); s.add_argument("--role", help="只列此 role（如 worker）"); s.set_defaults(func=cmd_roster)
     s = sub.add_parser("exec"); s.add_argument("--name", required=True); s.add_argument("--cmd", required=True); s.add_argument("--cwd")
-    s.add_argument("--max-minutes", type=int, default=120); s.add_argument("--notify-cmd"); s.add_argument("--notify-agent"); s.set_defaults(func=cmd_exec)
+    s.add_argument("--max-minutes", type=int, default=120); s.add_argument("--notify-cmd"); s.add_argument("--notify-agent")
+    s.add_argument("--allow-shell", action="store_true", help="允許 ; | & 等 shell 控制字元"); s.set_defaults(func=cmd_exec)
+    s = sub.add_parser("finalize", help="worker 死掉的 job 補收尾（result.md / failed / 殺殘留 / inbox）"); s.add_argument("--job", required=True); s.add_argument("--force", action="store_true"); s.set_defaults(func=cmd_finalize)
+    s = sub.add_parser("gc", help="回收舊 job 目錄"); s.add_argument("--days", type=int, default=7); s.add_argument("--keep", default="failed,blocked", help="逗號分隔不刪的 state")
+    s.add_argument("--dry-run", action="store_true"); s.set_defaults(func=cmd_gc)
     s = sub.add_parser("inbox", help="讀 / 確認終態通知（主 agent 每輪開頭跑一次，零等待）"); s.add_argument("--agent", default="default")
     s.add_argument("--ack", action="store_true"); s.add_argument("--all", action="store_true"); s.set_defaults(func=cmd_inbox)
     s = sub.add_parser("status"); s.add_argument("--job", required=True); s.set_defaults(func=cmd_status)

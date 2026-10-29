@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-29 (列車 r16：ark-agent-cli 2.4.0 —— 吸收 ai-qa-agent prototype 的營運治理)
+
+> 來源：`ark-agent-cli-v2.4.zip`（以 main 2.2.1 為基準開發）。依 10-28 判準先 diff 確認基準 → **疊加不覆蓋**：保留 2.2.2 的 description 改指（否則回退成指向已 deprecated 的 ark-llm-tools，AL-032 會擋）。
+
+- **Breaking**：`build_argv` 回三元組 `(argv, stdin, prompt_file)`（codex／claude／gemini 走 stdin、kiro 走 prompt 檔 —— Windows 長 prompt 不再 WinError 206）；
+  spawn 預設 `--access read-only`；`exec --cmd` 含 shell 控制字元需 `--allow-shell`
+- 空轉熔斷（checkpoint 協定 1.1：`actions`／`evidence_new`）、handoff grace kill、用量統計（`usage`）、finalize（含孤兒自動收尾）、`gc`、`watchdog`
+- 新測試 11 條（`test_governance.py`），共 31 passed；設計來源 `references/v2.4-governance-plan.md`
+- ⚠️ 版號：破壞性變更但作者定為 minor（2.2→2.4）；目前沒有 skill depends_on ark-agent-cli，不影響範圍解析
+
+---
+
 ## 2026-10-29 (列車 r15：盤點第三批 M-5 —— 三個品質類食譜合併成可執行的 ark-quality-gates)
 
 > 規格：kiro-cli `docs/specs/ark-quality-gates-spec.md`（Paddy 選方案②）。active 50 → 48。

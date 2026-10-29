@@ -72,6 +72,8 @@ def render_prompt(j: dict, seg: int, last_cp: dict | None, nudge: bool) -> tuple
              f"- job_id: {j['job_id']}", f"- segment: {seg}（上限 {j['max_segments']}）",
              f"- 剩餘時間預算: {remain_min} 分鐘（整個 job 上限 {j['max_minutes']} 分鐘）",
              f"- 本段建議工作量: 約 {j['segment_minutes']} 分鐘，到了就收尾寫 checkpoint",
+             f"- 本 job 已用: {j.get('segment', 0)} 段 / {int((time.time() - j['_started_ts']) / 60)} 分鐘 / {(j.get('usage') or {}).get('input_tokens', 0) + (j.get('usage') or {}).get('output_tokens', 0)} tokens；連續 {j.get('idle_streak', 0)} 段無進展（{j.get('idle_segments', 3)} 段熔斷）",
+             f"- 權限: {j.get('access', 'read-only')}（超出範圍的事回 blocked，不要硬做）",
              f"- 工作目錄: {j.get('cwd') or os.getcwd()}", f"- 產物目錄（evidence 放這裡）: {d / 'artifacts'}",
              f"- checkpoint_path: {cp_path}", ""]
     if last_cp:
@@ -125,11 +127,30 @@ def run_agent_job(j: dict):
         if (time.time() - j["_started_ts"]) / 60 >= j["max_minutes"]:
             j["state"] = "timeout"; save_job(j); event(j, "budget", why="max_minutes"); write_result(j, last_cp or {"reason": "時間用盡"}, "timeout"); _notify(j); return
         seg = j["segment"] + 1
+        if j.get("watchdog_cmd"):
+            ok = _watchdog(j)
+            if not ok:
+                j["watchdog_fails"] = j.get("watchdog_fails", 0) + 1; event(j, "watchdog_fail", n=j["watchdog_fails"])
+                if j["watchdog_fails"] >= int(j.get("watchdog_fail", 2)):
+                    cp = {"status": "blocked", "reason": f"watchdog 連續 {j['watchdog_fails']} 次失敗：{j['watchdog_cmd']}", "progress": (last_cp or {}).get("progress", "")}
+                    j["state"] = "blocked"; j["finished_at"] = C.now(); j["last_checkpoint"] = cp; save_job(j); write_result(j, cp, "blocked"); event(j, "blocked", reason="watchdog"); _notify(j); return
+                time.sleep(float(j.get("watchdog_retry_s", 30))); continue
+            j["watchdog_fails"] = 0
         prompt, cp_path = render_prompt(j, seg, last_cp, nudge)
-        C.atomic_write(d / "segments" / f"{seg:03d}.prompt.md", prompt)
+        pf = d / "segments" / f"{seg:03d}.prompt.md"
+        C.atomic_write(pf, prompt)
         j["heartbeat_at"] = C.now(); save_job(j); event(j, "segment_start", seg=seg, nudge=nudge)
-        r = A.call(j["backend"], prompt, j.get("model"), False, None, j.get("agent"), False, j.get("cwd"), j["segment_timeout_s"])
+        r = A.call_watch(j["backend"], prompt, cp_path, grace_s=float(j.get("handoff_grace_s", 60)), model=j.get("model"), agent=j.get("agent"),
+                         cwd=j.get("cwd"), timeout=j["segment_timeout_s"], access=j.get("access", "read-only"), allow_tools=j.get("allow_tools"), prompt_file=pf)
         C.atomic_write(d / "segments" / f"{seg:03d}.out.txt", (r.get("text") or "") + ("\n\n[stderr]\n" + r.get("raw_stderr", "") if r.get("raw_stderr") else ""))
+        if r.get("usage"):
+            C.write_json(d / "segments" / f"{seg:03d}.usage.json", r["usage"])
+            u = j.setdefault("usage", {"input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_calls": 0})
+            u["input_tokens"] += r["usage"].get("input_tokens", 0); u["output_tokens"] += r["usage"].get("output_tokens", 0)
+            u["cost_usd"] = round((u.get("cost_usd") or 0) + float(r["usage"].get("cost_usd") or 0), 4)
+        j.setdefault("usage", {"input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0, "llm_calls": 0})["llm_calls"] += 1
+        if r.get("killed"):
+            event(j, "killed", seg=seg, why=r["killed"])
         if r.get("driver_missing"):
             j["state"] = "failed"; j["error"] = r["raw_stderr"]; save_job(j); event(j, "failed", why="driver_missing"); write_result(j, {"reason": r["raw_stderr"]}, "failed"); _notify(j); return
         cp = read_checkpoint(cp_path, r.get("text") or "")
@@ -140,6 +161,14 @@ def run_agent_job(j: dict):
                 nudge = True; event(j, "nudge", seg=seg); continue  # 同一段重跑一次
             j["state"] = "failed"; j["error"] = "連續兩段未寫 checkpoint"; save_job(j); event(j, "failed", why="no_checkpoint")
             write_result(j, {"reason": j["error"]}, "failed"); _notify(j); return
+        # 空轉熔斷：有效動作 / 新證據 / metrics 變動 / progress 文字變化，任一即有進展
+        progressed = int(cp.get("actions") or 0) > 0 or int(cp.get("evidence_new") or 0) > 0 or (cp.get("metrics") and cp.get("metrics") != (last_cp or {}).get("metrics")) \
+            or (cp.get("progress") and cp.get("progress") != (last_cp or {}).get("progress")) or cp["status"] != "continue"
+        j["idle_streak"] = 0 if progressed else j.get("idle_streak", 0) + 1
+        if j["idle_streak"] >= int(j.get("idle_segments", 3)):
+            cp = {**cp, "status": "blocked", "reason": f"空轉熔斷：連續 {j['idle_streak']} 段無進展（無動作 / 無新證據 / metrics 與 progress 不變）"}
+            j["segment"] = seg; j["last_checkpoint"] = cp; j["state"] = "blocked"; j["finished_at"] = C.now(); save_job(j)
+            write_result(j, cp, "blocked"); event(j, "blocked", reason="idle"); _notify(j); return
         nudge = False
         j["segment"] = seg; j["last_checkpoint"] = cp; j["heartbeat_at"] = C.now()
         event(j, "checkpoint", seg=seg, status=cp["status"], progress=cp.get("progress", "")[:200], elapsed_ms=r.get("elapsed_ms"))
@@ -150,6 +179,31 @@ def run_agent_job(j: dict):
         save_job(j)
         last_cp = cp
         time.sleep(float(j.get("segment_gap_s", 0)))
+
+
+def _watchdog(j: dict) -> bool:
+    try:
+        cp = subprocess.run(j["watchdog_cmd"], shell=True, capture_output=True, text=True, timeout=120, cwd=j.get("cwd") or None)
+        return cp.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def finalize(j: dict, reason: str = "worker_died") -> dict:
+    """崩潰補收尾：從現有 checkpoints 補 result.md、state → failed、殺殘留 child、清 cancel、發 inbox。可由 worker finally 或 agent_spawn finalize 呼叫。"""
+    d = job_dir(j["job_id"])
+    j["_started_ts"] = j.get("_started_ts") or time.time()
+    if j.get("child_pid"):
+        try:
+            os.kill(int(j["child_pid"]), 9)
+        except Exception:  # noqa: BLE001
+            pass
+    (d / "cancel").unlink(missing_ok=True)
+    last = j.get("last_checkpoint") or {}
+    cp = {**last, "reason": f"{reason}: {j.get('error') or ''}".strip(": ")}
+    j["state"] = "failed"; j["finished_at"] = C.now(); j["error"] = j.get("error") or reason
+    save_job(j); write_result(j, cp, "failed"); event(j, "finalized", reason=reason); _notify(j)
+    return j
 
 
 def run_exec_job(j: dict):

@@ -91,7 +91,7 @@ def test_cancel(tmp_path, jobs_dir, monkeypatch):
 
 
 def test_exec_job_and_attach(tmp_path, jobs_dir):
-    ej = sh("exec", "--name", "script", "--cmd", f"{sys.executable} -c \"print('hello'); import time; time.sleep(0.3)\"", "--max-minutes", "1", expect=0)["data"]["job_id"]
+    ej = sh("exec", "--name", "script", "--cmd", f"{sys.executable} -c \"print('hello'); import time; time.sleep(0.3)\"", "--max-minutes", "1", "--allow-shell", expect=0)["data"]["job_id"]
     job = spawn(tmp_path, "segments=1", attach=ej)
     wait(job, 0); d = wait(ej, 0)["data"]
     assert d["exit_code"] == 0 and "hello" in (jobs_dir / ej / "exec.log").read_text(encoding="utf-8")
@@ -101,7 +101,7 @@ def test_exec_job_and_attach(tmp_path, jobs_dir):
 
 
 def test_exec_failure_exit_code(tmp_path):
-    ej = sh("exec", "--name", "bad", "--cmd", f"{sys.executable} -c \"import sys; sys.exit(3)\"", expect=0)["data"]["job_id"]
+    ej = sh("exec", "--name", "bad", "--cmd", f"{sys.executable} -c \"import sys; sys.exit(3)\"", "--allow-shell", expect=0)["data"]["job_id"]
     j = wait(ej, 6)
     assert j["data"]["state"] == "failed" and j["data"]["exit_code"] == 3
 
@@ -117,10 +117,11 @@ def test_one_shot_cli_and_cleaning():
     j = json.loads(r.stdout)
     assert j["success"] and "\x1b" not in j["data"]["text"] and "▸ Time" not in j["data"]["text"] and j["data"]["text"].startswith("第 2 段完成")
     assert C.parse_model_spec("claude/haiku") == ("claude", "haiku")
-    argv, stdin = C.build_argv("claude", "hi", model="haiku", json_output=True, lean=True)
-    assert argv[-1] == "hi" and "--output-format" in argv and "--tools" in argv and stdin is None
-    argv, stdin = C.build_argv("kiro", "hi", agent="admin", session="abc")
-    assert "--agent" in argv and "--resume-id" in argv
+    argv, stdin, pf = C.build_argv("claude", "hi", model="haiku", json_output=True, lean=True, access="full")
+    assert stdin == "hi" and "--output-format" in argv and "--tools" in argv and "--dangerously-skip-permissions" in argv
+    argv, stdin, pf = C.build_argv("kiro", "hi", agent="admin", session="abc", access="full")
+    assert "--agent" in argv and "--resume-id" in argv and pf is not None and pf.read_text(encoding="utf-8") == "hi"
+    pf.unlink()
 
 
 def test_missing_driver_is_8(tmp_path, monkeypatch):

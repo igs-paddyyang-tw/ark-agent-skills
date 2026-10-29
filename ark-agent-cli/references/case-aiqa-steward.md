@@ -36,6 +36,8 @@ E=$(python $S/ark-agent-cli/scripts/agent_spawn.py exec --name ghy-aztec2-longru
 J=$(python $S/ark-agent-cli/scripts/agent_spawn.py spawn --name aiqa-steward --task tasks/aiqa-steward.md \
      --backend kiro --agent aiqa --cwd $S/ark-mobile-adb \
      --max-minutes 75 --max-segments 10 --segment-minutes 7 --segment-timeout 900 \
+     --access read-only --idle-segments 3 --handoff-grace 60 \
+     --watchdog-cmd "python scripts/ark_mobile_adb.py --json --device 127.0.0.1:5555 doctor" --watchdog-fail 2 \
      --attach-exec $E --notify-cmd "python notify_tg.py {job_id} {state}" | jq -r .data.job_id)
 # ③ 回使用者；之後
 python $S/ark-agent-cli/scripts/agent_spawn.py status --job $J
@@ -48,6 +50,14 @@ python $S/ark-mobile-adb/scripts/aiqa_report.py --run artifacts/aiqa/<run_id>
 - 60 分鐘掛測 → steward `--max-minutes 75`（比腳本多 15 分鐘收尾）、`--segment-minutes 7`、`--max-segments 10`
 - 每段 CLI 呼叫 ≈ 讀檔 + 3 張圖 + 寫 checkpoint，LLM 時間 1–3 分鐘；剩下用 `sleep` 等到段末（task 裡明寫，避免狂截圖）
 - `--segment-timeout 900`：一段 15 分鐘沒寫 checkpoint 就砍，nudge 一次
+
+## 2.4.0 治理在這個案例裡
+
+- `--access read-only`：steward 只讀檔、讀截圖、跑 doctor；它不能點擊、不能改 pack（協定第 9 條 + CLI 旗標雙重擋）
+- `--watchdog-cmd doctor`：裝置離線連兩段 → `blocked(watchdog)`，不會對著黑畫面空轉
+- `--idle-segments 3`：腳本死了但 steward 沒發現、連三段「沒有新進展」→ 熔斷（prototype 2026-10-14 事故的通用解）
+- `--handoff-grace 60`：steward 寫完 checkpoint 還在想事情 → 60 秒砍，段時間可預期
+- usage：每段 token 進 job.json，`result` / inbox 帶出，掛測一小時花多少看得到
 
 ## 續跑
 

@@ -5,16 +5,18 @@ description: |
   （輸出清理、超時、JSON 抽取、model spec `backend/model`）。sub-agent：`agent_spawn.py` 把長時間任務丟到
   背景分段執行——每段 fresh context + checkpoint 檔接續，worker 管預算 / 心跳 / nudge / 續跑，主對話只
   spawn 與收 result.md；`exec` 另跑零 LLM 的背景腳本並可附掛給 sub-agent 當管家觀察（aiqa 1 小時掛測案例）。
+  2.4：prompt 走 stdin / 檔（不吃 Windows argv 上限）、sub-agent 預設 read-only 權限、空轉熔斷、已交接即砍、用量統計、
+  孤兒自動收尾、watchdog、gc——長時間 UX / quick test 可無人值守跑且成本可見。
   使用此 skill 當提及：呼叫 agent、問 claude / kiro / gemini / codex、統一 LLM 後端、多模型切換、從命令列測 agent，
   或「開子 agent」「subagent」「背景跑」「跑一小時」「無人值守」「長任務不卡對話」「先回使用者再背景跑」
-  「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」。
+  「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」「UX 測試要跑很久」「sub-agent 燒 token」「job 死掉沒報告」。
   不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-pipeline-recipes 的 llm-tools 頁）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.2.2"
+  version: "2.4.0"
   author: paddyyang
   schema_version: "1.2"
   status: active
-  updated: 2026-10-29
+  updated: 2026-10-30
   category: pipeline
   form: executor
   domain: general
@@ -40,13 +42,14 @@ sub-agent： agent_spawn.py spawn ──▶ detached agent_worker.py ──┬�
 > 四個 backend 各自讀自己的入口檔（`.kiro/steering` / `CLAUDE.md` / `GEMINI.md` / `AGENTS.md`）。
 
 三條鐵律：**狀態在檔案不在對話**（每段 fresh context，接續靠 checkpoint）、**sub-agent 不判定**（執行與觀察；判定留給 oracle 或主 agent）、**做不到就 blocked**（主 agent 處理完 resume，不假裝）。
+2.4 加三道治理：**最小權限**（sub-agent 預設 read-only，CLI 旗標真的擋）、**不空轉**（連 3 段無進展熔斷、已交接 60 秒砍）、**一定有收尾**（worker 怎麼死都補 result.md + inbox，token 看得到）。
 
 ## 資產地圖
 
 | 路徑 | 用途 | 何時載入 |
 |---|---|---|
 | `scripts/agent_cli.py` | one-shot 呼叫；`-b` / `-m backend/model` / `--json` / `--lean` / `--agent` / `--session` / `--cwd` | 問一下某個 CLI |
-| `scripts/agent_spawn.py` | `spawn` / `exec` / `status` / `list` / `tail` / `wait` / `cancel` / `resume` / `result` | 長任務、背景跑 |
+| `scripts/agent_spawn.py` | `spawn` / `exec` / `status` / `list` / `tail` / `wait` / `cancel` / `resume` / `result` / `inbox` / `roster` / `finalize` / `gc` | 長任務、背景跑 |
 | `scripts/agent_worker.py` | 背景 worker（spawn 自動 detach；`--job <id>` 可前景除錯） | 不直接用 |
 | `scripts/agent_common.py` | envelope、exit code、`BACKENDS` 旗標模板、輸出清理、JSON 抽取、找 `agents.yaml` | 加 backend 時 |
 | `scripts/roster.py` | 讀 `agents.yaml` → 列可派工名單 / 驗 name / 補 cwd（選角路由的確定性那半） | 選角派工時 |
@@ -58,6 +61,7 @@ sub-agent： agent_spawn.py spawn ──▶ detached agent_worker.py ──┬�
 | `references/backends.md` | 四個 backend 的旗標與環境變數 | 換模型 / 路徑 |
 | `references/routing.md` | **選角路由**：roster 列名單 → manager（LLM）選 → spawn --route 驗證補 cwd；與 team 方法1 分界 | 要派給專家 |
 | `references/v2-design.md` | v1.0 分析 → v2.0 設計（背景 sub-agent 分段＋checkpoint、aiqa 管家案例）—— 為什麼這樣設計 | 改架構前先讀 |
+| `references/v2.4-governance-plan.md` | 2.4 治理來源：ai-qa-agent prototype 對照與 W1–W5（stdin / 熔斷 / finalize / 用量 / 權限 / watchdog） | 要知道為什麼 |
 | `references/reporting-back.md` | **完成後怎麼回報主 agent 而主 agent 不等、不卡、不 timeout**（inbox / notify_cmd / to agent 三條） | 設計回報流程 |
 | `examples/tasks/aiqa-steward.md` `long-research.md` | task.md 範本（佔位用 `{…}`） | 起一個 job |
 | `scripts/tests/` | fake backend 全鏈：段數、nudge、blocked→resume、預算、cancel、exec+attach、one-shot、DRIVER_MISSING | 改腳本後 |
@@ -76,7 +80,9 @@ sub-agent： agent_spawn.py spawn ──▶ detached agent_worker.py ──┬�
 │   ├─ 腳本 + 要有人盯（aiqa 掛測）→ 先 exec 腳本，再 spawn --attach-exec <exec job>（steward 範本：examples/tasks/aiqa-steward.md）
 │   └─ 回使用者「已派工 job_id …，預計 N 分鐘」——不要 wait 卡住對話
 ├─ 每輪開頭 → inbox --agent <我> --ack；pending > 0 先轉述 notices 的 summary/reason 再處理本輪（這就是「回報主 agent」：拉，不等）
-├─ 使用者問進度 → status / tail --job；問結果 → result --job（終態才有 result.md），summary 原樣轉述
+├─ 使用者問進度 → status / tail --job（孤兒自動收尾，usage 帶 token）；問結果 → result --job，summary 原樣轉述
+├─ 跑很久的 UX / quick test → spawn --access read-only --watchdog-cmd "<健康檢查>" --idle-segments 3；要 sub-agent 改檔才給 workspace；full 只給人明確要求
+├─ 太多舊 job → gc --days 7（failed / blocked 預設保留）
 ├─ blocked → 把 reason 給人；處理完 resume --job [--extra-minutes]；timeout → resume --extra-segments；failed → tail 看最後輸出
 └─ 要停 → cancel --job（worker 下一檢查點停；exec 立即 kill）
 ```
@@ -120,6 +126,13 @@ one-shot `data`：`{text, json_data, backend, model, elapsed_ms, timed_out, exit
 | `ARK_AGENT_INBOX_DIR` | `~/.ark/agent-inbox` | 終態通知 inbox 目錄（主 agent 每輪 `inbox --ack` 讀這裡） |
 
 ## 版本
+
+### 2.4.0（2026-10-30）— Breaking（吸收 ai-qa-agent prototype 的營運治理，見 references/v2.4-governance-plan.md）
+- **prompt 餵法**：codex / claude / gemini 走 stdin（codex `-`），kiro 走 prompt 檔（argv 只放一行「讀檔」）；`build_argv` 回三元組 `(argv, stdin, prompt_file)`。Windows 長 prompt 不再 `WinError 206`。
+- **權限**：spawn 預設 `--access read-only`（2.2 以前 kiro 一律 `--trust-all-tools`、codex `workspace-write`）；one-shot `agent_cli.py` 預設仍 full。`exec --cmd` 含 shell 控制字元需 `--allow-shell`。
+- **空轉熔斷**（協定 1.1：checkpoint 加 `actions` / `evidence_new`）、**handoff grace kill**（`agent_cli.call_watch`）、**用量統計**（`usage` 進 job.json / status / list / inbox）、**finalize**（worker `finally` + 孤兒自動收尾 + `finalize` 子命令）、**gc**、**watchdog**。
+- Windows detach 加 `CREATE_BREAKAWAY_FROM_JOB`；POSIX 判活把殭屍視為死。
+- 新測試 11 條（`scripts/tests/test_governance.py`），既有測試改 `--allow-shell` 與三元組。
 
 ### 2.2.2（2026-10-29）
 - 文件：description「不適用於」的 LLM 工具函式改指 `ark-pipeline-recipes`（llm-tools 頁；ark-llm-tools 已併入）
