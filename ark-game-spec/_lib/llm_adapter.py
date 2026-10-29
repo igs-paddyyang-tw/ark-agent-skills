@@ -4,7 +4,7 @@ provider（環境變數 ARK_LLM_PROVIDER）:
   anthropic  ANTHROPIC_API_KEY（可選 ANTHROPIC_BASE_URL），模型 ARK_LLM_MODEL
   gemini     GEMINI_API_KEY，模型 ARK_LLM_MODEL
   module     ARK_LLM_ADAPTER_MODULE=path/to/adapter.py，需提供 complete(prompt, images, system) -> str
-             （接 ark-llm-tools 的 LLMAdapter / GeminiAdapter 用這條）
+             （接 ark-pipeline-recipes llm-tools 頁的 LLMAdapter / GeminiAdapter 用這條）
   fake       離線 deterministic 假回覆（測試 / 無憑證）；ARK_FAKE_ANSWERS=<json> 可指定固定回覆
 
 快取 key = sha256(provider, model, system, prompt, images sha, pack_sha)；同輸入重跑零費用。

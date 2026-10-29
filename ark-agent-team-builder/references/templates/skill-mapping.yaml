@@ -31,7 +31,7 @@ roles:
     description: "LLM 整合、Prompt 工程、MCP 開發"
     skills:
       - ark-mcp-builder
-      - ark-llm-tools
+      - ark-pipeline-recipes
       - ark-browser-tool
 
   worker-coder:
@@ -51,8 +51,7 @@ roles:
   worker-data:
     description: "數據分析、KPI 追蹤、趨勢洞察"
     skills:
-      - ark-chart-generator
-      - ark-etl-pipeline
+      - ark-pipeline-recipes
       - ark-db-query
 
   worker-market:
@@ -64,7 +63,7 @@ roles:
   worker-report:
     description: "報告產出、圖表渲染、定期摘要"
     skills:
-      - ark-chart-generator
+      - ark-pipeline-recipes
       - ark-news-daily
       - ark-report-template
 

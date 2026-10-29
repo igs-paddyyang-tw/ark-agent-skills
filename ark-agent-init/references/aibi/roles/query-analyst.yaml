@@ -37,7 +37,7 @@ metrics:
   - { name: golden questions 通過率, target: "≥95%" }
   - { name: 契約外查詢正確拒答, target: "100%" }
 knowledge_domains: [指標語意契約, 查詢範本, 資料表欄位語意, BigQuery 方言與成本控制, 歷次查詢錯誤案例]
-skills: [ark-db-query, ark-kpi-calculator, ark-data-contract, ark-wiki-engine]
+skills: [ark-db-query, ark-pipeline-recipes, ark-wiki-engine]
 examples:
   - kind: typical
     situation: 「2026-05 各渠道帶一個新玩家的成本」

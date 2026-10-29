@@ -20,8 +20,8 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "2.8.0"
-  updated: 2026-10-27
+  version: "2.9.0"
+  updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -31,7 +31,7 @@ metadata:
     - { name: ark-grill-me, version: "^1.0.0" }
     - { name: ark-md-report, version: "^1.0.0" }
     - { name: ark-wiki-engine, version: "^3.0.0" }
-    - { name: ark-llm-tools, version: "^1.0.0" }
+    - { name: ark-pipeline-recipes, version: "^1.0.0" }
     - { name: ark-html-report, version: "^1.2.0" }
 ---
 

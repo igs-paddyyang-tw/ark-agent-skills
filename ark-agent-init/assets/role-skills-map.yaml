@@ -19,14 +19,14 @@ base_skills:
 
 # 角色差異 → tier role
 role_skills:
-  admin:    [ark-planning-with-files, ark-env-doctor, ark-dashboard-health, ark-cost-tracker]
+  admin:    [ark-planning-with-files, ark-env-doctor, ark-dashboard-health, ark-pipeline-recipes]
   leader:   [ark-project-planning, ark-uml-generator, ark-doc-coauthoring]
-  ai-dev:   [ark-skill-creator, ark-mcp-builder, ark-llm-tools]
+  ai-dev:   [ark-skill-creator, ark-mcp-builder, ark-pipeline-recipes]
   coder:    [ark-skill-creator, ark-code-review]
   qa:       [ark-code-review, ark-test-runner]
   devops:   [ark-docker-deploy, ark-env-doctor]
   designer: [ark-frontend-design]
-  analyst:  [ark-kpi-calculator, ark-chart-generator, ark-etl-pipeline]
+  analyst:  [ark-pipeline-recipes]
 
 # tier 對照（供 skills-matrix.yaml / align_sync 的 tier 分層）
 tiers:

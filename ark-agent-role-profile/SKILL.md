@@ -28,8 +28,8 @@ metadata:
   depends_on:
     - { name: ark-grill-me, version: "^1.0.0" }
   author: paddyyang
-  version: "1.3.3"
-  updated: 2026-10-20
+  version: "1.3.4"
+  updated: 2026-10-29
 ---
 
 # ark-agent-role-profile

@@ -36,7 +36,7 @@ metrics:
   - { name: 一圖一結論（圖題為結論句）, target: "100%" }
   - { name: 軸縱放標示, target: "100%" }
 knowledge_domains: [ark-html-report 17 元件庫, chart-definition 契約, 視覺化誤導模式清單, 讀者分層對應圖型]
-skills: [ark-chart-generator, ark-html-report, ark-html-dashboard, ark-frontend-design]
+skills: [ark-pipeline-recipes, ark-html-report, ark-html-dashboard, ark-frontend-design]
 examples:
   - kind: typical
     situation: report-narrator 要「預算調整次數 vs 效率」的圖

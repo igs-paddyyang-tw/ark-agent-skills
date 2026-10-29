@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-10-29 (列車 r12：8 個產碼食譜合併成 ark-pipeline-recipes；新守門 AL-032)
+
+> 計畫：kiro-cli `docs/plans/ark-pipeline-recipes-merge-plan.md`（盤點 M-1）。active 62 → 55。
+
+- **新增 `ark-pipeline-recipes` 1.0.0**：SKILL.md 只做「情境 → 食譜」路由，8 份食譜原樣搬到 `references/<名稱>.md`（腳本逐位元組比對 8/8 一致）
+- **舊 8 個改 deprecated stub（2.0.0，Breaking）**：ark-anomaly-detector、ark-chart-generator、ark-cost-tracker、ark-etl-pipeline、ark-kpi-calculator、ark-llm-tools、ark-translator、ark-data-contract。
+  🔴 stub **保留 SKILL.md**（mirror_sync 會跳過沒有 SKILL.md 的上游目錄），description 保留原觸發詞並轉址
+- **新守門 AL-032 `ref-to-deprecated`（P1，ark-skills-align 2.7.0）**：active skill 的 depends_on／description／skill 內 `*.yaml` 指向 deprecated stub 即擋，訊息給出取代者。
+  stub 存在時 AL-015／016 都會放行，舊引用會讓新裝的 agent 只拿到空殼。反證：放回一處舊引用 → 轉紅；停用規則 → 3 項轉紅
+- **改引用**（patch）：ark-agent-init 2.6.1（role-skills-map、AIBI／gamedev 角色、skill-selection-map）、ark-agent-role-profile 1.3.4（9 個角色檔）、ark-agent-team-builder 3.1.4、ark-html-dashboard 1.0.3、ark-agent-cli 2.2.2、ark-retention-analysis 1.0.2；
+  ark-game-spec 2.9.0（depends_on llm-tools → pipeline-recipes；`llm_adapter.py` 註解屬契約檔 → minor）
+- 🟡 **消費端**：`mirror_sync` 會把已裝的舊目錄對齊成 stub，但**不會自動裝 `ark-pipeline-recipes`** —— 各專案同步後自行 `cp -r <ark-agent-skills>/ark-pipeline-recipes .kiro/skills/`
+
+---
+
 ## 2026-10-29 (列車 r11：補版號債＋修兩個守門的根因)
 
 - **補版號債**（r10 之後未升版）：ark-weknora-cli 1.1.0（kb_registry 三層查找）、ark-agent-team-builder 3.1.3（去 BOM）、ark-agent-cli 2.2.1（補連 `references/v2-design.md`，原為孤兒檔）

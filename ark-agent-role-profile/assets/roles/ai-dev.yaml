@@ -36,7 +36,7 @@ metrics:
   - { name: LLM 輸出 schema 驗證覆蓋, target: "100%" }
   - { name: API 踩坑入 wiki, target: "當日" }
 knowledge_domains: [LLM API 踩坑, Prompt pattern, RAG 策略, eval 設計, token 成本]
-skills: [ark-skill-creator, ark-mcp-builder, ark-llm-tools, ark-prompt-spec-validator, ark-cost-tracker]
+skills: [ark-skill-creator, ark-mcp-builder, ark-pipeline-recipes, ark-prompt-spec-validator]
 examples:
   - kind: typical
     situation: 要把日報摘要品質提升

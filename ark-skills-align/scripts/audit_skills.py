@@ -16,6 +16,7 @@
  12. unpaired-pairing-claim：宣稱「成對／雙軌」必須雙向（P2）
  13. orphan-asset：references/assets 從 SKILL.md 不可達（P2）
  14. deprecated-field：metadata.consumed_by 已廢除（P3）
+ 15. ref-to-deprecated：active skill 的 depends_on／description／*.yaml 指向 deprecated stub（P1，AL-032）
 
 用法：
   python audit_skills.py --repo /path/to/ark-agent-skills [--config audit_config.yml] [--json out.json]
@@ -226,7 +227,7 @@ def audit(repo: Path, triggers: dict):
         "orphan-asset": "AL-019", "referenced-test-missing": "AL-020",
         "missing-schema-version": "AL-021", "missing-updated": "AL-022",
         "deprecated-field": "AL-023", "legacy-category": "AL-024",
-        "depends-on-cycle": "AL-030", "invalid-dep-range": "AL-031",
+        "depends-on-cycle": "AL-030", "invalid-dep-range": "AL-031", "ref-to-deprecated": "AL-032",
         "content-changed-no-bump": "AL-108",
         "category-axis-mixed": "AL-025", "missing-form": "AL-026", "invalid-form": "AL-027",
         "missing-domain": "AL-028", "invalid-domain": "AL-029",
@@ -471,6 +472,44 @@ def audit(repo: Path, triggers: dict):
             add("P1", "dangling-desc-ref", name,
                 f"description 內文指向不存在的 skill：{ref}"
                 "（agent 讀的是 description —— 舊名沒刪就會被引用）")
+
+    # 3.5b AL-032 active skill 不得指向 deprecated stub（2026-10-29 加，8 個產碼食譜併入 ark-pipeline-recipes）
+    #
+    # 🔴 為什麼需要：stub 存在，所以 dangling-skill-ref／dangling-desc-ref 都會放行 ——
+    # 但角色對照表、depends_on、description 若還指著舊名，新裝的 agent 會被導到只剩轉址的空殼，
+    # 而 mirror_sync 不會自動裝上新 skill → 能力在消費端靜默消失。
+    # 掃三處：depends_on、description、skill 目錄內的 *.yaml（role-skills-map、角色檔、skill-mapping）。
+    # 豁免：自己 metadata.replaces 列的舊名（「我取代了它」本來就要提到它）。
+    successor = {}
+    for n, i in active.items():
+        for old in (((i["fm"] or {}).get("metadata") or {}).get("replaces") or []):
+            successor[str(old).strip()] = n
+    deprecated_names = set(stubs)
+
+    def _to(old: str) -> str:
+        return f"改指 {successor[old]}" if old in successor else "改指取代它的 skill"
+
+    for name, info in active.items():
+        fm = info["fm"] or {}
+        meta = fm.get("metadata") or {}
+        allowed = {str(r).split(".")[0].strip() for r in (meta.get("replaces") or [])}
+        hits: dict[str, str] = {}
+        for ref in (meta.get("depends_on") or []):
+            hits.setdefault(dep_name(ref), "depends_on")
+        for ref in DESC_ARK_REF_RE.findall(str(fm.get("description", ""))):
+            hits.setdefault(ref, "description")
+        sk_dir = repo / name
+        for y in sorted([*sk_dir.rglob("*.yaml"), *sk_dir.rglob("*.yml")]):
+            if "release" in y.relative_to(sk_dir).parts:
+                continue
+            txt = y.read_text(encoding="utf-8", errors="replace")
+            for ref in DESC_ARK_REF_RE.findall(txt):
+                hits.setdefault(ref, str(y.relative_to(sk_dir)))
+        for ref, where in sorted(hits.items()):
+            if ref in deprecated_names and ref not in allowed:
+                add("P1", "ref-to-deprecated", name,
+                    f"{where} 指向已 deprecated 的 {ref} —— {_to(ref)}"
+                    "（stub 只剩轉址，mirror_sync 不會自動裝新 skill）")
 
     # 3.6 scaffolder / executor 必須有端到端測試
     #

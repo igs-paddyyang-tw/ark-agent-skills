@@ -35,7 +35,7 @@ metrics:
   - { name: 宣稱有來源, target: "100%" }
   - { name: 活動有事後檢討, target: "100%" }
 knowledge_domains: [受眾輪廓, 文案模板, 活動檢討, 競品行銷案例, 平台投放規則]
-skills: [ark-marketing, ark-web-scraper, ark-chart-generator]
+skills: [ark-marketing, ark-web-scraper, ark-pipeline-recipes]
 examples:
   - kind: typical
     situation: Leader 要「新賽季上線的推廣方案」

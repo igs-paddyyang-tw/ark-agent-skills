@@ -36,7 +36,7 @@ metrics:
   - { name: 公告零撤回, target: "100%" }
   - { name: 情緒週報準時, target: "每週一 10:00" }
 knowledge_domains: [玩家回饋分類, 危機處理 SOP, 公告模板, 各平台社群規則]
-skills: [ark-telegram-sender, ark-translator]
+skills: [ark-telegram-sender, ark-pipeline-recipes]
 examples:
   - kind: typical
     situation: Leader 問「今天社群在吵什麼」

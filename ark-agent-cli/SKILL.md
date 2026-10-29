@@ -8,9 +8,9 @@ description: |
   使用此 skill 當提及：呼叫 agent、問 claude / kiro / gemini / codex、統一 LLM 後端、多模型切換、從命令列測 agent，
   或「開子 agent」「subagent」「背景跑」「跑一小時」「無人值守」「長任務不卡對話」「先回使用者再背景跑」
   「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」。
-  不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-llm-tools）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
+  不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-pipeline-recipes 的 llm-tools 頁）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.2.1"
+  version: "2.2.2"
   author: paddyyang
   schema_version: "1.2"
   status: active
@@ -120,6 +120,9 @@ one-shot `data`：`{text, json_data, backend, model, elapsed_ms, timed_out, exit
 | `ARK_AGENT_INBOX_DIR` | `~/.ark/agent-inbox` | 終態通知 inbox 目錄（主 agent 每輪 `inbox --ack` 讀這裡） |
 
 ## 版本
+
+### 2.2.2（2026-10-29）
+- 文件：description「不適用於」的 LLM 工具函式改指 `ark-pipeline-recipes`（llm-tools 頁；ark-llm-tools 已併入）
 
 ### 2.2.1（2026-10-29）
 - 文件：SKILL.md 資源表補連 `references/v2-design.md`（原本 agent 讀不到，audit orphan-asset）

@@ -34,18 +34,18 @@
 | code 品質 / PR 審查 / lint / 安全掃描 | `ark-code-review` | role: coder/qa |
 | 跑測試 / 覆蓋率 | `ark-test-runner` | role: qa |
 | 查資料庫 / BQ 取數 | `ark-db-query` | role: analyst/data-eng |
-| 資料清洗轉換 / 匯出檔案(md/csv/json) | `ark-etl-pipeline` | role: analyst/data-eng |
+| 資料清洗轉換 / 匯出檔案(md/csv/json) | `ark-pipeline-recipes`（etl-pipeline 頁） | role: analyst/data-eng |
 | 建新 skill / 改 skill / 測 skill 效能 | `ark-skill-creator` | role: ai-dev/coder |
 | 建/校整庫 skill、metadata 稽核 | `ark-skills-align` | role: admin |
 | 做前端介面 / 設計系統 | `ark-frontend-design` | role: designer |
-| 互動數據儀表板 | `ark-html-dashboard`；圖表 → `ark-chart-generator` | role: analyst |
+| 互動數據儀表板 | `ark-html-dashboard`；靜態圖表 → `ark-pipeline-recipes`（chart-generator 頁） | role: analyst |
 | 建新 agent workspace(.kiro 骨架) | `ark-agent-init` | 一次性任務 |
 | 建 bot / team daemon 專案骨架 | `ark-agent-bot-builder` / `ark-agent-team-builder` | 一次性任務 |
 | 上網查資料 / 大規模抓取 | `ark-web-scraper`；瀏覽器互動/截圖/E2E → `ark-browser-tool` | role: researcher |
 | Office 檔(.docx/.xlsx/.pptx/.pdf) | `ark-docx-tool` / `ark-xlsx-tool` / `ark-pptx-tool` / `ark-pdf-tool` | 按需 |
 | git log → changelog / 版本說明 | `ark-release-notes` | 按需 |
 
-> 領域專屬 skill（如遊戲 `ark-game-spec`、`ark-kpi-calculator`）由各專案在
+> 領域專屬 skill（如遊戲 `ark-game-spec`、`ark-retention-analysis`）由各專案在
 > `sync_skills.py` 的 MATRIX 依角色補，見 `role-templates-gamedev.md`。
 
 ## 串鏈原則

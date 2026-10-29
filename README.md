@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **62 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
+> **55 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -71,26 +71,19 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ③ 管線元件 Pipeline
 
-> 輸出：結構化資料｜`category: pipeline`｜18 個
+> 輸出：結構化資料｜`category: pipeline`｜11 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
 | `ark-agent-cli` | ⚙️ 執行 | 通用 | 統一 Agent CLI 閘道 + 背景 sub-agent。 |
-| `ark-anomaly-detector` | 📝 指示 | 通用 | 產出 KPI 異常偵測模組 + 告警規則引擎 + MCP Tool + 排程整合。 |
 | `ark-browser-tool` | 📝 指示 | 通用 | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
-| `ark-chart-generator` | 📝 指示 | 通用 | 產出 chart_generator.py 標準化圖表 Skill，使用 Matplotlib 將結構化數據轉換為圖表， 輸出至 artifacts/charts 目錄。 |
 | `ark-code-review` | 📝 指示 | 通用 | 產出程式碼審查 Skill，支援 Python/TypeScript 程式碼品質檢查、 風格一致性驗證、安全性掃描、PR 審查報告產生。 |
 | `ark-community-cli` | ⚙️ 執行 | 🎮 遊戲 | 社群訊息蒐集與分析的 CLI skill：以標準 SOP 從 Discord（自家伺服器，bot 唯讀）與 X／Twitter（日本市場， X API v2 pay-per-use）取得訊息，統一 s… |
-| `ark-cost-tracker` | 📝 指示 | 通用 | 產出 API 呼叫成本追蹤 Skill，記錄 LLM API 的 token 使用量和費用。 |
-| `ark-data-contract` | 📝 指示 | 通用 | 當使用者需要驗證管線元件間的 schema 契約時使用此技能。 |
 | `ark-db-query` | ⚙️ 執行 | 通用 | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
-| `ark-etl-pipeline` | 📝 指示 | 通用 | 產出 etl_pipeline.py 資料轉換 Skill，將任何資料來源（CSV、JSON、API 回傳、 Skill 輸出、資料庫查詢）轉換為 chart_generator 可直接使用的標準格式… |
-| `ark-kpi-calculator` | 📝 指示 | 通用 | 產出標準化 KPI 計算引擎模組 + MCP Tool，支援遊戲類指標（DAU/MAU/ARPU/RTP/留存率/LTV） 與通用指標（轉換率/流失率/NPS）。 |
-| `ark-llm-tools` | 📝 指示 | 通用 | 產出 LLM 通用工具 Skills（summarize、analyze、qa、intent_parse）， 搭配 GeminiAdapter 或 LLMAdapter 進行文字摘要、資料分析、問答、… |
+| `ark-pipeline-recipes` | 📝 指示 | 通用 | 資料管線與 LLM 工具的產碼食譜集：照食譜在專案裡寫出標準模組（圖表、ETL 轉換與匯出、 KPI 計算、異常偵測與告警、LLM 成本追蹤、翻譯、LLM 摘要／分析／意圖解析、管線資料契約）。 |
 | `ark-security-audit` | 📝 指示 | 通用 | 產出 security_audit.py 安全性掃描 Skill，對專案進行程式碼安全性檢查與弱點偵測。 |
 | `ark-telegram-sender` | ⚙️ 執行 | 通用 | 通用 Telegram 發送 Skill：文字訊息（HTML 格式）、檔案附件、圖片。 |
 | `ark-test-runner` | 📝 指示 | 通用 | 產出 test_runner.py 自動化測試執行 Skill，執行 pytest 測試並產生覆蓋率報告。 |
-| `ark-translator` | 📝 指示 | 通用 | 產出 translator.py 多語言翻譯 Skill，搭配 Gemini LLM 進行高品質翻譯， 支援繁體中文、簡體中文、英文、日文互譯。 |
 | `ark-web-scraper` | 📝 指示 | 通用 | 產出進階網頁爬蟲 Skill，基於 Scrapling 框架。 |
 | `ark-wiki-engine` | ⚙️ 執行 | 通用 | Agent 直接呼叫的 Wiki 知識庫 executor（捆綁可執行 scripts/，不掛 MCP、不跑 server）。 |
 
@@ -139,6 +132,21 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-mobile-adb` | ⚙️ 執行 | 🎮 遊戲 | Android / BlueStacks 裝置層 + 遊戲 AI QA（aiqa）+ 按鍵精靈式 macro + playtest（v2.2）。 |
 | `ark-skills-align` | ⚙️ 執行 | 通用 | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
 | `ark-weknora-cli` | ⚙️ 執行 | 通用 | WeKnora（L3 企業級 RAG 知識庫）的 CLI 閘道 skill，供 ark agent 用 bash 呼叫執行； 落地「WeKnora 管口徑、ark-db-query 管執行」 混合架構… |
+
+## 🗑️ 已移除（保留供遷移）
+
+> 兩種形態：目錄只剩 `README.md`，或保留 `SKILL.md` 但 frontmatter 標 `status: deprecated`（讓舊觸發詞仍導向遷移說明）。**不計入上方總數。**
+
+| Skill | 遷移到 |
+|-------|--------|
+| `ark-anomaly-detector` | 已併入 ark-pipeline-recipes（讀 references/anomaly-detector.md） |
+| `ark-chart-generator` | 已併入 ark-pipeline-recipes（讀 references/chart-generator.md） |
+| `ark-cost-tracker` | 已併入 ark-pipeline-recipes（讀 references/cost-tracker.md） |
+| `ark-data-contract` | 已併入 ark-pipeline-recipes（讀 references/data-contract.md） |
+| `ark-etl-pipeline` | 已併入 ark-pipeline-recipes（讀 references/etl-pipeline.md） |
+| `ark-kpi-calculator` | 已併入 ark-pipeline-recipes（讀 references/kpi-calculator.md） |
+| `ark-llm-tools` | 已併入 ark-pipeline-recipes（讀 references/llm-tools.md） |
+| `ark-translator` | 已併入 ark-pipeline-recipes（讀 references/translator.md） |
 
 <!-- END GENERATED CATALOGUE -->
 

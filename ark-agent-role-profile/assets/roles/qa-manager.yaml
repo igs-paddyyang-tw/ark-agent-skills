@@ -39,7 +39,7 @@ metrics:
   - { name: bug 可重現率, target: "100%" }
   - { name: 誤報偏差, target: "0（樣本達標才報）" }
 knowledge_domains: [機率表版本, bug pattern, 驗收矩陣範本, 歷次數值偏差, 統計門檻]
-skills: [ark-test-runner, ark-kpi-calculator, ark-anomaly-detector, ark-security-audit, ark-md-report, ark-html-report]
+skills: [ark-test-runner, ark-pipeline-recipes, ark-security-audit, ark-md-report, ark-html-report]
 examples:
   - kind: typical
     situation: 使用者說「驗一下新版的 RTP 對不對」

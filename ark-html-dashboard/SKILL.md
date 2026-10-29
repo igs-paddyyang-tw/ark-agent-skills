@@ -10,12 +10,12 @@ description: |
   遊戲面板、game dashboard、博奕分析、老虎機資訊、遊戲統計、
   或任何需要產出可分享的互動式數據視覺化頁面的場景。
   博奕遊戲面板請參考 references/gaming-preset.md。
-  不適用於靜態 PNG 圖表（請使用 ark-chart-generator）。
+  不適用於靜態 PNG 圖表（請使用 ark-pipeline-recipes 的 chart-generator 頁）。
 metadata:
-  version: "1.0.2"
+  version: "1.0.3"
   schema_version: "1.2"
   status: active
-  updated: 2026-10-20
+  updated: 2026-10-29
   category: view
   form: instruction
   domain: general
@@ -42,7 +42,7 @@ metadata:
 | Skill | 技術 | 輸出 | 用途 |
 |-------|------|------|------|
 | ark-html-dashboard | Chart.js（Canvas HTML） | 互動式 HTML | Web 嵌入、分享、Dashboard |
-| ark-chart-generator | Matplotlib（Python） | 靜態 PNG | 報表附件、PDF、Telegram |
+| ark-pipeline-recipes（chart-generator 頁） | Matplotlib（Python） | 靜態 PNG | 報表附件、PDF、Telegram |
 | ark-frontend-design | React/Tailwind | 完整前端應用 | 複雜 SPA |
 
 ## 產出檔案

@@ -15,15 +15,15 @@
 # 與 role-skills-map.md 的 base_skills（8 個全員底座）疊加，不取代
 gamedev_role_skills:
   game-planner:   [ark-game-spec, ark-grill-me, ark-doc-coauthoring]
-  math-designer:  [ark-game-spec, ark-game-prob, ark-game-proto, ark-kpi-calculator, ark-chart-generator]
+  math-designer:  [ark-game-spec, ark-game-prob, ark-game-proto, ark-pipeline-recipes]
   client-eng:     [ark-skill-creator, ark-code-review, ark-frontend-design]
   server-eng:     [ark-skill-creator, ark-code-review, ark-code-spec-validator]
   tech-artist:    [ark-frontend-design]
-  game-qa:        [ark-test-runner, ark-code-review, ark-anomaly-detector]
-  liveops:        [ark-scheduler-generator, ark-kpi-calculator, ark-release-notes]
-  game-analyst:   [ark-kpi-calculator, ark-retention-analysis, ark-etl-pipeline, ark-chart-generator]
+  game-qa:        [ark-test-runner, ark-code-review, ark-pipeline-recipes]
+  liveops:        [ark-scheduler-generator, ark-pipeline-recipes, ark-release-notes]
+  game-analyst:   [ark-pipeline-recipes, ark-retention-analysis]
   producer:       [ark-project-planning, ark-planning-with-files]
-  narrative:      [ark-doc-coauthoring, ark-translator]
+  narrative:      [ark-doc-coauthoring, ark-pipeline-recipes]
 ```
 
 ---

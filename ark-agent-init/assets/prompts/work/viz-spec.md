@@ -17,7 +17,7 @@ example: true
 2. 預設完整時間窗；基準線（有 baseline 的指標）與常態區間必畫
 3. 顏色只承載語意（改善/持平/變差），數字加標籤，不靠顏色單獨傳訊
 4. 截斷軸或縮放區間必在圖上註明並附完整窗小圖
-5. 交付 chart-definition（型別、序列、軸、標註、來源 artifact 路徑），用 ark-html-report 元件或 ark-chart-generator 生成
+5. 交付 chart-definition（型別、序列、軸、標註、來源 artifact 路徑），用 ark-html-report 元件或 ark-pipeline-recipes（chart-generator 頁）生成
 
 ## 輸出樣板
 

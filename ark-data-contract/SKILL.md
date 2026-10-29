@@ -1,45 +1,31 @@
 ---
 name: ark-data-contract
-description: "當使用者需要驗證管線元件間的 schema 契約時使用此技能。觸發條件包括：提及「資料契約」「schema 驗證」「管線契約」，或需要確保上下游元件的輸入/輸出格式一致。適用於 ETL 管線、agent 間訊息傳遞、API 回應格式的契約定義與驗證。不適用於資料庫查詢——該場景請用 ark-db-query。"
+description: |
+  [DEPRECATED — 已併入 ark-pipeline-recipes（讀 references/data-contract.md）]
+  原說明（保留觸發詞，讓舊說法仍導向新位置）：當使用者需要驗證管線元件間的 schema 契約時使用此技能。觸發條件包括：提及「資料契約」「schema 驗證」「管線契約」，或需要確保上下游元件的輸入/輸出格式一致。適用於 ETL 管線、agent 間訊息傳遞、API 回應格式的契約定義與驗證。
 metadata:
-  version: "1.0.1"
+  version: "2.0.0"
   schema_version: "1.2"
-  status: active
-  updated: 2026-10-20
-  author: paddyyang
+  status: deprecated
+  updated: 2026-10-29
   category: pipeline
   form: instruction
   domain: general
-  outputs:
-    - format: md
-      audience: ai
+  author: paddyyang
 ---
 
-# ark-data-contract
+# ark-data-contract（已併入 ark-pipeline-recipes）
 
-> 管線元件間 schema 契約驗證。
+本 skill 已併入 **`ark-pipeline-recipes`**，內容原樣搬到 `ark-pipeline-recipes/references/data-contract.md`。請改讀那一頁。
 
-## 觸發條件
+消費端若還沒有 `ark-pipeline-recipes`（`mirror_sync` 不會自動安裝新 skill）：
 
-- 使用者提及「資料契約」「schema 驗證」「管線契約」
-- 需要定義或驗證上下游元件的資料格式
-- 管線元件整合時的格式一致性檢查
+```bash
+cp -r <ark-agent-skills>/ark-pipeline-recipes .kiro/skills/
+```
 
-## Negative Trigger
+## 版本
 
-- 資料庫查詢 → 請用 `ark-db-query`
-- ETL 管線建構 → 請用 `ark-etl-pipeline`
-
-## 工作流程
-
-1. 定義契約 schema（JSON Schema / Pydantic model / TypedDict）
-2. 標記生產者（producer）與消費者（consumer）
-3. 驗證實際輸出是否符合契約
-4. 偵測 breaking change（欄位移除 / 型別變更 / 必填新增）
-5. 產出契約驗證報告
-
-## 產出格式
-
-- 契約定義文件（schema + 版本 + owner）
-- 驗證結果（pass / fail + 違規明細）
-- Breaking change 警告與遷移建議
+| 版本 | 日期 | 變更 |
+|---|---|---|
+| 2.0.0 | 2026-10-29 | **Breaking**：內容移至 `ark-pipeline-recipes/references/data-contract.md`，本目錄只留轉址；角色對照表改指 ark-pipeline-recipes |

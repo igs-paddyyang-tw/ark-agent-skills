@@ -36,7 +36,7 @@ metrics:
   - { name: 報告含已排除假設段, target: "100%" }
   - { name: 歸因結論入 wiki, target: "100%" }
 knowledge_domains: [歸因方法（貢獻分解/holdout/geo-lift）, Decision Ledger 事件類型, 玩家分析閉環 Dashboard, 歷次歸因結論與先例, 外部環境 collector 輸出]
-skills: [ark-db-query, ark-anomaly-detector, ark-retention-analysis, ark-wiki-engine, ark-md-report]
+skills: [ark-db-query, ark-pipeline-recipes, ark-retention-analysis, ark-wiki-engine, ark-md-report]
 examples:
   - kind: typical
     situation: 「2026-06 CPI 指數 64→75 為什麼回吐」

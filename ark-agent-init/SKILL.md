@@ -23,7 +23,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.6.0"
+  version: "2.6.1"
   updated: 2026-10-29
 ---
 
@@ -606,13 +606,13 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 | Admin / CEO（根目錄 .kiro） | 全部 | 管理者擁有全套能力 |
 | 全員必備（base_skills）| ark-grill-me, ark-superpowers, ark-spec-executor, ark-code-spec-validator, ark-wiki-engine, ark-prompt-spec-validator, ark-md-report, ark-html-report | 需求→文件→執行→驗證(code+prompt)→知識→報告（迴圈工程核心 + 產出）。權威清單見 `references/role-skills-map.md` 的 `base_skills:` |
 | Leader / PM | ark-project-planning, ark-doc-coauthoring, ark-uml-generator | 規劃+共筆+圖表 |
-| AI Dev | ark-skill-creator, ark-mcp-builder, ark-llm-tools | Skill 開發+MCP+LLM |
+| AI Dev | ark-skill-creator, ark-mcp-builder, ark-pipeline-recipes | Skill 開發+MCP+LLM |
 | Coder / 全端 | ark-skill-creator, ark-code-review, ark-webapp-generator, ark-db-query | 開發+審查+全端 |
 | QA / 測試 | ark-test-runner, ark-security-audit, ark-code-review | 品質保證 |
 | DevOps | ark-docker-deploy, ark-env-doctor, ark-webapp-generator | 部署運維（排程已併入 webapp-generator） |
-| 數據分析 | ark-db-query, ark-etl-pipeline, ark-chart-generator, ark-kpi-calculator, ark-anomaly-detector, ark-retention-analysis | 數據工程 |
-| 市場研究 | ark-web-scraper, ark-translator, ark-llm-tools | 資訊收集 |
-| 報告產出 | ark-html-report, ark-html-dashboard, ark-chart-generator, ark-etl-pipeline | 視覺化 + 報表 |
+| 數據分析 | ark-db-query, ark-pipeline-recipes, ark-retention-analysis | 數據工程 |
+| 市場研究 | ark-web-scraper, ark-pipeline-recipes | 資訊收集 |
+| 報告產出 | ark-html-report, ark-html-dashboard, ark-pipeline-recipes | 視覺化 + 報表 |
 
 **匹配邏輯：**
 
@@ -807,7 +807,7 @@ Agent 專屬的 MCP 直接寫在 agents/{role}.json 的 `mcpServers` 欄位。
 ```
 為 ai-dev-agent 配置 .kiro/，角色是 AI 工程師，
 專精 LLM 整合、Prompt Engineering、MCP 開發，
-部署 ark-mcp-builder 和 ark-llm-tools Skills
+部署 ark-mcp-builder 和 ark-pipeline-recipes（llm-tools 食譜）Skills
 ```
 
 ### 預期產出（每個 agent）

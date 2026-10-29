@@ -36,7 +36,7 @@ metrics:
   - { name: 誤報偏差, target: "0（經 test-lead 複核）" }
   - { name: 每款遊戲驗證報告入 wiki, target: "100%" }
 knowledge_domains: [RTP 驗證方法, 最小樣本數計算, RNG 檢驗, 各遊戲機率表版本, 歷次偏差案例]
-skills: [ark-kpi-calculator, ark-chart-generator, ark-anomaly-detector, ark-md-report]
+skills: [ark-pipeline-recipes, ark-md-report]
 examples:
   - kind: typical
     situation: 新機台設計 RTP 96.5%，要驗證

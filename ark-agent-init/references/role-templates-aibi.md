@@ -45,14 +45,14 @@
 ```yaml
 # 與 role-skills-map.yaml 的 base_skills（8 個全員底座）疊加，不取代
 aibi_role_skills:
-  aibi-manager:         [ark-db-query, ark-kpi-calculator, ark-telegram-sender]
+  aibi-manager:         [ark-db-query, ark-pipeline-recipes, ark-telegram-sender]
   bi-lead:              [ark-project-planning, ark-doc-coauthoring]
-  semantic-keeper:      [ark-data-contract, ark-db-query]
-  query-analyst:        [ark-db-query, ark-kpi-calculator, ark-data-contract]
-  insight-investigator: [ark-db-query, ark-anomaly-detector, ark-retention-analysis]
-  report-narrator:      [ark-chart-generator, ark-html-dashboard, ark-doc-coauthoring]
-  pulse-monitor:        [ark-db-query, ark-anomaly-detector, ark-telegram-sender]
-  viz-builder:          [ark-chart-generator, ark-html-dashboard, ark-frontend-design]
+  semantic-keeper:      [ark-pipeline-recipes, ark-db-query]
+  query-analyst:        [ark-db-query, ark-pipeline-recipes]
+  insight-investigator: [ark-db-query, ark-pipeline-recipes, ark-retention-analysis]
+  report-narrator:      [ark-pipeline-recipes, ark-html-dashboard, ark-doc-coauthoring]
+  pulse-monitor:        [ark-db-query, ark-pipeline-recipes, ark-telegram-sender]
+  viz-builder:          [ark-pipeline-recipes, ark-html-dashboard, ark-frontend-design]
 ```
 
 > `ark-wiki-engine`、`ark-md-report`、`ark-html-report` 已在 base_skills，不重列。

@@ -35,7 +35,7 @@ metrics:
   - { name: 必測低階機覆蓋, target: "前 3 台 100%" }
   - { name: 崩點已找出, target: "每版" }
 knowledge_domains: [效能基準表, 裝置占比與必測清單, 壓測腳本, 歷次退化案例]
-skills: [ark-test-runner, ark-chart-generator, ark-env-doctor, ark-anomaly-detector]
+skills: [ark-test-runner, ark-pipeline-recipes, ark-env-doctor]
 examples:
   - kind: typical
     situation: 新版本大廳改版要驗效能

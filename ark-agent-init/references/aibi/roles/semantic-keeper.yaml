@@ -36,7 +36,7 @@ metrics:
   - { name: queryable 指標 golden 覆蓋, target: "≥3 題/指標" }
   - { name: 契約外查詢請求轉建契約, target: "100%" }
 knowledge_domains: [指標語意契約, 受控詞彙表, 資料域 join key（player_id/campaign_id/experiment_id/activity_id）, 表欄位語意, 口徑變更歷史]
-skills: [ark-data-contract, ark-wiki-engine, ark-db-query, ark-prompt-spec-validator]
+skills: [ark-pipeline-recipes, ark-wiki-engine, ark-db-query, ark-prompt-spec-validator]
 examples:
   - kind: typical
     situation: bi-lead 問「D2 有沒有定義」

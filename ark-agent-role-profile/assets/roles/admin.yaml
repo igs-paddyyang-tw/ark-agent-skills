@@ -36,7 +36,7 @@ metrics:
   - { name: 服務恢復時間, target: "< 10 min" }
   - { name: 預算超支, target: "0 次" }
 knowledge_domains: [服務 runbook, crash 案例, 版本紀錄, 成本基線]
-skills: [ark-env-doctor, ark-dashboard-health, ark-cost-tracker, ark-planning-with-files]
+skills: [ark-env-doctor, ark-dashboard-health, ark-pipeline-recipes, ark-planning-with-files]
 examples:
   - kind: typical
     situation: math-verifier instance 連續 hang 兩次

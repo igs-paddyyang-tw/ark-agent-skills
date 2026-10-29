@@ -36,7 +36,7 @@ metrics:
   - { name: 誤報率（經 bi-lead 判定）, target: "<10%" }
   - { name: 同指標同日重複告警, target: "0" }
 knowledge_domains: [契約 baseline 與閾值, 常態波動歷史分佈, Decision Ledger 事件類型, 告警去重規則, 歷次誤報案例]
-skills: [ark-db-query, ark-anomaly-detector, ark-telegram-sender, ark-wiki-engine]
+skills: [ark-db-query, ark-pipeline-recipes, ark-telegram-sender, ark-wiki-engine]
 examples:
   - kind: typical
     situation: 排程巡檢 CPI 指數

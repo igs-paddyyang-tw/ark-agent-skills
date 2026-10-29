@@ -55,7 +55,7 @@ relationships:
   reports_to: null
   delegates_to: [test-lead-agent]
   consults: [admin-agent]
-skills: [ark-test-runner, ark-code-review, ark-chart-generator]
+skills: [ark-test-runner, ark-code-review, ark-pipeline-recipes]
 ```
 
 > 完整版（含 metrics / knowledge_domains / examples）見 team-agent 專案的實際部署。

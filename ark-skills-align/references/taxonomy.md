@@ -93,7 +93,7 @@
 | **D-3 / D-5** | view 類整併 | ❓ |
 | **D-4 / D-6** | document 類整併；`ark-report-template` 標 D-6 待定 | ✅ report-template 已 stub |
 | **D-7** | `ark-file-export` 待定 | ❓ 仍為 active pipeline |
-| **D-8** | `ark-cost-tracker` 收編（收編則 pipeline 為 14） | ❓ 仍為 active pipeline |
+| **D-8** | `ark-cost-tracker` 收編（收編則 pipeline 為 14） | ✅ 2026-10-29 併入 `ark-pipeline-recipes`（與另 7 個產碼食譜一起） |
 | **D-10** | `ark-landing-page` 觀察 | ❓ |
 | **D-11** | `ark-uml-generator` 觀察 | ❓ |
 | **D-14** | `ark-news-daily` 歸類修正 `pipeline` → `document` | ✅ **已完成**（見下方判準） |

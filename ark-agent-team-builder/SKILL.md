@@ -27,7 +27,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.1.3"
+  version: "3.1.4"
   updated: 2026-10-29
 ---
 
@@ -208,8 +208,8 @@ python3 scripts/sync_skills.py --check    # 驗一致（doctor/CI 用）
 |------|-------------------|--------------------------|
 | manager（總機） | 通用執行力：RAG 查詢 + 規格/計畫 + 報告 | `ark-weknora-cli` `ark-superpowers` `ark-project-planning` `ark-md-report` |
 | leader（統籌） | 拆解/派工/驗收 | `ark-project-planning` `ark-grill-me` |
-| admin（維運） | 環境/健康/成本 | `ark-env-doctor` `ark-dashboard-health` `ark-cost-tracker` |
-| worker（職人） | **依領域**：資料/研究/報告… | 競品→`ark-web-scraper` `ark-marketing`；報告→`ark-chart-generator` `ark-html-report` |
+| admin（維運） | 環境/健康/成本 | `ark-env-doctor` `ark-dashboard-health` `ark-pipeline-recipes`（cost-tracker） |
+| worker（職人） | **依領域**：資料/研究/報告… | 競品→`ark-web-scraper` `ark-marketing`；報告→`ark-pipeline-recipes`（圖表） `ark-html-report` |
 | 全員 COMMON | 知識查詢 | `ark-wiki-engine` |
 
 > 🔴 **只裝該裝的，別全員裝同一批** —— skill 會進 agent 的 context window，

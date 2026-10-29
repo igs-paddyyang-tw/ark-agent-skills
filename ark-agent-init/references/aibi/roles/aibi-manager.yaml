@@ -37,7 +37,7 @@ metrics:
   - { name: 契約外問題正確拒答並轉建契約, target: "100%" }
   - { name: 簡單查詢自答率（不派工）, target: "盡量高" }
 knowledge_domains: [指標語意契約, 玩家分析閉環 KPI Tree, 決策紀錄 Decision Ledger, 歷次歸因結論]
-skills: [ark-db-query, ark-wiki-engine, ark-kpi-calculator, ark-md-report, ark-telegram-sender]
+skills: [ark-db-query, ark-wiki-engine, ark-pipeline-recipes, ark-md-report, ark-telegram-sender]
 examples:
   - kind: typical
     situation: 「上週玩星派對的付費率怎麼樣」

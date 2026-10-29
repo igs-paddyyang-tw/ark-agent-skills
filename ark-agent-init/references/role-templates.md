@@ -45,4 +45,4 @@
 > 遊戲產業（尤其機率型遊戲 slot/fish）建議直接採 gamedev 包 —— 它已對齊
 > AC-ID / ark-code-spec-validator 慣例、artifacts 落點、送審數學文件需求。
 > AI/BI 團隊建議直接採 aibi 包 —— 它以「語意契約先行、契約外不作答、證據等級三態」為地基，
-> 對齊 ark-data-contract / ark-md-report 契約與 Decision Ledger 資料域。
+> 對齊 ark-pipeline-recipes（data-contract 頁）/ ark-md-report 契約與 Decision Ledger 資料域。
