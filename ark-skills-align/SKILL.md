@@ -13,7 +13,7 @@ description: |
   或任何需要批次修改、驗證、重組 ark-agent-skills repo 的場景。
   單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
 metadata:
-  version: "2.7.0"
+  version: "2.7.1"
   author: paddyyang
   schema_version: "1.2"
   category: ops
@@ -48,9 +48,14 @@ python ark-skills-align/scripts/audit_skills.py --repo . --json baseline.json
 # 版本回填 semver + depends_on 物件化
 python ark-skills-align/scripts/backfill_metadata.py --repo . --versions
 # 產 release manifest + index（audit 全綠才打 tag）
-python ark-skills-align/scripts/gen_manifest.py --repo . --release skills-YYYY.MM-rN
+python ark-skills-align/scripts/gen_manifest.py --repo . --release skills-YYYY.MM-rN --out ark-skills-align/release
+#   ⚠️ 不帶 --out 會寫到 repo 根 release/（錯位置）；在乾淨工作樹最後產
 # 移除/改名前後反向掃消費端
 python ark-skills-align/scripts/check_consumers.py --name ark-foo
+#   不帶 --name：列懸空引用＋「已併入、stub 仍在」的舊名（矩陣／SOUL 還寫舊名、或複本旁沒有接手者 → 回 1）
+# 與上一班列車比 major 升版 → Alignment Notice
+python ark-skills-align/scripts/check_consumers.py --impact --json impact.json
+python ark-skills-align/scripts/notice_build.py impact.json --out docs/reports/review/<date>-align-notice.md
 ```
 
 守門規則（`AL-xxx` 穩定 ID，exit 0/1/2）:既有 AL-001~024（frontmatter/category/觸發詞/
@@ -94,7 +99,7 @@ tier 策略:base 全隊同版（Loop 五件套，major 不一致 P0）· role �
 
 ## 收尾（強制）
 
-1. audit P0/P1=0 + check_consumers 對本次移除的名字回 0
+1. audit P0/P1=0 + check_consumers 對本次移除的名字回 0（併入改 stub 時：`--impact` 列出要通知的消費端；mirror_sync 不會自動裝接手者）
 2. drift/verify report:ark-md-report review 型，存 `docs/reports/review/{date}-align-*.md`
 3. 獨立 commit（pathspec，不 `git add -A`），message 帶 `[refs: alignment-directive]` 或 D-x
 

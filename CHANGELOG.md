@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-10-29 (列車 r13：盤點第一批收尾 —— dashboard-health→env-doctor、uml→superpowers；check_consumers 認得 stub 型合併)
+
+> 計畫：kiro-cli `docs/plans/skills-batch1-m2-m3-plan.md`（盤點 M-2、M-3）。active 55 → 53。
+
+- **ark-env-doctor 1.1.0**：新增端點模式 `--endpoints`／`--sse`／`--endpoints-file`（`scripts/endpoints.py`，只用標準庫；任一失敗 exit 1 可接排程）＋ 8 項測試（本機 http.server：2xx／5xx／SSE／連不上；反證：狀態碼判斷改永遠通過 → 3 紅）。
+  原 ark-dashboard-health 正文原樣搬 `references/dashboard-health.md`
+- **ark-superpowers 1.2.0**：設計階段加「設計圖（Mermaid）」，原 ark-uml-generator 正文原樣搬 `references/uml-diagrams.md`；description 加 UML／序列圖／ERD／Mermaid 觸發詞
+- **ark-dashboard-health、ark-uml-generator → deprecated stub 2.0.0**（保留 SKILL.md 與觸發詞）；接手者以 `replaces` 宣告
+- **check_consumers（repo 根 scripts/）**：
+  - 認得「已併入、stub 仍在」的名字：矩陣／SOUL／蒸餾設定寫舊名、或複本旁沒有接手者 → 回 1，訊息給「改成 X」；複本旁已有接手者 → 提示舊 stub 可刪。
+    舊判準只看「上游已不存在」，r12 的 8 個 stub 全部漏網（實測：97 份複本缺接手者、30 處 sync 矩陣、28 份 SOUL.md 仍寫舊名）
+  - 實作 v2 設計就規劃、從未落地的 `--impact --json`：與上一班列車（manifest 歷史）比 major 升版 → notice_build.py 的輸入
+  - pre-push 原本建議了不存在的 `--impact`；改正並加測試「hook 建議的旗標必須存在」（反證：寫錯旗標 → 紅）
+- 改引用（patch）：ark-agent-init 2.6.2、ark-agent-role-profile 1.3.5、ark-agent-team-builder 3.1.5、ark-skills-align 2.7.1（check_consumers／gen_manifest `--out` 用法）
+
+---
+
 ## 2026-10-29 (列車 r12：8 個產碼食譜合併成 ark-pipeline-recipes；新守門 AL-032)
 
 > 計畫：kiro-cli `docs/plans/ark-pipeline-recipes-merge-plan.md`（盤點 M-1）。active 62 → 55。

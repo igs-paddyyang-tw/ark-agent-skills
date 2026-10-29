@@ -9,10 +9,12 @@ description: |
   使用此 Skill 當使用者提及 superpowers、工程標準化、標準化文件、
   寫 spec、規格文件、需求文件、設計文件、design doc、ADR、架構決策、
   執行計畫、execution plan、技術提案、系統設計、RFC、里程碑、
+  設計文件裡的圖（UML、序列圖、類別圖、ERD、流程圖、架構圖、Mermaid；原 ark-uml-generator 併入），
   或任何需要產出結構化工程決策文件的場景。
   不適用於：與使用者一來一往共同起草請用 ark-doc-coauthoring；遊戲企劃文件請用 ark-game-spec；照 plan 執行請用 ark-spec-executor。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
+  replaces: [ark-uml-generator]
   schema_version: "1.2"
   status: active
   updated: 2026-10-29
@@ -181,6 +183,12 @@ One Pager 的 frontmatter 有 `upgraded_to` 欄位，升級後指向完整文件
 | 框架對照表 | `references/framework-mapping.md` |
 
 產出文件時，載入對應模板作為骨架，填入使用者提供的內容。
+
+### 設計圖（Mermaid，原 ark-uml-generator）
+
+Design 文件需要圖時（API 互動、資料模型、元件依賴、業務分支、類別繼承），
+讀 [`references/uml-diagrams.md`](references/uml-diagrams.md)：圖種選擇規則、輸出格式、範例與品質要求。
+圖直接內嵌在 Design／ADR 的對應章節，不另開檔。
 
 ---
 

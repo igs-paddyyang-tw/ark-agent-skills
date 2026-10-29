@@ -23,7 +23,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.6.1"
+  version: "2.6.2"
   updated: 2026-10-29
 ---
 
@@ -605,7 +605,7 @@ git clone https://github.com/igs-paddyyang-tw/ark-kiro-skills.git skills/
 |---------|------------|------|
 | Admin / CEO（根目錄 .kiro） | 全部 | 管理者擁有全套能力 |
 | 全員必備（base_skills）| ark-grill-me, ark-superpowers, ark-spec-executor, ark-code-spec-validator, ark-wiki-engine, ark-prompt-spec-validator, ark-md-report, ark-html-report | 需求→文件→執行→驗證(code+prompt)→知識→報告（迴圈工程核心 + 產出）。權威清單見 `references/role-skills-map.md` 的 `base_skills:` |
-| Leader / PM | ark-project-planning, ark-doc-coauthoring, ark-uml-generator | 規劃+共筆+圖表 |
+| Leader / PM | ark-project-planning, ark-doc-coauthoring, ark-superpowers | 規劃+共筆+設計圖 |
 | AI Dev | ark-skill-creator, ark-mcp-builder, ark-pipeline-recipes | Skill 開發+MCP+LLM |
 | Coder / 全端 | ark-skill-creator, ark-code-review, ark-webapp-generator, ark-db-query | 開發+審查+全端 |
 | QA / 測試 | ark-test-runner, ark-security-audit, ark-code-review | 品質保證 |

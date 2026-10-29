@@ -23,17 +23,29 @@
 | 人格清單 | `**/steering/SOUL.md` 的 skill 條列 | agent 以為自己有這個能力 |
 | 蒸餾來源 | `**/distill-sources.yaml` 的 `scan_paths` | 掃不存在的目錄 → 零筆，不報錯 |
 
+## 併入但保留 stub 的名字（2026-10-29 加）
+
+合併時舊目錄常改成 `status: deprecated` 的 stub（保留 SKILL.md 才能被 mirror_sync 對齊）。
+stub 還在，所以「上游已不存在」這條判準看不到它 —— 但消費端若只有舊名，
+同步後拿到的只是轉址空殼（mirror_sync **不會**自動裝接手者）。
+這類另列「已併入」段：矩陣／SOUL／蒸餾設定還寫舊名、或複本旁邊沒有接手者 → 要處理（回 1）；
+複本旁邊已有接手者 → 只是殘留 stub，提示可刪。
+
 用法：
     python check_consumers.py                      # 掃預設消費端根目錄
     python check_consumers.py --consumers ~/kiro-cli/projects
     python check_consumers.py --name ark-foo       # 只查某個名字（移除前先問「誰在用」）
+    python check_consumers.py --impact --json impact.json
+        # 與上一班列車比 major 升版 → notice_build.py 的輸入（release／breaking／affected／recipients）
 
-Exit code：有懸空引用回 1；消費端根目錄不存在回 0（明說跳過，不假裝通過）。
+Exit code：有懸空引用、或已併入名字仍需處理 → 1；消費端根目錄不存在回 0（明說跳過，不假裝通過）。
+--impact 只產報表，固定回 0。
 """
 from __future__ import annotations
 
 import argparse
 import ast
+import json
 import re
 import subprocess
 import sys
@@ -48,6 +60,39 @@ SOUL_BULLET = re.compile(r"^-\s+`(ark-[a-z0-9-]+)`\s+—")
 YAML_PATH = re.compile(r"^\s*-\s+(ark-[a-z0-9-]+)/\s*(?:#.*)?$")
 
 SKIP_DIRS = {".git", ".venv", "node_modules", "__pycache__", "state", ".index"}
+
+
+MANIFEST = "ark-skills-align/release/manifest.json"
+_STATUS_DEP = re.compile(r"^\s+status:\s*deprecated\s*$", re.M)
+_VERSION = re.compile(r"^\s+version:\s*[\"']?(\d+\.\d+\.\d+)", re.M)
+
+
+def _replaces_map(repo: Path) -> dict[str, str]:
+    """現存 skill 的 `metadata.replaces`：舊名 → 取代它的 skill。"""
+    out: dict[str, str] = {}
+    for d in sorted(repo.glob("ark-*")):
+        sk = d / "SKILL.md"
+        if not sk.is_file():
+            continue
+        head = sk.read_text(encoding="utf-8", errors="replace")[:2000]
+        m = re.search(r"^\s*replaces:\s*\[([^\]]*)\]", head, re.M)
+        if m:
+            for old in m.group(1).split(","):
+                old = old.strip().strip("'\"").split(".")[0]
+                if old.startswith("ark-"):
+                    out[old] = d.name
+    return out
+
+
+def deprecated_skills(repo: Path) -> dict[str, str | None]:
+    """上游以 stub 保留的已併入 skill（SKILL.md 標 `status: deprecated`）→ 接手者（查不到為 None）。"""
+    succ = _replaces_map(repo)
+    out: dict[str, str | None] = {}
+    for d in sorted(repo.glob("ark-*")):
+        sk = d / "SKILL.md"
+        if sk.is_file() and _STATUS_DEP.search(sk.read_text(encoding="utf-8", errors="replace")[:2000]):
+            out[d.name] = succ.get(d.name)
+    return out
 
 
 def upstream_skills(repo: Path) -> set[str]:
@@ -216,18 +261,7 @@ def resolve_successors(repo: Path, names: set[str], existing: set[str]) -> dict:
       ② 移除 commit 訊息裡的箭頭／併入式宣告（接手者自己也被移除時追一層）
       ③ 都推不出來 → 不確定，附上移除 commit 讓人自己看
     """
-    replaces: dict[str, str] = {}
-    for d in sorted(repo.glob("ark-*")):
-        sk = d / "SKILL.md"
-        if not sk.is_file():
-            continue
-        head = sk.read_text(encoding="utf-8", errors="replace")[:2000]
-        m = re.search(r"^\s*replaces:\s*\[([^\]]*)\]", head, re.M)
-        if m:
-            for old in m.group(1).split(","):
-                old = old.strip().strip("'\"").split(".")[0]
-                if old.startswith("ark-"):
-                    replaces[old] = d.name
+    replaces = _replaces_map(repo)
 
     out = {}
     for n in sorted(names):
@@ -282,12 +316,100 @@ def _show(p: Path, args) -> str:
     return str(p)
 
 
+def _project(p: Path, consumers: Path) -> str | None:
+    """站點所屬的消費端專案（consumers 底下第一層）；上游自己的 examples 回 None。"""
+    try:
+        return p.relative_to(consumers).parts[0]
+    except (ValueError, IndexError):
+        return None
+
+
+def _git_show(repo: Path, rev: str, path: str) -> str | None:
+    r = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True, text=True, cwd=repo)
+    return r.stdout if r.returncode == 0 else None
+
+
+def previous_train(repo: Path) -> tuple[str, str, dict[str, str]]:
+    """(現行列車, 上一班列車, 上一班的 {skill: version})。
+
+    基準取 manifest.json 歷史中 **release 與現行不同** 的最近一版 ——
+    推送前（新 manifest 已 commit 未推）與推送後都比得到同一對，不依賴 origin/main。
+    查不到（沒有 manifest 或沒有歷史）回空表，由呼叫端明說「沒有基準」。
+    """
+    f = repo / MANIFEST
+    if not f.is_file():
+        return "", "", {}
+    cur = json.loads(f.read_text(encoding="utf-8")).get("release", "")
+    log = subprocess.run(["git", "log", "--format=%H", "--", MANIFEST],
+                         capture_output=True, text=True, cwd=repo)
+    for sha in log.stdout.split() if log.returncode == 0 else []:
+        txt = _git_show(repo, sha, MANIFEST)
+        if not txt:
+            continue
+        m = json.loads(txt)
+        if m.get("release") != cur:
+            return cur, m.get("release", ""), {k: str(v.get("version", ""))
+                                               for k, v in (m.get("skills") or {}).items()}
+    return cur, "", {}
+
+
+def build_impact(repo: Path, consumers: Path, sites) -> dict:
+    """notice_build.py 的輸入：與上一班列車相比 major 升版的 skill，以及哪些消費端專案用到它。"""
+    cur_rel, base_rel, base = previous_train(repo)
+    deprecated = deprecated_skills(repo)
+    breaking = []
+    for d in sorted(repo.glob("ark-*")):
+        sk = d / "SKILL.md"
+        if not sk.is_file() or d.name not in base:
+            continue
+        m = _VERSION.search(sk.read_text(encoding="utf-8", errors="replace")[:3000])
+        old = base[d.name]
+        if not m or not old.split(".")[0].isdigit() or int(m.group(1).split(".")[0]) <= int(old.split(".")[0]):
+            continue
+        succ = deprecated.get(d.name)
+        if d.name in deprecated:
+            how = (f"已併入 {succ}：`cp -r <ark-agent-skills>/{succ} .kiro/skills/` 後 mirror_sync"
+                   if succ else "已 deprecated，見該 stub 的 SKILL.md")
+        else:
+            how = f"見 {d.name} SKILL.md 版本段／CHANGELOG 的 Breaking"
+        users = sorted({pr for p, _, names in sites if d.name in names
+                        and (pr := _project(p, consumers))})
+        breaking.append({"skill": d.name, "from": old, "to": m.group(1),
+                         "migration": how, "consumers": users})
+    affected = sorted({u for b in breaking for u in b["consumers"]})
+    return {"release": cur_rel, "baseline": base_rel, "breaking": breaking,
+            "affected": affected, "recipients": affected}
+
+
+def report_deprecated(stale: dict, deprecated: dict, args) -> int:
+    """「已併入、stub 仍在」的名字還被消費端引用。回傳需處理的處數。"""
+    todo = 0
+    print(f"\n🟡 {len(stale)} 個名字已併入其他 skill（上游只剩轉址 stub），消費端還指著舊名：")
+    for n, where in sorted(stale.items()):
+        succ = deprecated[n]
+        print(f"\n  {n}（{len(where)} 處）· 接手者 {succ or '不明（stub 沒被任何 replaces 認領）'}")
+        for kind, p in where:
+            if kind == "deployed" and succ and (p / succ).is_dir():
+                mark = "  ✅ 接手者已在，舊 stub 可刪"
+            elif kind == "deployed":
+                mark = "  🔴 接手者未安裝 —— mirror_sync 只會給轉址空殼"
+                todo += 1
+            else:
+                mark = f"  🔴 改成 {succ}" if succ else "  🔴 改成接手者"
+                todo += 1
+            print(f"    [{kind:8}] {_show(p, args)}{mark}")
+    return todo
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--consumers", type=Path, default=DEFAULT_CONSUMERS,
                     help=f"消費端根目錄（預設 {DEFAULT_CONSUMERS}）")
     ap.add_argument("--repo", type=Path, default=SKILLS_REPO, help="上游 skill 庫")
     ap.add_argument("--name", help="只查這個 skill 名字（移除前先問「誰在用」）")
+    ap.add_argument("--impact", action="store_true",
+                    help="與上一班列車比 major 升版，輸出 notice_build.py 的 impact JSON")
+    ap.add_argument("--json", type=Path, help="--impact 的輸出檔（省略則印到 stdout）")
     args = ap.parse_args()
 
     if not args.consumers.is_dir():
@@ -301,6 +423,20 @@ def main() -> int:
     sites = collect(args.consumers) + collect_self_examples(args.repo)
     if not sites:
         print("⏭  沒有掃到任何消費端引用面（矩陣／複本／SOUL／蒸餾設定）")
+        return 0
+
+    if args.impact:
+        impact = build_impact(args.repo, args.consumers, sites)
+        if not impact["baseline"]:
+            print("⚠️  找不到上一班列車的 manifest（release/manifest.json 沒有歷史）→ 無法判定 major 升版")
+        print(f"列車 {impact['release'] or '?'}（基準 {impact['baseline'] or '無'}）："
+              f"破壞性升版 {len(impact['breaking'])} 個、影響 {len(impact['affected'])} 個消費端")
+        out = json.dumps(impact, ensure_ascii=False, indent=2)
+        if args.json:
+            args.json.write_text(out + "\n", encoding="utf-8")
+            print(f"→ {args.json}（接著：notice_build.py {args.json} --out <報告路徑>）")
+        else:
+            print(out)
         return 0
 
     if args.name:
@@ -320,13 +456,21 @@ def main() -> int:
         for n in sorted(names & removed):
             dangling.setdefault(n, []).append((kind, p))
 
+    deprecated = deprecated_skills(args.repo)
+    stale: dict[str, list[tuple[str, Path]]] = {}
+    for p, kind, names in sites:
+        for n in sorted(names & set(deprecated)):
+            stale.setdefault(n, []).append((kind, p))
+
     scanned = len(sites)
     if self_built:
         print(f"ℹ️  {len(self_built)} 個名字上游從來沒有過 → 判定為專案自建，不列入懸空"
               f"（{', '.join(sorted(self_built)[:5])}{' …' if len(self_built) > 5 else ''}）")
+    todo = report_deprecated(stale, deprecated, args) if stale else 0
     if not dangling:
-        print(f"✅ 掃了 {scanned} 個引用面，懸空引用 0")
-        return 0
+        print(f"\n{'⚠️' if todo else '✅'} 掃了 {scanned} 個引用面，懸空引用 0"
+              + (f"；已併入的舊名 {todo} 處待處理" if todo else ""))
+        return 1 if todo else 0
 
     succ_map = resolve_successors(args.repo, set(dangling), upstream)
     print(f"\n🔴 {len(dangling)} 個名字在上游已不存在，但消費端還指著它：")

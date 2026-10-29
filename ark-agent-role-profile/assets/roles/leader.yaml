@@ -36,7 +36,7 @@ metrics:
   - { name: 派工附驗收條件, target: "100%" }
   - { name: 驗收一次通過率, target: "> 90%" }
 knowledge_domains: [需求分析筆記, 派工策略, 驗收標準範本, 常見範圍蔓延案例]
-skills: [ark-project-planning, ark-uml-generator, ark-doc-coauthoring, ark-planning-with-files]
+skills: [ark-project-planning, ark-superpowers, ark-doc-coauthoring, ark-planning-with-files]
 examples:
   - kind: typical
     situation: 使用者說「幫我做一個每日 KPI 報表」

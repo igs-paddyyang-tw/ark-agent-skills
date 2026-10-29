@@ -14,7 +14,6 @@ roles:
     skills:
       - ark-env-doctor
       - ark-docker-deploy
-      - ark-dashboard-health
       - ark-security-audit
 
   leader:
@@ -25,7 +24,6 @@ roles:
       - ark-spec-executor
       - ark-project-planning
       - ark-planning-with-files
-      - ark-uml-generator
 
   worker-ai-dev:
     description: "LLM 整合、Prompt 工程、MCP 開發"

@@ -6,12 +6,16 @@ description: |
   ModuleNotFoundError、ImportError、新手環境設定、一鍵安裝、
   DevContainer 建立、或任何「我的環境跑不起來」相關問題。
   也適用於產出 setup 腳本、修復腳本、或環境診斷報告。
-  不適用於：已部署服務的端點與可用性請用 ark-dashboard-health（本 skill 修的是開發機環境）。
+  另有端點模式（原 ark-dashboard-health 併入）：檢查已部署服務的 API 端點、SSE 連線、頁面可用性，
+  使用此 Skill 當使用者提及 dashboard 正常嗎、API 測試、SSE 測試、健康檢查、端點測試、
+  dashboard health、服務可用性。
+  不適用於：服務的業務指標與數值異常請用 ark-pipeline-recipes（anomaly-detector 頁）。
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
+  replaces: [ark-dashboard-health]
   schema_version: "1.2"
   status: active
-  updated: 2026-10-20
+  updated: 2026-10-29
   category: ops
   form: executor
   domain: general
@@ -46,6 +50,21 @@ python scripts/env_doctor.py --check python
 python scripts/env_doctor.py --check go
 python scripts/env_doctor.py --check node
 ```
+
+## 端點模式（已部署服務，原 ark-dashboard-health）
+
+開發機環境以外，也檢查**已經跑起來的服務**：狀態碼、回應時間、SSE 連線。任一失敗 exit 1，可直接接排程。
+
+```bash
+# 一般端點（預設預期 2xx）＋ SSE（只驗 content-type，不等事件）
+python scripts/env_doctor.py --endpoints http://localhost:8888/health --sse http://localhost:8888/api/events
+# 端點多時用清單檔（JSON；YAML 需 PyYAML）：每筆 {name, url, method?, expect_status?, contains?, sse?}
+python scripts/env_doctor.py --endpoints-file endpoints.json --output docs/endpoint-report.md
+```
+
+- 實作在 `scripts/endpoints.py`（只用標準庫：環境壞了也能跑）；測試 `scripts/tests/test_env_doctor_endpoints.py`
+- 原 dashboard-health 的端點表、前端元件檢查、排程範例原樣保留在 [`references/dashboard-health.md`](references/dashboard-health.md)
+  （當時寫死 port 13030、6 個 agent，套用前改成你的服務）
 
 ## 偵測項目
 
@@ -149,3 +168,9 @@ pip install google-genai pydantic>=2.5.0 playwright
 | Git | `git --version` | 平台對應安裝指令 |
 | Gemini CLI | `gemini --version` | `npm install -g @google/gemini-cli` |
 | `.kiro/skills/` | 目錄存在 | `git clone` 指令 |
+
+## 版本
+
+| 版本 | 日期 | 變更 |
+|---|---|---|
+| 1.1.0 | 2026-10-29 | 新增端點模式 `--endpoints`／`--sse`／`--endpoints-file`（`scripts/endpoints.py`＋測試）；ark-dashboard-health 併入，原文在 `references/dashboard-health.md` |

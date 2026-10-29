@@ -14,12 +14,38 @@ from installers import generate_fix_commands
 from reporter import generate_report, generate_fix_scripts
 
 
+def run_endpoints(args) -> int:
+    """端點模式：任一失敗 exit 1（可直接接排程或 CI）。"""
+    from endpoints import check_all, load_endpoints, render
+    eps = load_endpoints(args.endpoints, args.sse, args.endpoints_file)
+    if not eps:
+        print("⏭  沒有任何端點可檢查（清單檔是空的）")
+        return 0
+    results = check_all(eps, args.timeout)
+    report = render(results)
+    print(report)
+    out = Path(args.output or "endpoint_report.md")
+    out.write_text(report, encoding="utf-8")
+    print(f"📄 報告已儲存: {out}")
+    return 0 if all(r["ok"] for r in results) else 1
+
+
 def main():
     parser = argparse.ArgumentParser(description="開發環境診斷與修復")
     parser.add_argument("--fix", action="store_true", help="自動執行修復")
     parser.add_argument("--check", choices=["python", "go", "node"], help="僅檢查特定語言")
-    parser.add_argument("--output", default="env_report.md", help="報告輸出路徑")
+    parser.add_argument("--output", default=None,
+                        help="報告輸出路徑（預設 env_report.md；端點模式 endpoint_report.md）")
+    # 端點模式（2026-10-29 由 ark-dashboard-health 併入）：檢查已部署服務，不做開發機診斷
+    parser.add_argument("--endpoints", nargs="+", metavar="URL", help="檢查這些端點（預設預期 2xx）")
+    parser.add_argument("--sse", nargs="+", metavar="URL", help="檢查 SSE 端點（只驗 content-type，不等事件）")
+    parser.add_argument("--endpoints-file", type=Path, help="端點清單 JSON／YAML（格式見 scripts/endpoints.py）")
+    parser.add_argument("--timeout", type=float, default=5.0, help="端點模式每個請求的逾時秒數")
     args = parser.parse_args()
+
+    if args.endpoints or args.sse or args.endpoints_file:
+        return run_endpoints(args)
+    args.output = args.output or "env_report.md"
 
     project_root = Path.cwd()
 
@@ -67,4 +93,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

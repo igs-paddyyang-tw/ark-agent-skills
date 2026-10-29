@@ -1,88 +1,31 @@
 ---
 name: ark-uml-generator
 description: |
-  產出 Mermaid 格式的 UML 圖表，用於系統設計文件。
-  支援序列圖、類別圖、ERD、流程圖、元件圖。
-  使用此 Skill 當使用者提及 UML、序列圖、類別圖、ERD、流程圖、
-  架構圖、Mermaid、畫圖、系統互動圖、資料模型圖。
+  [DEPRECATED — 已併入 ark-superpowers（設計階段「設計圖（Mermaid）」；原文在 references/uml-diagrams.md）]
+  原說明（保留觸發詞，讓舊說法仍導向新位置）：產出 Mermaid 格式的 UML 圖表，用於系統設計文件。 支援序列圖、類別圖、ERD、流程圖、元件圖。 使用此 Skill 當使用者提及 UML、序列圖、類別圖、ERD、流程圖、 架構圖、Mermaid、畫圖、系統互動圖、資料模型圖。
 metadata:
-  version: "1.0.1"
+  version: "2.0.0"
   schema_version: "1.2"
-  status: active
-  updated: 2026-10-20
+  status: deprecated
+  updated: 2026-10-29
   category: document
   form: instruction
   domain: general
-  outputs:
-    - format: md
-      audience: both
   author: paddyyang
 ---
 
-# Skill: generate-uml
+# ark-uml-generator（已併入 ark-superpowers）
 
-## 說明
+本 skill 已併入 **`ark-superpowers`**：設計階段「設計圖（Mermaid）」。原內容原樣保留在 `ark-superpowers/references/uml-diagrams.md`。
 
-產出 Mermaid 格式的 UML 圖表，用於系統設計文件。
+消費端若還沒有 `ark-superpowers`（`mirror_sync` 不會自動安裝新 skill）：
 
-## 支援圖表類型
-
-| 類型 | 用途 | Mermaid 語法 |
-|------|------|-------------|
-| 序列圖 | API 流程、元件互動 | `sequenceDiagram` |
-| 類別圖 | Domain Model、介面定義 | `classDiagram` |
-| ERD | 資料庫 Schema | `erDiagram` |
-| 流程圖 | 業務流程、決策樹 | `flowchart` |
-| 元件圖 | 系統架構總覽 | `graph` |
-
-## 使用方式
-
-當需要產出設計圖時，依以下規則選擇圖表類型：
-
-1. **描述 API 互動流程** → 序列圖
-2. **描述資料模型關係** → ERD
-3. **描述系統元件與依賴** → 元件圖（flowchart LR）
-4. **描述業務邏輯分支** → 流程圖
-5. **描述類別/介面繼承** → 類別圖
-
-## 輸出格式
-
-```markdown
-## {圖表標題}
-
-```mermaid
-{diagram_content}
+```bash
+cp -r <ark-agent-skills>/ark-superpowers .kiro/skills/
 ```
 
-### 說明
-- {圖表重點解讀}
-```
+## 版本
 
-## 範例：微服務序列圖
-
-```mermaid
-sequenceDiagram
-    participant C as Client (React)
-    participant G as API Gateway
-    participant U as User Service (Go)
-    participant R as Report Service (Python)
-    participant DB as PostgreSQL
-    participant MQ as RabbitMQ
-
-    C->>G: POST /api/v1/reports/generate
-    G->>U: Verify Token
-    U-->>G: OK
-    G->>R: GenerateReport(params)
-    R->>DB: Query data
-    DB-->>R: Result set
-    R->>MQ: Publish report.generated
-    R-->>G: 202 Accepted {job_id}
-    G-->>C: 202 {job_id}
-```
-
-## 品質要求
-
-- 參與者命名：`{簡稱} as {全名} ({技術})`
-- 訊息標註：含 HTTP Method 或 gRPC method
-- 非同步用虛線箭頭 `-->>`
-- 複雜流程用 `alt/opt/loop` 區塊
+| 版本 | 日期 | 變更 |
+|---|---|---|
+| 2.0.0 | 2026-10-29 | **Breaking**：併入 `ark-superpowers`，內容移至 `ark-superpowers/references/uml-diagrams.md`，本目錄只留轉址；角色對照表改指 ark-superpowers |

@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **55 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
+> **53 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -100,7 +100,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ⑤ 文件輸出 Document
 
-> 輸出：MD / Office｜`category: document`｜14 個
+> 輸出：MD / Office｜`category: document`｜13 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
@@ -116,16 +116,14 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-pptx-tool` | 📝 指示 | 通用 | 任何涉及 .pptx 檔案的情境皆使用此技能——無論作為輸入、輸出或兩者皆是。 |
 | `ark-release-notes` | 📝 指示 | 通用 | 當使用者需要從 git log 產出結構化 changelog 或版本說明時使用此技能。 |
 | `ark-retention-analysis` | 📝 指示 | 🎮 遊戲 | 玩家留存與 LTV 分析：Cohort 分析、留存曲線、LTV 預測、流失預警。 |
-| `ark-uml-generator` | 📝 指示 | 通用 | 產出 Mermaid 格式的 UML 圖表，用於系統設計文件。 |
 | `ark-xlsx-tool` | 📝 指示 | 通用 | 當試算表檔案為主要輸入或輸出時，請使用此技能。 |
 
 ## ⑥ 維運 Ops
 
-> 輸出：診斷 / 驗證｜`category: ops`｜7 個
+> 輸出：診斷 / 驗證｜`category: ops`｜6 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
-| `ark-dashboard-health` | 📝 指示 | 通用 | 自動化測試 Dashboard 所有 API 端點 + SSE 連線 + 前端頁面可用性。 |
 | `ark-env-doctor` | ⚙️ 執行 | 通用 | 當使用者遇到開發環境問題時使用此技能。 |
 | `ark-github-cli` | ⚙️ 執行 | 通用 | git / GitHub 統一閘道，讀寫兩側： 【讀｜L2 平台知識】從 GitHub repo 同步平台文件到 knowledge/github/、程式碼搜尋、issue/PR 讀取—— 知識檢索順… |
 | `ark-grafana-query` | ⚙️ 執行 | 通用 | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
@@ -142,11 +140,13 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-anomaly-detector` | 已併入 ark-pipeline-recipes（讀 references/anomaly-detector.md） |
 | `ark-chart-generator` | 已併入 ark-pipeline-recipes（讀 references/chart-generator.md） |
 | `ark-cost-tracker` | 已併入 ark-pipeline-recipes（讀 references/cost-tracker.md） |
+| `ark-dashboard-health` | 已併入 ark-env-doctor（端點模式 `env_doctor.py --endpoints`；原文在 references/dashboard-health.md） |
 | `ark-data-contract` | 已併入 ark-pipeline-recipes（讀 references/data-contract.md） |
 | `ark-etl-pipeline` | 已併入 ark-pipeline-recipes（讀 references/etl-pipeline.md） |
 | `ark-kpi-calculator` | 已併入 ark-pipeline-recipes（讀 references/kpi-calculator.md） |
 | `ark-llm-tools` | 已併入 ark-pipeline-recipes（讀 references/llm-tools.md） |
 | `ark-translator` | 已併入 ark-pipeline-recipes（讀 references/translator.md） |
+| `ark-uml-generator` | 已併入 ark-superpowers（設計階段「設計圖（Mermaid）」；原文在 references/uml-diagrams.md） |
 
 <!-- END GENERATED CATALOGUE -->
 

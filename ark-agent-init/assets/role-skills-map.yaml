@@ -19,8 +19,8 @@ base_skills:
 
 # 角色差異 → tier role
 role_skills:
-  admin:    [ark-planning-with-files, ark-env-doctor, ark-dashboard-health, ark-pipeline-recipes]
-  leader:   [ark-project-planning, ark-uml-generator, ark-doc-coauthoring]
+  admin:    [ark-planning-with-files, ark-env-doctor, ark-pipeline-recipes]
+  leader:   [ark-project-planning, ark-superpowers, ark-doc-coauthoring]
   ai-dev:   [ark-skill-creator, ark-mcp-builder, ark-pipeline-recipes]
   coder:    [ark-skill-creator, ark-code-review]
   qa:       [ark-code-review, ark-test-runner]

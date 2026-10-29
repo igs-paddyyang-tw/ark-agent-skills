@@ -291,3 +291,93 @@ def test_library_itself_is_not_mistaken_for_a_deployed_copy(tmp_path):
     empty = tmp_path / "no-consumers"; empty.mkdir()
     r = run(repo, empty)
     assert r.returncode == 0, r.stdout
+
+
+# ── 併入但保留 stub（2026-10-29：8 個產碼食譜 → ark-pipeline-recipes）──────────
+
+def _stub_world(tmp_path):
+    """上游：ark-new（replaces ark-old）＋ ark-old 的 deprecated stub。"""
+    repo = tmp_path / "skills"
+    (repo / "ark-new").mkdir(parents=True)
+    (repo / "ark-new" / "SKILL.md").write_text(
+        "---\nname: ark-new\nmetadata:\n  version: \"1.0.0\"\n  replaces: [ark-old]\n---\n", encoding="utf-8")
+    (repo / "ark-old").mkdir()
+    (repo / "ark-old" / "SKILL.md").write_text(
+        "---\nname: ark-old\nmetadata:\n  version: \"2.0.0\"\n  status: deprecated\n---\n", encoding="utf-8")
+    consumers = tmp_path / "projects"
+    return repo, consumers
+
+
+def test_stub_without_successor_installed_is_caught(tmp_path):
+    """只裝舊名 → mirror_sync 後只剩轉址空殼，必須紅（舊版判準看不到：stub 還有 SKILL.md）。"""
+    repo, consumers = _stub_world(tmp_path)
+    (consumers / "demo" / ".kiro" / "skills" / "ark-old").mkdir(parents=True)
+    r = run(repo, consumers)
+    assert r.returncode == 1, r.stdout
+    assert "ark-old" in r.stdout and "接手者 ark-new" in r.stdout and "接手者未安裝" in r.stdout
+
+
+def test_stub_with_successor_installed_passes(tmp_path):
+    repo, consumers = _stub_world(tmp_path)
+    for n in ("ark-old", "ark-new"):
+        (consumers / "demo" / ".kiro" / "skills" / n).mkdir(parents=True)
+    r = run(repo, consumers)
+    assert r.returncode == 0, r.stdout
+    assert "舊 stub 可刪" in r.stdout
+
+
+def test_stub_in_matrix_is_caught_with_actionable_fix(tmp_path):
+    repo, consumers = _stub_world(tmp_path)
+    (consumers / "demo" / "scripts").mkdir(parents=True)
+    (consumers / "demo" / "scripts" / "sync_skills.py").write_text(
+        _sync_script({"a-agent": ["ark-old"]}, ["ark-new"]), encoding="utf-8")
+    r = run(repo, consumers)
+    assert r.returncode == 1 and "改成 ark-new" in r.stdout
+
+
+# ── --impact：notice_build 的輸入 ────────────────────────────────
+
+def _g(repo: Path, *a):
+    subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True)
+
+
+def test_impact_reports_major_bump_against_previous_train(tmp_path):
+    import json
+    repo, consumers = _stub_world(tmp_path)
+    mf = repo / "ark-skills-align" / "release" / "manifest.json"
+    mf.parent.mkdir(parents=True)
+    _g(repo, "init", "-q")
+    _g(repo, "config", "user.email", "t@t"); _g(repo, "config", "user.name", "t")
+    mf.write_text(json.dumps({"release": "r1", "skills": {"ark-old": {"version": "1.0.1"}}}), encoding="utf-8")
+    _g(repo, "add", "-A"); _g(repo, "commit", "-qm", "r1")
+    mf.write_text(json.dumps({"release": "r2", "skills": {"ark-new": {"version": "1.0.0"}}}), encoding="utf-8")
+    _g(repo, "add", "-A"); _g(repo, "commit", "-qm", "r2")
+    (consumers / "demo" / ".kiro" / "skills" / "ark-old").mkdir(parents=True)
+    out = tmp_path / "impact.json"
+    r = run(repo, consumers, "--impact", "--json", str(out))
+    assert r.returncode == 0, r.stdout + r.stderr
+    imp = json.loads(out.read_text(encoding="utf-8"))
+    assert (imp["release"], imp["baseline"]) == ("r2", "r1")
+    assert [(b["skill"], b["from"], b["to"]) for b in imp["breaking"]] == [("ark-old", "1.0.1", "2.0.0")]
+    assert "ark-new" in imp["breaking"][0]["migration"]
+    assert imp["affected"] == ["demo"]
+
+
+def test_impact_without_manifest_history_says_so(tmp_path):
+    repo, consumers = _stub_world(tmp_path)
+    consumers.mkdir()
+    (consumers / "demo" / ".kiro" / "skills" / "ark-old").mkdir(parents=True)
+    r = run(repo, consumers, "--impact")
+    assert r.returncode == 0 and "找不到上一班列車" in r.stdout
+
+
+def test_pre_push_hook_only_suggests_flags_that_exist():
+    """pre-push 印給人照抄的指令，旗標必須真的存在（2026-10-29：曾建議不存在的 --impact）。"""
+    import re
+    hook = (SCRIPTS.parent / "scripts" / "hooks" / "pre-push").read_text(encoding="utf-8")
+    src = CHECKER.read_text(encoding="utf-8")
+    lines = [ln for ln in hook.splitlines() if "check_consumers.py" in ln and "echo" in ln]
+    assert lines, "hook 裡找不到 check_consumers 建議指令 —— 測試掃描範圍是空的"
+    for ln in lines:
+        for flag in re.findall(r"\s(--[a-z][a-z-]*)", ln):
+            assert f'"{flag}"' in src, f"pre-push 建議了 check_consumers 沒有的旗標 {flag}"
