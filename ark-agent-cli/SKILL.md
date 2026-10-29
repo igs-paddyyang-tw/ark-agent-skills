@@ -10,7 +10,7 @@ description: |
   「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」。
   不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-llm-tools）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
   author: paddyyang
   schema_version: "1.2"
   status: active
@@ -50,12 +50,14 @@ sub-agent： agent_spawn.py spawn ──▶ detached agent_worker.py ──┬�
 | `scripts/agent_worker.py` | 背景 worker（spawn 自動 detach；`--job <id>` 可前景除錯） | 不直接用 |
 | `scripts/agent_common.py` | envelope、exit code、`BACKENDS` 旗標模板、輸出清理、JSON 抽取、找 `agents.yaml` | 加 backend 時 |
 | `scripts/roster.py` | 讀 `agents.yaml` → 列可派工名單 / 驗 name / 補 cwd（選角路由的確定性那半） | 選角派工時 |
+| `scripts/agent_notify.py` | 終態回報：`--to inbox`（預設，worker 自動）/ `--to cmd`（推 TG）/ `--to agent`（再叫醒主 agent 接著做） | 接回報 |
 | `scripts/fake_backend.py` | 測試 / dry-run 用假 CLI（會寫 checkpoint） | 驗 task.md 流程 |
 | `references/subagent-protocol.md` | **sub-agent 提詞協定段（worker 直接讀）+ task.md 契約 + checkpoint schema + 主 agent 側契約** | 寫 task 前必讀 |
 | `references/job-contract.md` | job 目錄、job.json、狀態機、exit code、心跳 / 孤兒、notify | 接 bot |
 | `references/case-aiqa-steward.md` | 實戰：aiqa 1 小時掛測 = exec 腳本 + steward sub-agent | 遊戲測試派工 |
 | `references/backends.md` | 四個 backend 的旗標與環境變數 | 換模型 / 路徑 |
 | `references/routing.md` | **選角路由**：roster 列名單 → manager（LLM）選 → spawn --route 驗證補 cwd；與 team 方法1 分界 | 要派給專家 |
+| `references/reporting-back.md` | **完成後怎麼回報主 agent 而主 agent 不等、不卡、不 timeout**（inbox / notify_cmd / to agent 三條） | 設計回報流程 |
 | `examples/tasks/aiqa-steward.md` `long-research.md` | task.md 範本（佔位用 `{…}`） | 起一個 job |
 | `scripts/tests/` | fake backend 全鏈：段數、nudge、blocked→resume、預算、cancel、exec+attach、one-shot、DRIVER_MISSING | 改腳本後 |
 
@@ -72,6 +74,7 @@ sub-agent： agent_spawn.py spawn ──▶ detached agent_worker.py ──┬�
 │   │     --max-minutes N --segment-minutes 6~10 --max-segments ⌈N/segment⌉+2 → 回 job_id
 │   ├─ 腳本 + 要有人盯（aiqa 掛測）→ 先 exec 腳本，再 spawn --attach-exec <exec job>（steward 範本：examples/tasks/aiqa-steward.md）
 │   └─ 回使用者「已派工 job_id …，預計 N 分鐘」——不要 wait 卡住對話
+├─ 每輪開頭 → inbox --agent <我> --ack；pending > 0 先轉述 notices 的 summary/reason 再處理本輪（這就是「回報主 agent」：拉，不等）
 ├─ 使用者問進度 → status / tail --job；問結果 → result --job（終態才有 result.md），summary 原樣轉述
 ├─ blocked → 把 reason 給人；處理完 resume --job [--extra-minutes]；timeout → resume --extra-segments；failed → tail 看最後輸出
 └─ 要停 → cancel --job（worker 下一檢查點停；exec 立即 kill）
@@ -113,8 +116,12 @@ one-shot `data`：`{text, json_data, backend, model, elapsed_ms, timed_out, exit
 | `ARK_CLI_TIMEOUT` | `300` | one-shot 超時秒 |
 | `ARK_AGENT_JOBS_DIR` | `~/.ark/agent-jobs` | job 目錄 |
 | `ARK_AGENTS_YAML` | 往上找 `agents.yaml` | 選角路由的編制來源（不設則從 cwd 逐層往上找） |
+| `ARK_AGENT_INBOX_DIR` | `~/.ark/agent-inbox` | 終態通知 inbox 目錄（主 agent 每輪 `inbox --ack` 讀這裡） |
 
 ## 版本
+
+### 2.2.0（2026-10-29）
+- 新增**終態回報機制**（sub-agent 完成後回報主 agent，而主 agent 不等、不卡、不 timeout）：`agent_notify.py` 三條推/拉路徑 —— ① `inbox`（worker 終態一律寫 `~/.ark/agent-inbox/<agent>.jsonl`，主 agent 每輪開頭 `agent_spawn.py inbox --ack` 毫秒讀取）② `--to cmd`（推 TG）③ `--to agent`（再叫醒主 agent 一次把 result.md 當新訊息餵它）。`agent_spawn.py inbox` 子命令、spawn/exec 加 `--notify-agent`；worker 所有終態（done/blocked/timeout/failed/cancelled）都回報。新增 `references/reporting-back.md`、2 個測試（report_back / spawn_returns_immediately）。詳見 reporting-back.md。
 
 ### 2.1.0（2026-10-28）
 - 新增**選角路由**（Manager 選角直派，方法 2）：`agent_spawn.py roster` 讀 `agents.yaml` 列可派工名單；`spawn --route agent:<name>` 驗證該 agent 可派工並自動補 `--agent` / `--cwd`（從 yaml 的 `dir`）。選角由 manager（LLM）在對話層決定，腳本只做「列名單 / 驗名字 / 補 cwd」的確定性工作；選不出退回給人。新增 `scripts/roster.py`、`references/routing.md`、`scripts/tests/test_route.py`。依賴 PyYAML。

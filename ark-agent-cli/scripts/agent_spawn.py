@@ -119,7 +119,7 @@ def cmd_spawn(a):
     j = {"job_id": job_id, "name": a.name, "type": "agent", "backend": a.backend, "model": a.model, "agent": a.agent, "cwd": str(pathlib.Path(a.cwd).resolve()) if a.cwd else None,
          "task_file": str(task_copy), "state": "queued", "created_at": C.now(), "segment": 0, "max_segments": a.max_segments, "max_minutes": a.max_minutes,
          "segment_minutes": a.segment_minutes, "segment_timeout_s": a.segment_timeout, "segment_gap_s": a.segment_gap,
-         "attached_exec": a.attach_exec, "notify_cmd": a.notify_cmd, "protocol": C.PROTOCOL_VERSION, "skill_version": C.SKILL_VERSION, "last_checkpoint": None}
+         "attached_exec": a.attach_exec, "notify_cmd": a.notify_cmd, "notify_agent": a.notify_agent, "protocol": C.PROTOCOL_VERSION, "skill_version": C.SKILL_VERSION, "last_checkpoint": None}
     C.write_json(d / "job.json", j)
     pid = detach(job_id)
     C.emit({"job_id": job_id, "dir": str(d), "worker_pid": pid, "state": "queued",
@@ -130,7 +130,7 @@ def cmd_exec(a):
     job_id = C.new_job_id(a.name)
     d = jdir(job_id); d.mkdir(parents=True)
     j = {"job_id": job_id, "name": a.name, "type": "exec", "command": a.cmd, "cwd": str(pathlib.Path(a.cwd).resolve()) if a.cwd else None, "state": "queued",
-         "created_at": C.now(), "max_minutes": a.max_minutes, "notify_cmd": a.notify_cmd, "skill_version": C.SKILL_VERSION}
+         "created_at": C.now(), "max_minutes": a.max_minutes, "notify_cmd": a.notify_cmd, "notify_agent": a.notify_agent, "skill_version": C.SKILL_VERSION}
     C.write_json(d / "job.json", j)
     pid = detach(job_id)
     C.emit({"job_id": job_id, "dir": str(d), "worker_pid": pid, "log": str(d / "exec.log"), "next": f"python agent_spawn.py wait --job {job_id}"})
@@ -199,6 +199,20 @@ def cmd_resume(a):
     C.emit({"job_id": a.job, "resumed_from_segment": j.get("segment"), "worker_pid": pid, "max_minutes": j["max_minutes"], "max_segments": j["max_segments"]})
 
 
+def cmd_inbox(a):
+    """讀 / 確認終態通知。主 agent 每輪開頭跑一次（零等待的「拉」）；--ack 把 pending 標為已讀。"""
+    import agent_notify as N
+    path = N.INBOX_ROOT / f"{a.agent}.jsonl"
+    rows = [C.json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()] if path.exists() else []
+    pending = [r for r in rows if not r.get("ack")]
+    out = rows if a.all else pending
+    if a.ack and pending:
+        for r in rows:
+            r["ack"] = True
+        C.atomic_write(path, "".join(C.json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+    C.emit({"agent": a.agent, "pending": len(pending), "notices": out, "acked": bool(a.ack and pending), "inbox": str(path)})
+
+
 def cmd_result(a):
     j = load(a.job); d = jdir(a.job)
     res = d / "result.md"
@@ -227,11 +241,14 @@ def main():
     s.add_argument("--max-minutes", type=int, default=90); s.add_argument("--max-segments", type=int, default=12)
     s.add_argument("--segment-minutes", type=int, default=8); s.add_argument("--segment-timeout", type=int, default=900); s.add_argument("--segment-gap", type=float, default=0)
     s.add_argument("--attach-exec"); s.add_argument("--notify-cmd")
+    s.add_argument("--notify-agent", help="終態寫進哪個 agent 的 inbox（預設同 --agent）；inbox 永遠會寫")
     s.add_argument("--route", help="agent:<name>：讀 agents.yaml 驗證並自動填 --agent/--cwd")
     s.set_defaults(func=cmd_spawn)
     s = sub.add_parser("roster"); s.add_argument("--role", help="只列此 role（如 worker）"); s.set_defaults(func=cmd_roster)
     s = sub.add_parser("exec"); s.add_argument("--name", required=True); s.add_argument("--cmd", required=True); s.add_argument("--cwd")
-    s.add_argument("--max-minutes", type=int, default=120); s.add_argument("--notify-cmd"); s.set_defaults(func=cmd_exec)
+    s.add_argument("--max-minutes", type=int, default=120); s.add_argument("--notify-cmd"); s.add_argument("--notify-agent"); s.set_defaults(func=cmd_exec)
+    s = sub.add_parser("inbox", help="讀 / 確認終態通知（主 agent 每輪開頭跑一次，零等待）"); s.add_argument("--agent", default="default")
+    s.add_argument("--ack", action="store_true"); s.add_argument("--all", action="store_true"); s.set_defaults(func=cmd_inbox)
     s = sub.add_parser("status"); s.add_argument("--job", required=True); s.set_defaults(func=cmd_status)
     s = sub.add_parser("list"); s.add_argument("--state"); s.add_argument("--limit", type=int, default=30); s.set_defaults(func=cmd_list)
     s = sub.add_parser("tail"); s.add_argument("--job", required=True); s.add_argument("-n", type=int, default=40); s.set_defaults(func=cmd_tail)

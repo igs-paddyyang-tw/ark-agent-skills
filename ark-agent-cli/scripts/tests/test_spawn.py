@@ -127,3 +127,34 @@ def test_missing_driver_is_8(tmp_path, monkeypatch):
     monkeypatch.setenv("ARK_CLI_CLAUDE_CMD", "/nonexistent/claude")
     r = subprocess.run([sys.executable, str(SCRIPTS / "agent_cli.py"), "-b", "claude", "hi"], capture_output=True, text=True, encoding="utf-8", env=os.environ)
     assert r.returncode == 8 and json.loads(r.stdout)["error"]["code"] == "DRIVER_MISSING"
+
+
+def test_report_back_three_paths(tmp_path, jobs_dir, monkeypatch):
+    """終態回報三條路：① inbox 寫入且可 ack ② notify_cmd 以 shell 執行 ③ to agent 再叫醒主 agent。"""
+    monkeypatch.setenv("ARK_AGENT_INBOX_DIR", str(tmp_path / "inbox"))
+    flag = tmp_path / "cmd.txt"
+    job = sh("spawn", "--name", "t", "--task", task(tmp_path, "segments=1"), "--backend", "fake", "--agent", "aiqa",
+             "--notify-cmd", f"{sys.executable} -c \"open(r'{flag}','w').write('{{job_id}} {{state}}')\"", expect=0)["data"]["job_id"]
+    wait(job, 0)
+    time.sleep(0.5)
+    # ① inbox：寫進 aiqa 的 inbox，pending=1；--ack 後清零
+    d = sh("inbox", "--agent", "aiqa", "--ack", expect=0)["data"]
+    assert d["pending"] == 1 and d["notices"][0]["job_id"] == job and d["notices"][0]["state"] == "done" and d["notices"][0]["result_md"]
+    assert sh("inbox", "--agent", "aiqa", expect=0)["data"]["pending"] == 0
+    # ② notify_cmd：以 shell 執行，{job_id} {state} 被代入
+    assert flag.exists() and flag.read_text() == f"{job} done"
+    # ③ to agent：把 result.md 當新訊息餵主 agent 一次（fake backend，驗 delivered）
+    r = subprocess.run([sys.executable, str(SCRIPTS / "agent_notify.py"), "--job", job, "--to", "agent", "--backend", "fake", "--agent", "aiqa"],
+                       capture_output=True, text=True, encoding="utf-8", env=os.environ)
+    assert json.loads(r.stdout)["data"]["delivered_to_agent"] is True
+
+
+def test_spawn_returns_immediately(tmp_path, monkeypatch):
+    """spawn 不等 worker 跑完就回 job_id，否則主 agent 的 one-shot 會被長任務拖到 timeout。
+    意圖是「不等 worker 完成」，用相對比較（遠小於 worker 總時長）而非寫死秒數——Windows 啟動 python
+    解譯器本身就有 ~1.5s 固定 overhead，絕對閾值會誤判。worker 設每段 sleep 3s × 3 段 ≈ 9s。"""
+    monkeypatch.setenv("ARK_FAKE_SLEEP", "3")
+    t0 = time.time(); job = spawn(tmp_path, "segments=3"); dt = time.time() - t0
+    assert dt < 5, f"spawn 應明顯快於 worker 跑完（~9s），實際 {dt:.1f}s —— 它在等 worker"
+    assert sh("status", "--job", job, expect=0)["data"]["state"] in ("queued", "running")
+    sh("cancel", "--job", job, expect=0)

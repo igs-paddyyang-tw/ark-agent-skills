@@ -119,11 +119,11 @@ def run_agent_job(j: dict):
     nudge = False
     while True:
         if (d / "cancel").exists():
-            j["state"] = "cancelled"; save_job(j); event(j, "cancelled"); write_result(j, last_cp or {"reason": "cancelled"}, "cancelled"); return
+            j["state"] = "cancelled"; save_job(j); event(j, "cancelled"); write_result(j, last_cp or {"reason": "cancelled"}, "cancelled"); _notify(j); return
         if j["segment"] >= j["max_segments"]:
-            j["state"] = "timeout"; save_job(j); event(j, "budget", why="max_segments"); write_result(j, last_cp or {"reason": "段數用盡"}, "timeout"); return
+            j["state"] = "timeout"; save_job(j); event(j, "budget", why="max_segments"); write_result(j, last_cp or {"reason": "段數用盡"}, "timeout"); _notify(j); return
         if (time.time() - j["_started_ts"]) / 60 >= j["max_minutes"]:
-            j["state"] = "timeout"; save_job(j); event(j, "budget", why="max_minutes"); write_result(j, last_cp or {"reason": "時間用盡"}, "timeout"); return
+            j["state"] = "timeout"; save_job(j); event(j, "budget", why="max_minutes"); write_result(j, last_cp or {"reason": "時間用盡"}, "timeout"); _notify(j); return
         seg = j["segment"] + 1
         prompt, cp_path = render_prompt(j, seg, last_cp, nudge)
         C.atomic_write(d / "segments" / f"{seg:03d}.prompt.md", prompt)
@@ -131,7 +131,7 @@ def run_agent_job(j: dict):
         r = A.call(j["backend"], prompt, j.get("model"), False, None, j.get("agent"), False, j.get("cwd"), j["segment_timeout_s"])
         C.atomic_write(d / "segments" / f"{seg:03d}.out.txt", (r.get("text") or "") + ("\n\n[stderr]\n" + r.get("raw_stderr", "") if r.get("raw_stderr") else ""))
         if r.get("driver_missing"):
-            j["state"] = "failed"; j["error"] = r["raw_stderr"]; save_job(j); event(j, "failed", why="driver_missing"); write_result(j, {"reason": r["raw_stderr"]}, "failed"); return
+            j["state"] = "failed"; j["error"] = r["raw_stderr"]; save_job(j); event(j, "failed", why="driver_missing"); write_result(j, {"reason": r["raw_stderr"]}, "failed"); _notify(j); return
         cp = read_checkpoint(cp_path, r.get("text") or "")
         if cp is None:
             if r.get("timed_out"):
@@ -139,7 +139,7 @@ def run_agent_job(j: dict):
             if not nudge:
                 nudge = True; event(j, "nudge", seg=seg); continue  # 同一段重跑一次
             j["state"] = "failed"; j["error"] = "連續兩段未寫 checkpoint"; save_job(j); event(j, "failed", why="no_checkpoint")
-            write_result(j, {"reason": j["error"]}, "failed"); return
+            write_result(j, {"reason": j["error"]}, "failed"); _notify(j); return
         nudge = False
         j["segment"] = seg; j["last_checkpoint"] = cp; j["heartbeat_at"] = C.now()
         event(j, "checkpoint", seg=seg, status=cp["status"], progress=cp.get("progress", "")[:200], elapsed_ms=r.get("elapsed_ms"))
@@ -162,9 +162,9 @@ def run_exec_job(j: dict):
         t0 = time.time()
         while p.poll() is None:
             if (d / "cancel").exists():
-                p.kill(); j["state"] = "cancelled"; save_job(j); event(j, "cancelled"); return
+                p.kill(); j["state"] = "cancelled"; save_job(j); event(j, "cancelled"); _notify(j); return
             if (time.time() - t0) / 60 > j["max_minutes"]:
-                p.kill(); j["state"] = "timeout"; save_job(j); event(j, "budget", why="max_minutes"); return
+                p.kill(); j["state"] = "timeout"; save_job(j); event(j, "budget", why="max_minutes"); _notify(j); return
             j["heartbeat_at"] = C.now(); save_job(j); time.sleep(2)
         j["exit_code"] = p.returncode; j["state"] = "done" if p.returncode == 0 else "failed"; j["finished_at"] = C.now(); save_job(j)
         event(j, j["state"], exit_code=p.returncode); _notify(j)
@@ -173,12 +173,19 @@ def run_exec_job(j: dict):
 
 
 def _notify(j: dict):
+    """終態回報：永遠先寫 inbox（主 agent 下一輪自己讀，零等待）；有 notify_cmd 再以 shell 執行（推 TG / 再呼叫主 agent）。"""
+    import agent_notify as N
+    try:
+        N.to_inbox(j, j.get("notify_agent") or j.get("agent"))
+        event(j, "inbox", agent=j.get("notify_agent") or j.get("agent") or "default")
+    except Exception as e:  # noqa: BLE001
+        event(j, "inbox_failed", error=str(e))
     cmd = j.get("notify_cmd")
     if not cmd:
         return
     try:
-        subprocess.Popen(cmd.replace("{job_id}", j["job_id"]).replace("{state}", j["state"]).replace("{result}", str(job_dir(j["job_id"]) / "result.md")), shell=True)
-        event(j, "notify", cmd=cmd)
+        r = N.to_cmd(j, cmd)
+        event(j, "notify", cmd=r["cmd"])
     except Exception as e:  # noqa: BLE001
         event(j, "notify_failed", error=str(e))
 
