@@ -90,9 +90,34 @@ def _agent_skills(matrix: dict, agent: str, info: dict, manifest: dict | None) -
     return out
 
 
+def require_manifest(matrix: dict) -> dict | None:
+    """plan 一定要有 manifest 且帶 tiers_default；缺任何一個就說清楚原因與修法，回 None。
+
+    🔴 2026-10-30：原本拉不到 manifest（網址錯／斷網）或 manifest 沒有 tiers_default 時照常往下算，
+    目標集合只剩 extra —— plan 看起來「差異很少」，其實是角色 skill 全部漏掉。
+    """
+    url = matrix.get("upstream", {}).get("manifest_url", "")
+    if not url:
+        print("❌ skills-matrix.yaml 沒有 upstream.manifest_url —— 無法得知角色該裝哪些 skill", file=sys.stderr)
+        return None
+    manifest = fetch_manifest(url)
+    if manifest is None:
+        print(f"❌ 拉不到 manifest：{url}\n   正確路徑：https://raw.githubusercontent.com/igs-paddyyang-tw/"
+              "ark-agent-skills/main/ark-skills-align/release/manifest.json（舊的 main/release/… 是 404）",
+              file=sys.stderr)
+        return None
+    if not (manifest.get("tiers_default") or {}).get("base"):
+        print(f"❌ manifest（{manifest.get('release', '?')}）沒有 tiers_default —— 上游 r18 之前的列車不帶角色表，"
+              "請改用最新列車", file=sys.stderr)
+        return None
+    return manifest
+
+
 def cmd_plan(root: Path, waves: bool) -> int:
     matrix = load_matrix(root)
-    manifest = fetch_manifest(matrix.get("upstream", {}).get("manifest_url", "")) if matrix.get("upstream", {}).get("manifest_url") else None
+    manifest = require_manifest(matrix)
+    if manifest is None:
+        return 2
     lock = load_lock(root)
     skills_dir = root / ".kiro" / "skills"
     diffs = []

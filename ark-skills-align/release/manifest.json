@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.10-r17",
-  "commit": "3446f2a",
-  "generated_at": "2026-10-29T19:05:50+08:00",
+  "release": "skills-2026.10-r18",
+  "commit": "2c33833",
+  "generated_at": "2026-10-30T09:05:40+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.2.0",
@@ -533,9 +533,9 @@
       "updated": "2026-10-20"
     },
     "ark-skills-align": {
-      "version": "2.10.0",
-      "tree_hash": "sha256:819149562648167a84e4d51c22fde686f8f15cc95652359e84140c3b8b0afc01",
-      "contract_hash": "sha256:b662f8e00750a3aeec07ab1a5aecdf08299e807179f3c69c22caf071192723d2",
+      "version": "2.11.0",
+      "tree_hash": "sha256:322db2f363658d666d091ab873a8a207d214ac2d919bab9fc2edd2bd04b14c4a",
+      "contract_hash": "sha256:ec7f5ff2c5cb0b096eec55e2aa80008fe88cc1ea69982e12248661ca6dfea2db",
       "status": "active",
       "category": "ops",
       "depends_on": [
@@ -545,7 +545,7 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-29"
+      "updated": "2026-10-30"
     },
     "ark-spec-executor": {
       "version": "2.0.3",
@@ -653,6 +653,50 @@
       "depends_on": [],
       "replaces": [],
       "updated": "2026-10-20"
+    }
+  },
+  "tiers_default": {
+    "base": [
+      "ark-grill-me",
+      "ark-superpowers",
+      "ark-spec-executor",
+      "ark-code-spec-validator",
+      "ark-wiki-engine",
+      "ark-prompt-spec-validator",
+      "ark-md-report",
+      "ark-html-report"
+    ],
+    "role": {
+      "admin": [
+        "ark-superpowers",
+        "ark-env-doctor",
+        "ark-pipeline-recipes"
+      ],
+      "leader": [
+        "ark-superpowers"
+      ],
+      "ai-dev": [
+        "ark-skill-creator",
+        "ark-mcp-builder",
+        "ark-pipeline-recipes"
+      ],
+      "coder": [
+        "ark-skill-creator",
+        "ark-quality-gates"
+      ],
+      "qa": [
+        "ark-quality-gates"
+      ],
+      "devops": [
+        "ark-docker-deploy",
+        "ark-env-doctor"
+      ],
+      "designer": [
+        "ark-frontend-design"
+      ],
+      "analyst": [
+        "ark-pipeline-recipes"
+      ]
     }
   }
 }

@@ -101,6 +101,23 @@ def parse_meta(skill_md: Path) -> dict:
     return fm.get("metadata") or {}
 
 
+ROLE_MAP = Path("ark-agent-init") / "assets" / "role-skills-map.yaml"
+
+
+def tiers_default(repo: Path) -> dict:
+    """角色 → skill 清單（align_sync 據此算每個 agent 的目標集合）。
+
+    唯一權威是 ark-agent-init 的 role-skills-map.yaml；manifest 只是帶著它出貨。
+    🔴 2026-10-30 補：align_sync 一直讀 `tiers_default`，但本檔從沒產過 → 角色集合恆為空、只剩 extra。
+    """
+    f = repo / ROLE_MAP
+    if not f.is_file():
+        return {"base": [], "role": {}}
+    data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+    return {"base": list(data.get("base_skills") or []),
+            "role": {k: list(v or []) for k, v in (data.get("role_skills") or {}).items()}}
+
+
 def build(repo: Path, release: str, out_dir: Path | None = None) -> tuple[dict, dict]:
     skills = {}
     for d in sorted(repo.iterdir()):
@@ -132,6 +149,7 @@ def build(repo: Path, release: str, out_dir: Path | None = None) -> tuple[dict, 
         "release": release, "commit": commit,
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "skills": skills,
+        "tiers_default": tiers_default(repo),
     }
     # index：tree_hash → {skill, version, release}（累積）
     # 🔴 讀舊 index 必須用「實際輸出路徑」（--out），不能寫死 repo/release

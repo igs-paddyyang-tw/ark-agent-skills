@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-10-30 (列車 r18：align_sync 角色集合為空的根因 —— manifest 補 tiers_default)
+
+> 計畫：kiro-cli `docs/plans/align-sync-tiers-default-plan.md`（r17 實作時發現）。
+
+- **根因**：`align_sync` 用 manifest 的 `tiers_default` 算每個 agent 的 base＋角色 skill，但 `gen_manifest` 從沒產過這個欄位 → 角色集合恆為空、只剩 `extra`；
+  拉不到 manifest（網址錯、斷網）時也照常往下算 —— plan 看起來「差異很少」，其實角色 skill 全部漏掉
+- **ark-skills-align 2.11.0**：
+  - `gen_manifest`：manifest 帶 `tiers_default`（來源 ark-agent-init `role-skills-map.yaml`，唯一權威）—— **本班 r18 起**才有
+  - `align_sync plan`：manifest 拉不到、或沒有 `tiers_default` → 印原因與正確網址、exit 2，不再產出看似正常的 plan
+  - 新測試 5 條（`test_align_sync_tiers.py`）；反證：換回舊 align_sync → 2 紅、manifest 拿掉欄位 → 1 紅
+- 🟡 消費端：aidev 的 `skills-matrix.yaml` 仍是 404 舊網址 `main/release/manifest.json`，需自改為 `main/ark-skills-align/release/manifest.json`
+- ⚠️ 未補：`align_sync apply` 仍是空實作（原規劃 W2）；目前各專案實際用 mirror_sync 對齊
+
+---
+
 ## 2026-10-29 (列車 r17：盤點 O-1 遊戲 skill 依 domain 分流＋O-2 description 減肥)
 
 > 計畫：kiro-cli `docs/plans/skills-o1-o2-domain-desc-plan.md`。
