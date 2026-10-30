@@ -7,7 +7,7 @@ description: |
   「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」「UX 測試要跑很久」「sub-agent 燒 token」「job 死掉沒報告」。
   不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-pipeline-recipes 的 llm-tools 頁）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.4.2"
+  version: "2.4.3"
   author: paddyyang
   schema_version: "1.2"
   status: active
@@ -130,6 +130,12 @@ one-shot `data`：`{text, json_data, backend, model, elapsed_ms, timed_out, exit
 | `ARK_AGENT_INBOX_DIR` | `~/.ark/agent-inbox` | 終態通知 inbox 目錄（主 agent 每輪 `inbox --ack` 讀這裡） |
 
 ## 版本
+
+### 2.4.3（2026-10-30）— 補完 U-3：codex／gemini 背景 job 的用量（真 CLI 實測格式）
+- worker 對 claude／codex／gemini 都要 json；`_finish` 解包回覆文字：codex 事件流取最後一個 `agent_message`、gemini 取 `response`
+- gemini usage 從 `stats.models.<model>.tokens` 加總（output 含 thoughts）；codex 沿用 `turn.completed.usage`
+- gemini 加 `--skip-trust`：gemini-cli 0.53 headless 在未信任目錄直接 exit 55，背景 job 的新目錄會整個失敗
+- 夾具＝2026-10-30 真輸出（codex-cli 0.146、gemini-cli 0.53）；5 測試（反證：換回 2.4.2 → 5 紅）；兩家 CLI 不回報金額，`cost_usd` 為空
 
 ### 2.4.2（2026-10-30）— 修 bot 接背景 job 實測的 5 個問題（交接單 kiro-cli `docs/plans/ark-agent-cli-2.4.1-fixes-plan.md`）
 - **U-1** checkpoint 的 `actions`／`evidence_new` 寫成清單時 worker 崩潰 → 容錯計數（清單取長度）；協定註明兩欄是整數

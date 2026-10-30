@@ -11,7 +11,7 @@ import sys
 import uuid
 
 CONTRACT = "1"
-SKILL_VERSION = "2.4.2"  # 必須等於 SKILL.md metadata.version（tests/test_fixes_242.py 的 test_u4 守門）
+SKILL_VERSION = "2.4.3"  # 必須等於 SKILL.md metadata.version（tests/test_fixes_242.py 的 test_u4 守門）
 PROTOCOL_VERSION = "subagent-protocol/1.2"  # 1.2（2.4.2）：寫不了檔時可把 checkpoint JSON 印在輸出最後
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "BUDGET_EXCEEDED": 4, "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8}
 HERE = pathlib.Path(__file__).resolve().parent
@@ -102,7 +102,8 @@ BACKENDS = {
     "codex":  {"env": ["ARK_CLI_CODEX_CMD", "CODEX_CLI_CMD"], "default": "codex", "args": ["exec", "--skip-git-repo-check"],
                "prompt": "stdin", "stdin_marker": "-", "model": ["-m", "{model}"], "json": ["--json"], "resume": [], "agent": [],
                "access": {"read-only": ["-s", "read-only"], "workspace": ["-s", "workspace-write"], "full": ["-s", "danger-full-access"]}},
-    "gemini": {"env": ["ARK_CLI_GEMINI_CMD", "GEMINI_CLI_CMD"], "default": "gemini", "args": [],
+    # --skip-trust：headless 在未信任目錄會直接 exit 55（gemini-cli 0.53 實測）；只信任本次 session 的 cwd
+    "gemini": {"env": ["ARK_CLI_GEMINI_CMD", "GEMINI_CLI_CMD"], "default": "gemini", "args": ["--skip-trust"],
                "prompt": "stdin", "model": ["-m", "{model}"], "json": ["--output-format", "json"], "resume": [], "agent": [],
                "access": {"read-only": ["--approval-mode", "default"], "workspace": ["--approval-mode", "auto_edit"], "full": ["--approval-mode", "yolo"]}},
     "fake":   {"env": ["ARK_CLI_FAKE_CMD"], "default": f"{sys.executable} {HERE / 'fake_backend.py'}", "args": [],
@@ -168,6 +169,17 @@ def extract_usage(text: str, json_data=None) -> dict | None:
                 o = json.loads(line); cands.append((o.get("usage") or (o.get("turn") or {}).get("usage")))
             except Exception:  # noqa: BLE001
                 pass
+    # gemini `--output-format json`：stats.models.<model>.tokens（可能多個模型，例如 router＋main）→ 加總
+    #   output 含 thoughts（gemini 的思考 token 也計費）
+    models = ((json_data or {}).get("stats") or {}).get("models") if isinstance(json_data, dict) and isinstance(json_data.get("stats"), dict) else None
+    if isinstance(models, dict) and models:
+        it = ot = 0
+        for m in models.values():
+            tk = (m or {}).get("tokens") or {}
+            it += int(tk.get("prompt") or tk.get("input") or 0)
+            ot += int(tk.get("candidates") or 0) + int(tk.get("thoughts") or 0)
+        if it or ot:
+            return {"input_tokens": it, "output_tokens": ot, "cost_usd": None}
     for u in cands:
         if isinstance(u, dict):
             it = u.get("input_tokens") or u.get("prompt_tokens") or u.get("promptTokenCount") or 0

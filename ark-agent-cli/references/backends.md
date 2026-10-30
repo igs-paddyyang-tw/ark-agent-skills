@@ -31,10 +31,10 @@
 
 | backend | prompt 餵法 | read-only | workspace | full | json / usage |
 |---|---|---|---|---|---|
-| codex | **stdin**（`exec … -`） | `-s read-only` | `-s workspace-write` | `-s danger-full-access` | `--json` 事件流 → `turn.completed.usage` |
+| codex | **stdin**（`exec … -`） | `-s read-only` | `-s workspace-write` | `-s danger-full-access` | `--json` 事件流：回覆＝最後一個 `item.completed`／`agent_message.text`、用量＝`turn.completed.usage`（2.4.3 實測 0.146） |
 | claude | **stdin**（`-p` 無參數） | `--allowedTools Read,Grep,Glob,LS` | `+ Write,Edit,Bash` | `--dangerously-skip-permissions` | `--output-format json` → `usage` / `total_cost_usd` |
 | kiro | **prompt 檔**（argv 一行「讀 <path> 並執行」；`ARK_CLI_KIRO_PROMPT=stdin` 可改） | `--trust-tools=fs_read` | `--trust-tools=fs_read,fs_write,execute_bash` | `--trust-all-tools` | 無 usage（記 null） |
-| gemini | stdin | `--approval-mode default` | `auto_edit` | `yolo` | `--output-format json` → `stats` |
+| gemini | stdin（加 `--skip-trust`：headless 未信任目錄會 exit 55） | `--approval-mode default` | `auto_edit` | `yolo` | `--output-format json`：回覆＝`response`、用量＝`stats.models.<model>.tokens` 加總（2.4.3 實測 0.53） |
 
 為什麼不走 argv：Windows CreateProcess 命令列上限 32,767 字元，一段 sub-agent prompt（協定 + task + checkpoint）輕易超過，會 `WinError 206`。`--argv` 旗標只給極短 prompt 除錯。
 旗標名以各 CLI 當前版本為準；第一次接真 backend 用 `agent_cli.py -b <x> --access read-only "回 ok"` 探一次，不對就改 `BACKENDS` 表（或 env 覆蓋 cmd）。

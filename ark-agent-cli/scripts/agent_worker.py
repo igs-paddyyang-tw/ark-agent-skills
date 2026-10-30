@@ -31,8 +31,9 @@ for _s in (sys.stdout, sys.stderr):
 PROTOCOL_FILE = C.SKILL_ROOT / "references" / "subagent-protocol.md"
 VALID = ("continue", "done", "blocked")
 #: 背景 job 要求 json 輸出的 backend —— usage 只在 json 裡（2.4.2 U-3：原本一律 text → usage 恆為 0）。
-#: 只列輸出格式已驗證、`agent_cli._finish` 會把回覆文字解出來的 claude；codex（事件流）／gemini（response 包裝）待驗證後再加。
-JSON_USAGE_BACKENDS = ("claude",)
+#: 三家輸出格式都以真 CLI 實測過（2.4.3：claude 2.1、codex-cli 0.146 事件流、gemini-cli 0.53 response 包裝），
+#: `agent_cli._finish` 會把回覆文字解出來；kiro 沒有 json 模式。
+JSON_USAGE_BACKENDS = ("claude", "codex", "gemini")
 
 
 def job_dir(job_id: str) -> pathlib.Path:

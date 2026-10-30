@@ -21,14 +21,36 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import agent_common as C  # noqa: E402
 
 
+def _codex_message(text: str) -> str | None:
+    """codex `exec --json` 事件流：最後一個 item.completed／agent_message 的 text 才是回覆（2.4.3 實測 codex-cli 0.146）。"""
+    msg = None
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            o = C.json.loads(line)
+        except ValueError:
+            continue
+        item = o.get("item") if isinstance(o, dict) else None
+        if o.get("type") == "item.completed" and isinstance(item, dict) and item.get("type") == "agent_message":
+            msg = item.get("text") or msg
+    return msg
+
+
 def _finish(backend, cp_stdout, cp_stderr, returncode, t0, json_output, model, timed_out=False):
     text = C.clean_output(cp_stdout)
     data = C.extract_json(text) if json_output else None
-    if json_output and isinstance(data, dict) and "result" in data and backend == "claude":  # claude --output-format json 包一層
-        usage = C.extract_usage(text, data)
+    usage = C.extract_usage(text, data)
+    # json 模式要把「回覆文字」從各家包裝裡解出來 —— 否則 checkpoint 退路撈到的是包裝本身（2.4.3：codex／gemini 實測格式）
+    if json_output and backend == "claude" and isinstance(data, dict) and "result" in data:     # {"result": …, "usage": …}
         text = str(data.get("result", text)); data = C.extract_json(text) or data
-    else:
-        usage = C.extract_usage(text, data)
+    elif json_output and backend == "gemini" and isinstance(data, dict) and "response" in data:  # {"response": …, "stats": …}
+        text = str(data.get("response") or ""); data = C.extract_json(text) or data
+    elif json_output and backend == "codex":                                                   # JSONL 事件流
+        msg = _codex_message(text)
+        if msg is not None:
+            text = msg; data = C.extract_json(text)
     return {"success": bool(text) and not timed_out, "timed_out": timed_out, "text": text, "json_data": data, "backend": backend, "model": model,
             "elapsed_ms": int((time.time() - t0) * 1000), "exit_code": returncode, "raw_stderr": (cp_stderr or "")[-2000:], "usage": usage}
 

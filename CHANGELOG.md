@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-30 (列車 r22：ark-agent-cli 2.4.3 —— 補完 U-3，codex／gemini 背景 job 用量)
+
+- 2.4.2 的 U-3 只對 claude 開 json（另兩家格式未驗證）。本版以真 CLI 實測（codex-cli 0.146、gemini-cli 0.53）後補齊：
+  - **codex** `--json` 是事件流：回覆＝最後一個 `item.completed`／`agent_message.text`，用量＝`turn.completed.usage`（原本已會抽）
+  - **gemini** `--output-format json`：回覆＝`response`，用量＝`stats.models.<model>.tokens`（可能多個模型，加總；output 含 thoughts）—— 原本完全抽不到
+  - 🔴 **新發現**：gemini headless 在未信任目錄直接 exit 55 → 加 `--skip-trust`（只信任本次 session 的 cwd）。背景 job 常在新目錄跑，修前會整個失敗
+- 測試夾具＝實測輸出；5 條（反證：換回 2.4.2 → 5 紅）；agent-cli 全部 50 passed；實跑 `agent_cli.call` 兩家都回乾淨 checkpoint JSON 與非 0 用量
+- 兩家 CLI 不回報金額 → `cost_usd` 為空（不是 0）
+
+---
+
 ## 2026-10-30 (列車 r21：ark-agent-cli 2.4.2 —— bot 接背景 job 實測的 5 個問題)
 
 > 交接單：kiro-cli `docs/plans/ark-agent-cli-2.4.1-fixes-plan.md`（bot 依 alignment 計畫 P3 接上背景 job，以真 claude 跑時發現）。
