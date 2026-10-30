@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.10-r20",
-  "commit": "e9a20e6",
-  "generated_at": "2026-10-30T10:30:52+08:00",
+  "release": "skills-2026.10-r21",
+  "commit": "5b5fb03",
+  "generated_at": "2026-10-30T13:19:07+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.2.0",
@@ -19,16 +19,16 @@
       "updated": "2026-10-27"
     },
     "ark-agent-cli": {
-      "version": "2.4.1",
-      "tree_hash": "sha256:d2761f162a735babe2042a1f203f65979dd57b2eb39455dd5b18d684977e07ff",
-      "contract_hash": "sha256:41d7cf4418800d0fc839725b6ac0e35b672f8d871682238245542513d4554214",
+      "version": "2.4.2",
+      "tree_hash": "sha256:e15dc4261dea7b4a313319f97c4b7bff7c59ac75eed18f3b0a2f17734660ce3b",
+      "contract_hash": "sha256:4a4b5b762a30ff7d602710bfd2fe1bd08cc0218c05e1faa552bebac3564a0ce3",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],
       "replaces": [
         "ark-llm-cli"
       ],
-      "updated": "2026-10-29"
+      "updated": "2026-10-30"
     },
     "ark-agent-init": {
       "version": "2.7.1",
