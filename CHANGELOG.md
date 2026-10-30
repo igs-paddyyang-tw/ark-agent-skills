@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-10-30 (列車 r19：align_sync apply 實作＋盤點 O-3 補測 10 個 skill)
+
+> 計畫：kiro-cli `docs/plans/align-sync-apply-and-o3-tests-plan.md`。
+
+- **ark-skills-align 2.12.0：`align_sync apply` 實作**（原為空實作「留 W2」；v2 規格 AC-11／AC-13）
+  - 從上游本機 clone 歷史中「manifest 的 release 等於列車」的 commit `git archive` 取檔 —— **不信 manifest 的 `commit` 欄位**：
+    r12～r18 發版流程「commit → 產 manifest → amend」讓它指向 amend 前、不在 main 的孤兒 commit
+  - tree_hash 對上 manifest 才換上（先放旁邊再換名，失敗不留半套）；寫 lock（version／tree_hash／source／tier）；exit 0／1／2／10
+  - 5 條測試（反證：改用 working tree、跳過 hash 驗證、忽略 --yes 各 1 紅）；實測對 r18：plan 17 → 兩波 apply → plan 0、verify P0/P1=0
+  - 🔴 **發版流程改正**：manifest 另開 commit，不再 amend（本班起）；consumer-contract 範例網址修正（原 manifest_url／index_url 皆 404）
+- **盤點 O-3：10 個有腳本沒測試的 skill 補行為測試**（97 passed、1 skipped、5 xfailed；每個至少一次反證；skill 程式零改動；各升 minor）：
+  community-cli 1.2.0、telegram-sender 2.1.0、md-report 1.1.0、book 1.2.0、daily-news 2.2.0、agent-role-profile 1.5.0、
+  agent-team-design 1.4.0、code-spec-validator 1.1.0、release-notes 1.1.0、web-scraper 1.1.0（Office 四件為官方鏡像，不在範圍）
+- **測出 5 個 bug（`xfail(strict=True)` 標記，待修）**：
+  1. telegram-sender `tg_send.py`：`parse_mode="plain"` 原樣送給 Telegram（SKILL.md 說合法，Telegram 回 400）
+  2. book `book_lint.py`：模組層 `calibration_hit` 不清空，同一行程連 lint 兩本會漏報
+  3. code-spec-validator：SKILL.md 示範 `run_validator.py --target .`，wrapper 不認 `--target`，把它當 project_root
+  4. release-notes `changelog_gen.py`：`--last N` 涵蓋到第一筆 commit 時 `HEAD~N` 不存在，統計被吞成 0
+  5. web-scraper 範本：slug 只換空白，標題含 `/` 時寫檔失敗，整批文章都不落檔
+
+---
+
 ## 2026-10-30 (列車 r18：align_sync 角色集合為空的根因 —— manifest 補 tiers_default)
 
 > 計畫：kiro-cli `docs/plans/align-sync-tiers-default-plan.md`（r17 實作時發現）。
