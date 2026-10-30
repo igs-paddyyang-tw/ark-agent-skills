@@ -5,12 +5,10 @@ description: |
   FastAPI Server + Web Chat UI、BaseSkill 插件系統、WorkflowEngine + ScheduleEngine
   排程、Telegram Bot channel。三種可選規模：純 web / +排程 / +TG（三合一）。
   可獨立運作，支援 /skill_id 指令、workflow YAML、APScheduler 排程、TG 私聊路由。
-  使用此 Skill 當使用者提及建立專案、產出 Web 應用、gen web app、ark webapp、
-  webbot、web + bot、web 加 telegram、加入排程、排程引擎、工作流引擎、
-  每日報表自動化、Telegram Bot 開發、加入 TG bot、
-  或任何需要從零建構 FastAPI + Skill + 排程 + TG 的獨立應用場景。
-  不適用於：① ark_bot_agent / ark_team_agent 的**消費端**（那用 ark-agent-bot-builder /
-  ark-agent-team-builder，套件已內建 web/TG/排程）；② 純 TG 推播請用 ark-telegram-sender。
+  使用此 Skill 當使用者明確要**不依賴 ark 套件的獨立應用**：gen web app、ark webapp、webbot、
+  獨立 FastAPI 應用、自帶 web + TG + 排程的單體服務、ai-bot-workshop 教材專案。
+  不適用於：① 要一個 agent／bot／團隊（**預設路徑**：ark-agent-bot-builder／ark-agent-team-builder，
+  套件已內建 web／TG／排程／記憶）；② 純 TG 推播請用 ark-telegram-sender；③ 既有專案加排程請用套件的 scheduler.yaml。
 metadata:
   schema_version: "1.2"
   status: active
@@ -23,8 +21,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.0.2"
-  updated: 2026-10-20
+  version: "2.0.3"
+  updated: 2026-10-30
 ---
 
 # ark-webapp-generator

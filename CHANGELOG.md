@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-10-30 (列車 r20：修 r19 揭露的 5 個 bug＋盤點 M-6、O-4 收尾)
+
+- **5 個 bug 修好、xfail 拿掉**（反證：5 支腳本換回原版 → 恰好 5 紅）：
+  telegram-sender 2.2.0（`plain`／`none` 不送 parse_mode；JSON payload 與 multipart 一致略過 None）、
+  book 1.3.0（book_lint 每本書重置 calibration_hit）、code-spec-validator 1.2.0（run_validator 認 `--target`；SKILL.md 更正「降級模式」—— wrapper 一樣需要套件）、
+  release-notes 1.2.0（`--last N` 超過首 commit 以空樹為起點）、web-scraper 1.2.0（news_parser 範本 slug 消毒路徑字元）
+- **O-4 ark-agent-init 2.7.1**：SKILL.md 831 → 413 行，逐檔產出規則、知識庫／記憶細節、Workshop 引導原樣搬到
+  `references/{file-generation-rules,workspace-kb-memory,workshop-guide}.md`（非空行 0 遺失）；prompt_lint P2 4→2、verdict sound；61 測試綠
+- **M-6 ark-webapp-generator 2.0.3**：維持 active（有腳本與測試、5 份安裝）。分界兩邊早已寫明，實際問題是觸發詞太廣
+  （「建立專案」「Telegram Bot 開發」「加入 TG bot」會把要 bot 的人帶離預設路徑）→ 收窄為「明確要不依賴 ark 套件的獨立應用」，並寫明預設走 bot／team-builder
+
+---
+
 ## 2026-10-30 (列車 r19：align_sync apply 實作＋盤點 O-3 補測 10 個 skill)
 
 > 計畫：kiro-cli `docs/plans/align-sync-apply-and-o3-tests-plan.md`。
