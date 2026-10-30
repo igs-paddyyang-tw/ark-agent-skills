@@ -9,6 +9,8 @@
   idle_from=K     第 K 段起 actions=0、evidence_new=0、progress / metrics 不變（測空轉熔斷）
   linger=S        寫完 checkpoint 後再睡 S 秒才退出（測 handoff grace kill）
   usage           輸出含 usage 的 JSON 行（測用量統計）
+  list_actions    actions／evidence_new 寫成清單（測 2.4.2 U-1 容錯）
+  stdout_only     不寫 checkpoint 檔，只把 JSON 印在輸出最後（測 read-only 退路，U-5）
 每段把 prompt 裡 `checkpoint_path: <path>` 指到的檔寫成 checkpoint JSON。
 """
 import json
@@ -35,7 +37,9 @@ idle = seg >= idle_from
 cp = {"status": status, "progress": "沒有新進展" if idle else f"segment {seg}/{want} 完成", "next": "" if status != "continue" else f"繼續第 {seg + 1} 段",
       "evidence": [] if idle else [f"fake-evidence-{seg}.txt"], "notes": ["fake note"], "actions": 0 if idle else 3, "evidence_new": 0 if idle else 1,
       "metrics": {"spins": 0 if idle else seg * 10}, "reason": "fake blocked reason" if status == "blocked" else "", "summary": "fake 任務完成摘要" if status == "done" else ""}
-if m:
+if "list_actions" in script:
+    cp["actions"] = ["讀檔", "跑測試", "寫報告"]; cp["evidence_new"] = ["fake-evidence.txt"]
+if m and "stdout_only" not in script:
     with open(m.group(1), "w", encoding="utf-8") as f:
         json.dump(cp, f, ensure_ascii=False)
 print(f"\x1b[32m> 第 {seg} 段完成\x1b[0m\n▸ Time: 0.2s\n" + json.dumps(cp, ensure_ascii=False))

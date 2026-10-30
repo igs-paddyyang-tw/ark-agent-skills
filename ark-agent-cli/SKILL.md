@@ -7,11 +7,11 @@ description: |
   「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」「UX 測試要跑很久」「sub-agent 燒 token」「job 死掉沒報告」。
   不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-pipeline-recipes 的 llm-tools 頁）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.4.1"
+  version: "2.4.2"
   author: paddyyang
   schema_version: "1.2"
   status: active
-  updated: 2026-10-29
+  updated: 2026-10-30
   category: pipeline
   form: executor
   domain: general
@@ -130,6 +130,17 @@ one-shot `data`：`{text, json_data, backend, model, elapsed_ms, timed_out, exit
 | `ARK_AGENT_INBOX_DIR` | `~/.ark/agent-inbox` | 終態通知 inbox 目錄（主 agent 每輪 `inbox --ack` 讀這裡） |
 
 ## 版本
+
+### 2.4.2（2026-10-30）— 修 bot 接背景 job 實測的 5 個問題（交接單 kiro-cli `docs/plans/ark-agent-cli-2.4.1-fixes-plan.md`）
+- **U-1** checkpoint 的 `actions`／`evidence_new` 寫成清單時 worker 崩潰 → 容錯計數（清單取長度）；協定註明兩欄是整數
+- **U-2** worker 例外路徑只標 failed → 改走 `finalize`：補 result.md、寫 inbox、跑 notify_cmd
+- **U-3** 背景 job 的 claude 呼叫改要 `--output-format json`，usage／cost 不再恆為 0（codex／gemini 輸出格式待驗證，暫維持文字）
+- **U-4** `SKILL_VERSION` 常數與 SKILL.md 同步並加測試守門
+- **U-5** 協定 1.2：寫不了檔（read-only）時把 checkpoint JSON 印在輸出最後，worker 代存
+- 測試 `scripts/tests/test_fixes_242.py` 14 條（反證：換回 2.4.1 程式 → 13 紅）
+
+### 2.4.1（2026-10-29）
+- 文件：description 減肥（前段敘述壓縮、觸發清單與「不適用於」逐字保留）
 
 ### 2.4.0（2026-10-30）— Breaking（吸收 ai-qa-agent prototype 的營運治理，見 references/v2.4-governance-plan.md）
 - **prompt 餵法**：codex / claude / gemini 走 stdin（codex `-`），kiro 走 prompt 檔（argv 只放一行「讀檔」）；`build_argv` 回三元組 `(argv, stdin, prompt_file)`。Windows 長 prompt 不再 `WinError 206`。

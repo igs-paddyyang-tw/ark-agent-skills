@@ -30,6 +30,9 @@ for _s in (sys.stdout, sys.stderr):
 
 PROTOCOL_FILE = C.SKILL_ROOT / "references" / "subagent-protocol.md"
 VALID = ("continue", "done", "blocked")
+#: 背景 job 要求 json 輸出的 backend —— usage 只在 json 裡（2.4.2 U-3：原本一律 text → usage 恆為 0）。
+#: 只列輸出格式已驗證、`agent_cli._finish` 會把回覆文字解出來的 claude；codex（事件流）／gemini（response 包裝）待驗證後再加。
+JSON_USAGE_BACKENDS = ("claude",)
 
 
 def job_dir(job_id: str) -> pathlib.Path:
@@ -102,13 +105,30 @@ def write_result(j: dict, cp: dict, state: str):
     cps = [C.read_json(p) for p in sorted((d / "segments").glob("*.checkpoint.json"))]
     ev = [e for c in cps if isinstance(c, dict) for e in (c.get("evidence") or [])]
     notes = [n for c in cps if isinstance(c, dict) for n in (c.get("notes") or [])]
-    L = [f"# 結果 — {j['name']}（{j['job_id']}）", "",
-         f"- state: **{state}** · segments: {j['segment']} · 耗時 {int((time.time() - j['_started_ts']) / 60)} 分鐘 · backend {j['backend']}",
+    L = [f"# 結果 — {j.get('name', j['job_id'])}（{j['job_id']}）", "",
+         f"- state: **{state}** · segments: {j.get('segment', 0)} · 耗時 {int((time.time() - j['_started_ts']) / 60)} 分鐘 · backend {j.get('backend', j.get('type', '—'))}",
          f"- 原因: {cp.get('reason') or '—'}" if state != "done" else "", "", "## 摘要", "", cp.get("summary") or cp.get("progress") or "（sub-agent 未提供摘要）", "",
          "## 逐段進度", ""] + [f"{i + 1}. [{c.get('status')}] {c.get('progress', '')}" for i, c in enumerate(cps) if isinstance(c, dict)] + \
         ["", "## 證據", ""] + ([f"- {e}" for e in ev] or ["- 無"]) + ["", "## 備註 / 異常", ""] + ([f"- {n}" for n in notes] or ["- 無"]) + \
         ["", f"## 產物目錄", "", f"`{d / 'artifacts'}`", ""]
     C.atomic_write(d / "result.md", "\n".join(x for x in L if x is not None))
+
+
+def _count(v) -> int:
+    """checkpoint 的 actions／evidence_new 容錯轉數字：清單取長度、數字取值、其他當 0。
+
+    🔴 2.4.2（U-1）：sub-agent 常把這兩欄寫成清單（做了哪些事），原本 `int(list)` 拋 TypeError，
+    worker 在 sub-agent 已寫 done 之後崩潰 → job failed（實測 job 20261030-094021-bot-coder-2d31ac）。
+    """
+    if isinstance(v, bool):
+        return int(v)
+    if isinstance(v, (int, float)):
+        return int(v)
+    if isinstance(v, (list, tuple, dict, set)):
+        return len(v)
+    if isinstance(v, str) and v.strip().isdigit():
+        return int(v.strip())
+    return 0
 
 
 def run_agent_job(j: dict):
@@ -141,7 +161,8 @@ def run_agent_job(j: dict):
         C.atomic_write(pf, prompt)
         j["heartbeat_at"] = C.now(); save_job(j); event(j, "segment_start", seg=seg, nudge=nudge)
         r = A.call_watch(j["backend"], prompt, cp_path, grace_s=float(j.get("handoff_grace_s", 60)), model=j.get("model"), agent=j.get("agent"),
-                         cwd=j.get("cwd"), timeout=j["segment_timeout_s"], access=j.get("access", "read-only"), allow_tools=j.get("allow_tools"), prompt_file=pf)
+                         cwd=j.get("cwd"), timeout=j["segment_timeout_s"], access=j.get("access", "read-only"), allow_tools=j.get("allow_tools"), prompt_file=pf,
+                         json_output=j["backend"] in JSON_USAGE_BACKENDS)
         C.atomic_write(d / "segments" / f"{seg:03d}.out.txt", (r.get("text") or "") + ("\n\n[stderr]\n" + r.get("raw_stderr", "") if r.get("raw_stderr") else ""))
         if r.get("usage"):
             C.write_json(d / "segments" / f"{seg:03d}.usage.json", r["usage"])
@@ -162,7 +183,7 @@ def run_agent_job(j: dict):
             j["state"] = "failed"; j["error"] = "連續兩段未寫 checkpoint"; save_job(j); event(j, "failed", why="no_checkpoint")
             write_result(j, {"reason": j["error"]}, "failed"); _notify(j); return
         # 空轉熔斷：有效動作 / 新證據 / metrics 變動 / progress 文字變化，任一即有進展
-        progressed = int(cp.get("actions") or 0) > 0 or int(cp.get("evidence_new") or 0) > 0 or (cp.get("metrics") and cp.get("metrics") != (last_cp or {}).get("metrics")) \
+        progressed = _count(cp.get("actions")) > 0 or _count(cp.get("evidence_new")) > 0 or (cp.get("metrics") and cp.get("metrics") != (last_cp or {}).get("metrics")) \
             or (cp.get("progress") and cp.get("progress") != (last_cp or {}).get("progress")) or cp["status"] != "continue"
         j["idle_streak"] = 0 if progressed else j.get("idle_streak", 0) + 1
         if j["idle_streak"] >= int(j.get("idle_segments", 3)):
@@ -250,10 +271,17 @@ def main():
     try:
         (run_exec_job if j.get("type") == "exec" else run_agent_job)(j)
     except Exception as e:  # noqa: BLE001
-        # 以磁碟最新狀態為底，疊上記憶體中的 j（保留 exit_code 等終態欄位），再標 failed
+        # 以磁碟最新狀態為底，疊上記憶體中的 j（保留 exit_code 等終態欄位），再走 finalize 收尾
+        # 🔴 2.4.2（U-2）：原本只標 failed —— 不寫 result.md、不寫 inbox、不跑 notify_cmd，
+        #    主 agent 只看 inbox 會永遠不知道（與 SKILL.md「worker 怎麼死都補 result.md + inbox」不符）
         disk = load_job(a.job)
         disk.update({k: v for k, v in j.items() if not k.startswith("_")})
-        disk["state"] = "failed"; disk["error"] = f"{type(e).__name__}: {e}"; save_job(disk); event(disk, "failed", why=disk["error"])
+        disk["error"] = f"{type(e).__name__}: {e}"
+        event(disk, "failed", why=disk["error"])
+        try:
+            finalize(disk, reason="worker_exception")
+        except Exception as fe:  # noqa: BLE001  收尾本身失敗也至少留下 failed
+            disk["state"] = "failed"; save_job(disk); event(disk, "finalize_failed", error=f"{type(fe).__name__}: {fe}")
         raise
 
 

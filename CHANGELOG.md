@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-10-30 (列車 r21：ark-agent-cli 2.4.2 —— bot 接背景 job 實測的 5 個問題)
+
+> 交接單：kiro-cli `docs/plans/ark-agent-cli-2.4.1-fixes-plan.md`（bot 依 alignment 計畫 P3 接上背景 job，以真 claude 跑時發現）。
+> 版號用 2.4.2：上游 2.4.1 已被 r17 的 description 減肥佔用（只改文字）。
+
+- **U-1（P1）** checkpoint 的 `actions`／`evidence_new` 寫成清單 → `int(list)` 崩潰、sub-agent 已 done 的 job 變 failed → 容錯計數
+- **U-2（P1）** worker 例外路徑只標 failed、不補 result.md／不寫 inbox／不跑 notify_cmd → 改走 `finalize`
+- **U-3（P2）** 背景 job 呼叫 claude 沒要 json → usage／cost 恆為 0 → claude 改要 `--output-format json`（codex／gemini 輸出格式未驗證，維持文字，usage 仍不可見）
+- **U-4（P3）** `SKILL_VERSION` 停在 2.2.0 → 同步並加測試守門
+- **U-5（P1）** read-only 下 sub-agent 寫不了 checkpoint、協定又沒說可印 JSON → 協定 1.2 明寫（worker 本就有從輸出撈 JSON 的退路）
+- 測試 `test_fixes_242.py` 14 條；反證：換回 2.4.1 程式 → 13 紅（stdout 退路那條本就會過，屬既有行為）；agent-cli 全部 45 passed
+- 🟡 消費端：ark_bot_agent 的 vendor 需重新同步（`tests/ark_bot_agent/test_vendor_skill_sync.py` 會轉紅提示）
+
+---
+
 ## 2026-10-30 (列車 r20：修 r19 揭露的 5 個 bug＋盤點 M-6、O-4 收尾)
 
 - **5 個 bug 修好、xfail 拿掉**（反證：5 支腳本換回原版 → 恰好 5 紅）：

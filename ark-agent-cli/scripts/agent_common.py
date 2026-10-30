@@ -11,8 +11,8 @@ import sys
 import uuid
 
 CONTRACT = "1"
-SKILL_VERSION = "2.2.0"
-PROTOCOL_VERSION = "subagent-protocol/1.1"
+SKILL_VERSION = "2.4.2"  # 必須等於 SKILL.md metadata.version（tests/test_fixes_242.py 的 test_u4 守門）
+PROTOCOL_VERSION = "subagent-protocol/1.2"  # 1.2（2.4.2）：寫不了檔時可把 checkpoint JSON 印在輸出最後
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "BUDGET_EXCEEDED": 4, "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8}
 HERE = pathlib.Path(__file__).resolve().parent
 SKILL_ROOT = HERE.parent
