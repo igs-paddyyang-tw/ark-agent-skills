@@ -13,11 +13,11 @@ description: |
 metadata:
   author: paddyyang
   schema_version: "1.2"
-  version: "1.1.4"
+  version: "1.2.0"
   category: pipeline
   form: executor
   domain: game
-  updated: 2026-10-20
+  updated: 2026-10-30
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }

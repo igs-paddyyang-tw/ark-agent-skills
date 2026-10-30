@@ -11,12 +11,12 @@ description: |
   非程式碼 coverage。如需 coverage 分析，請用 ark-quality-gates。
   不適用於：單純的 code review 請用 ark-quality-gates；網頁抓取請用 ark-web-scraper。
 metadata:
-  version: "1.0.2"
+  version: "1.1.0"
   schema_version: "1.2"
   # 2026-09-14 T1 併入（--sync 模式）
   replaces: [ark-api-doc-sync]
   status: active
-  updated: 2026-10-29
+  updated: 2026-10-30
   category: process
   form: instruction
   domain: general

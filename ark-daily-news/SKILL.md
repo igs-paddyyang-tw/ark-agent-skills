@@ -13,8 +13,8 @@ metadata:
   category: document
   form: instruction
   domain: general
-  version: "2.1.2"
-  updated: 2026-10-20
+  version: "2.2.0"
+  updated: 2026-10-30
   outputs:
     - { format: md, audience: ai }
     - { format: html, audience: human }

@@ -8,8 +8,8 @@ description: |
 metadata:
   author: paddyyang
   schema_version: "1.2"
-  version: "1.1.3"
-  updated: 2026-10-29
+  version: "1.2.0"
+  updated: 2026-10-30
   category: document
   form: instruction
   domain: general
