@@ -10,8 +10,9 @@ schema_version: "1.0"
 upstream:
   repo: https://github.com/igs-paddyyang-tw/ark-agent-skills.git
   release: skills-2026.09-r2              # 對齊單位（C-2）；個別 skill 只能例外 pin
-  manifest_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/release/manifest.json
-  index_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/release/index.json
+  manifest_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/ark-skills-align/release/manifest.json
+  index_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/ark-skills-align/release/index.json
+  local_clone: ~/kiro-cli/.kiro/skills    # apply 從這個 clone 的 git 歷史取列車內容（--upstream 可覆寫）
 tiers:
   base:   { policy: same-version }        # 全隊同版；major 不一致 P0（AL-301）、minor P1（AL-302）
   role:   { policy: range, default: "^major" }
@@ -52,7 +53,7 @@ lock 描述「**這台機器現在裝了什麼**」——進 git 會在多機間
 | 動詞 | exit |
 |------|------|
 | plan | 0 無差異 / 1 有差異 / 2 matrix/manifest 無法解析 |
-| apply --yes | 0 / 1 / 10（無 --yes：只印 plan，C-5 需人私訊 manager 確認） |
+| apply --wave N --yes | 0 全部套用 / 1 有 skill 未套用（tree_hash 不符、不在列車、pin、local_only）/ 2 找不到 manifest、上游 clone 或列車 commit / 10 未帶 --yes（只列出，C-5） |
 | verify | 0 / 1 有 P1 / 2 有 P0 |
 | verify --remote | 0 同版 / 1 落後或未知 / 2 無法判定 |
 | resolve | 0 查到 / 1 unknown |

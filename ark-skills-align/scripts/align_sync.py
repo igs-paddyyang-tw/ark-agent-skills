@@ -6,7 +6,9 @@
 
 動詞（§4.2.5）:
   plan [--waves]         讀 matrix+manifest+lock → 列 add/update/remove/pin-violation，不改檔
-  apply --wave N --yes   依 plan 從 release 取檔複製 → 更新 lock（--yes 由人私訊 manager 確認，C-5）
+  apply --wave N --yes [--upstream <clone>]
+                         依 plan 從上游列車 commit 取檔（git archive）→ 驗 manifest tree_hash → 換上 → 更新 lock
+                         （--yes 由人私訊 manager 確認，C-5；未帶 --yes 只列出、exit 10）
   verify [--team]        lock ↔ 實際 tree hash（AL-203）、tier 策略（AL-301/302）、depends_on（AL-303）
   verify --remote        目標版本取自上游 manifest（lag/breaking/unknown）
   migrate --from <sync>  AST 抽 MATRIX → skills-matrix.yaml 草稿；tree hash 反查 index → 初始 lock
@@ -113,12 +115,8 @@ def require_manifest(matrix: dict) -> dict | None:
     return manifest
 
 
-def cmd_plan(root: Path, waves: bool) -> int:
-    matrix = load_matrix(root)
-    manifest = require_manifest(matrix)
-    if manifest is None:
-        return 2
-    lock = load_lock(root)
+def compute_diffs(root: Path, matrix: dict, manifest: dict, lock: dict) -> list[dict]:
+    """matrix（期望）× manifest（上游列車）× lock（本機現況）→ add／update／pin-violation 清單。"""
     skills_dir = root / ".kiro" / "skills"
     diffs = []
     for agent, info in (matrix.get("agents") or {}).items():
@@ -142,6 +140,15 @@ def cmd_plan(root: Path, waves: bool) -> int:
             if not semver.satisfies(manifest["skills"][sk]["version"], pin.get("version", "*")):
                 diffs.append({"skill": sk, "action": "pin-violation",
                               "pin": pin.get("version"), "reason": pin.get("reason")})
+    return diffs
+
+
+def cmd_plan(root: Path, waves: bool) -> int:
+    matrix = load_matrix(root)
+    manifest = require_manifest(matrix)
+    if manifest is None:
+        return 2
+    diffs = compute_diffs(root, matrix, manifest, load_lock(root))
     if waves:
         by_wave = {}
         for d in diffs:
@@ -156,6 +163,133 @@ def cmd_plan(root: Path, waves: bool) -> int:
             print(f"  {d['action']:16} {d.get('agent','-'):16} {d['skill']}")
     print(f"\n共 {len(diffs)} 項差異" if diffs else "✅ 無差異")
     return 1 if diffs else 0
+
+
+MANIFEST_PATH = "ark-skills-align/release/manifest.json"
+
+
+def _git(upstream: Path, *args: str, binary: bool = False):
+    import subprocess
+    return subprocess.run(["git", "-C", str(upstream), *args], capture_output=True, text=not binary)
+
+
+def find_release_commit(upstream: Path, release: str) -> str | None:
+    """上游 clone 歷史中「manifest.json 的 release 等於 R」的 commit。
+
+    🔴 不信 manifest 的 `commit` 欄位：r12～r18 的發版流程（commit → 產 manifest → amend）讓它指向
+    amend 前、不在 main 上的孤兒 commit。含該 manifest 的 commit 本身才是那班列車的內容（AC-13）。
+    """
+    log = _git(upstream, "log", "--all", "--format=%H", "--", MANIFEST_PATH)
+    if log.returncode != 0:
+        return None
+    for sha in log.stdout.split():
+        show = _git(upstream, "show", f"{sha}:{MANIFEST_PATH}")
+        if show.returncode == 0:
+            try:
+                if json.loads(show.stdout).get("release") == release:
+                    return sha
+            except json.JSONDecodeError:
+                continue
+    return None
+
+
+def _extract(upstream: Path, sha: str, skill: str, dest: Path) -> bool:
+    """git archive 取出 release commit 裡的 skill 目錄（不碰上游 working tree）。"""
+    import io
+    import tarfile
+    arc = _git(upstream, "archive", "--format=tar", sha, skill, binary=True)
+    if arc.returncode != 0:
+        return False
+    with tarfile.open(fileobj=io.BytesIO(arc.stdout)) as tf:
+        try:
+            tf.extractall(dest, filter="data")
+        except TypeError:                      # Python < 3.11.4
+            tf.extractall(dest)
+    return (dest / skill / "SKILL.md").is_file()
+
+
+def cmd_apply(root: Path, wave: int | None, yes: bool, upstream_arg: str | None) -> int:
+    """依 plan 從**上游列車的 commit** 取檔 → 驗 manifest tree_hash → 換上 → 寫 lock（AC-11／AC-13）。"""
+    import shutil
+    import tempfile
+    from datetime import datetime
+    matrix = load_matrix(root)
+    manifest = require_manifest(matrix)
+    if manifest is None:
+        return 2
+    lock = load_lock(root)
+    diffs = [d for d in compute_diffs(root, matrix, manifest, lock)
+             if d["action"] in ("add", "update") and (wave is None or d.get("wave") == wave)]
+    blocked = {d["skill"] for d in compute_diffs(root, matrix, manifest, lock) if d["action"] == "pin-violation"}
+    if not yes:
+        for d in diffs:
+            print(f"  {d['action']:8} {d['agent']:16} {d['skill']}")
+        print(f"需 --yes（由人私訊 manager 確認，C-5）；以上 {len(diffs)} 項未套用")
+        return 10
+    if wave is None:
+        print("❌ apply 需指定 --wave N（逐波升級，每波 verify 過才下一波）", file=sys.stderr)
+        return 2
+    up = upstream_arg or (matrix.get("upstream") or {}).get("local_clone")
+    if not up or not (Path(up).expanduser() / ".git").exists():
+        print("❌ 找不到上游 ark-agent-skills 的本機 clone：用 --upstream <路徑> 或在 skills-matrix.yaml 設 upstream.local_clone",
+              file=sys.stderr)
+        return 2
+    upstream = Path(up).expanduser()
+    release = manifest.get("release", "")
+    sha = find_release_commit(upstream, release)
+    if not sha:
+        print(f"❌ 上游 clone 的歷史裡找不到列車 {release}：先在 {upstream} 跑 git fetch", file=sys.stderr)
+        return 2
+
+    skills_dir = root / ".kiro" / "skills"
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    local_only = set(matrix.get("local_only") or [])
+    done: dict[str, dict] = {}       # skill → lock 條目（同一 skill 多個 agent 只取檔一次）
+    failed = []
+    with tempfile.TemporaryDirectory() as td:
+        for d in diffs:
+            sk = d["skill"]
+            if sk in done or sk in failed:
+                continue
+            want = (manifest.get("skills") or {}).get(sk)
+            reason = ("local_only，不由上游管理" if sk in local_only else
+                      "pin 不滿足（見 plan 的 pin-violation）" if sk in blocked else
+                      f"不在列車 {release}（deprecated 或已移除）" if not want else "")
+            if reason:
+                print(f"  ⏭  {sk}：{reason}")
+                failed.append(sk)
+                continue
+            stage = Path(td) / "stage"
+            if not _extract(upstream, sha, sk, stage):
+                print(f"  ❌ {sk}：無法從 {sha[:7]} 取出")
+                failed.append(sk)
+                continue
+            got = _tree_hash(stage / sk)
+            if got != want["tree_hash"]:
+                print(f"  ❌ {sk}：取出的內容 tree_hash 與 manifest 不符（{got[:19]}… ≠ {want['tree_hash'][:19]}…），不安裝")
+                failed.append(sk)
+                shutil.rmtree(stage / sk)
+                continue
+            dst = skills_dir / sk
+            tmp = skills_dir / f".{sk}.new"
+            if tmp.exists():
+                shutil.rmtree(tmp)
+            shutil.move(str(stage / sk), tmp)          # 先放旁邊，換名才生效 —— 失敗不留半套
+            if dst.exists():
+                shutil.rmtree(dst)
+            tmp.rename(dst)
+            done[sk] = {"version": want["version"], "tree_hash": got, "source": f"upstream@{sha[:7]}"}
+            print(f"  ✅ {d['action']:8} {sk} {want['version']}")
+    for d in diffs:
+        if d["skill"] in done:
+            entry = dict(done[d["skill"]], tier=d["tier"], declared_by=["skills-matrix"])
+            lock.setdefault("agents", {}).setdefault(d["agent"], {})[d["skill"]] = entry
+    if done:
+        lock["release"] = release
+        lock["synced_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+        save_lock(root, lock)
+    print(f"\nwave {wave}：套用 {len(done)}、未套用 {len(failed)}（列車 {release} @ {sha[:7]}）")
+    return 1 if failed else 0
 
 
 def cmd_verify(root: Path, remote: bool) -> int:
@@ -263,6 +397,7 @@ def main() -> int:
     sub.add_parser("verify").add_argument("--remote", action="store_true")
     sub.add_parser("resolve").add_argument("path")
     ap_apply = sub.add_parser("apply"); ap_apply.add_argument("--wave", type=int); ap_apply.add_argument("--yes", action="store_true")
+    ap_apply.add_argument("--upstream", help="上游 ark-agent-skills 本機 clone（預設讀 matrix 的 upstream.local_clone）")
     ap_hb = sub.add_parser("heartbeat"); ap_hb.add_argument("--force", action="store_true")
     args = ap.parse_args()
     root = Path.cwd()
@@ -275,10 +410,7 @@ def main() -> int:
     if args.cmd == "heartbeat":
         return cmd_heartbeat(root, args.force)
     if args.cmd == "apply":
-        if not args.yes:
-            print("需 --yes（由人私訊 manager 確認，C-5）;先看 plan"); return 10
-        print("apply:依 plan 從 release 取檔（實作留 W2 完整版）")
-        return 0
+        return cmd_apply(root, args.wave, args.yes, args.upstream)
     return 0
 
 

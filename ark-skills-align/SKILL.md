@@ -13,7 +13,7 @@ description: |
   或任何需要批次修改、驗證、重組 ark-agent-skills repo 的場景。
   單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
 metadata:
-  version: "2.11.0"
+  version: "2.12.0"
   author: paddyyang
   schema_version: "1.2"
   category: ops
@@ -50,6 +50,8 @@ python ark-skills-align/scripts/backfill_metadata.py --repo . --versions
 # 產 release manifest + index（audit 全綠才打 tag）
 python ark-skills-align/scripts/gen_manifest.py --repo . --release skills-YYYY.MM-rN --out ark-skills-align/release
 #   ⚠️ 不帶 --out 會寫到 repo 根 release/（錯位置）；在乾淨工作樹最後產
+#   🔴 manifest **另開一個 commit**（`chore: 列車 rN manifest`），不要 amend 進內容 commit ——
+#      amend 會讓 manifest 記的 commit 變成孤兒（r12～r18 都是）；align_sync 以「含該 manifest 的 commit」為準
 # 移除/改名前後反向掃消費端
 python ark-skills-align/scripts/check_consumers.py --name ark-foo
 #   不帶 --name：列懸空引用＋「已併入、stub 仍在」的舊名（矩陣／SOUL 還寫舊名、或複本旁沒有接手者 → 回 1）
@@ -69,7 +71,9 @@ AL-107（消費端型缺 tested_against）。改動走 Alignment Directive 的 D
 
 ```bash
 python .kiro/skills/ark-skills-align/scripts/align_sync.py plan --waves      # 列差異，不改檔
-python .kiro/skills/ark-skills-align/scripts/align_sync.py apply --wave 1 --yes  # 私訊 manager 確認才升（C-5）
+python .kiro/skills/ark-skills-align/scripts/align_sync.py apply --wave 1 --yes --upstream <ark-agent-skills clone>
+#   私訊 manager 確認才升（C-5）；從「manifest 是該列車的那個 commit」git archive 取檔，tree_hash 對上 manifest 才換上、寫 lock
+#   上游路徑也可寫在 skills-matrix.yaml 的 upstream.local_clone；找不到列車 → 先在 clone 裡 git fetch
 python .kiro/skills/ark-skills-align/scripts/align_sync.py verify             # AL-203 drift/AL-301 base tier
 python .kiro/skills/ark-skills-align/scripts/align_sync.py verify --remote    # 對上游 manifest，出 lag/breaking
 python .kiro/skills/ark-skills-align/scripts/align_sync.py heartbeat          # 送 team 頻道（同版只寫 health）
