@@ -10,7 +10,7 @@ description: |
   專責大規模網頁抓取、反爬處理。瀏覽器互動自動化/畫面擷取請用 ark-browser-tool。
   不適用於：瀏覽器自動化操作請用 ark-browser-tool；測試自動化請用 ark-quality-gates。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   schema_version: "1.2"
   status: active
   updated: 2026-10-30

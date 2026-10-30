@@ -2,6 +2,7 @@
 
 Usage:
     py scripts/run_validator.py [--full] [project_root]
+    py scripts/run_validator.py [--full] --target <project_root>   # 與 SKILL.md 的寫法相容
 """
 from __future__ import annotations
 
@@ -20,7 +21,13 @@ def main() -> None:
         cmd.append("--full")
         args.remove("--full")
 
-    if args:
+    if "--target" in args:                 # SKILL.md 示範的寫法；原本會把 '--target' 當成路徑（2026-10-30）
+        i = args.index("--target")
+        if i + 1 >= len(args):
+            sys.exit("--target 後面要接專案路徑")
+        project_root = args[i + 1]
+        del args[i:i + 2]
+    elif args:
         project_root = args[0]
 
     cmd.append(project_root)

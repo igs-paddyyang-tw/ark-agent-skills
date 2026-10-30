@@ -112,7 +112,13 @@ def _diff_stat(ns: argparse.Namespace) -> tuple[int, int]:
         if ns.range:
             spec = ns.range
         elif ns.last:
-            spec = f"HEAD~{ns.last}..HEAD"
+            # --last N 涵蓋到第一筆 commit 時 HEAD~N 不存在 → 以空樹為起點（2026-10-30；原本例外被吞成 0）
+            try:
+                _run_git(["rev-parse", "--verify", "--quiet", f"HEAD~{ns.last}"])
+                spec = f"HEAD~{ns.last}..HEAD"
+            except subprocess.CalledProcessError:
+                empty = _run_git(["hash-object", "-t", "tree", "/dev/null"]).strip()
+                spec = f"{empty}..HEAD"
         else:
             return (0, 0)
         out = _run_git(["diff", "--shortstat", spec])

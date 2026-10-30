@@ -8,7 +8,7 @@ description: |
 metadata:
   author: paddyyang
   schema_version: "1.2"
-  version: "1.2.0"
+  version: "1.3.0"
   updated: 2026-10-30
   category: document
   form: instruction

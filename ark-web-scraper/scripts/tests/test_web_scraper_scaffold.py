@@ -185,9 +185,6 @@ def test_news_parser_writes_frontmatter_markdown(gen, tmp_path):
     assert "# Hello World" in text
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "news_parser 的 slug 只把空白換成 -，標題含 `/`（如 'AI/ML 週報'）時檔名變成子路徑，"
-    "write_text 因目錄不存在失敗 → 整批 success=False，同批其他文章也不落檔"))
 def test_news_parser_title_with_slash(gen, tmp_path):
     """標題含 `/` 仍應成功落檔（slug 應消毒路徑分隔符）。"""
     load, _, _ = gen

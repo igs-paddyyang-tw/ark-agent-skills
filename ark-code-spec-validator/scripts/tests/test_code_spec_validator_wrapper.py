@@ -99,9 +99,6 @@ def test_extra_positional_args_use_first_as_root(captured):
     assert captured["cmd"][3:] == ["a"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "SKILL.md 降級模式示範 `run_validator.py --target .`，但 wrapper 不認得 --target，"
-    "會把字串 '--target' 當成 project_root 傳給模組（'.' 被丟掉）"))
 def test_documented_target_flag_is_honoured(captured):
     """SKILL.md 寫的用法 `--target .` 應該讓 root = `.`。"""
     captured["call"]("--target", ".")

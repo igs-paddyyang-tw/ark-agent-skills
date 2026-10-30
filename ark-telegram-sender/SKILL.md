@@ -14,7 +14,7 @@ metadata:
   category: pipeline
   form: executor
   domain: general
-  version: "2.1.0"
+  version: "2.2.0"
   updated: 2026-10-30
   outputs:
     - { format: data, audience: human }

@@ -168,8 +168,6 @@ def test_send_file_missing_and_oversize(tmp_path, monkeypatch):
     assert "超過 Bot API 上限" in tg_send.send_file(f, chat_id=1)["message"]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG：--parse-mode plain 原樣送出 parse_mode='plain'，"
-                   "Telegram 不認得此值會回 400；plain 應省略 parse_mode 欄位")
 def test_plain_parse_mode_is_not_sent_to_api(fake_api):
     """SKILL.md 列 `plain` 為合法 parse_mode；送到 API 時不該帶 Telegram 不支援的值。"""
     calls, _ = fake_api

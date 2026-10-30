@@ -206,7 +206,8 @@ class NewsParserSkill(BaseSkill):
 
             for i, item in enumerate(p.items):
                 title = item.get("title", f"article-{i}")
-                slug = title[:30].replace(" ", "-").lower()
+                # 只留字母數字（含中文）與 -_，其餘（含 / 等路徑字元）換成 -（2026-10-30：標題含 / 會寫檔失敗）
+                slug = "".join(c if c.isalnum() or c in "-_" else "-" for c in title[:30]).strip("-").lower() or f"article-{i}"
                 filename = f"{today}-{slug}.md"
                 content = (
                     f"---\\n"

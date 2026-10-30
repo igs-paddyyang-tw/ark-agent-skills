@@ -11,7 +11,7 @@ description: |
   非程式碼 coverage。如需 coverage 分析，請用 ark-quality-gates。
   不適用於：單純的 code review 請用 ark-quality-gates；網頁抓取請用 ark-web-scraper。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   schema_version: "1.2"
   # 2026-09-14 T1 併入（--sync 模式）
   replaces: [ark-api-doc-sync]
@@ -254,13 +254,16 @@ pip show ark-team-agent | grep Version
 pip install --force-reinstall https://github.com/igs-paddyyang-tw/ark_team_agent/releases/latest/download/ark_team_agent-*.whl
 ```
 
-### 降級模式（模組確實不可用）
+### `scripts/run_validator.py`（薄包裝，**不是**降級模式）
 
-如果確認環境無法安裝套件，改用 `scripts/run_validator.py`：
+`run_validator.py` 只是幫你組 `python -m ark_team_agent.code_spec_validator` 的指令 ——
+**它一樣需要套件**，模組不在就一樣失敗（2026-10-30 補測確認；舊版文件寫成「模組不可用時的降級模式」是錯的）。
 
 ```bash
-python .kiro/skills/ark-code-spec-validator/scripts/run_validator.py --target .
+python .kiro/skills/ark-code-spec-validator/scripts/run_validator.py --target .   # = 位置參數 `.`
 ```
+
+模組確實裝不起來 → 照上方修復指引處理；仍不行就**回報阻礙**（見下方禁止行為，不可自行實作或跳過）。
 
 ### 禁止行為
 

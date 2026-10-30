@@ -239,7 +239,7 @@ def _call(
             else:
                 req = urllib.request.Request(
                     url,
-                    data=json.dumps(payload).encode("utf-8"),
+                    data=json.dumps({k: v for k, v in payload.items() if v is not None}).encode("utf-8"),  # 與 multipart 一致：None＝不帶
                     headers={"Content-Type": "application/json"},
                 )
             with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -315,6 +315,17 @@ def _encode_multipart(fields: dict[str, Any], files: dict[str, Path]) -> tuple[b
 
 # ── 對外 API ────────────────────────────────────────────────────────────────
 
+def _api_parse_mode(parse_mode: str | None) -> str | None:
+    """送給 Bot API 的 parse_mode：`plain`／`none`／空 → None（不帶這個欄位）。
+
+    Telegram 只認 HTML／Markdown／MarkdownV2；原樣送 `plain` 會被回 400（2026-10-30 補測揭露）。
+    None 值的欄位由 _call 統一略過。
+    """
+    if not parse_mode or parse_mode.strip().lower() in ("plain", "none", "text"):
+        return None
+    return parse_mode
+
+
 def send_text(
     text: str,
     *,
@@ -358,7 +369,7 @@ def send_text(
     base = {
         "chat_id": chat,
         "message_thread_id": thread,
-        "parse_mode": parse_mode,
+        "parse_mode": _api_parse_mode(parse_mode),
         "disable_web_page_preview": disable_preview,
     }
     if dry_run:
@@ -425,7 +436,7 @@ def send_file(
     token, _ = _get_token(token_env, yaml_token_env)
     return _call(
         token, "sendDocument",
-        {"chat_id": chat, "message_thread_id": thread, "caption": 說明, "parse_mode": parse_mode},
+        {"chat_id": chat, "message_thread_id": thread, "caption": 說明, "parse_mode": _api_parse_mode(parse_mode)},
         files={"document": p},
     )
 

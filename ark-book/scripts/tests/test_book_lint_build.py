@@ -110,8 +110,6 @@ def test_published_book_requires_published_chapters(tmp_path):
     assert any("書為 published 但章節" in f for f in lint_fails(bd))
 
 
-@pytest.mark.xfail(strict=True, reason="BUG：book_lint.calibration_hit 是模組層全域 set、從不重置；"
-                   "同一行程 lint 第二本書時沿用上一本的命中，漏報「_calibration.md 條目未反映」")
 def test_calibration_hits_do_not_leak_between_books(tmp_path):
     """兩本書各有同一條 calibration；A 的章節有反映、B 沒有 → lint B 應 WARN。"""
     line = "人格不是形容詞要寫成資料這件事"

@@ -127,9 +127,6 @@ def test_mutually_exclusive_range_flags():
 
 # ── 邊界 ─────────────────────────────────────────────────────
 
-@pytest.mark.xfail(strict=True, reason=(
-    "_diff_stat 用 `HEAD~N..HEAD` 算統計；--last N 涵蓋到第一筆 commit 時 HEAD~N 不存在，"
-    "例外被吞掉回 (0, 0) → changelog 寫「檔案變動：0」，與實際不符"))
 def test_last_n_covering_root_commit_reports_real_stats(repo, capsys):
     """--last 4（= 全部歷史）時，統計應反映 4 個檔案的變動，而不是 0。"""
     assert cg.main(["--last", "4"]) == 0

@@ -359,6 +359,7 @@ def lint_book(book_dir: Path, wiki_schema: Path | None, only: Path | None = None
     br, meta = lint_book_yaml(book_dir, wiki_tags)
     results.append(br)
     calibration = load_calibration(book_dir)
+    calibration_hit.clear()   # 模組層 set：每本書重算，否則同一行程 lint 第二本會沿用上一本的命中（2026-10-30）
 
     files = sorted(p for p in book_dir.glob("*.md") if FILENAME_RE.match(p.name))
     if only:
