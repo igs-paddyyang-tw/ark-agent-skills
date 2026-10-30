@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.10-r19",
-  "commit": "5e64417",
-  "generated_at": "2026-10-30T09:34:05+08:00",
+  "release": "skills-2026.10-r20",
+  "commit": "e9a20e6",
+  "generated_at": "2026-10-30T10:30:52+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.2.0",
@@ -31,14 +31,14 @@
       "updated": "2026-10-29"
     },
     "ark-agent-init": {
-      "version": "2.7.0",
-      "tree_hash": "sha256:8eb582e1cdd4db97502959120ff89fb1ff864a9ec44c65c2b059cbf0e68bb0a3",
+      "version": "2.7.1",
+      "tree_hash": "sha256:69bbb96fcb52d163d9b87cbc0c372e12f8a1833fb1f80cd4701aee98c6502a35",
       "contract_hash": "sha256:6f18efaa9906d54960c12cd7909822c81c79f9828d740943aa496e908217442e",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [],
       "replaces": [],
-      "updated": "2026-10-29"
+      "updated": "2026-10-30"
     },
     "ark-agent-role-profile": {
       "version": "1.5.0",
@@ -90,9 +90,9 @@
       "updated": "2026-10-30"
     },
     "ark-book": {
-      "version": "1.2.0",
-      "tree_hash": "sha256:e9df35eadf1383bacdc5b4efb5163b9fb927e797ec6b5a6e02ca88fbc5c52577",
-      "contract_hash": "sha256:3d671d9f3604955075356ee9c730e35dc27864b571eeee1a6e7dbcd385beb1ca",
+      "version": "1.3.0",
+      "tree_hash": "sha256:04fd2811af71cd786f1311b29fabb345e3febe1c3f1192c633edc6a0bc10d7df",
+      "contract_hash": "sha256:a72a54cee917997b539c5c21acb7c7f350120023c332bc03d031427c91432a34",
       "status": "active",
       "category": "document",
       "depends_on": [
@@ -119,9 +119,9 @@
       "updated": "2026-10-29"
     },
     "ark-code-spec-validator": {
-      "version": "1.1.0",
-      "tree_hash": "sha256:c03c558f0422ab79268479d4526bf54bb113dd081ca60d7c464f7faf1a09d9ed",
-      "contract_hash": "sha256:c48fc6d6b26fd57d4580f8c11bc5e1dd4fab9e0376700f3999acbc1a26931262",
+      "version": "1.2.0",
+      "tree_hash": "sha256:6a729f11b75874d747c6b797dd96510b53f01de3ce8ef93519d83170493f7711",
+      "contract_hash": "sha256:b75333e5897d3d989b42f78d3296a45fd4bedbbb1b6b125fbbf1b6c6e0fc85dc",
       "status": "active",
       "category": "process",
       "depends_on": [],
@@ -503,9 +503,9 @@
       "updated": "2026-10-29"
     },
     "ark-release-notes": {
-      "version": "1.1.0",
-      "tree_hash": "sha256:6a640e32c985a6b3bf168536517c3f04b2497f1d85d16cb27518dd613acec6ab",
-      "contract_hash": "sha256:8386601f5de49dace209cb1301d3849685f237b4a85129f16e169ac465358715",
+      "version": "1.2.0",
+      "tree_hash": "sha256:5810c137686f04200b2224965f9d615de85cedde6e2f2f917685bb00107fdc11",
+      "contract_hash": "sha256:83a6f119218c860ab6384ac5e61118f6e455453d3cc5410be615b0dcc5d25328",
       "status": "active",
       "category": "document",
       "depends_on": [],
@@ -582,9 +582,9 @@
       "updated": "2026-10-29"
     },
     "ark-telegram-sender": {
-      "version": "2.1.0",
-      "tree_hash": "sha256:f5c33591bcd77df9d7920987d621b27a0a19428edf0279b2ca44e60c3f98bba1",
-      "contract_hash": "sha256:cdd99fb5c34cae48e13f4ea91a81bae02e987b77935de8d86ffbfbc9836a1289",
+      "version": "2.2.0",
+      "tree_hash": "sha256:76a5d9f792139fe1c6873e97939930840606b83744e71bb2096afcdf98a5d83f",
+      "contract_hash": "sha256:e552f023608cbe71265fe0da2c3fa9cbdaf4d4d99a94b78884f7b1dd2ef52de9",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],
@@ -592,9 +592,9 @@
       "updated": "2026-10-30"
     },
     "ark-web-scraper": {
-      "version": "1.1.0",
-      "tree_hash": "sha256:eb28adee8e76e71e593fe5de10d731d04d6122b8bd6c4064160c8bc5dfe52e07",
-      "contract_hash": "sha256:f968f930fec7a9c5bcf5e6626a7717bd6c7e6aa00ab12108af457cf22124fafb",
+      "version": "1.2.0",
+      "tree_hash": "sha256:128e17624979087a4deb6a62b2272f45c70c31e5d247a29d8bc9b4ebf4222fdd",
+      "contract_hash": "sha256:b93c601c47009c0a484afb81d81fcdf90ed7b5a2d3fc92d83a547bbe037cdbab",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],
@@ -602,8 +602,8 @@
       "updated": "2026-10-30"
     },
     "ark-webapp-generator": {
-      "version": "2.0.2",
-      "tree_hash": "sha256:71cf4178329f7774be691f5376908096e191c2090971427ac6858e242a3036c5",
+      "version": "2.0.3",
+      "tree_hash": "sha256:1a1baa931a06450926df8c11a5a619759c0367950c82a2d2b88b431575eb2cc4",
       "contract_hash": "sha256:34db9463eed016daacab74ccae9fc97000bdd8cca338e1481e535b452d6e2348",
       "status": "active",
       "category": "scaffolder",
@@ -614,7 +614,7 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-20"
+      "updated": "2026-10-30"
     },
     "ark-weknora-cli": {
       "version": "1.1.1",
