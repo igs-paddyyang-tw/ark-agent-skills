@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-02 (列車 r23：ark-agent-cli 2.4.4 —— kiro 信任工具名對齊 kiro-cli 2.34)
+
+> 來源：team 1.13.14 在 nana 做 TG `/job` 實測失敗（paddy-bot `docs/reports/2026-11-02-team-1.13.14-15-tg-field-test-closeout.md` P-2）。
+
+- **kiro-cli 2.34 內建工具改名**（讀檔 `read_file` 等）。read-only 原本只信任 `fs_read` → 讀工作區外的檔（背景 job 的 prompt 檔在 `~/.ark/agent-jobs/`）被擋
+- 改為新舊名並列：read-only＝`fs_read,read_file,list_directory,file_search,grep_search`；workspace＝唯讀＋`fs_write,str_replace,fs_append,execute_bash`
+- ⚠️ 實測 2.34 非互動模式 `execute_bash` 列在 `--trust-tools` 仍被擋（只有 `--trust-all-tools` 放行）→ kiro 的 workspace 實際只能讀寫檔；寫在 `references/backends.md`
+- ⚠️ 另記：`--agent <name>` 指向的 agent.json 沒宣告 `tools` 時，2.34 非互動只給 MCP 工具、無內建讀檔工具（team 1.13.15 的 jobs 已改為 kiro 不帶 `--agent`）
+- 測試：`test_kiro_tools_244.py`（2 條）＋`test_governance` 快照更新；反證：換回 2.4.3 映射 → 3 紅；agent-cli 全部 52 passed；真 kiro 2.34.2 以 read-only 讀工作區外檔案成功
+
+---
+
 ## 2026-10-30 (列車 r22：ark-agent-cli 2.4.3 —— 補完 U-3，codex／gemini 背景 job 用量)
 
 - 2.4.2 的 U-3 只對 claude 開 json（另兩家格式未驗證）。本版以真 CLI 實測（codex-cli 0.146、gemini-cli 0.53）後補齊：

@@ -51,7 +51,7 @@ def test_prompt_never_in_argv_for_long_prompt(tmp_path):
 
 
 def test_access_mapping_snapshot():
-    want = {("kiro", "read-only"): "--trust-tools=fs_read", ("kiro", "full"): "--trust-all-tools", ("claude", "read-only"): "Read,Grep,Glob,LS",
+    want = {("kiro", "read-only"): "--trust-tools=fs_read,read_file,list_directory,file_search,grep_search", ("kiro", "full"): "--trust-all-tools", ("claude", "read-only"): "Read,Grep,Glob,LS",
             ("claude", "full"): "--dangerously-skip-permissions", ("codex", "read-only"): "read-only", ("codex", "workspace"): "workspace-write",
             ("codex", "full"): "danger-full-access", ("gemini", "full"): "yolo"}
     for (b, acc), token in want.items():

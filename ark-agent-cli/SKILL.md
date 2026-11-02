@@ -7,11 +7,11 @@ description: |
   「checkpoint 續跑」「bot 分身開子 agent」「aiqa 掛測管家」「UX 測試要跑很久」「sub-agent 燒 token」「job 死掉沒報告」。
   不適用於：摘要 / 分析 / 意圖解析等 LLM 工具函式（→ ark-pipeline-recipes 的 llm-tools 頁）；團隊常駐多 agent 協作（→ ark-agent-team-builder）。
 metadata:
-  version: "2.4.3"
+  version: "2.4.4"
   author: paddyyang
   schema_version: "1.2"
   status: active
-  updated: 2026-10-30
+  updated: 2026-11-02
   category: pipeline
   form: executor
   domain: general

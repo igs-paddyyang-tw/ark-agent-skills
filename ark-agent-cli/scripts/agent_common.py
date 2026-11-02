@@ -11,7 +11,7 @@ import sys
 import uuid
 
 CONTRACT = "1"
-SKILL_VERSION = "2.4.3"  # 必須等於 SKILL.md metadata.version（tests/test_fixes_242.py 的 test_u4 守門）
+SKILL_VERSION = "2.4.4"  # 必須等於 SKILL.md metadata.version（tests/test_fixes_242.py 的 test_u4 守門）
 PROTOCOL_VERSION = "subagent-protocol/1.2"  # 1.2（2.4.2）：寫不了檔時可把 checkpoint JSON 印在輸出最後
 EXIT = {"BAD_INPUT": 2, "GATE_BLOCKED": 3, "BUDGET_EXCEEDED": 4, "CONN_FAILED": 5, "QUERY_FAILED": 6, "TIMEOUT": 7, "DRIVER_MISSING": 8}
 HERE = pathlib.Path(__file__).resolve().parent
@@ -92,10 +92,16 @@ def append_jsonl(path: pathlib.Path, obj):
 # prompt 一律優先 stdin（Windows argv 上限 ~32K，長 prompt 會 WinError 206）；不吃 stdin 的 backend 走 file：
 #   prompt 寫到檔，argv 只放一行「讀 <path> 並依其執行」。argv 只在測試 / 極短 prompt 用。
 ACCESS_LEVELS = ("read-only", "workspace", "full")
+#: kiro 的信任工具名（2.4.4）：kiro-cli 2.34 內建工具改名（fs_read→read_file 等），新舊名並列 —— 舊版認舊名、新版認新名，不認得的名字 kiro 會略過。
+#: 2026-11-02 實測 2.34.2：只信任 fs_read → 讀工作區外的檔（背景 job 的 prompt 檔在 ~/.ark/agent-jobs/）被擋；read_file → 讀得到。
+#: ⚠️ 2.34 非互動模式 execute_bash 列在 --trust-tools 仍會被擋（只有 --trust-all-tools 放行）→ workspace 在 kiro 上實際只能讀寫檔、不能跑 shell。
+_KIRO_READ = "fs_read,read_file,list_directory,file_search,grep_search"
+_KIRO_WRITE = "fs_write,str_replace,fs_append,execute_bash"
 BACKENDS = {
     "kiro":   {"env": ["ARK_CLI_KIRO_CMD", "KIRO_CLI_PATH"], "default": "kiro-cli", "args": ["chat", "--no-interactive"],
                "prompt": os.getenv("ARK_CLI_KIRO_PROMPT", "file"), "model": ["--model", "{model}"], "json": [], "resume": ["--resume-id", "{session}"], "agent": ["--agent", "{agent}"],
-               "access": {"read-only": ["--trust-tools=fs_read"], "workspace": ["--trust-tools=fs_read,fs_write,execute_bash"], "full": ["--trust-all-tools"]}},
+               "access": {"read-only": ["--trust-tools=" + _KIRO_READ], "workspace": ["--trust-tools=" + _KIRO_READ + "," + _KIRO_WRITE],
+                          "full": ["--trust-all-tools"]}},
     "claude": {"env": ["ARK_CLI_CLAUDE_CMD", "CLAUDE_CLI_CMD"], "default": "claude", "args": ["-p"],
                "prompt": "stdin", "model": ["--model", "{model}"], "json": ["--output-format", "json"], "resume": ["--resume", "{session}"], "agent": [],
                "access": {"read-only": ["--allowedTools", "Read,Grep,Glob,LS"], "workspace": ["--allowedTools", "Read,Grep,Glob,LS,Write,Edit,Bash"], "full": ["--dangerously-skip-permissions"]}},
