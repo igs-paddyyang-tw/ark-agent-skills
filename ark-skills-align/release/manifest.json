@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r23",
-  "commit": "af4f704",
-  "generated_at": "2026-11-02T18:22:36+08:00",
+  "release": "skills-2026.11-r24",
+  "commit": "302c84c",
+  "generated_at": "2026-11-03T16:56:10+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.2.0",
@@ -173,8 +173,8 @@
       "updated": "2026-10-30"
     },
     "ark-db-query": {
-      "version": "3.0.2",
-      "tree_hash": "sha256:b6bc9db7bfa934eb1b7a58eec5ed17d84f55767e8964356ce58bdc274cab6031",
+      "version": "3.0.3",
+      "tree_hash": "sha256:b32cdb30c2d2378e1b85a5cbb868079554cc3a8551823995e7e99ad11cc42c8e",
       "contract_hash": "sha256:f1dcb13892ec9f04a67af56a594f6b0a1e6a6a8a21a6013054c8bd2e43546b49",
       "status": "active",
       "category": "pipeline",
@@ -182,7 +182,7 @@
       "replaces": [
         "bq-mcp-server"
       ],
-      "updated": "2026-10-20"
+      "updated": "2026-11-03"
     },
     "ark-docker-deploy": {
       "version": "1.1.0",
