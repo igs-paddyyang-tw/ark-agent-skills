@@ -20,6 +20,28 @@
 GOOGLE_APPLICATION_CREDENTIALS 指向的服務帳號缺 roles/bigquery.jobUser（跑查詢）
 或 roles/bigquery.dataViewer（讀表）。回報使用者補權限，不要嘗試其他憑證。
 
+## BQ: 憑證檔「was not found」／could not automatically determine credentials
+**先別懷疑金鑰遺失** —— 最常見根因是 `GOOGLE_APPLICATION_CREDENTIALS` 設成**相對路徑**
+（如 `secrets/<sa-key>.json`）：從專案根手動跑 OK，但排程／daemon 觸發的 agent
+`working_directory` 不是專案根（如 `agents/<name>/`）→ 相對路徑解析失敗。依序三查：
+
+```bash
+echo "GAC=${GOOGLE_APPLICATION_CREDENTIALS:-<未設>}"   # ① 是相對還是絕對
+pwd; realpath "$GOOGLE_APPLICATION_CREDENTIALS"         # ② 以當下 cwd 解析到哪
+ls -la "$(realpath "$GOOGLE_APPLICATION_CREDENTIALS")"  # ③ 檔案存在性與權限
+python scripts/db_health.py --db-type bigquery          # 逐項診斷（credentials_env → 連線 → 最小查詢）
+```
+
+修法：在服務啟動時（`.env`／systemd `Environment=`）就把 GAC 設成**絕對路徑**；
+程式端若必須吃相對路徑，以專案根哨兵（如 `team.yaml`／`agents.yaml`）定位後再絕對化。
+驗證時**從非專案根的 cwd 重跑**一次，才算模擬到排程環境。未設 GAC 且確定走 ADC 時才設 `ARK_BQ_ADC_OK=1`。
+
+## BQ: No module named 'google.cloud'（DRIVER_MISSING）
+不一定是沒裝 —— agent（LLM）常自行打系統 `python` 而非專案 `.venv/bin/python`，
+`google-cloud-bigquery` 只裝在 venv。先確認 `python -c "import sys; print(sys.executable)"`；
+修法是呼叫時寫死 venv 直譯器，或 systemd unit 的 `PATH` 把 `.venv/bin` 排最前。
+確認是同一個直譯器仍缺套件，才照 hint `pip install`。
+
 ## MongoDB: ServerSelectionTimeoutError
 host/port 錯或網路不通。db_health.py 的 connect_and_ping 會給出實際錯誤字串。
 

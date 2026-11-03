@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-03 (列車 r24：ark-db-query 3.0.3 —— troubleshooting 補 BQ 憑證兩個陷阱)
+
+> 來源：ninja-team-agent 根層 `skills/ark-bq-credential-triage`（本地 SKILL.md，不在 Kiro 載入範圍）。依「整合進現有 skill、不新增」原則，通用部分併入 ark-db-query。
+
+- `references/troubleshooting.md` 新增「憑證檔 was not found／could not determine credentials」：相對路徑 GAC × 排程 cwd 非專案根（2026-09-01 ninja product 刊中斷兩天的根因）、三查指令、`db_health.py` 診斷、從非專案根 cwd 驗證
+- 新增「No module named 'google.cloud'」：agent 打系統 python 而非 venv（2026-08-14 ninja 專案刊 KPI 全缺的根因）
+- 去除消費端寫死值（金鑰檔名、`find_project_root`／pipeline 專名），只留通用判準；純文件，scripts 未動
+
+---
+
 ## 2026-11-02 (列車 r23：ark-agent-cli 2.4.4 —— kiro 信任工具名對齊 kiro-cli 2.34)
 
 > 來源：team 1.13.14 在 nana 做 TG `/job` 實測失敗（paddy-bot `docs/reports/2026-11-02-team-1.13.14-15-tg-field-test-closeout.md` P-2）。

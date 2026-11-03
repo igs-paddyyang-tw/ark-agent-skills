@@ -32,8 +32,8 @@ metadata:
   depends_on: []
   replaces: [bq-mcp-server]
   author: paddyyang
-  version: "3.0.2"
-  updated: 2026-10-20
+  version: "3.0.3"
+  updated: 2026-11-03
 ---
 
 # ark-db-query v2.0
