@@ -54,7 +54,8 @@ python ark-skills-align/scripts/mirror_sync.py plan  --upstream <skills repo> --
 python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> [--keep PATH ...] [--only SKILL ...] --yes
 ```
 
-- 掃描 `<team 根>/.kiro/skills` 與 `<team 根>/projects/*/.kiro/skills`；symlink 目錄跳過。
+- 掃描 `<team 根>` 與 `<team 根>/projects/*` 各自的技能複本；symlink 目錄跳過。
+- **佈局雙讀（2.13.0 起，ark-agent-os 3.0 前）**：該目錄有 `.ark/ark.yaml` → `.ark/skills`；否則 `.kiro/skills`。同一目錄只取一處，不會兩份都寫（判定在 `scripts/ark_layout.py`）。
 - 只處理上游也有的 skill；本地獨有的 skill（domain / local_only）不碰。
 - `--keep PATH`：skill 內相對路徑或其前綴（可重複），例如 `kb_registry.json`、`artifacts`。
 - `--accept-upstream SKILL`：人審過 LOCAL、確認只是**上游 git 歷史之前的舊版**（無 version、舊措辭）時，明確指定用上游覆蓋。真修正先回貢上游，不可用此旗標蓋掉。
@@ -64,7 +65,8 @@ python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --
 - Windows：git 輸出一律以 UTF-8 解碼；`check-ignore` 以 `-z`（NUL 分隔、位元組）收送 ——
   文字模式會把 stdin 的 `
 ` 轉成 `
-`，git 收到尾帶 `` 的路徑而全部比對不到。不需再設 `PYTHONUTF8=1`。
+`，git 收到尾帶 `
+` 的路徑而全部比對不到。不需再設 `PYTHONUTF8=1`。
 
 ## 驗收
 

@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-05 (列車 r25：ark-skills-align 2.13.0 —— .ark 工具中立佈局雙讀)
+
+> 來源：kiro-cli `docs/plans/ark-workspace-layout-skills-plan.md` S2（Paddy 11-05 拍板 R-1～R-8）。ark-agent-os 2.2 起部署可遷移到 `.ark/`，技能端先改好、3.0 前雙讀。
+
+- 新增 `ark-skills-align/scripts/ark_layout.py`：有 `.ark/ark.yaml` → `.ark/` 佈局，否則照舊 `.kiro/`（只建了 `.ark/` 目錄不算已遷移）
+- `mirror_sync`：每個 team 根／`projects/*` 各自判佈局，`.ark` 佈局寫 `.ark/skills`；同一目錄只取一處
+- `align_sync`：技能落點、版本鎖（`.ark/skills.lock`）、驗證狀態（`.ark/runtime/skills.verify.json`）跟佈局走；legacy 佈局路徑完全不變
+- 根 `scripts/check_consumers.py`：已部署複本同時掃 `.ark/skills/` 與 `.kiro/skills/`
+- ⚠️ 交套件端：ark-agent-os `skills_verify.py` 目前只讀 `.kiro/skills.verify.json`，ark 佈局要改讀 `.ark/runtime/`
+- 測試：`test_ark_layout.py`（6 條）＋ check_consumers `.ark` 案例 1 條；全部 279 passed；反證：三支腳本各自還原舊版 → 各 1 紅
+
+---
+
 ## 2026-11-03 (列車 r24：ark-db-query 3.0.3 —— troubleshooting 補 BQ 憑證兩個陷阱)
 
 > 來源：ninja-team-agent 根層 `skills/ark-bq-credential-triage`（本地 SKILL.md，不在 Kiro 載入範圍）。依「整合進現有 skill、不新增」原則，通用部分併入 ark-db-query。

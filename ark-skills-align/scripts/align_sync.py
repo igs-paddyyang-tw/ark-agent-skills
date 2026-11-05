@@ -2,7 +2,7 @@
 """align_sync.py — 消費端 skill 版本對齊（ADR-002/003/005）。
 
 取代各專案自建 sync_skills.py。邏輯一份（本檔）、資料一份（skills-matrix.yaml，git）、
-狀態一份（.kiro/skills.lock.json，本機不進 git，每台機器一份）。
+狀態一份（.ark/skills.lock；未遷移的部署為 .kiro/skills.lock.json；本機不進 git，每台機器一份）。
 
 動詞（§4.2.5）:
   plan [--waves]         讀 matrix+manifest+lock → 列 add/update/remove/pin-violation，不改檔
@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import semver  # noqa: E402
+from ark_layout import lock_path, skills_dir, verify_path  # noqa: E402
 
 try:
     import yaml
@@ -60,12 +61,12 @@ def load_matrix(root: Path) -> dict:
 
 
 def load_lock(root: Path) -> dict:
-    lk = root / ".kiro" / "skills.lock.json"
+    lk = lock_path(root)
     return json.loads(lk.read_text(encoding="utf-8")) if lk.exists() else {"agents": {}}
 
 
 def save_lock(root: Path, lock: dict) -> None:
-    lk = root / ".kiro" / "skills.lock.json"
+    lk = lock_path(root)
     lk.parent.mkdir(parents=True, exist_ok=True)
     lk.write_text(json.dumps(lock, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -117,14 +118,14 @@ def require_manifest(matrix: dict) -> dict | None:
 
 def compute_diffs(root: Path, matrix: dict, manifest: dict, lock: dict) -> list[dict]:
     """matrix（期望）× manifest（上游列車）× lock（本機現況）→ add／update／pin-violation 清單。"""
-    skills_dir = root / ".kiro" / "skills"
+    sdir = skills_dir(root)
     diffs = []
     for agent, info in (matrix.get("agents") or {}).items():
         want = _agent_skills(matrix, agent, info, manifest)
         have = (lock.get("agents", {}).get(agent) or {})
         for sk, meta in want.items():
             cur = have.get(sk)
-            installed = (skills_dir / sk).exists()
+            installed = (sdir / sk).exists()
             if not installed or cur is None:
                 diffs.append({"agent": agent, "skill": sk, "action": "add",
                               "wave": info.get("wave", 9), "tier": meta["tier"]})
@@ -241,8 +242,8 @@ def cmd_apply(root: Path, wave: int | None, yes: bool, upstream_arg: str | None)
         print(f"❌ 上游 clone 的歷史裡找不到列車 {release}：先在 {upstream} 跑 git fetch", file=sys.stderr)
         return 2
 
-    skills_dir = root / ".kiro" / "skills"
-    skills_dir.mkdir(parents=True, exist_ok=True)
+    sdir = skills_dir(root)
+    sdir.mkdir(parents=True, exist_ok=True)
     local_only = set(matrix.get("local_only") or [])
     done: dict[str, dict] = {}       # skill → lock 條目（同一 skill 多個 agent 只取檔一次）
     failed = []
@@ -270,8 +271,8 @@ def cmd_apply(root: Path, wave: int | None, yes: bool, upstream_arg: str | None)
                 failed.append(sk)
                 shutil.rmtree(stage / sk)
                 continue
-            dst = skills_dir / sk
-            tmp = skills_dir / f".{sk}.new"
+            dst = sdir / sk
+            tmp = sdir / f".{sk}.new"
             if tmp.exists():
                 shutil.rmtree(tmp)
             shutil.move(str(stage / sk), tmp)          # 先放旁邊，換名才生效 —— 失敗不留半套
@@ -295,12 +296,12 @@ def cmd_apply(root: Path, wave: int | None, yes: bool, upstream_arg: str | None)
 def cmd_verify(root: Path, remote: bool) -> int:
     matrix = load_matrix(root)
     lock = load_lock(root)
-    skills_dir = root / ".kiro" / "skills"
+    sdir = skills_dir(root)
     findings = []
     # AL-203 local-drift:lock 記的 tree hash ≠ 實際
     for agent, skills in (lock.get("agents") or {}).items():
         for sk, meta in skills.items():
-            d = skills_dir / sk
+            d = sdir / sk
             if d.exists():
                 actual = _tree_hash(d)
                 if meta.get("tree_hash") and meta["tree_hash"] != actual:
@@ -372,7 +373,7 @@ def cmd_heartbeat(root: Path, force: bool) -> int:
                  "lag": lag, "manifest": "ok"}
         changed = lag > 0
     # 寫 /api/health 的 skills 區塊（本機檔，套件會讀）
-    hp = root / ".kiro" / "skills.verify.json"
+    hp = verify_path(root)
     hp.parent.mkdir(parents=True, exist_ok=True)
     prev = json.loads(hp.read_text(encoding="utf-8")) if hp.exists() else {}
     hp.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")

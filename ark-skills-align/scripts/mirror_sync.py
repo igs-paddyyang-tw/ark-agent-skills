@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""mirror_sync.py — 消費端 `.kiro/skills` 整份複本對齊上游（規格：references/mirror-sync.md）。
+"""mirror_sync.py — 消費端技能複本（`.ark/skills`；未遷移的 `.kiro/skills`）整份對齊上游（規格：references/mirror-sync.md）。
 
 適用沒有接 align_sync（無 skills-matrix / lock）的 team。逐檔以 git blob hash 判定：
 本地內容曾存在於上游歷史 → 過期，可對齊；從未存在 → 本地修改，不覆蓋、列出待審。
@@ -30,6 +30,9 @@ import tarfile
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ark_layout import skills_dir  # noqa: E402
 
 IGNORE_DIRS = {"__pycache__"}
 IGNORE_SUFFIXES = {".pyc"}
@@ -148,8 +151,13 @@ def _kept(rel: str, keep: list[str]) -> bool:
 
 
 def skill_dirs(target: Path) -> list[Path]:
-    """team 根與 projects/* 底下的 `.kiro/skills`（symlink 跳過）。"""
-    cands = [target / ".kiro" / "skills"] + sorted((target / "projects").glob("*/.kiro/skills"))
+    """team 根與 projects/* 底下的技能複本（symlink 跳過）。
+
+    每個目錄各自判佈局：有 `.ark/ark.yaml` → `.ark/skills`，否則 `.kiro/skills`
+    （ark-agent-os 3.0 前雙讀；同一目錄只取一處，不會兩份都寫）。
+    """
+    roots = [target] + sorted(p for p in (target / "projects").glob("*") if p.is_dir())
+    cands = [skills_dir(r) for r in roots]
     return [d for d in cands if d.is_dir() and not d.is_symlink()]
 
 
@@ -274,7 +282,7 @@ def _print_human(reports: list[SkillReport], applied: bool) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="消費端 .kiro/skills 整份複本對齊上游")
+    ap = argparse.ArgumentParser(description="消費端技能複本（.ark/skills 或 .kiro/skills）整份對齊上游")
     ap.add_argument("verb", choices=["plan", "apply"])
     ap.add_argument("--upstream", required=True, type=Path, help="ark-agent-skills 本機 clone")
     ap.add_argument("--target", required=True, type=Path, help="team repo 根")

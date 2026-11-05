@@ -81,6 +81,15 @@ def test_deployed_copy_of_removed_skill_is_caught(world):
     assert "[deployed" in r.stdout
 
 
+
+def test_deployed_copy_in_ark_layout_is_caught(world):
+    """.ark 佈局（ark-agent-os ≥ 2.2）的複本在 `.ark/skills/` —— 只掃 `.kiro` 會整批漏掉。"""
+    repo, consumers = world
+    (consumers / "demo-team" / "agents" / "w" / ".ark" / "skills" / "ark-gone").mkdir(parents=True)
+    r = run(repo, consumers)
+    assert r.returncode == 1
+    assert "[deployed" in r.stdout and ".ark" in r.stdout
+
 def test_soul_bullet_for_removed_skill_is_caught(world):
     repo, consumers = world
     soul = consumers / "demo-team" / "agents" / "w" / ".kiro" / "steering" / "SOUL.md"

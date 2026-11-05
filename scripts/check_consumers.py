@@ -19,7 +19,7 @@
 | 面 | 檔案 | 失效樣態 |
 |---|---|---|
 | 角色矩陣 | `*/scripts/sync_skills.py` 的 `MATRIX` / `COMMON` | sync 印「來源缺 X，跳過」 |
-| 已部署複本 | `**/.kiro/skills/<name>/` | agent 讀到上游已刪的舊版 |
+| 已部署複本 | `**/.ark/skills/<name>/`、`**/.kiro/skills/<name>/` | agent 讀到上游已刪的舊版 |
 | 人格清單 | `**/steering/SOUL.md` 的 skill 條列 | agent 以為自己有這個能力 |
 | 蒸餾來源 | `**/distill-sources.yaml` 的 `scan_paths` | 掃不存在的目錄 → 零筆，不報錯 |
 
@@ -144,8 +144,9 @@ def scan_matrices(root: Path) -> list[tuple[Path, str, set[str]]]:
 
 
 def scan_deployed(root: Path) -> list[tuple[Path, str, set[str]]]:
+    """已部署複本：`.ark/skills/`（.ark 佈局）與 `.kiro/skills/`（未遷移）都掃。"""
     out = []
-    for d in _walk(root, ".kiro"):
+    for d in [*_walk(root, ".ark"), *_walk(root, ".kiro")]:
         sk = d / "skills"
         if not sk.is_dir():
             continue
