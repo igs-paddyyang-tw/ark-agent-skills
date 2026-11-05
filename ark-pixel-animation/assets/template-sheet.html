@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  ark-pixel-animation · sprite sheet 模式頁面
+  - 產生器 chibi.js 由 scripts/export_sheet.py 注入下方的 /*__ARK_CHIBI__*/（唯一來源，不在這裡複製）
+  - 網址參數：?name=<角色名>（必填，決定外觀）、?names=a,b,c（同一組內外觀不重複）、?scale=、?t=
+  - 頁面只有一張 <canvas>（動作預覽，給 verify_pixel.py）；sheet 本身以 <img> 顯示
+  - window.__pixel：verify_pixel 契約（W,H,FPS,DURATION,PAL,renderAt,pause,pixels）＋ sheet()（112×96 RGBA）
+-->
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pixel Character Sheet</title>
+<style>
+  html,body{margin:0;background:#0b0b10;color:#c9ccd6;font:14px/1.5 system-ui,sans-serif}
+  main{padding:16px;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+  canvas,img{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+  .sheet{background:repeating-conic-gradient(#20232f 0% 25%,#171a24 0% 50%) 0 0/24px 24px}
+  .meta{font-family:ui-monospace,monospace;font-size:12px;color:#8a8fa3}
+</style></head>
+<body><main>
+  <div class="meta" id="meta"></div>
+  <canvas id="preview"></canvas>
+  <img id="sheet" class="sheet" alt="sprite sheet">
+</main>
+<script>/*__ARK_CHIBI__*/</script>
+<script>
+(() => {
+  const C = globalThis.ArkChibi;
+  if (!C) { document.getElementById('meta').textContent = '缺少 chibi.js（請用 scripts/export_sheet.py --preview 產生本頁）'; return; }
+  const Q = new URLSearchParams(location.search);
+  const NAME = Q.get('name') || 'demo-agent';
+  const NAMES = (Q.get('names') || '').split(',').map(s => s.trim()).filter(Boolean);
+  const HASH = NAMES.length ? (C.uniqueLooks([...new Set([...NAMES, NAME])])[NAME]) : C.strHash(NAME);
+  const LOOK = C.lookFor(HASH);
+
+  // ── sheet（112×96、透明底）──
+  const SW = C.FW * C.COLS, SH = C.FH * C.ROWS.length;
+  const sheetCv = document.createElement('canvas'); sheetCv.width = SW; sheetCv.height = SH;
+  const sctx = sheetCv.getContext('2d'); sctx.imageSmoothingEnabled = false;
+  C.buildSheet(sctx, LOOK);
+  const img = document.getElementById('sheet');
+  img.src = sheetCv.toDataURL(); img.style.width = SW * 6 + 'px'; img.style.height = SH * 6 + 'px';
+  document.getElementById('meta').textContent = `${NAME} · hair ${LOOK.hair} · outfit ${LOOK.outfit} · ${LOOK.acc} · hash ${HASH}`;
+
+  // ── 動作預覽：下／上／右／左走路、打字、閱讀（8 FPS，決定性）──
+  const BG = '#1a1d2b';
+  const PAL = [...C.CHIBI_PAL, BG];
+  const W = 160, H = 40, FPS = 8, DURATION = 2;
+  const cv = document.getElementById('preview'), ctx = cv.getContext('2d', { alpha: false });
+  cv.width = W; cv.height = H; ctx.imageSmoothingEnabled = false;
+  const SCALE = +Q.get('scale') || 4;
+  cv.style.width = W * SCALE + 'px'; cv.style.height = H * SCALE + 'px';
+  const I = Math.floor;
+  function cell(dir, frame, x, y, flip) {
+    const row = dir === 'left' ? 2 : C.ROWS.indexOf(dir);
+    if (flip) { ctx.save(); ctx.translate(x + C.FW, y); ctx.scale(-1, 1); ctx.drawImage(sheetCv, frame * C.FW, row * C.FH, C.FW, C.FH, 0, 0, C.FW, C.FH); ctx.restore(); }
+    else ctx.drawImage(sheetCv, frame * C.FW, row * C.FH, C.FW, C.FH, x, y, C.FW, C.FH);
+  }
+  function renderAt(t) {
+    t = ((t % DURATION) + DURATION) % DURATION;
+    const f = I(t * FPS);
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+    const walk = [0, 1, 0, 2][f % 4], alt = I(f / 2) % 2;
+    const items = [['down', walk], ['up', walk], ['right', walk], ['left', walk], ['down', 3 + alt], ['down', 5 + alt]];
+    items.forEach(([dir, fr], i) => cell(dir, fr, 6 + i * 26, 4, dir === 'left'));
+    return { t: f / FPS, frame: f, state: 'sheet' };
+  }
+  let paused = Q.has('t'), start = performance.now(), last = -1;
+  function loop(now) {
+    if (!paused) { const t = ((now - start) / 1000) % DURATION, f = I(t * FPS); if (f !== last) { last = f; renderAt(t); } }
+    requestAnimationFrame(loop);
+  }
+  renderAt(paused ? +Q.get('t') : 0); requestAnimationFrame(loop);
+
+  window.__pixel = {
+    W, H, FPS, DURATION, PAL, SCALE, STATES: ['sheet'],
+    renderAt, pause() { paused = true; }, play() { paused = false; start = performance.now(); },
+    pixels() { return Array.from(ctx.getImageData(0, 0, W, H).data); },
+    sheet() {
+      return { name: NAME, hash: HASH, look: LOOK, w: SW, h: SH, palette: C.CHIBI_PAL,
+               rgba: Array.from(sctx.getImageData(0, 0, SW, SH).data) };
+    },
+  };
+})();
+</script></body></html>

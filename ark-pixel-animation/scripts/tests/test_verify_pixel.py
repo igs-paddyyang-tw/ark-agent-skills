@@ -91,3 +91,41 @@ def test_fps_out_of_range_is_rejected(tmp_path: Path) -> None:
 
 def test_sample_times_includes_loop_seam() -> None:
     assert verify_pixel.sample_times(2, 0.5, 10) == [0.0, 0.5, 1.0, 1.5, 1.9]
+
+
+# ── 1.1：網址、viewport、canvas 選擇器（Pixel Office 實測回饋）──────────────────
+def test_target_url_file_and_http():
+    assert verify_pixel.target_url("http://h/app", 2) == "http://h/app?t=0&scale=2"
+    assert verify_pixel.target_url("http://h/app?demo=1", 3) == "http://h/app?demo=1&t=0&scale=3"
+    assert verify_pixel.target_url(CANVAS, 4).startswith("file://") and verify_pixel.target_url(CANVAS, 4).endswith("?t=0&scale=4")
+
+
+def test_auto_viewport_fits_scaled_canvas():
+    vp = verify_pixel.auto_viewport(384, 224, 3)
+    assert vp["width"] >= 384 * 3 and vp["height"] >= 224 * 3 + 200
+
+
+def test_http_url_target(tmp_path: Path) -> None:
+    """以 http:// 網址驗收（本機起一個靜態伺服器）。"""
+    import functools
+    import http.server
+    import threading
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(CANVAS.parent))
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        url = f"http://127.0.0.1:{srv.server_address[1]}/{CANVAS.name}"
+        r = verify_pixel.verify(url, tmp_path / "shots", step=0.5, scale=6)    # 6 倍＝960×540，靠自動 viewport 容下
+        assert r["ok"], r["problems"]
+    finally:
+        srv.shutdown()
+
+
+def test_multiple_canvases_warn_and_selector(tmp_path: Path) -> None:
+    src = CANVAS.read_text(encoding="utf-8")
+    page = tmp_path / "two.html"
+    page.write_text(src.replace('<body><canvas id="c"></canvas>', '<body><canvas id="other" width="4" height="4"></canvas><canvas id="c"></canvas>'), encoding="utf-8")
+    r = verify_pixel.verify(page, tmp_path / "a", step=0.5, canvas="#c")
+    assert r["ok"] and not r["warnings"], (r["problems"], r["warnings"])
+    r2 = verify_pixel.verify(page, tmp_path / "b", step=0.5)
+    assert r2["warnings"] and "2 張 canvas" in r2["warnings"][0]

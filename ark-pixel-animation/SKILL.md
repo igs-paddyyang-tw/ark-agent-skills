@@ -3,7 +3,9 @@ name: ark-pixel-animation
 description: |
   產出復古遊戲像素動畫 executor（單檔 HTML，Canvas 2D 或 PixiJS）：低解析邏輯畫布、固定色盤、整數倍放大、8–12 FPS 點陣節奏，
   角色待機／集氣／施法／收招等循環動作；先分鏡、再 2 秒測試版、以 verify_pixel.py 逐秒取樣驗收（色盤外顏色、決定性、靜止、平滑放大、FPS）。
-  使用此 skill 當提及：像素動畫、pixel art 動畫、點陣動畫、8-bit／16-bit 風、復古遊戲角色動作、sprite 循環動畫、像素角色、點陣角色待機動畫。
+  1.1 起另有 sprite sheet 模式：名字 → 原創 Q 版角色 112×96 sheet（3 方向 × 7 格，pixel-agents 相容）＋ manifest，verify_sheet.py 驗收。
+  使用此 skill 當提及：像素動畫、pixel art 動畫、點陣動畫、8-bit／16-bit 風、復古遊戲角色動作、sprite 循環動畫、像素角色、點陣角色待機動畫、
+  sprite sheet、角色圖集、Q 版像素角色、辦公室角色、agent 頭像像素圖。
   不適用於：一般網頁 UI 動效與前端介面（→ ark-frontend-design）、slot 機率雛型與演出（→ ark-game-proto）、
   正式遊戲 Client 與素材打包（→ ark-web-game）、數據圖表與儀錶板（→ ark-html-dashboard）。
 metadata:
@@ -13,11 +15,12 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "1.0.0"
+  version: "1.1.0"
   updated: 2026-11-05
   outputs:
     - { format: html, audience: human }
     - { format: png, audience: human }
+    - { format: data, audience: ai }
   render: html
 ---
 
@@ -30,7 +33,11 @@ metadata:
 |---|---|
 | `assets/template-canvas.html` | Canvas 2D 範本（預設，零依賴） |
 | `assets/template-pixi.html` | PixiJS 8 範本（使用者指定 PixiJS 時；需 CDN），說明見 `references/pixijs.md` |
-| `scripts/verify_pixel.py` | 驗收腳本（必跑） |
+| `scripts/verify_pixel.py` | 動畫驗收（必跑）；1.1 起可驗網址、`--canvas` 指定畫布、viewport 自動容得下 |
+| `assets/chibi.js` | **sprite sheet 模式**：Q 版角色產生器（唯一來源；瀏覽器／ES 模組／node 都能載入） |
+| `assets/template-sheet.html` | sprite sheet 預覽頁（動作預覽＋sheet 圖；`chibi.js` 由匯出腳本注入） |
+| `scripts/export_sheet.py` | 名字 → `char_<slug>.png`（112×96 RGBA）＋ `<slug>.json`（`ark.pixel_character.v1`） |
+| `scripts/verify_sheet.py` | sprite sheet 驗收（8 項，只需 Pillow） |
 | `references/motion-guide.md` | 動作設計守則、分鏡表格式 |
 | `references/prompt-template.md` | 給使用者的提詞範本 |
 
@@ -39,6 +46,7 @@ metadata:
 1. **低解析邏輯畫布**：常用 160×90（16:9）、128×96（4:3）、64×64（icon）。所有座標是邏輯像素整數。
 2. **整數倍放大、關閉平滑**：`canvas.width/height = 邏輯尺寸`，CSS 寬高 = 邏輯尺寸 × 整數 SCALE；`imageSmoothingEnabled = false`；CSS `image-rendering: pixelated`。
 3. **固定色盤**：全片只用 `PAL` 陣列中的顏色（常用 16 或 24 色），以索引取色。**禁止**漸層、模糊、陰影、`globalAlpha`、半透明、`arc()`／`fillText()`／`lineTo` 斜線（都會產生反鋸齒色）。圓、斜線、文字一律用像素點或 bitmap 自己畫。
+   **sprite sheet 模式例外**：背景必須透明 → 每個像素的 alpha 只能是 0（背景）或 255（色盤色），**禁止中間值**（`verify_sheet.py` ② 檢查）。
 4. **點陣節奏**：FPS 8–12（預設 10）。`f = floor(t*FPS)`，所有動作數值都由 `f` 或量化後的 `tq = f/FPS` 推出，位移用 `Math.floor`／`step()` 對齊像素格。
 5. **決定性**：同一個 `t` 永遠畫出同一張圖。不用 `Math.random()`、`Date.now()`，改用 `hash(n)`。
 6. **單一入口 `renderAt(t)`**：每次全畫面重畫，不依賴上一格狀態；並暴露 `window.__pixel` 驗收介面。
@@ -81,6 +89,7 @@ python3 scripts/verify_pixel.py anim.html --out shots              # 正式版�
 輸出 `_contact_sheet.png` 與 `report.json`；exit 0 通過、1 有問題、2 環境缺件。
 
 - 需要 Python `playwright` 與 `Pillow`。Chromium 已安裝就不要重裝；版本與 playwright 不合時用 `--chromium <執行檔>` 或 `ARK_PIXEL_CHROMIUM` 指定。
+- 驗網頁：目標直接給 `http(s)://` 網址；頁面有多張 canvas 時用 `--canvas "<選擇器>"`；viewport 預設自動放大到容得下放大後的畫布（`--viewport WxH` 可覆寫）。Playwright 截圖預設隱藏捲軸，要驗捲軸請自行截整頁並關掉 `--hide-scrollbars`。
 - **一定要用 Read 打開 `_contact_sheet.png` 親自看**，再回報。`ok: false` 時修正後重跑，直到通過。
 
 ### Step 5 — 正式版
@@ -92,6 +101,28 @@ python3 scripts/verify_pixel.py anim.html --out shots              # 正式版�
 - 有 Artifact 工具：發佈成 artifact（頁面本身已自包含）。
 - 否則：存到專案產出目錄交付 HTML，並附 contact sheet。
 - 網址參數：`?t=3.5` 凍結在 3.5 秒，`?scale=6` 指定放大倍率。
+
+## sprite sheet 模式（1.1）
+
+用途：遊戲或網頁要拿「一個角色的全部動作格」當素材（例：Pixel Office 的 agent 角色）。產出物是 PNG＋manifest，不是單檔動畫。
+
+| 項目 | 規格 |
+|---|---|
+| 版型 | 112×96 RGBA＝3 列方向（下、上、右；左＝右的水平鏡像）× 7 格 × 16×32；第 0–2 格走路、3–4 格打字、5–6 格閱讀（與 pixel-agents `char_N.png` 相容） |
+| 造型 | 原創 Q 版：14×14 大頭、小身體；**名字決定外觀**（FNV-1a 雜湊 → 髮色 × 衣服 × 配件，216 種）；同一次匯出的名字保證不重複；同樣輸入永遠同樣輸出 |
+| 色盤 | `chibi.js` 的 `CHIBI_PAL`（寫進 manifest 的 `palette`） |
+| manifest | `{"schema":"ark.pixel_character.v1","name","frame":{"w":16,"h":32},"rows":["down","up","right"],"frames":{"walk":[0,1,2],"type":[3,4],"read":[5,6]},"palette":[…],"look":{…},"hash"}` |
+
+流程：
+
+```bash
+python3 scripts/export_sheet.py --name cto-agent --name qa-agent --out characters/   # 或 --names-file names.txt
+python3 scripts/verify_sheet.py characters/char_*.png --out characters/contact/       # 8 項全過才交付
+python3 scripts/export_sheet.py --preview sheet.html                                   # 預覽頁：開 sheet.html?name=cto-agent
+```
+
+`verify_sheet.py` 檢查：① 尺寸 112×96 ② alpha 只有 0／255 ③ 不跨格 ④ 每格非空且腳底在第 31 列 ⑤ 顏色都在 manifest 色盤 ⑥ 走路首尾腳部位移 ≤ 2px ⑦ 打字、閱讀兩格各有變化 ⑧ 輸出 6 倍 contact sheet。
+**一定要用 Read 打開 contact sheet 親自看**再交付。網頁要即時畫同一個角色時，直接載入 `assets/chibi.js` 呼叫 `ArkChibi.buildSheet()`，不要另寫一份畫法。
 
 ## `window.__pixel` 契約
 

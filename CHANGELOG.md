@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-05 (列車 r30：ark-pixel-animation 1.1.0 —— sprite sheet 模式＋verify_pixel 驗網頁)
+
+> 來源：nana-team Pixel Office 先行版（已上線）的結案回饋與技能計畫 S3～S5（`nana-team-agent/docs/plans/2026-11-05-ark-pixel-animation-skill-plan.md`）。
+
+- **sprite sheet 模式**：`assets/chibi.js`（原創 Q 版角色產生器，唯一來源；名字 → 髮色×衣服×配件 216 種，同組不重複、決定性）、`assets/template-sheet.html`（動作預覽＋sheet，產生器由匯出腳本注入）、`scripts/export_sheet.py`（→ `char_<slug>.png` 112×96 RGBA＋`ark.pixel_character.v1` manifest，pixel-agents 版型相容）、`scripts/verify_sheet.py`（8 項：尺寸、alpha 只 0／255、不跨格、腳底第 31 列、色盤、走路接縫 ≤2px、動作變化、6 倍 contact sheet）
+- 鐵律 3 補 sprite sheet 例外：背景透明，alpha 只能 0 或 255
+- **verify_pixel.py**：目標可為 `http(s)://` 網址、`--canvas` 選擇器（多張 canvas 時警告）、viewport 自動容得下放大後畫布（`--viewport` 可覆寫）；說明 Playwright 預設隱藏捲軸
+- 實測踩到：產生器註解含 `</script>` 內嵌後提早關閉標籤 → 注入時跳脫，測試釘住；閱讀格的文件被大頭擋住 → 改最後畫
+- 測試：22 passed（新增 sprite sheet 11、verify_pixel 4）；反證：色盤外顏色、半透明邊、跨格、浮空腳各自紅且訊息指出格子；audit P0／P1=0、prompt_lint 100/100
+
 ## 2026-11-05 (ark-skill-creator 2.0.2：description eval 腳本修 Windows 執行)
 
 > game-team 消費端於 Windows 跑 description 優化時發現。
