@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r28",
-  "commit": "d8d1ee0",
-  "generated_at": "2026-11-05T13:01:01+08:00",
+  "release": "skills-2026.11-r29",
+  "commit": "6f3e99a",
+  "generated_at": "2026-11-05T13:02:13+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -462,6 +462,16 @@
         "ark-data-contract"
       ],
       "updated": "2026-10-29"
+    },
+    "ark-pixel-animation": {
+      "version": "1.0.0",
+      "tree_hash": "sha256:0b7eb3e6ee459e479d14fe5a9243dbcf382f4a793bc7d3a4d686fb5dda9b0413",
+      "contract_hash": "sha256:c7a65a4027db310619425f3d4310753bba6cdd6daf2b99f7efa0f36303a5f979",
+      "status": "active",
+      "category": "view",
+      "depends_on": [],
+      "replaces": [],
+      "updated": "2026-11-05"
     },
     "ark-pptx-tool": {
       "version": "1.0.1",
