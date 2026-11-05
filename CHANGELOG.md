@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-05 (列車 r29：新增 ark-pixel-animation 1.0.0 —— 復古像素動畫 executor)
+
+> 來源：Paddy 提供的技能草稿（單一 SKILL.md）；nana-team `docs/plans/2026-11-05-ark-pixel-animation-skill-plan.md` S1／S2。Pixel Office（像素辦公室）角色動畫的基底，v1.1 再加 sprite sheet 模式。
+
+- 新 skill `ark-pixel-animation`（view／executor／game）：鐵律 7 條、分鏡 → 2 秒測試版 → 驗收 → 正式版流程
+- 草稿內嵌的範本與腳本拆檔：`assets/template-canvas.html`、`assets/template-pixi.html`（PixiJS 8.6.6，草稿只有說明，本次補成完整範本）、`scripts/verify_pixel.py`（改成可匯入的函式＋`--chromium`／`ARK_PIXEL_CHROMIUM`，環境缺件 exit 2）
+- 兩份範本實跑驗收 `ok: true`（160×90、16 色用 15、10 FPS）；測試 7 passed，反證 4 項各紅：`globalAlpha` → 色盤外顏色、`Math.random` → 決定性、拿掉 `pixelated` → 放大非單色、FPS 24 → 範圍
+- 守門：audit P0／P1 = 0（初版 P1×2 已修：description 指向 deprecated 的 ark-chart-generator、用到 ark-browser-tool 獨占詞「截圖」）、prompt_lint 100/100、README 重產
+
+---
+
 ## 2026-11-05 (列車 r28：ark-agent-init 2.8.0 —— team MCP 進入點跟著套件走（R-12）)
 
 > 來源：paddy-bot `docs/plans/ark-workspace-layout-os-plan.md` R-12（team MCP 模組改 `ark_agent_os.team_mcp`，舊名 shim 只撐到 3.0）。

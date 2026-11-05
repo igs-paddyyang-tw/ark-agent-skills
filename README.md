@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **48 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
+> **49 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -84,7 +84,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ④ 呈現層 View
 
-> 輸出：HTML / 視覺（給人看）｜`category: view`｜4 個
+> 輸出：HTML / 視覺（給人看）｜`category: view`｜5 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
@@ -92,6 +92,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-game-proto` | ⚙️ 執行 | 🎮 遊戲 | 機率規格書 → 可玩 H5 slot 驗證雛型（PixiJS 8）executor（製程 C 段演出驗證）：編 game-config、單檔試玩＋驗證台、與 Go 快測逐局對照；另附正式演出版型 St… |
 | `ark-html-dashboard` | 📝 指示 | 通用 | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
 | `ark-html-report` | 📝 指示 | 通用 | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
+| `ark-pixel-animation` | ⚙️ 執行 | 🎮 遊戲 | 產出復古遊戲像素動畫 executor（單檔 HTML，Canvas 2D 或 PixiJS）：低解析邏輯畫布、固定色盤、整數倍放大、8–12 FPS 點陣節奏， 角色待機／集氣／施法／收招等循環動作… |
 
 ## ⑤ 文件輸出 Document
 
