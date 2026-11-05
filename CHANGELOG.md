@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-05 (列車 r28：ark-agent-init 2.8.0 —— team MCP 進入點跟著套件走（R-12）)
+
+> 來源：paddy-bot `docs/plans/ark-workspace-layout-os-plan.md` R-12（team MCP 模組改 `ark_agent_os.team_mcp`，舊名 shim 只撐到 3.0）。
+
+- `build_kiro.py`：團隊根 venv 裝有 `ark_agent_os/team_mcp.py` → mcp.json 寫 `-m ark_agent_os.team_mcp`；偵測不到 → 照舊 `ark_team_agent.team_mcp`（1.x 與 2.x 都能跑）
+- 備註：daemon 啟動時會依 `kiro_files.mcp_json` 重寫 mcp.json，本檔只影響「daemon 還沒跑過」的新骨架
+- 測試 1 條；反證：還原 → 紅；ark-agent-init 62 passed
+
+---
+
 ## 2026-11-05 (列車 r27：.ark 佈局 S4 —— 9 個 skill 腳本雙讀)
 
 > 來源：kiro-cli `docs/plans/ark-workspace-layout-skills-plan.md` S4。規則：有 `.ark/ark.yaml` → `.ark/`（skills→`.ark/skills`、steering→`.ark/brain`），否則照舊 `.kiro/`；legacy 部署行為不變。

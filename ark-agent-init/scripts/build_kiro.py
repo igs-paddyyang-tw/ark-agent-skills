@@ -61,6 +61,16 @@ AGENTS_ASSETS = ASSETS_DIR / "agents"
 #: 套件名（現在裝的是 ark_team_agent，且以 `-m` 呼叫），後者是 Windows 啟動器，
 #: 在 Linux 上根本不存在。對照組：套件自己在啟動時寫的 mcp.json。
 TEAM_MCP_MODULE = "ark_team_agent.team_mcp"
+#: ark-agent-os 的新名（套件計畫 R-12）；舊名靠相容 shim 只撐到 3.0。
+TEAM_MCP_MODULE_OS = "ark_agent_os.team_mcp"
+
+
+def team_mcp_module(base: Path) -> str:
+    """依團隊根 venv 實際裝的套件挑 team MCP 進入點：有 ark_agent_os → 新名；偵測不到 → 舊名（1.x、2.x 都能跑）。"""
+    for sp in [*base.glob(".venv/lib/python*/site-packages"), base / ".venv" / "Lib" / "site-packages"]:
+        if (sp / "ark_agent_os" / "team_mcp.py").is_file():
+            return TEAM_MCP_MODULE_OS
+    return TEAM_MCP_MODULE
 PROMPTS_ASSETS = ASSETS_DIR / "prompts"
 
 TODAY = date.today().isoformat()
@@ -338,9 +348,9 @@ def _build_agent_kiro(
         #    改成由實際深度算，admin 搬到 agents/ 底下也不會指錯。
         home = _relative_home(kiro_dir.parent, base)
         if is_admin:
-            mcp_content = _make_admin_mcp(name, port, home)
+            mcp_content = _make_admin_mcp(name, port, home, team_mcp_module(base))
         else:
-            mcp_content = _make_agent_mcp(name, role, port, allowed, home)
+            mcp_content = _make_agent_mcp(name, role, port, allowed, home, team_mcp_module(base))
         mcp_json.write_text(
             json.dumps(mcp_content, indent=2, ensure_ascii=False),
             encoding="utf-8",
@@ -707,13 +717,13 @@ def _relative_home(agent_dir: Path, base: Path) -> str:
     depth = len(agent_dir.resolve().relative_to(base.resolve()).parts)
     return "." if depth == 0 else "/".join([".."] * depth)
 
-def _make_admin_mcp(instance: str, port: int, home: str = ".") -> dict:
+def _make_admin_mcp(instance: str, port: int, home: str = ".", module: str = TEAM_MCP_MODULE) -> dict:
     return {
         "mcpServers": {
             "team": {
                 "command": "python3",
                 "args": [
-                    "-m", TEAM_MCP_MODULE,
+                    "-m", module,
                     "--port", str(port),
                     "--instance", instance,
                     "--role", "admin",
@@ -726,13 +736,13 @@ def _make_admin_mcp(instance: str, port: int, home: str = ".") -> dict:
 
 
 def _make_agent_mcp(instance: str, role: str, port: int, allowed_targets: str,
-                    home: str = "../..") -> dict:
+                    home: str = "../..", module: str = TEAM_MCP_MODULE) -> dict:
     return {
         "mcpServers": {
             "team": {
                 "command": "python3",
                 "args": [
-                    "-m", TEAM_MCP_MODULE,
+                    "-m", module,
                     "--port", str(port),
                     "--instance", instance,
                     "--role", role,

@@ -172,6 +172,19 @@ def test_mcp_entrypoint_matches_the_installed_package(project):
     assert team["args"][:2] == ["-m", "ark_team_agent.team_mcp"], team["args"]
 
 
+
+def test_mcp_entrypoint_follows_installed_ark_agent_os(tmp_path):
+    """團隊 venv 裝的是 ark-agent-os → 用新名 ark_agent_os.team_mcp（R-12：舊名 shim 只撐到 3.0）。"""
+    sp = tmp_path / ".venv" / "lib" / "python3.12" / "site-packages" / "ark_agent_os"
+    sp.mkdir(parents=True)
+    (sp / "team_mcp.py").write_text("", encoding="utf-8")
+    (tmp_path / "team.yaml").write_text(TEAM_YAML, encoding="utf-8")
+    r = subprocess.run([sys.executable, str(BUILD), str(tmp_path / "team.yaml"), str(tmp_path)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    mcp = json.loads((tmp_path / ".kiro" / "settings" / "mcp.json").read_text(encoding="utf-8"))
+    assert mcp["mcpServers"]["team"]["args"][:2] == ["-m", "ark_agent_os.team_mcp"]
+
 # ── 冪等：重跑不得覆寫手寫人格 ──────────────────────────────────
 
 def test_rerun_does_not_overwrite_handwritten_soul(project):
