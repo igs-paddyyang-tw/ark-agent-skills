@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // pixi-client（Stage）⇄ Go Server：ark-go WebSocket 端到端冒煙（Playwright + Chromium SwiftShader）
 //   自己起 Server、建置資料夾版、起靜態服務，跑完全部收掉：
-//   node tools/smoke_ws.js [--skill <aidev>/.kiro/skills/ark-game-proto] [--game ../pixi-client/game.js] [--odds ../../quicktest/odds/odds_1.0.0.json]
+//   node tools/smoke_ws.js [--skill <aidev>/.ark/skills/ark-game-proto（未遷移：.kiro/skills/…）] [--game ../pixi-client/game.js] [--odds ../../quicktest/odds/odds_1.0.0.json]
 //        [--server-dir .] [--server-odds <Server 設定檔>] [--engine huff] [--scenes '["feature",{"feat":"OH"},{"label":"Open House 到宮殿"}]'] [--out <dir>] [--spins 3]
 // 檢查（ark-web-game 計畫 AC-022）：
 //   1. 啟動指標 time_to_playable_ms 已記錄；init 帶 supported、不帶 seed
@@ -21,7 +21,11 @@ try { ({ chromium } = require('playwright')); } catch (e) { console.log('SKIP：
 const a = process.argv.slice(2);
 const arg = (k, d) => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : d; };
 const HERE = __dirname;
-const skill = path.resolve(arg('--skill', path.join(HERE, '..', '..', '..', '..', '..', '..', '.kiro', 'skills', 'ark-game-proto')));
+// 預設找 aidev 根的技能目錄：.ark 佈局（.ark/skills）優先，未遷移的退 .kiro/skills
+const AIDEV = path.join(HERE, '..', '..', '..', '..', '..', '..');
+const DEFAULT_SKILL = ['.ark', '.kiro'].map((d) => path.join(AIDEV, d, 'skills', 'ark-game-proto')).find((p) => fs.existsSync(p))
+  || path.join(AIDEV, '.kiro', 'skills', 'ark-game-proto');
+const skill = path.resolve(arg('--skill', DEFAULT_SKILL));
 const game = path.resolve(arg('--game', path.join(HERE, '..', '..', 'pixi-client', 'game.js')));
 const oddsArg = arg('--odds', path.join(HERE, '..', '..', '..', 'quicktest', 'odds', 'odds_1.0.0.json'));
 const odds = oddsArg === 'none' ? null : path.resolve(oddsArg);

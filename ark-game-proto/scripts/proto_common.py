@@ -15,10 +15,11 @@ def _find_mdview() -> pathlib.Path:
     """尋找 ark-game-prob 的 ps_mdview（環境變數 > 常見安裝位置）。"""
     import os
     cands = [os.environ.get("ARK_GAME_PROB_SCRIPTS", ""),
-             HERE.parents[1] / "ark-game-prob" / "scripts",            # 同層 skill（.kiro/skills/ 或 repo 根）
+             HERE.parents[1] / "ark-game-prob" / "scripts",            # 同層 skill（.ark/skills/、.kiro/skills/ 或 repo 根）
+             pathlib.Path.cwd() / ".ark/skills/ark-game-prob/scripts",
              pathlib.Path.cwd() / ".kiro/skills/ark-game-prob/scripts"]
-    cands += [p / ".kiro/skills/ark-game-prob/scripts" for p in HERE.parents]
-    cands += [p / ".kiro/skills/ark-game-prob/scripts" for p in pathlib.Path.cwd().parents]
+    for base in (*HERE.parents, *pathlib.Path.cwd().parents):    # .ark 佈局優先，未遷移的退 .kiro
+        cands += [base / ".ark/skills/ark-game-prob/scripts", base / ".kiro/skills/ark-game-prob/scripts"]
     for c in cands:
         if c and (pathlib.Path(c) / "ps_mdview.py").exists():
             return pathlib.Path(c)

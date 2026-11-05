@@ -9,6 +9,7 @@ CHECKER=""
 
 # 搜尋 checker 位置（支援多種放置方式）
 for candidate in \
+    "$REPO_ROOT/.ark/skills/ark-superpowers/scripts/check_doc_completeness.py" \
     "$REPO_ROOT/.kiro/skills/ark-superpowers/scripts/check_doc_completeness.py" \
     "$REPO_ROOT/scripts/check_doc_completeness.py"; do
     if [[ -f "$candidate" ]]; then

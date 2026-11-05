@@ -175,3 +175,17 @@ def test_slug_placeholder_mode_and_require_assets(tmp_path):
     rc3, _ = run("--slug", "demo", "--repo", repo)
     man3 = json.loads((d / "stage-build.json").read_text(encoding="utf-8"))
     assert rc3 == 0 and man3["assets_base"] == "external:ext/refs" and man3["assets_mode"] in ("ref", "partial")
+
+
+def test_find_repo_accepts_ark_or_kiro(tmp_path):
+    """.ark 工具中立佈局（ark-agent-os ≥ 2.2）的 aidev 根也要認得；未遷移的照舊。"""
+    sys.path.insert(0, str(STAGE))
+    import stage_build as SB
+    for cfg in (".ark", ".kiro"):
+        root = tmp_path / cfg.strip(".")
+        (root / "data" / "slot").mkdir(parents=True)
+        (root / cfg).mkdir()
+        assert SB.find_repo(root / "data" / "slot") == root
+    bare = tmp_path / "bare"
+    (bare / "data" / "slot").mkdir(parents=True)
+    assert SB.find_repo(bare / "data" / "slot") is None

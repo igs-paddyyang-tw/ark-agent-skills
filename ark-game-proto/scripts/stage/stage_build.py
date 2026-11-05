@@ -282,7 +282,7 @@ def serve(out: pathlib.Path, port: int):
 
 def find_repo(start: pathlib.Path) -> pathlib.Path | None:
     for d in [start, *start.parents]:
-        if (d / "data" / "slot").is_dir() and (d / ".kiro").is_dir():
+        if (d / "data" / "slot").is_dir() and ((d / ".ark").is_dir() or (d / ".kiro").is_dir()):
             return d
     return None
 
@@ -337,7 +337,7 @@ def resolve_assets(base_dir: pathlib.Path, cands) -> pathlib.Path:
 def slug_build(a) -> None:
     repo = pathlib.Path(a.repo).resolve() if a.repo else find_repo(pathlib.Path.cwd().resolve()) or find_repo(HERE)
     if not repo:
-        emit({}, False, "BAD_INPUT", "找不到 aidev 根目錄（含 data/slot 與 .kiro），請給 --repo")
+        emit({}, False, "BAD_INPUT", "找不到 aidev 根目錄（含 data/slot 與 .ark 或 .kiro），請給 --repo")
     # 佈局契約 v3（ark-game-spec references/game-layout-contract.md）：⑦ 用戶端在 game/pixi-client；舊 proto/stage 相容一版
     data = repo / "data" / "slot" / a.slug / "game" / "pixi-client"
     if not (data / "stage.yaml").is_file() and (repo / "data" / "slot" / a.slug / "proto" / "stage" / "stage.yaml").is_file():

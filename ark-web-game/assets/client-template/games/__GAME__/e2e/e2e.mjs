@@ -160,7 +160,7 @@ try {
     let stage = null;
     if (aidev && CFG.stage) {
       const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `${CFG.game}-stage-`));
-      execFileSync(process.env.PYTHON || 'python3', [path.join(aidev, '.kiro/skills/ark-game-proto/scripts/stage/stage_build.py'), '--game', path.join(aidev, CFG.stage.game), ...(CFG.stage.odds ? ['--odds', path.join(aidev, CFG.stage.odds)] : []), '--out', tmp], { stdio: 'ignore' });
+      execFileSync(process.env.PYTHON || 'python3', [path.join(aidev, fs.existsSync(path.join(aidev, '.ark', 'ark.yaml')) ? '.ark/skills' : '.kiro/skills', 'ark-game-proto/scripts/stage/stage_build.py'), '--game', path.join(aidev, CFG.stage.game), ...(CFG.stage.odds ? ['--odds', path.join(aidev, CFG.stage.odds)] : []), '--out', tmp], { stdio: 'ignore' });
       const sw = await staticServer(tmp);
       const page = await browser.newPage({ viewport: { width: 540, height: 960 } });
       await page.goto(`${sw.url}/index.html`);

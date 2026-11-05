@@ -594,7 +594,7 @@ status: review
 
 1. 在「可以直接打開的成品」點 ⑦ 試玩版，玩 30 轉後關掉分頁回到本書
 2. 依「要拍板的事」表格，從第 2 章開始逐章閱讀並在拍板欄填寫決議
-3. 填完重新發布：`py -X utf8 .kiro/skills/ark-game-proto/scripts/review_build.py --slug <slug>`
+3. 填完重新發布：`py -X utf8 .ark/skills/ark-game-proto/scripts/review_build.py --slug <slug>`（未遷移的部署：`.kiro/skills/…`）
 
 你應該看到：重新發布後，本章表格的「狀態」欄從「⏳ 待拍板」變成你填的決議。
 

@@ -68,7 +68,10 @@ def load_runner_cmd(runner: str) -> str:
 def build_prompt(task: dict, plan: dict, ws: Path, attempt: int, prev: dict | None) -> str:
     tpl = PROMPT_TPL.read_text(encoding="utf-8") if PROMPT_TPL.exists() else "{task_name}\n產出：{output_file}\nAC：{ac}\n{retry_context}"
     fm = plan.get("frontmatter", {})
-    soul = ws / "agents" / f"{task['role']}-agent" / ".kiro" / "steering" / "SOUL.md"
+    agent_dir = ws / "agents" / f"{task['role']}-agent"
+    # .ark 佈局（ark-agent-os ≥ 2.2）人格在 .ark/brain/；未遷移的照舊 .kiro/steering/
+    soul = (agent_dir / ".ark" / "brain" / "SOUL.md") if (agent_dir / ".ark" / "ark.yaml").is_file() \
+        else (agent_dir / ".kiro" / "steering" / "SOUL.md")
     retry = ""
     if prev:
         retry = f"\n## 上輪驗收失敗（第 {attempt} 次重試）\n方法：{prev.get('method')}　指令：{prev.get('command')}\n證據：\n```\n{prev.get('evidence','')}\n```\n請針對上述失敗修正，不要重寫無關部分。\n"

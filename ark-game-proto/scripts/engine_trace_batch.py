@@ -11,6 +11,8 @@ import argparse, json, pathlib, re, subprocess, sys
 import yaml
 
 HERE = pathlib.Path(__file__).resolve().parent
+#: 本 skill 實際所在的技能目錄（相對 repo 根）：裝在 .ark/skills 就寫 .ark/skills，舊佈局 .kiro/skills
+SKILLS_REL = f"{HERE.parents[2].name}/skills" if HERE.parents[2].name in (".ark", ".kiro") else ".kiro/skills"
 SKIP_DIR = re.compile(r"參考資料|簡易試算|觀察|__MACOSX")
 SIDE = re.compile(r"道具卡|buy ?bonus|play ?bonus|BB", re.I)
 RTP_LO, RTP_HI = 80.0, 110.0  # 20 萬局樣本的合理區間；外面多半是押注單位錯或調參版
@@ -69,10 +71,10 @@ def main():
                 r.update(pick=pick, sim=res["sim"], tuned=res.get("tuned"), bet=res["bet"], grid_ok=res["grid_ok"], symbols=len(res["symbols"]))
                 (out / "engine-trace.jsonl").unlink(missing_ok=True)
                 (out / "stage.yaml").write_text(
-                    "# 引擎回放試玩（⑦-lite）建置設定 —— python .kiro/skills/ark-game-proto/scripts/stage/stage_build.py "
-                    f"--game .kiro/skills/ark-game-proto/scripts/stage/replay/game.js --odds data/slot/{g['slug']}/game/replay/trace.json "
+                    f"# 引擎回放試玩（⑦-lite）建置設定 —— python {SKILLS_REL}/ark-game-proto/scripts/stage/stage_build.py "
+                    f"--game {SKILLS_REL}/ark-game-proto/scripts/stage/replay/game.js --odds data/slot/{g['slug']}/game/replay/trace.json "
                     f"--out output/slot/{g['slug']}/game/replay/single --single\n"
-                    "game: ../../../../../.kiro/skills/ark-game-proto/scripts/stage/replay/game.js\nodds: trace.json\nassets_base: []\n", encoding="utf-8")
+                    f"game: ../../../../../{SKILLS_REL}/ark-game-proto/scripts/stage/replay/game.js\nodds: trace.json\nassets_base: []\n", encoding="utf-8")
                 b = subprocess.run([sys.executable, str(HERE / "stage/stage_build.py"), "--game", str(HERE / "stage/replay/game.js"), "--odds", str(out / "trace.json"),
                                     "--out", str(repo / "output/slot" / g["slug"] / "game/replay/single"), "--single"], capture_output=True, text=True)
                 r["build"] = json.loads(b.stdout.strip().splitlines()[-1]).get("success") if b.stdout.strip() else False
@@ -118,8 +120,8 @@ def write_readme(out, g, r, tried):
 ## 重跑
 
 ```bash
-python .kiro/skills/ark-game-proto/scripts/engine_trace.py --engine "<slot_math_squad>/SLOT/{r['pick']}" --n 2000 --out data/slot/{g['slug']}/game/replay --name "{r['name']}"
-python .kiro/skills/ark-game-proto/scripts/stage/stage_build.py --game .kiro/skills/ark-game-proto/scripts/stage/replay/game.js --odds data/slot/{g['slug']}/game/replay/trace.json --out output/slot/{g['slug']}/game/replay/single --single
+python {SKILLS_REL}/ark-game-proto/scripts/engine_trace.py --engine "<slot_math_squad>/SLOT/{r['pick']}" --n 2000 --out data/slot/{g['slug']}/game/replay --name "{r['name']}"
+python {SKILLS_REL}/ark-game-proto/scripts/stage/stage_build.py --game {SKILLS_REL}/ark-game-proto/scripts/stage/replay/game.js --odds data/slot/{g['slug']}/game/replay/trace.json --out output/slot/{g['slug']}/game/replay/single --single
 ```
 """, encoding="utf-8")
 

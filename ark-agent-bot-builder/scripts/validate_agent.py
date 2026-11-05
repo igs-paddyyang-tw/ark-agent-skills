@@ -79,6 +79,8 @@ def validate(root: Path) -> list[str]:                      # noqa: C901
         if not (root / f).is_file():
             add(f"缺檔案：{f}")
     for d in REQUIRED_DIRS:
+        if d == ".kiro/steering" and (root / ".ark" / "ark.yaml").is_file():
+            d = ".ark/brain"                         # .ark 佈局（ark-agent-os ≥ 2.2）大腦在 .ark/brain/
         if not (root / d).is_dir():
             add(f"缺目錄：{d}/")
 

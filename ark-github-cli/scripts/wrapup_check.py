@@ -19,7 +19,7 @@ from pathlib import Path
 
 PLAN_FILES = ["task_plan.md", "plan.md", "TODO.md", "todo.md"]
 DOC_FILES = ["AGENTS.md", "index.md", "README.md", "readme.md", "knowledge/shared/index.md", ".kiro/steering/AGENTS.md"]
-IGNORE_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".kiro", ".pytest_cache", "dist", "build", ".mypy_cache"}
+IGNORE_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".kiro", ".ark", ".pytest_cache", "dist", "build", ".mypy_cache"}
 
 
 def find_todos(ws: Path) -> list[str]:

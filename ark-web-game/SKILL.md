@@ -15,8 +15,8 @@ metadata:
   category: scaffolder
   form: executor
   domain: game
-  version: "0.11.2"
-  updated: 2026-10-29
+  version: "0.12.0"
+  updated: 2026-11-05
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -128,6 +128,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 0.12.0 | 2026-11-05 | .ark 工具中立佈局雙讀（ark-agent-os ≥ 2.2）：`smoke_ws.js` 預設技能路徑、e2e 範本找 `stage_build.py` 先 `.ark/skills` 再 `.kiro/skills`；說明文字補 `.ark` 路徑 |
 | 0.11.2 | 2026-10-29 | description 減肥（盤點 O-2）：前段功能敘述壓成一句，觸發清單與「不適用於」逐字保留；原前段移到正文「功能總覽」 |
 | 0.11.1 | 2026-10-27 | 資安進開發流程（Paddy：下次開發要注意資安）：決策樹加「資安」分支（開新遊戲、⑧ 測試環境、上線前三個檢查點）、守門表加資安兩列；`tools/sec_check.py` 進 client-template（新平台一開就有），`--game` 不再限兩款、可加 `--client` |
 | 0.11.0 | 2026-10-27 | 上線前資安三件（2026-10-23 資安快測 prod 4 FAIL → 0）：範本預設安全——`wg_server_init` 產的 Server 映像預設 CMD 不帶 `-dev`（fail closed）、client-template vite 正式 build 不產 source map（`PGP_SOURCEMAP=1` 才產）；兩款加 `compose.release.yaml`、nginx `security-headers.conf`＋`server_tokens off`；delivery §6 補 dev／release 分開與 nginx add_header 繼承陷阱；測試 17 |

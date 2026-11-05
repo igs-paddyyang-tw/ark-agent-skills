@@ -140,7 +140,7 @@ export function pickPresenter(_r: SpinResult): Presenter {
 }
 """,
     f"{GAME_DIR}/assets.yaml.tmpl": """# __NAME__ 素材設定（ark-web-game wg_pack_assets；格式 pgp-assets/1）
-#   python <aidev>/.kiro/skills/ark-web-game/scripts/wg_pack_assets.py --config games/__GAME__/assets.yaml --out <output 資料夾> [--set 來源=資料夾]
+#   python <aidev>/.ark/skills/ark-web-game/scripts/wg_pack_assets.py（未遷移：.kiro/skills/…） --config games/__GAME__/assets.yaml --out <output 資料夾> [--set 來源=資料夾]
 #   打包後：game.config.ts 的 assets 改 './assets/manifest.json'，建置時 PGP_ASSETS_DIR=<output 資料夾>
 #   畫面認得的別名：bg_main、logo、reel_frame、reel_bg、ui_panel、ui_spin、ui_auto、ui_plus、ui_minus、sym_<符號代號>、win_big／mega／super；音效 sfx_spin、sfx_stop、sfx_prewin、sfx_alarm、sfx_board_start、sfx_board_end、sfx_fast_on、sfx_fast_off、sfx_info
 schema: pgp-assets/1

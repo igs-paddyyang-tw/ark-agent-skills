@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-11-05 (列車 r27：.ark 佈局 S4 —— 9 個 skill 腳本雙讀)
+
+> 來源：kiro-cli `docs/plans/ark-workspace-layout-skills-plan.md` S4。規則：有 `.ark/ark.yaml` → `.ark/`（skills→`.ark/skills`、steering→`.ark/brain`），否則照舊 `.kiro/`；legacy 部署行為不變。
+
+| skill | 版本 | 改了什麼 |
+|---|---|---|
+| ark-spec-executor | 2.1.0 | `run_plan` 派工 prompt 的 SOUL 路徑跟 agent 工作目錄佈局走；`report_gen` 找 loop-rules 先 `.ark/skills` |
+| ark-agent-team-builder | 3.2.0 | `validate_team`：profile 戳記檢查的 SOUL、skills-matrix 版本鎖（`.ark/skills.lock`）跟佈局走 |
+| ark-game-proto | 1.9.0 | `proto_common` 找 ark-game-prob 先 `.ark/skills`；`stage_build` 認 `.ark` 或 `.kiro` 的 aidev 根；`engine_trace_batch` 產生的指令依本 skill 實際所在目錄 |
+| ark-web-game | 0.12.0 | `smoke_ws.js` 預設技能路徑、e2e 範本找 `stage_build.py` 先 `.ark/skills` |
+| ark-agent-bot-builder | 3.3.0 | `validate_agent`：`.ark` 佈局要求 `.ark/brain/` 而非 `.kiro/steering/` |
+| ark-superpowers | 1.4.0 | pre-commit hook 找 checker 先 `.ark/skills` |
+| ark-github-cli | 1.1.0 | `wrapup_check` 略過 `.ark/` |
+| ark-game-quicktest | 2.3.0 | 缺 ark-game-prob 的安裝說明補 `.ark/skills` |
+| ark-mobile-adb | 2.6.0 | 判準出處補 `.ark/brain/CODE.md` |
+
+- 剩下 AL-034 命中 5 個 skill（ark-agent-init、webapp-generator、bot-builder 的 build_agent、team-design、wiki-engine）都是**產生器**，屬 S3，等 ark-agent-os 2.2 能讀 `.ark` 再改（現在就產 `.ark` 會讓 daemon 讀不到）
+- 測試：雙讀 5 條（spec-executor 2、team-builder 2、stage_build 1）；反證三支各還原 → 各 1 紅；改到的 skill 既有測試全過（ark-mobile-adb `test_fake_full_chain_all_pass` 在未改的 main 一樣失敗，非本次引入）
+
+---
+
 ## 2026-11-05 (列車 r26：ark-skills-align 2.14.0 —— .ark 版本鎖、稽核規則、上游 clone 特例)
 
 > 來源：kiro-cli `docs/plans/ark-workspace-layout-skills-plan.md` S2 T2.2／T2.3／T2.5（接 r25 的雙讀）。

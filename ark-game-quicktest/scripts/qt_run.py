@@ -130,7 +130,7 @@ def main() -> None:
         prob_skill = pathlib.Path(__file__).resolve().parent.parent.parent / "ark-game-prob" / "scripts" / "ps_run.py"
         if not prob_skill.exists():
             C.fail("MISSING_DEP", "ark-game-prob skill 不在同層",
-                   f"機率規格書已移至 ark-game-prob（v2.0 拆分）。\n安裝：複製 ark-game-prob/ 到 .kiro/skills/\n找到後預期位置：{prob_skill}")
+                   f"機率規格書已移至 ark-game-prob（v2.0 拆分）。\n安裝：複製 ark-game-prob/ 到本 skill 同層（.ark/skills/；未遷移的部署 .kiro/skills/）\n找到後預期位置：{prob_skill}")
         ps_args = [sys.executable, str(prob_skill), "--qt", str(d)] + (["--out", a.prob_out] if a.prob_out else [])
         ps_r = subprocess.run(ps_args, capture_output=True, text=True, encoding="utf-8")
         if ps_r.returncode != 0:

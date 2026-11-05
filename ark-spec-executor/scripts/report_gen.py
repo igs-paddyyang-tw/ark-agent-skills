@@ -32,6 +32,7 @@ def opt(argv, name, default=None):
 
 def thresholds() -> tuple[int, int, str]:
     for cand in [HERE.parent.parent / "ark-code-spec-validator" / "references" / "loop-rules.md",
+                 Path(".ark/skills/ark-code-spec-validator/references/loop-rules.md"),
                  Path(".kiro/skills/ark-code-spec-validator/references/loop-rules.md"),
                  Path("skills/ark-code-spec-validator/references/loop-rules.md")]:
         if cand.exists():

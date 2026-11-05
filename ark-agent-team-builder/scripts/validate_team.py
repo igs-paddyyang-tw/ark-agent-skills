@@ -122,8 +122,10 @@ def validate(path: Path) -> list[str]:
         prof = profile_of.get(name)
         if prof:
             wd = inst.get("working_directory", f"agents/{name}")
-            soul = (path.parent / ".kiro" / "steering" / "SOUL.md") if wd == "." \
-                else (path.parent / wd / ".kiro" / "steering" / "SOUL.md")
+            agent_dir = path.parent if wd == "." else path.parent / wd
+            # .ark 佈局（ark-agent-os ≥ 2.2）人格在 .ark/brain/；未遷移的照舊 .kiro/steering/
+            soul = (agent_dir / ".ark" / "brain" / "SOUL.md") if (agent_dir / ".ark" / "ark.yaml").is_file() \
+                else (agent_dir / ".kiro" / "steering" / "SOUL.md")
             if soul.exists():
                 head = soul.read_text(encoding="utf-8", errors="replace")[:200]
                 if "profile-sha256" not in head:
@@ -137,8 +139,10 @@ def validate(path: Path) -> list[str]:
 
     # skills-align v2:有 skills-matrix.yaml 卻無 lock → 提示先跑 align_sync（B-4）
     proj = path.parent
-    if (proj / "skills-matrix.yaml").exists() and not (proj / ".kiro" / "skills.lock.json").exists():
-        errors.append("有 skills-matrix.yaml 但缺 .kiro/skills.lock.json：先跑 "
+    lock = (proj / ".ark" / "skills.lock") if (proj / ".ark" / "ark.yaml").is_file() \
+        else (proj / ".kiro" / "skills.lock.json")
+    if (proj / "skills-matrix.yaml").exists() and not lock.exists():
+        errors.append(f"有 skills-matrix.yaml 但缺 {lock.relative_to(proj).as_posix()}：先跑 "
                       "align_sync.py plan --waves → apply（skill 版本尚未對齊落地）")
 
     return errors

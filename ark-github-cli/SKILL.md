@@ -8,10 +8,10 @@ description: |
   不適用於：知識蒸餾入 wiki 請用 ark-wiki-engine（本 skill 不寫 wiki/）；產 changelog 請用
   ark-release-notes；自家業務數字口徑查詢請用 ark-db-query。
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
   schema_version: "1.2"
   status: active
-  updated: 2026-10-29
+  updated: 2026-11-05
   category: ops
   form: executor
   domain: general
@@ -129,5 +129,6 @@ python scripts/wrapup_git.py <ws> --paths memory/ docs/ AGENTS.md --message "wra
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.1.0 | 2026-11-05 | `wrapup_check` 掃描時略過 `.ark/`（.ark 工具中立佈局，與 `.kiro/` 同為設定層） |
 | 1.0.0 | 2026-10-27 | **正式定版，無破壞性變更**（CLI、stdout 契約、收尾四步與 0.2.3 相同）。0.x 卻是 `status: active` 且每次收尾都在用，版號語意對不上 → 定 1.0.0；之後契約變更依 semver |
 | 0.2.x | 2026-09-22 ~ 10-20 | 讀側 L2 平台知識＋寫側開發收尾四步；0.2.1~0.2.3 為全庫 metadata 治理（三軸、depends_on 範圍） |

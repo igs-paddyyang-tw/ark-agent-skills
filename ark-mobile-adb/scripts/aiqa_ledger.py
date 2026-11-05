@@ -3,7 +3,7 @@
 借鏡 ai-qa-agent `ledger.py` 的設計、在 aiqa 自行重做（不搬 code）。
 解決：單轉守恆 oracle 會被升級/任務外部加幣誤判 FAIL（fuxing3 FX3-11-001 的 +38,888 即此）。
 
-核心判準（見 .kiro/steering/CODE.md「核帳與機台判準」）：
+核心判準（見 .ark/brain/CODE.md；未遷移的部署 .kiro/steering/CODE.md「核帳與機台判準」）：
 - 守恆式：`credit_after == baseline - bet + (win or 0)`，容差 ±tol。
 - baseline 跟狀態走：上一轉結算後餘額；BASELINE_BREAKERS 令基準失效、該對不判。
 - 只 SINGLE_OFF / STREAK_OFF 進 FAIL；外部加幣、讀不到、基準失效一律不當 FAIL（靜音/人覆核）。

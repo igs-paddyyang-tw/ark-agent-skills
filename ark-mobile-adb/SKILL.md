@@ -14,8 +14,8 @@ metadata:
   category: ops
   form: executor
   domain: game
-  version: "2.5.2"
-  updated: 2026-10-29
+  version: "2.6.0"
+  updated: 2026-11-05
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
