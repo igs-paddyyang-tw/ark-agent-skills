@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r24",
-  "commit": "302c84c",
-  "generated_at": "2026-11-03T16:56:10+08:00",
+  "release": "skills-2026.11-r25",
+  "commit": "595c5a1",
+  "generated_at": "2026-11-05T12:12:37+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.2.0",
@@ -533,9 +533,9 @@
       "updated": "2026-10-20"
     },
     "ark-skills-align": {
-      "version": "2.12.0",
-      "tree_hash": "sha256:9eb066a2a1ad0bb6173f79fbad10c7d1f13c0bcb930882507000784931c1407d",
-      "contract_hash": "sha256:f9e886d7c3e79006e16b355bcee86700ce72bb126f834a7c4f5aac4f96d8af0f",
+      "version": "2.13.0",
+      "tree_hash": "sha256:aeb73e8584752cdbd929f2e2bfbd8093f629bd410bb3b849acf5ee066085ce5b",
+      "contract_hash": "sha256:bc8705a4d833cb42ecc4a0e763f4a1211c12f1e0f89024247d40ad4a08af0c76",
       "status": "active",
       "category": "ops",
       "depends_on": [
@@ -545,7 +545,7 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-30"
+      "updated": "2026-11-05"
     },
     "ark-spec-executor": {
       "version": "2.0.3",
