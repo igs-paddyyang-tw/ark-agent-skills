@@ -12,6 +12,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # 🔴 `--help` 不需要任何第三方依賴 —— 在 import 之前先攔截。
@@ -44,19 +45,24 @@ def _call_claude(prompt: str, model: str | None, timeout: int = 300) -> str:
     # programmatic subprocess usage is safe. Same pattern as run_eval.py.
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
 
-    result = subprocess.run(
-        cmd,
-        input=prompt,
-        capture_output=True,
-        text=True,
-        env=env,
-        timeout=timeout,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"claude -p exited {result.returncode}\nstderr: {result.stderr}"
+    # claude -p 偶發 exit 1 且 stderr 為空（暫時性，多為併發/限流），重試一次再放棄。
+    for attempt in range(2):
+        result = subprocess.run(
+            cmd,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            timeout=timeout,
         )
-    return result.stdout
+        if result.returncode == 0:
+            return result.stdout
+        if attempt == 0:
+            time.sleep(10)
+    raise RuntimeError(
+        f"claude -p exited {result.returncode}\nstderr: {result.stderr}"
+    )
 
 
 def improve_description(

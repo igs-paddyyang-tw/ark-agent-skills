@@ -8,9 +8,10 @@ for a set of queries. Outputs results as JSON.
 import argparse
 import json
 import os
-import select
+import queue
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -62,6 +63,10 @@ def run_single_query(
     """
     unique_id = uuid.uuid4().hex[:8]
     clean_name = f"{skill_name}-skill-{unique_id}"
+    # 平行 worker 會在同一個 .claude/commands/ 各放一份描述相同、只差 uuid 的 command，
+    # 模型常選到「別的 worker」那份 → 用完整 clean_name 比對會誤判未觸發。
+    # 改以前綴比對：任何一份同 skill 的 eval command 被選中都算觸發。
+    match_key = f"{skill_name}-skill-"
     project_commands_dir = Path(project_root) / ".claude" / "commands"
     command_file = project_commands_dir / f"{clean_name}.md"
 
@@ -109,20 +114,31 @@ def run_single_query(
         pending_tool_name = None
         accumulated_json = ""
 
+        # 跨平台讀取：Windows 的 select() 不支援 pipe（WinError 10093），
+        # 改用背景執行緒讀 stdout、以 queue 傳遞；EOF 以 None 為哨兵。
+        chunk_q: "queue.Queue[bytes | None]" = queue.Queue()
+
+        def _pump() -> None:
+            try:
+                while True:
+                    data = os.read(process.stdout.fileno(), 8192)
+                    if not data:
+                        break
+                    chunk_q.put(data)
+            except OSError:
+                pass
+            finally:
+                chunk_q.put(None)
+
+        threading.Thread(target=_pump, daemon=True).start()
+
         try:
             while time.time() - start_time < timeout:
-                if process.poll() is not None:
-                    remaining = process.stdout.read()
-                    if remaining:
-                        buffer += remaining.decode("utf-8", errors="replace")
-                    break
-
-                ready, _, _ = select.select([process.stdout], [], [], 1.0)
-                if not ready:
+                try:
+                    chunk = chunk_q.get(timeout=1.0)
+                except queue.Empty:
                     continue
-
-                chunk = os.read(process.stdout.fileno(), 8192)
-                if not chunk:
+                if chunk is None:
                     break
                 buffer += chunk.decode("utf-8", errors="replace")
 
@@ -156,12 +172,12 @@ def run_single_query(
                             delta = se.get("delta", {})
                             if delta.get("type") == "input_json_delta":
                                 accumulated_json += delta.get("partial_json", "")
-                                if clean_name in accumulated_json:
+                                if match_key in accumulated_json:
                                     return True
 
                         elif se_type in ("content_block_stop", "message_stop"):
                             if pending_tool_name:
-                                return clean_name in accumulated_json
+                                return match_key in accumulated_json
                             if se_type == "message_stop":
                                 return False
 
@@ -173,9 +189,9 @@ def run_single_query(
                                 continue
                             tool_name = content_item.get("name", "")
                             tool_input = content_item.get("input", {})
-                            if tool_name == "Skill" and clean_name in tool_input.get("skill", ""):
+                            if tool_name == "Skill" and match_key in tool_input.get("skill", ""):
                                 triggered = True
-                            elif tool_name == "Read" and clean_name in tool_input.get("file_path", ""):
+                            elif tool_name == "Read" and match_key in tool_input.get("file_path", ""):
                                 triggered = True
                             return triggered
 

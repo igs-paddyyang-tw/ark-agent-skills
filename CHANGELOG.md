@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-05 (ark-skill-creator 2.0.2：description eval 腳本修 Windows 執行)
+
+> game-team 消費端於 Windows 跑 description 優化時發現。
+
+- **run_eval.py**：讀 `claude -p` 串流改用背景執行緒＋queue（Windows `select()` 不支援 pipe → WinError 10093，整批 eval 無法跑）
+- **run_eval.py**：觸發判定由完整 command 名改為 `<skill>-skill-` 前綴比對 —— 平行 worker 會放多份只差 uuid 的 eval command，模型選到別份時原本誤判「未觸發」
+- **improve_description.py**：`claude -p` 輸出以 UTF-8 解碼；偶發 exit 1（stderr 空，多為併發／限流）等 10 秒重試一次
+
 ## 2026-11-05 (列車 r29：新增 ark-pixel-animation 1.0.0 —— 復古像素動畫 executor)
 
 > 來源：Paddy 提供的技能草稿（單一 SKILL.md）；nana-team `docs/plans/2026-11-05-ark-pixel-animation-skill-plan.md` S1／S2。Pixel Office（像素辦公室）角色動畫的基底，v1.1 再加 sprite sheet 模式。
