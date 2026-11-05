@@ -35,6 +35,12 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import semver  # noqa: E402  同目錄（align_sync 同法）
+
+#: AL-034：程式裡的 `.kiro` 路徑（前面不能是字母數字，排除 cli.kiro.dev 這類網址）
+KIRO_PATH_RE = re.compile(r"(?<![\w.-])\.kiro(?=[\\/\"'])")
+#: 「已有 .ark 雙讀」也要是路徑形態 —— 只找子字串會被 `CFG.arkIdPrefix` 這種屬性名騙過（e2e.mjs 實例）
+ARK_PATH_RE = re.compile(r"(?<![\w.-])\.ark(?=[\\/\"'])")
+KIRO_CODE_SUFFIXES = {".py", ".sh", ".js", ".mjs", ".ts"}
 import gen_manifest  # noqa: E402  tree_hash／contract_hash 與 manifest 同一套算法（不另寫一份）
 
 # schema v1.2（2026-10-20）：分類三軸 —— 規格 docs/specs/2026-10-20-skill-taxonomy-three-axis-spec.md
@@ -237,6 +243,8 @@ def audit(repo: Path, triggers: dict):
         "major-no-breaking": "AL-103", "depends-on-no-range": "AL-104",
         "upstream-dep-unsatisfiable": "AL-105", "updated-before-contract": "AL-106",
         "tested-against-missing": "AL-107",
+        # .ark 工具中立佈局（ark-agent-os ≥ 2.2；3.0 前雙讀）
+        "kiro-path-in-script": "AL-034", "doc-kiro-layout-only": "AL-035",
     }
 
     def add(sev, rule, skill, msg):
@@ -447,6 +455,32 @@ def audit(repo: Path, triggers: dict):
             if last and updated < last:
                 add("P3", "updated-before-contract", name,
                     f"metadata.updated={updated} 早於契約檔最後 commit {last}（回貢延遲可忽略；若是上游直接改的就更新 updated）")
+
+    # AL-034／035：.ark 工具中立佈局（kiro-cli docs/plans/ark-workspace-layout-skills-plan.md S2 T2.3）
+    #   腳本寫死 `.kiro` 路徑、整支沒有 `.ark` → 部署遷移到 .ark 後找不到檔（P2；S3／S4 完成後升 P1）
+    #   文件只講 `.kiro/steering`、整個 skill 沒提 `.ark` → 教人放舊位置（P3，列車分批改）
+    for name, info in active.items():
+        sk_dir = Path(info["path"]).parent
+        bad = []
+        for f in sorted(sk_dir.rglob("*")):
+            rel = f.relative_to(sk_dir)
+            if not f.is_file() or f.suffix not in KIRO_CODE_SUFFIXES and f.name != "pre-commit":
+                continue
+            if {"tests", "__pycache__", "node_modules", "release"} & set(rel.parts) or f.name.startswith("test_"):
+                continue                                    # 測試刻意建 legacy 佈局，不算
+            text = f.read_text(encoding="utf-8", errors="ignore")
+            if KIRO_PATH_RE.search(text) and not ARK_PATH_RE.search(text):
+                bad.append(rel.as_posix())
+        if bad:
+            add("P2", "kiro-path-in-script", name,
+                f"{len(bad)} 支腳本寫死 .kiro 路徑、沒有 .ark 雙讀：{', '.join(bad[:5])}{' …' if len(bad) > 5 else ''}"
+                " → 有 .ark/ark.yaml 時改用 .ark/（skills→.ark/skills、steering→.ark/brain），否則退 .kiro/")
+        docs = [sk_dir / "SKILL.md", *sorted((sk_dir / "references").rglob("*.md"))] \
+            if (sk_dir / "references").is_dir() else [sk_dir / "SKILL.md"]
+        doc_text = "\n".join(d.read_text(encoding="utf-8", errors="ignore") for d in docs if d.is_file())
+        if ".kiro/steering" in doc_text and not ARK_PATH_RE.search(doc_text):
+            add("P3", "doc-kiro-layout-only", name,
+                f"文件提到 .kiro/steering {doc_text.count('.kiro/steering')} 處、沒提 .ark/brain → 列車分批補上 .ark 佈局說明")
 
     # AL-030 依賴環：同步／安裝順序無解，也代表兩邊職責沒切乾淨（2026-10-20 game-prob ⇄ game-quicktest）
     for cyc in find_dep_cycles(graph):

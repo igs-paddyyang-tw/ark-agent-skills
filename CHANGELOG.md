@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-05 (列車 r26：ark-skills-align 2.14.0 —— .ark 版本鎖、稽核規則、上游 clone 特例)
+
+> 來源：kiro-cli `docs/plans/ark-workspace-layout-skills-plan.md` S2 T2.2／T2.3／T2.5（接 r25 的雙讀）。
+
+- **T2.2 版本鎖**：`mirror_sync apply` 在 `.ark` 佈局寫 `.ark/skills.lock` 的 `mirror` 區塊（上游 repo、commit、各 skill version＋tree_hash）；與 align_sync 的 `agents` 共用一檔、互不覆蓋。新 verb `mirror_sync check`：手改、缺複本、沒鎖 → exit 1；legacy 佈局明說跳過
+- **T2.3 稽核規則**：AL-034 `kiro-path-in-script`（P2；腳本寫死 `.kiro`、沒有 `.ark` 雙讀；測試檔與 `cli.kiro.dev` 網址不算）、AL-035 `doc-kiro-layout-only`（P3；文件只講 `.kiro/steering`）。首跑命中 14 個 skill／27 支腳本、6 個 skill 文件，與 S1 盤點一致；S3／S4 完成後 AL-034 升 P1
+- **T2.5 上游 clone 特例**：kiro-cli 的 `.kiro/skills` 是上游 clone 本身 → 遷移步驟寫進 `references/mirror-sync.md`（clone 搬 `.ark/skills`，`.kiro/skills`、`.claude/skills` 留 symlink，8 個消費端 wrapper 不用改）
+- 測試：mirror_sync 鎖 4 條、稽核 5 條；反證：拿掉寫鎖／check 永遠 0／覆蓋整檔各紅；稽核退回子字串比對（被 `CFG.arkIdPrefix` 騙過）或關掉規則各紅
+
+---
+
 ## 2026-11-05 (列車 r25：ark-skills-align 2.13.0 —— .ark 工具中立佈局雙讀)
 
 > 來源：kiro-cli `docs/plans/ark-workspace-layout-skills-plan.md` S2（Paddy 11-05 拍板 R-1～R-8）。ark-agent-os 2.2 起部署可遷移到 `.ark/`，技能端先改好、3.0 前雙讀。

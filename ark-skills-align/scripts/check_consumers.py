@@ -7,6 +7,7 @@
 保留根檔案的理由:
 - 消費端 8 個 wrapper（各專案 doctor.sh / check_skills_residue.sh）寫死
   `$HOME/kiro-cli/.kiro/skills/scripts/check_consumers.py`，在別的 repo 不能一起改
+  （kiro-cli 遷移到 `.ark/skills/` 後，`.kiro/skills` 保留為 symlink，這條路徑照樣有效 —— references/mirror-sync.md「上游 clone 特例」）
 - 本 wrapper 讓 SKILL.md 的 `ark-skills-align/scripts/check_consumers.py` 指向成立
 
 用法與根檔案完全一致（argv 原封轉發）。

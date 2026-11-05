@@ -231,3 +231,51 @@ def test_accept_upstream_overrides_reviewed_local(env):
     assert r.status == "STALE" and "scripts/run.py" in r.stale and r.keep == ["SKILL.md"]
     assert (local / "scripts" / "run.py").read_text(encoding="utf-8") == "print('v1.1')\n"
     assert (local / "SKILL.md").read_text(encoding="utf-8") == "old skill md\n"
+
+
+# ── .ark 佈局版本鎖（S2 T2.2）────────────────────────────────────
+
+def _place_ark(team: Path, src: Path) -> Path:
+    (team / ".ark").mkdir(parents=True, exist_ok=True)
+    (team / ".ark" / "ark.yaml").write_text("schema: ark-workspace/1\n", encoding="utf-8")
+    dst = team / ".ark" / "skills" / "ark-demo"
+    shutil.copytree(src, dst)
+    return dst
+
+
+def test_ark_apply_writes_lock_and_keeps_align_keys(env):
+    import json
+    up, v1, team = env
+    _place_ark(team, v1)
+    lk = team / ".ark" / "skills.lock"
+    lk.write_text(json.dumps({"agents": {"a": {}}}), encoding="utf-8")       # align_sync 的部分
+    M.run(up, team, [], None, do_apply=True)
+    data = json.loads(lk.read_text(encoding="utf-8"))
+    assert data["agents"] == {"a": {}}, "不可覆蓋 align_sync 的 agents"
+    meta = data["mirror"]["skills"]["ark-demo"]
+    assert meta["version"] == "1.1.0" and meta["tree_hash"].startswith("sha256:")
+    assert len(data["mirror"]["upstream"]["commit"]) == 40
+    assert M.main(["check", "--target", str(team)]) == 0
+
+
+def test_ark_check_catches_hand_edit(env):
+    up, v1, team = env
+    local = _place_ark(team, v1)
+    M.run(up, team, [], None, do_apply=True)
+    (local / "scripts" / "run.py").write_text("print('手改')\n", encoding="utf-8")
+    assert M.main(["check", "--target", str(team)]) == 1
+
+
+def test_ark_check_without_lock_fails(env):
+    _, v1, team = env
+    _place_ark(team, v1)
+    assert M.main(["check", "--target", str(team)]) == 1
+
+
+def test_legacy_apply_writes_no_lock_and_check_skips(env, capsys):
+    up, v1, team = env
+    _place(team, ".", v1)
+    M.run(up, team, [], None, do_apply=True)
+    assert not (team / ".kiro" / "skills.lock.json").exists() and not (team / ".ark").exists()
+    assert M.main(["check", "--target", str(team)]) == 0
+    assert "legacy" in capsys.readouterr().out

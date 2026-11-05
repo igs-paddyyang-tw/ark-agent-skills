@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ark_layout import skills_dir  # noqa: E402
+from ark_layout import ARK, find_ark_dirs, lock_path, skills_dir  # noqa: E402
 
 IGNORE_DIRS = {"__pycache__"}
 IGNORE_SUFFIXES = {".pyc"}
@@ -235,6 +235,74 @@ def apply_one(local: Path, up: Path, r: SkillReport) -> None:
     staging.rename(local)
 
 
+LOCK_KEY = "mirror"   # `.ark/skills.lock` 與 align_sync 共用一份 JSON：align_sync 管 agents，本工具管 mirror
+
+
+def _tree_hash(skill_dir: Path) -> str:
+    """與 align_sync._tree_hash 同規則（執行期產物、頂層 release/ 不算內容）。"""
+    h = hashlib.sha256()
+    files = sorted((p for p in skill_dir.rglob("*")
+                    if p.is_file() and not ({"__pycache__", ".pytest_cache", "node_modules"}
+                                            & set(p.relative_to(skill_dir).parts))
+                    and p.suffix != ".pyc" and p.relative_to(skill_dir).parts[0] != "release"),
+                   key=lambda x: str(x.relative_to(skill_dir)))
+    for p in files:
+        h.update(str(p.relative_to(skill_dir)).encode("utf-8") + b"\0")
+        h.update(p.read_bytes() + b"\0")
+    return "sha256:" + h.hexdigest()
+
+
+def _load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def write_lock(d: Path, upstream: Path, up_root: Path) -> Path | None:
+    """`.ark` 佈局的複本對齊後寫版本鎖（legacy 佈局不寫，行為不變）。
+
+    只記上游也有的 skill（本地獨有的 domain／local_only 不鎖）；保留檔內其他 key（align_sync 的 agents）。
+    """
+    ws = d.parent.parent
+    if find_ark_dirs(ws)[0] != ARK:
+        return None
+    commit = _git(["-C", str(upstream), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    origin = _git(["-C", str(upstream), "remote", "get-url", "origin"], capture_output=True, text=True)
+    skills = {}
+    for local in sorted(p for p in d.iterdir() if p.is_dir() and not p.is_symlink()):
+        if (local / "SKILL.md").exists() and (up_root / local.name / "SKILL.md").exists():
+            skills[local.name] = {"version": _fmt(_version(local / "SKILL.md")), "tree_hash": _tree_hash(local)}
+    lk = lock_path(ws)
+    data = _load_json(lk)
+    data[LOCK_KEY] = {"upstream": {"repo": (origin.stdout.strip() if origin.returncode == 0 else str(upstream)),
+                                   "commit": commit},
+                      "skills": skills}
+    lk.parent.mkdir(parents=True, exist_ok=True)
+    lk.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return lk
+
+
+def check_locks(target: Path) -> list[str]:
+    """比對 `.ark` 佈局複本與版本鎖；回傳問題清單（空＝一致）。legacy 佈局明說跳過。"""
+    problems: list[str] = []
+    for d in skill_dirs(target):
+        ws = d.parent.parent
+        rel = ws.relative_to(target).as_posix()
+        if find_ark_dirs(ws)[0] != ARK:
+            print(f"  ⏭ {rel}：legacy .kiro 佈局，無版本鎖（跳過）")
+            continue
+        locked = (_load_json(lock_path(ws)).get(LOCK_KEY) or {}).get("skills")
+        if locked is None:
+            problems.append(f"{rel}：沒有版本鎖 → 先跑 mirror_sync apply")
+            continue
+        for name, meta in sorted(locked.items()):
+            sk = d / name
+            if not sk.is_dir():
+                problems.append(f"{rel}/{name}：鎖裡有、複本不見了 → mirror_sync apply 重建")
+            elif _tree_hash(sk) != meta.get("tree_hash"):
+                problems.append(f"{rel}/{name}：內容與鎖不符（被手改？）→ 改動提案回上游，或 mirror_sync apply 還原")
+        print(f"  🔒 {rel}：檢查 {len(locked)} 個 skill")
+    return problems
+
+
 def run(upstream: Path, target: Path, keep: list[str], only: list[str] | None,
         do_apply: bool, accept: list[str] | None = None) -> list[SkillReport]:
     """掃描 target 全部複本；do_apply 時對齊 STALE。`accept`：審過可用上游覆蓋的 skill 名。"""
@@ -260,6 +328,8 @@ def run(upstream: Path, target: Path, keep: list[str], only: list[str] | None,
                 if do_apply and r.status == "STALE":
                     apply_one(local, up, r)
                 reports.append(r)
+            if do_apply:
+                write_lock(d, upstream, up_root)
     return reports
 
 
@@ -283,8 +353,9 @@ def _print_human(reports: list[SkillReport], applied: bool) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="消費端技能複本（.ark/skills 或 .kiro/skills）整份對齊上游")
-    ap.add_argument("verb", choices=["plan", "apply"])
-    ap.add_argument("--upstream", required=True, type=Path, help="ark-agent-skills 本機 clone")
+    ap.add_argument("verb", choices=["plan", "apply", "check"],
+                    help="check：比對 .ark 佈局複本與 .ark/skills.lock（不需 --upstream；不一致 exit 1）")
+    ap.add_argument("--upstream", type=Path, help="ark-agent-skills 本機 clone（plan／apply 必填）")
     ap.add_argument("--target", required=True, type=Path, help="team repo 根")
     ap.add_argument("--keep", action="append", default=[], help="保留本地版本的 skill 內相對路徑（可重複）")
     ap.add_argument("--only", action="append", help="只處理指定 skill（可重複）")
@@ -294,6 +365,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", action="store_true", help="輸出 JSON")
     a = ap.parse_args(argv)
 
+    if a.verb == "check":
+        problems = check_locks(a.target.resolve())
+        for msg in problems:
+            print(f"❌ {msg}")
+        print("✅ 版本鎖一致" if not problems else f"\n{len(problems)} 項不一致")
+        return 1 if problems else 0
+    if a.upstream is None:
+        print("❌ plan／apply 需帶 --upstream", file=sys.stderr)
+        return 2
     if a.verb == "apply" and not a.yes:
         print("❌ apply 需帶 --yes（先跑 plan 確認）", file=sys.stderr)
         return 2
