@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r30",
-  "commit": "d4d8662",
-  "generated_at": "2026-11-05T17:47:35+08:00",
+  "release": "skills-2026.11-r32",
+  "commit": "42779c3",
+  "generated_at": "2026-11-06T11:45:04+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -249,9 +249,9 @@
       "updated": "2026-10-29"
     },
     "ark-game-proto": {
-      "version": "1.9.0",
-      "tree_hash": "sha256:14fa5883cfb29f91da049161b3e853de937ea4eb4eec90a41f9f7321ea7e0496",
-      "contract_hash": "sha256:88b44152a6ea123d82efd082128f386ec0a252939863a2ad704591c1df313f8f",
+      "version": "1.10.0",
+      "tree_hash": "sha256:20146133919444fcf6e6442e9040bd97842b77e7fb0192844ef56cb65da240c6",
+      "contract_hash": "sha256:7e380fa71a4840fed2ec7639f4cecb55ff5619ebfd104bf075bc88d929188e1c",
       "status": "active",
       "category": "view",
       "depends_on": [
@@ -273,12 +273,12 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-11-05"
+      "updated": "2026-11-06"
     },
     "ark-game-quicktest": {
-      "version": "2.3.0",
-      "tree_hash": "sha256:510391e6008c5f612606663b36f57e7172b33db32bfd049da6953d7af6f56c4e",
-      "contract_hash": "sha256:7807787b026581cf6a4c658f7c6315f4895096fdeb846ec94486538af669d796",
+      "version": "2.3.1",
+      "tree_hash": "sha256:d1d5df8a2cad2dcacc548e996b94d4c08e9ced47b182f7d34b34586a2337450e",
+      "contract_hash": "sha256:803d618a85366322ed4a0fbcf662f43043f65f1e45357798b7f415efe95ac9c1",
       "status": "active",
       "category": "process",
       "depends_on": [
