@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-06 (列車 r33：ark-skills-align 2.15.0 —— Windows 雜湊與 Linux 一致)
+
+> 來源：r31 推送時 Windows 上 audit 誤報 39 個 P1 `contract-changed-no-bump`，追到根因。
+
+- `gen_manifest`（tree_hash／contract_hash）、`align_sync`、`mirror_sync`：雜湊與排序用的相對路徑改 `as_posix()`；原本用 `str(Path)`，Windows 是 `\`，與 Linux 產的 manifest 永遠對不上，contract glob（`scripts/**`）也比不到
+- `audit_skills` 可達性檢查（SKILL.md 有沒有提到某檔）同樣改 `as_posix()`
+- Linux 上結果**完全不變**（既有 manifest 仍有效）；實測 Windows 重算 45 個未改動 skill 全部與 r30 manifest 一致，Windows audit P0／P1 = 0
+- 消費端影響：Windows 部署的 `mirror_sync` 以前會把所有 skill 判成「與 manifest 不同」，升到 2.15.0 後才正確
+- 注意：工作區檔案若被存成 CRLF（git 視為相同），雜湊仍會不同 —— 雜湊讀實際位元組
+- 測試 39 passed；`test_mirror_sync_picks_one_dir_per_workspace` 在 Windows 需 symlink 權限（WinError 1314，與本次無關）
+
 ## 2026-11-06 (列車 r32：ark-game-quicktest 2.3.1 —— cpp_trace MSVC 相容＋還原局 SOP W2 第 15～21 輪規律)
 
 > 來源：aidev-team slot W2 批次（10-22～11-03）在 `projects/aidev-team-agent` 消費端的本地修改回貢（mirror_sync 判定 LOCAL）。

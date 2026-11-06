@@ -71,8 +71,9 @@ def _iter_files(skill_dir: Path):
 
 def _hash_files(skill_dir: Path, files) -> str:
     h = hashlib.sha256()
-    for p in sorted(files, key=lambda x: str(x.relative_to(skill_dir))):
-        h.update(str(p.relative_to(skill_dir)).encode("utf-8"))
+    # 路徑一律用 posix（/）：Windows 的 str(Path) 是「\」，雜湊與 glob 比對會和 Linux 不同（2.x 修，Linux 結果不變）
+    for p in sorted(files, key=lambda x: x.relative_to(skill_dir).as_posix()):
+        h.update(p.relative_to(skill_dir).as_posix().encode("utf-8"))
         h.update(b"\0")
         h.update(p.read_bytes())
         h.update(b"\0")
@@ -86,7 +87,7 @@ def tree_hash(skill_dir: Path) -> str:
 def contract_hash(skill_dir: Path, globs: list[str]) -> str:
     matched = []
     for p in _iter_files(skill_dir):
-        rel = str(p.relative_to(skill_dir))
+        rel = p.relative_to(skill_dir).as_posix()
         if any(fnmatch.fnmatch(rel, g) or fnmatch.fnmatch(rel, g.replace("**", "*"))
                or (g.endswith("/**") and rel.startswith(g[:-3] + "/")) for g in globs):
             matched.append(p)

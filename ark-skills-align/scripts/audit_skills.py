@@ -636,7 +636,7 @@ def audit(repo: Path, triggers: dict):
             changed = False
             for f in list(pending):
                 rel = f.relative_to(skill_dir)
-                hit = (f.name in reachable_text or str(rel) in reachable_text
+                hit = (f.name in reachable_text or rel.as_posix() in reachable_text
                        or any(part in reachable_text for part in rel.parts[1:-1]))
                 if hit:
                     pending.remove(f)

@@ -245,9 +245,9 @@ def _tree_hash(skill_dir: Path) -> str:
                     if p.is_file() and not ({"__pycache__", ".pytest_cache", "node_modules"}
                                             & set(p.relative_to(skill_dir).parts))
                     and p.suffix != ".pyc" and p.relative_to(skill_dir).parts[0] != "release"),
-                   key=lambda x: str(x.relative_to(skill_dir)))
+                   key=lambda x: x.relative_to(skill_dir).as_posix())     # posix：與 Linux 產的 manifest 一致
     for p in files:
-        h.update(str(p.relative_to(skill_dir)).encode("utf-8") + b"\0")
+        h.update(p.relative_to(skill_dir).as_posix().encode("utf-8") + b"\0")
         h.update(p.read_bytes() + b"\0")
     return "sha256:" + h.hexdigest()
 
