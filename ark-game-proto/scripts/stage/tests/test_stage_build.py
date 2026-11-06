@@ -93,6 +93,32 @@ def test_odds_injected_before_game(tmp_path):
     assert rc != 0
 
 
+def test_replay_symbol_images(tmp_path):
+    """1.10.0：--symbol-images（或 stage.yaml symbol_images）→ globalThis.REPLAY_ASSETS → replay game.js 掛 sym_S<碼>；
+    素材清單算得到、單檔內嵌；盤面沒出現的碼不收；不給時與 1.9.0 相同（無注入、無素材）。"""
+    png = bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0000000020001e221bc330000000049454e44ae426082")
+    art = tmp_path / "art"
+    art.mkdir()
+    for n in ("w.png", "m1.png", "x.png"):
+        (art / n).write_bytes(png)
+    trace = tmp_path / "trace.json"
+    grid = [[1, 11, 21], [11, 21, 22], [21, 22, 11], [22, 11, 21], [11, 21, 2]]
+    trace.write_text(json.dumps({"schema": "proto-stage-trace-lite/1", "info": {"name": "t", "defaultBet": 50, "balance": 100000},
+                                 "meta": {}, "rounds": [[0, 0, 0, grid], [100, 100, 0, grid]]}), encoding="utf-8")
+    m = tmp_path / "stage.yaml"
+    m.write_text("symbol_images:\n  1: w.png\n  11: m1.png\n  99: x.png\n", encoding="utf-8")   # 99 不在盤面 → 不收
+    replay = STAGE / "replay" / "game.js"
+    rc, d = run("--game", replay, "--out", tmp_path / "s", "--single", "--odds", trace, "--assets-base", art, "--symbol-images", m)
+    assert rc == 0 and d["success"], d
+    html = (tmp_path / "s" / "index.html").read_text(encoding="utf-8")
+    assert html.index("globalThis.REPLAY_ASSETS") < html.index("/* game.js */")
+    assert d["data"]["assets"] == 2 and d["data"]["missing"] == [] and d["data"]["inlined"] == 2 and d["data"]["symbol_images"] == 3
+    rc, d = run("--game", replay, "--out", tmp_path / "n", "--single", "--odds", trace)
+    assert rc == 0 and d["data"]["assets"] == 0 and "globalThis.REPLAY_ASSETS =" not in (tmp_path / "n" / "index.html").read_text(encoding="utf-8")
+    rc, d = run("--game", replay, "--out", tmp_path / "b", "--single", "--odds", trace, "--symbol-images", tmp_path / "none.yaml")
+    assert rc == 2
+
+
 def test_odds_required_game_loads_with_odds(tmp_path):
     """1.4.1：素材清單掃描（node 載入 game.js）也先注入 odds → 「沒有 odds 就丟錯」的遊戲包（例 magic-lamp）建得起來；沒給 odds 仍明確失敗。"""
     g = tmp_path / "game.js"

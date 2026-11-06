@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-06 (列車 r31：ark-game-proto 1.10.0 —— 引擎回放試玩可貼符號圖)
+
+> 來源：歡樂聖誕（ho-ho-ho）⑦ 試玩補素材（nana `docs/designs/2026-11-05-hohoho-asset-backfill-design.md` §5）。
+
+- `stage.yaml` 新增 `symbol_images`（回放顯示碼 → 相對 `assets_base` 的圖）；`stage_build --symbol-images` 同義（可直接吃含該鍵的 stage.yaml）
+- `stage_build` 與 odds 同段注入 `globalThis.REPLAY_ASSETS`，素材清單掃描也注入 → 單檔內嵌、資料夾版複製都算得到
+- `replay/game.js` 依 REPLAY_ASSETS 掛 `sym_S<顯示碼>`（runtime 既有貼圖鍵），盤面沒出現的碼不收；沒給時輸出與 1.9.0 相同
+- 修：只有圖、沒有 odds 時單檔註解引用 `odds.name` 會崩；`stage_build` VERSION 由 1.8.0 補到 1.10.0
+- 測試：`test_replay_symbol_images`（11 passed、2 skipped〔需真瀏覽器〕）
+
 ## 2026-11-05 (列車 r30：ark-pixel-animation 1.1.0 —— sprite sheet 模式＋verify_pixel 驗網頁)
 
 > 來源：nana-team Pixel Office 先行版（已上線）的結案回饋與技能計畫 S3～S5（`nana-team-agent/docs/plans/2026-11-05-ark-pixel-animation-skill-plan.md`）。

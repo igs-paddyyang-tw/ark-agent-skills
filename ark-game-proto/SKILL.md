@@ -13,8 +13,8 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "1.9.0"
-  updated: 2026-11-05
+  version: "1.10.0"
+  updated: 2026-11-06
   outputs:
     - { format: data, audience: ai }
     - { format: html, audience: human }
@@ -102,6 +102,8 @@ metadata:
 │   └─ 開 index.html：?seed= 重現、?rng=go 用 Go Float64 流；除錯「強制」分頁 = 搜尋真 seed；「服務」分頁錄製 / 重播軌跡
 ├─ 驗：node scripts/stage/tests/stage_test.js --game <新> --orig <原>（結果一致 / 契約 / 分層 / Http）；smoke.js 截圖 0 error
 ├─ 接 Server（HTTP）：node scripts/stage/tests/mock_server.js --game <game.js> → ?service=http&base=…&game=…&dev=1；契約 references/stage-api.md
+├─ 引擎回放試玩（⑦-lite）要貼真圖（1.10.0）：stage.yaml `symbol_images: {1: WW.png, 11: M1.png, …}`（顯示碼 → 相對 assets_base 的圖）
+│   → stage_build --slug，或 --game replay/game.js --odds trace.json --assets-base <圖夾> --symbol-images <stage.yaml>；缺圖照舊色塊
 └─ 接 Server（ark-go WS，1.5.0）：stage.yaml service: {kind: ws}（或 ?service=ws&url=ws://…/ws&ark_id=…&dev=1）；mock：node scripts/stage/tests/mock_ws.js；
    網路、斷線續玩、協定協商、分包發布的規則在 ark-web-game（references/wire-protocol.md、delivery.md）
 
@@ -143,6 +145,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 1.10.0 | 2026-11-06 | 引擎回放試玩（⑦-lite）可貼符號圖：stage.yaml `symbol_images`（或 `--symbol-images`）→ `stage_build` 與 odds 同段注入 `globalThis.REPLAY_ASSETS`（素材清單掃描也看得到）→ `replay/game.js` 掛 `sym_S<顯示碼>`，盤面沒出現的碼不收、缺圖照舊色塊；只有圖沒有 odds 時單檔註解不再崩；`stage_build` VERSION 補齊（原停在 1.8.0）；測試 `test_replay_symbol_images`。試點歡樂聖誕（ho-ho-ho）13 張 |
 | 1.9.0 | 2026-11-05 | .ark 工具中立佈局雙讀（ark-agent-os ≥ 2.2）：`proto_common` 找 ark-game-prob 先 `.ark/skills` 再 `.kiro/skills`；`stage_build` 認 `.ark` 或 `.kiro` 的 aidev 根；`engine_trace_batch` 產生的 stage.yaml／README 指令依本 skill 實際所在技能目錄 |
 | 1.8.0 | 2026-10-27 | 素材版控分層（Paddy 拍板，雛形要能從 git 一次重產）：`stage_build --slug` 找不到 `assets_base`（內部參考 L3，例：D 槽競品裁圖）→ 佔位模式照常建置（runtime 本來就以佔位圖演出），清冊 `stage-build.json` 加 `assets_mode`（ref／partial／placeholder），`assets_base` 只寫 repo 相對路徑或 `external:<最後兩層>`／`placeholder`，不再寫各機器絕對路徑（避免換機器就改到進 git 的清冊）；`--require-assets` 缺圖就擋；佔位模式且 stage.yaml 有 `bundles:` 時不產 manifest／release.json（原本必要 bundle 為空會讓 wg_release 擋下整個建置——豬來 ⑦ 在沒有 D 槽的機器建不起來的真正原因），清冊記 `release_note`；測試 `test_slug_placeholder_mode_and_require_assets` |
 | 1.7.0 | 2026-10-23 | review_build 還原局與正式 Client（十階段 S-4 試行，神燈寶藏）：`--no-play`（R-3：不收 ⑦ 單檔、不連 ⑥ 驗證台、不收 ⑥⑦ 驗收截圖，兩者內嵌線上機率等級參數）、`--exclude-link <glob>`（例 prob/prob-spec*、docs/reports/*live*）、`--client-checks <e2e 資料夾>`（⑧-C 正式 Client e2e 報告合併為 checks/client-e2e.json＋截圖 WebP）、`--play-url`（測試環境試玩網址） |

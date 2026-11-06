@@ -1,5 +1,5 @@
 // ============================================================
-//  引擎回放試玩（⑦-lite）通用遊戲包 — ark-game-proto 1.5.0
+//  引擎回放試玩（⑦-lite）通用遊戲包 — ark-game-proto 1.10.0（symbol_images 貼圖）
 //  軌跡（proto-stage-trace/1）由 scripts/engine_trace.py 從該款 Go 快測引擎原樣跑出，stage.yaml `odds:` 注入 globalThis.HUFF_ODDS。
 //  數學 = 快測引擎（不是規格書）；演出泛用：主遊戲盤面＋贏分，特色遊戲只顯示摘要（沒有玩法演出）。
 //  符號名依 FastTest 範本代碼：1 WILD、2 SCATTER、3 BONUS、11～19 M1～M9、21～ A K Q J 10 9 8 7（其餘 S<代碼>）。
@@ -40,6 +40,11 @@
     const n = Number(id.slice(1));
     SYM[id] = { name: label(n), color: n === 1 ? '#2fbf71' : n === 2 ? '#8e5cff' : n === 3 ? '#ff4fd8' : n >= 21 ? '#00897b' : PAL[i % PAL.length], ...(n === 1 ? { wild: true } : {}), ...(n === 2 ? { scatter: true } : {}) };
   });
+  // 1.10.0：stage.yaml `symbol_images`（顯示碼 → 素材路徑）由 stage_build 注入 globalThis.REPLAY_ASSETS；
+  // runtime 以 sym_S<碼> 找貼圖（runtime/slot/reels.js），沒給或缺圖 → 照舊色塊佔位。
+  const IMG = root.REPLAY_ASSETS || {};
+  const images = {};
+  Object.keys(IMG).forEach((n) => { if (SYM[`S${n}`] && IMG[n]) images[`sym_S${n}`] = IMG[n]; });
   const bet = TR.info.defaultBet;
   const W = 1080, cellW = Math.floor(1000 / reels) - 6, gap = Math.floor((1000 - cellW * reels) / Math.max(1, reels - 1));
   const H = Math.min(600, rows * (cellW + 6));
@@ -48,7 +53,7 @@
     name: `${TR.info.name || 'Slot'}｜引擎回放試玩`,
     seed: null,
     stage: { width: W, height: 1920, background: '#14102a' },
-    assets: { images: {}, videos: {}, sounds: {} },
+    assets: { images, videos: {}, sounds: {} },
     service: { kind: 'replay', trace: TR, loop: true },
     spec: {
       reels, rows, pays: 'ways', symbols: SYM, symbolOrder: ids,
