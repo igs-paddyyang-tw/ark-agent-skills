@@ -23,8 +23,10 @@ import argparse
 import hashlib
 import io
 import json
+import os
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -221,18 +223,67 @@ def classify(local: Path, up: Path, history: set[str], keep: list[str], base: st
     return r
 
 
+def _force_writable(func, path, _exc) -> None:
+    """rmtree 的錯誤處理：Windows 唯讀檔（WinError 5）先清唯讀屬性再重試；其他錯誤照拋。"""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+
+def _rmtree(path: Path) -> None:
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_force_writable)
+    else:  # pragma: no cover
+        shutil.rmtree(path, onerror=_force_writable)
+
+
+def _sync_in_place(staging: Path, local: Path) -> None:
+    """2.15.1：整份替換失敗（Windows 目錄被別的程序當工作目錄鎖住）時的退路 ——
+    逐檔覆蓋、刪掉 staging 沒有的檔；鎖住的空目錄留著（不影響內容與雜湊）。"""
+    want = {p.relative_to(staging) for p in staging.rglob("*") if p.is_file()}
+    for rel in sorted(want):
+        dst = local / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if dst.exists():
+            os.chmod(dst, stat.S_IWRITE)
+        shutil.copy2(staging / rel, dst)
+    for p in sorted((p for p in local.rglob("*") if p.is_file()), reverse=True):
+        if p.relative_to(local) not in want:
+            os.chmod(p, stat.S_IWRITE)
+            p.unlink()
+    for d in sorted((d for d in local.rglob("*") if d.is_dir()), key=lambda d: len(d.parts), reverse=True):
+        try:
+            d.rmdir()          # 只刪空目錄；有內容或被鎖住就跳過
+        except OSError:
+            pass
+
+
 def apply_one(local: Path, up: Path, r: SkillReport) -> None:
-    """以上游內容重建複本，保留 keep 與 local-data 檔。"""
+    """以上游內容重建複本，保留 keep 與 local-data 檔。
+
+    2.15.1（Windows）：唯讀檔先清屬性再刪；整份替換失敗（目錄被鎖）就退回就地同步 ——
+    不再「先刪本地、刪到一半失敗」留下半刪的 skill。"""
     staging = local.with_name(local.name + ".mirror-sync-tmp")
     if staging.exists():
-        shutil.rmtree(staging)
+        _rmtree(staging)
     shutil.copytree(up, staging)
     for rel in r.keep + r.local_data + r.ignored_local:
         dst = staging / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(local / rel, dst)
-    shutil.rmtree(local)
+    trash = local.with_name(local.name + ".mirror-sync-old")
+    try:
+        if trash.exists():
+            _rmtree(trash)
+        local.rename(trash)            # 先整個移開（原子）；被鎖住時這一步就失敗，本地完好
+    except OSError:
+        _sync_in_place(staging, local)
+        _rmtree(staging)
+        return
     staging.rename(local)
+    try:
+        _rmtree(trash)
+    except OSError:
+        pass                            # 舊目錄刪不掉不影響結果；下次 apply 會再清
 
 
 LOCK_KEY = "mirror"   # `.ark/skills.lock` 與 align_sync 共用一份 JSON：align_sync 管 agents，本工具管 mirror

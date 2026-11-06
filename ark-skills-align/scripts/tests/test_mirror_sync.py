@@ -279,3 +279,37 @@ def test_legacy_apply_writes_no_lock_and_check_skips(env, capsys):
     assert not (team / ".kiro" / "skills.lock.json").exists() and not (team / ".ark").exists()
     assert M.main(["check", "--target", str(team)]) == 0
     assert "legacy" in capsys.readouterr().out
+
+
+def test_apply_one_handles_readonly_and_in_place_fallback(tmp_path, monkeypatch):
+    """2.15.1（Windows）：本地有唯讀檔照樣能整份替換；整份替換失敗（目錄被鎖）時退回就地同步，不留半刪的 skill。"""
+    import stat as _stat
+    up = tmp_path / "up" / "ark-x"
+    (up / "scripts").mkdir(parents=True)
+    (up / "SKILL.md").write_text("new", encoding="utf-8")
+    (up / "scripts" / "a.py").write_text("new a", encoding="utf-8")
+
+    def make_local(name):
+        loc = tmp_path / name / "ark-x"
+        (loc / "scripts").mkdir(parents=True)
+        (loc / "SKILL.md").write_text("old", encoding="utf-8")
+        ro = loc / "scripts" / "old_only.json"
+        ro.write_text("{}", encoding="utf-8")
+        os.chmod(ro, _stat.S_IREAD)                      # 唯讀（Windows rmtree 會 WinError 5）
+        return loc
+
+    loc = make_local("t1")
+    M.apply_one(loc, up, M.SkillReport(base=".", name="ark-x"))
+    assert (loc / "SKILL.md").read_text(encoding="utf-8") == "new" and (loc / "scripts" / "a.py").exists()
+    assert not (loc / "scripts" / "old_only.json").exists() and not list(loc.parent.glob("*.mirror-sync-*"))
+
+    loc2 = make_local("t2")
+    real_rename = Path.rename
+    def locked_rename(self, target):                   # 模擬：本地目錄被別的程序鎖住，無法整個移開
+        if self == loc2:
+            raise PermissionError("locked")
+        return real_rename(self, target)
+    monkeypatch.setattr(Path, "rename", locked_rename)
+    M.apply_one(loc2, up, M.SkillReport(base=".", name="ark-x"))
+    assert (loc2 / "SKILL.md").read_text(encoding="utf-8") == "new" and (loc2 / "scripts" / "a.py").exists()
+    assert not (loc2 / "scripts" / "old_only.json").exists() and not list(loc2.parent.glob("*.mirror-sync-*"))

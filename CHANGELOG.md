@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-06 (列車 r36：ark-skills-align 2.15.1 —— mirror_sync 在 Windows 不再留下半刪的 skill)
+
+> 來源：aidev mirror_sync 實際套用時連續撞到兩種 Windows 狀況，`apply_one` 先刪本地再改名，中途失敗會留下只刪一半的 skill。
+
+- 刪除改用 `_rmtree`：唯讀檔（WinError 5）先清唯讀屬性再刪
+- 替換順序改為「本地整個移開（rename，原子）→ staging 改名進位 → 再刪舊目錄」；移開失敗（目錄被別的程序當工作目錄鎖住，WinError 32）就退回**就地同步**（逐檔覆蓋、刪掉上游沒有的檔，鎖住的空目錄留著），本地不會半刪
+- 測試 `test_apply_one_handles_readonly_and_in_place_fallback`（test_mirror_sync 20 passed）
+- 實測：aidev 20 個落後 skill 全部對齊（ark-game-proto 1.10.0、ark-game-spec 2.10.0、ark-web-game 0.12.0、ark-wiki-engine 3.0.5…）
+
 ## 2026-11-06 (列車 r35：ark-game-spec 2.10.0 —— capture stage：實機取素材 → 競品分析素材包)
 
 > 來源：aiqa（墨驗）歡樂聖誕取素材閉環 ⑥ Pack；原為 aiqa 專案腳本 `aiqa_asset_pack.py`，依「換專案還用得上 → 技能」技能化（nana `docs/reports/2026-11-06-aiqa-competitor-asset-capability-review.md` R-03）。
