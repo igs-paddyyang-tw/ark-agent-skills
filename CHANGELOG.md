@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-06 (列車 r32：ark-game-quicktest 2.3.1 —— cpp_trace MSVC 相容＋還原局 SOP W2 第 15～21 輪規律)
+
+> 來源：aidev-team slot W2 批次（10-22～11-03）在 `projects/aidev-team-agent` 消費端的本地修改回貢（mirror_sync 判定 LOCAL）。
+
+- **cpp_trace.py**：MSVC 專屬語法轉換（`long float`→`double`、`for each (X in Y)`→`for (X : Y)`）；GT 系 SpeedRun 可視化工具原始碼預設不編，連結出現 undefined reference 時自動不跳過重編（`skip_src_retry`）；`--define NAME=V` 直接改寫原檔已有的 `#define`（原本 -D 會被原檔蓋掉且無警告）；`-std=gnu++14`＋`-include cstdint`；include 路徑涵蓋 `*.hpp`；patch 腳本輸出以 errors=replace 解碼
+- **references/restore-stages-sop.md**：補 W2 第 15～21 輪累積規律（+65 行：截圖版本判定、高波動款多 seed 判定、C++ UB 與權重邊界、換皮偵測等）
+- 測試：game-quicktest 28 passed／3 skipped；cpp_trace py_compile 通過
+- r32 manifest 一併涵蓋 r31 的 ark-game-proto 1.10.0（r31 未產 manifest）
 ## 2026-11-06 (列車 r31：ark-game-proto 1.10.0 —— 引擎回放試玩可貼符號圖)
 
 > 來源：歡樂聖誕（ho-ho-ho）⑦ 試玩補素材（nana `docs/designs/2026-11-05-hohoho-asset-backfill-design.md` §5）。

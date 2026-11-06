@@ -17,7 +17,14 @@ KIT = pathlib.Path(__file__).resolve().parent
 SHIM = KIT / "shim"
 
 
-def sources(src: pathlib.Path) -> list[pathlib.Path]:
+SKIP_SRC = {"pipelinecommandparser.cpp", "slotjsonexporter.cpp"}  # GT 系 SpeedRun 可視化工具（MSVC 專屬、與快測無關）
+
+
+def sources(src: pathlib.Path, skip: bool = True) -> list[pathlib.Path]:
+    return [p for p in _sources(src) if not (skip and p.name.lower() in SKIP_SRC)]
+
+
+def _sources(src: pathlib.Path) -> list[pathlib.Path]:
     files = []
     for proj in list(src.glob("*.vcxproj")) + list(src.glob("*.vcproj")):
         t = proj.read_text(encoding="utf-8", errors="ignore")
@@ -45,6 +52,8 @@ def patch(work: pathlib.Path) -> dict:
         s, k = re.subn(r"(uint32_t\s+random\s*=\s*gen_rand32\s*\(\s*\)\s*;)", r"\1 __trial_count_sfmt();", s)
         info["count_patch"] += k
         s, k = re.subn(r"cin\s*>>\s*(\w+)\s*;", r"\1 = __trial_n() ;", s)
+        s = re.sub(r"\blong\s+float\b", "double", s)  # MSVC 的 long float = double
+        s = re.sub(r"\bfor\s+each\s*\(\s*([^()]+?)\s+in\s+([^()]+?)\s*\)", r"for (\1 : \2)", s)  # MSVC 的 for each (X in Y)
         # ASSERT 巨集只印訊息＋getchar，不影響結果；換成空（MSVC 容忍的指標 > 0 等寫法 g++ 編不過）
         s = re.sub(r"(#define\s+\w*ASSERT\s*\(\s*a\s*\))[^\n]*", r"\1 {}", s)
         info["n_patch"] += k
@@ -72,19 +81,31 @@ def build(src: pathlib.Path, work: pathlib.Path, defines: list[str], patch_sh: s
     shutil.copytree(src, work, ignore=shutil.ignore_patterns("*.exe", "*.obj", "*.pdb", "*.xls*", "Backup", "Debug", "Release", "*.txt"))
     info = patch(work)
     if patch_sh:  # 遊戲專屬修正（放在該款 quicktest/port/cpp_patch.sh；在副本目錄執行）
-        r = subprocess.run(["bash", str(pathlib.Path(patch_sh).resolve())], cwd=work, capture_output=True, text=True)
+        r = subprocess.run(["bash", str(pathlib.Path(patch_sh).resolve())], cwd=work, capture_output=True, text=True, errors="replace")
         info["patch_sh"] = {"script": patch_sh, "rc": r.returncode}
         if r.returncode:
             info["error"] = f"patch 腳本失敗 rc={r.returncode}：{(r.stderr or r.stdout)[-600:]}"
             return work / "trial.bin", info  # patch 失敗就不編譯，保留 patch 的錯誤訊息
+    # --define NAME=V：原檔已有 #define NAME 時 -D 會被蓋掉（-w 下沒警告，fortune-fuwa）→ 直接改寫原檔的 #define
+    for d in defines:
+        name, _, val = d.partition("=")
+        for h in list(work.rglob("*.h")) + list(work.rglob("*.cpp")):
+            b = h.read_bytes()
+            nb, k = re.subn(rb"^([ \t]*#define[ \t]+" + re.escape(name.encode()) + rb")[ \t]+[^\r\n]*", rb"\1 " + (val or "1").encode(), b, flags=re.M)
+            if k:
+                h.write_bytes(nb); info.setdefault("define_rewrite", []).append(f"{h.name}:{name}")
     srcs = [work / p.relative_to(src) for p in sources(src)]
-    incs = sorted({str(p.parent) for p in work.rglob("*.h")})
+    incs = sorted({str(p.parent) for p in list(work.rglob("*.h")) + list(work.rglob("*.hpp"))} | {str(p.parent.parent) for p in work.rglob("*.hpp")})
     exe = work / "trial.bin"
     hook_o = work / "trial_hook.o"
     subprocess.run(["gcc", "-m32", "-O2", "-c", str(SHIM / "trial_hook.c"), "-o", str(hook_o)], check=True)
-    cmd = ["g++", "-m32", "-msse2", "-mfpmath=sse", "-O2", "-w", "-fpermissive", "-std=gnu++11", "-I", str(SHIM), "-include", str(SHIM / "trial_hook.h"), "-DMEXP=19937"]
-    cmd += [f"-D{d}" for d in defines] + [x for i in incs for x in ("-I", i)] + [str(s) for s in srcs] + [str(hook_o), "-o", str(exe), "-lpthread"]
-    r = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
+    cmd = ["g++", "-m32", "-msse2", "-mfpmath=sse", "-O2", "-w", "-fpermissive", "-std=gnu++14", "-I", str(SHIM), "-include", str(SHIM / "trial_hook.h"), "-include", "cstdint", "-DMEXP=19937"]
+    base = cmd + [f"-D{d}" for d in defines] + [x for i in incs for x in ("-I", i)]
+    r = subprocess.run(base + [str(s) for s in srcs] + [str(hook_o), "-o", str(exe), "-lpthread"], capture_output=True, text=True, errors="replace")
+    if r.returncode and "undefined reference" in r.stderr:  # 跳過的可視化工具原始碼其實被 main 引用（mad-scientist）→ 不跳過再編一次
+        srcs = [work / p.relative_to(src) for p in sources(src, skip=False)]
+        r = subprocess.run(base + [str(s) for s in srcs] + [str(hook_o), "-o", str(exe), "-lpthread"], capture_output=True, text=True, errors="replace")
+        info["skip_src_retry"] = True
     info["sources"] = [s.name for s in srcs]
     if r.returncode:
         info["error"] = r.stderr[-3000:]

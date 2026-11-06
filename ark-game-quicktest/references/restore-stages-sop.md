@@ -277,3 +277,68 @@ assets_base: []
 - **base_game_rate 可能等於 DEF_KILL_GATE_MAX**（例 9900），而不是目標 RTP。
 - C++ `long *= pow(2,n)` 要用 double→int32 飽和（cvttsd2si → INT32_MIN）重現。
 - 已知 kit 缺口：trace 沒有每手押注欄，Extra Bet 的總押注倍數不在 parity 檢查範圍內，要靠 RTP 對截圖確認。
+
+## W2 第 15 輪累積的規律（144／146／148／150）
+
+- **kit 已修（cpp_trace）**：GT 系 SpeedRun「可視化工具＋快測」新架構自動處理：MSVC `for each (X in Y)` → `for (X : Y)`；一律 `-include cstdint`；`*.hpp` 所在目錄（含上一層，給 `nlohmann/json.hpp`）加進 -I；PipelineCommandParser.cpp、SlotJsonExporter.cpp 不編。patch 腳本輸出 Big5 不再崩潰。cpp_patch.sh 裡這幾項不必再做（舊款不受影響，已回歸 sichuan-opera、fortune-cat parity 0 不一致）。
+- **目標截圖不在 R-1 主版時**：查同資料夾的 `*機率比對.xlsx`（A／B 分頁 × NO EXTRA_100%／95.2%）。
+- **ENUM_ROW_MAX 大於實際填的列**：未填列是 memset(1) 在 long long 上的值（0x0101…01），Go 要用同值 sentinel，不可用 −1（會小於 SS 被當成起算符號）。
+- **C++ 快測截圖在不開 Extra 時 Free_1..4 = 0%**：代表截圖背後的 C++ 沒有依 SPCount 分組，可以用來判斷 C++ 分支和 xlsx 是否同版。
+- 主遊戲 Ways RTP 可用獨立軸解析精確計算，用來確認輪帶與押注，比抽樣快。
+- 已知 kit 缺口：ps_extract 在 6 軸遊戲只抽到前 5 軸。
+
+## W2 第 16 輪累積的規律（151／152／153／154）
+
+- **kit 已修（cpp_trace）**：改用 `-std=gnu++14`（新版 SpeedRun 用 make_unique）；可視化工具原始碼預設不編，若連結時 undefined reference（main 有引用，例 mad-scientist）會自動改成一起編再試一次。
+- **C++ 用 `std::random_device`＋每次新建 mt19937 做位置抽樣**（FisherYatesShuffle）：結果不可重現。cpp_patch.sh 改成固定種子的共用 mt19937，Go 端實作 mt19937＋libstdc++ uniform_int（Lemire）即可逐局一致（magic-forest）。
+- **SpeedRun 專案 `DEF_MODE 1`（可視化產版）不跑快測迴圈**：patch 成 0。
+- **權重迴圈寫成指定而不是累加**：C++ 永遠只用某一組輪帶，quirk 旗標留給 parity，正式依線上（mad-scientist）。
+- **Gold 段可能是一個專案目錄一段**（NoExtra_G1..G5），不是 #define：逐目錄 dump 再合併（golden-feast）。
+- **高波動款（SD 很大）**：2,000 萬局 CI 半寬可能大於 ±0.5pt。主遊戲可窮舉時，用精確解析值判定（lion-dance 的 analytic_rtp.py）；不能窮舉就加跑 seed、以合計樣本判定，README 寫明。
+- `if (陣列 > 0)`（指標和 0 比大小）g++ 編不過：在 cpp_patch.sh 改 `!= 0`（kit 不自動改，避免動到有號純量）。
+- `int × float` 要用 float32 相乘再截斷。
+
+## W2 第 17 輪累積的規律（155／156／157／159）
+
+- **線上值為 0 的靜態權重表，C++ 是動態權重**（依目前分數重算，線上另有 `*_weight_magic_number`）：0 是佔位符，不要照字面讀；照字面跑若遠低於目標就排除（jungle-adventure）。
+- **xlsx Overview 的 Hit% 和引擎差很多**：代表截圖來自比 slot_math_squad 更新的 C++，記 G-xx 待裁定，不要調參（super-ace）。
+- **連消家族的「貼後沒贏就還原」**仍會消耗亂數；numerator 為 0 的 gate 也照樣抽 RANDOM(100)：Go 端都要保留才能 0 不一致。
+- **`*_BuyBonus` 專案也可能含完整的基本遊戲**（藏在 DEF_ITEM_CARD 後面）：patch 成 0、以輪帶 diff 確認線上預設。Buy Bonus 的 RTP = 每 TotalBet 的報表 RTP ÷ 購買價（Charge）。
+- **C++ 的 RTP 標籤（DEF_RTP_INFO 註解）可能含砍分**：同引擎有／無 KILL_GATE 各跑一次確認。
+- **JP 在本手贏分之後才用 `+=` 加上**：trace 掛鉤要放在最後一次加總之後（slotvers-buybonus 在 cpp_patch.sh 移動掛鉤）。
+- 高波動款（SD ≥ 13）一開始就規劃第二個 seed；能窮舉的主遊戲用解析值（jungle-adventure 主遊戲逐線解析、FG 以 DP 算，與 Overview 9 位一致）。
+
+## W2 第 18 輪累積的規律（161／164／165／166）
+
+- **kit 已修（cpp_trace）**：`--define NAME=V` 會直接改寫原檔已有的 `#define NAME`（以前 -D 會被原檔蓋掉、沒有警告，fortune-fuwa）；MSVC `long float` 自動改成 double。
+- **先查換皮**：拿 ref/live 玩法鍵和已移植款逐鍵比，可能 server_id 不同但表相同（leprechaun-bingo = goldenhoyeah 換皮）→ 直接沿用該款 config-map 與引擎，結果應逐位元相同，記 G-xx。
+- **線上是 GHY 全面重新設計版**（dragon-treasure = 知識庫 R-013 魔龍寶藏）：線上鍵無法投影到任何 C++，live 欄為 0、改跑 C++ 原表並記 G-xx；把線上鍵對應到 K 卡（K-027～K-030）寫進遊戲卡。
+- **`*_PlayBonus`／DEF_VERSION 9 的 C++ 是道具卡模擬器**：盤面全 WW＋強制 SS，一般主遊戲被拿掉；對到線上 srv-buy_bonus／sg_card 做 parity，一般路徑從同家族 C++ 移植。
+- **截圖屬於哪一版**：除了 RTP，也比觸發頻率、JP 頻率、各分項（JP、寶盆）；分項對不上的那一塊就是版本差。修正版若成對敏感度證明 RTP 中性，可沿用舊截圖當目標。
+- **GT 系 ChanceTest 的 FG／JP 用 `+=` 加到本手贏分**：trace 掛鉤要移到最後一次 `+=` 之後（kit 沒自動處理，cpp_patch.sh 移）。
+- 權重表一律以表內 Total 當 RANDOM 上限、掃描範圍含 Total 欄；Total ≠ Σ 時 cpp_dump 記錄、不要直接失敗（只在用到的路徑才算錯）。
+
+## W2 第 19 輪累積的規律（170／171／173／174）
+
+- **parity 前先查 ChanceTest 統計陣列的越界寫入**（例 index 0xff）：g++ -m32 下會寫進 SFMT 靜態狀態，SFMT 次數相同但數值從第 2 個 624 區塊開始分歧；在 cpp_patch.sh 修統計段（只影響統計）。
+- **罕見 quirk 路徑**：先在 Go 找出觸發的手號，再把 parity 跑到那一手（例 1,930 萬手）證明一致。
+- **截圖 Hit% 和 portkit HitRate 定義不同**：C++ 的 bMainIsHitFlag 含 FG／Feature 贏分；主遊戲命中＋FG 觸發率 ≈ 截圖 Hit%。
+- **C++ 只實作部分顆數（例只處理 4 顆 FF）而線上與 xlsx 有 5～7 顆**：依 xlsx 流程說明實作並標 filled:inferred，用截圖分項驗證（fortunegod）。
+- **xlsx 參照表 M-1「server紀錄」欄＝各輪帶組 RTP**，以 M-1 權重加總可當目標；逐組比「主遊戲精確值＋E[FG|SC 顆數]」能定位差異在主遊戲還是 FG。
+- **高波動款的判定**：qt_report 只吃單一報表；正式 20M 超出、合計樣本在容許內時判 PASS（附註），README 列出每個 seed 與合計（好四多龍 240M）。
+- **家族沿用**：好四多（174／183／184）同一份 GT 基底，龍的 engine／config-map 已外部化差異，鳳、虎只要加 config 旗標。
+
+## W2 第 20 輪累積的規律（182／183／184／191）
+
+- **C++ switch 漏 case 讀到未初始化變數（UB）**：結果隨編譯與版面變化，**不要做 quirk 旗標**；在 C++ 副本用 cpp_patch.sh 補上 case 做 parity（另留一份不補、只跑到第一個觸發手的 parity），正式依線上／xlsx（好四多鳳、虎）。
+- **權重總和為 0 時索引沿用上一次的值**（GT get_index_by_weight）：Go 必須保留舊值才會一致（freedomstar）。
+- **線上 buy_bonus 檔可能保留 C++ 原值**：一般表被改過時可以當旁證（witch F-3 差 6pt → rejected 待裁定）。
+- **同家族的鍵不一定每款都生效**：線上有 fever_trigger_amount 但該款 C++／xlsx 沒有該機制時，打開跑一次敏感度（虎 114% → 排除）。
+- GT 截圖 Symbol Hit Count 的「FF」列其實是 SS（名稱表和 enum 差一列）。
+
+## W2 第 21 輪累積的規律（197／508）
+
+- **姊妹款的 xlsx 截圖可能是複製來的舊圖**（508 的截圖和 157 完全相同）：先確認觸發頻率和引擎一致才當目標；沒有自己的數字時，用 base_game_rate＋xlsx 設計公式，README 寫明低信心。
+- **C++ 快測目錄可能停在調參中途**（保底上限 0、只有一種 FG 類型，RTP 遠低於目標）：用 `QT_LIVEPATH` 之類的 patch 環境變數把 C++ 推到線上才有的路徑，parity 就能涵蓋。
+- **SD ≈ 24 的連消款**：一開始就規劃 5 個 seed（1 億局）合計判定。
+- 線上某組輪帶全是同一個符號時，長度不同只改停點抽值、不改盤面，同 seed 結果逐位元相同，可以忽略。

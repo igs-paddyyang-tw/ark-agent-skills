@@ -14,7 +14,7 @@ metadata:
   category: process
   form: executor
   domain: game
-  version: "2.3.0"
+  version: "2.3.1"
   updated: 2026-11-05
   outputs:
     - { format: data, audience: ai }
