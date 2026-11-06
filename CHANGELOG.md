@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-06 (列車 r34：ark-mobile-adb 2.6.1 —— aiqa_run 裝置失聯熔斷)
+
+> 來源：aiqa-team 消費端本地修改回貢（mirror_sync 判定 LOCAL；與上游 2.6.0 economy batch 模式三方合併）。
+
+- **aiqa_run.py**：rep 遇 `CONN_FAILED`（adb offline／BlueStacks 視窗消失）標 `device_lost`；連續 `DEVICE_LOST_LIMIT`（2）個 item 失聯即中止，剩餘 item 標 NEEDS_HUMAN，manifest／emit 帶 `aborted: device_lost` 與處置提示 —— 不再逐 item 撞死裝置等 900s 逾時
+- 與 2.6.0 的 `--mode batch`（economy 連轉核帳）並存：`run_item(..., mode)` 參數保留
+- 測試：新增 `test_device_lost_breaker.py`（連續 2 次中止／單次不中止）；全套 69 passed、1 skipped（`test_fake_full_chain_all_pass` 需 openpyxl）
+
 ## 2026-11-06 (列車 r33：ark-skills-align 2.15.0 —— Windows 雜湊與 Linux 一致)
 
 > 來源：r31 推送時 Windows 上 audit 誤報 39 個 P1 `contract-changed-no-bump`，追到根因。

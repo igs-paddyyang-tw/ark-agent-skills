@@ -315,7 +315,7 @@ def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader:
         trace = D.Trace(rep_dir / "trace.jsonl")
         dev = dev_factory(trace)
         ex = Executor(dev, pack, rep_dir, reader, visual, llm, timeout_s)
-        status, err = "ok", None
+        status, err, device_lost = "ok", None, False
         try:
             ex.run_actions(item.get("actions", []))
             # 視覺斷言若沒有對應 ask，用最後畫面問一次
@@ -329,6 +329,9 @@ def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader:
             status, err = "timeout", str(e)
         except (C.PackError, Exception) as e:  # noqa: BLE001
             status, err = "error", f"{type(e).__name__}: {e}"
+            # 裝置失聯（adb offline / 視窗消失）—— 標記讓 main() 熔斷，不再逐 item 重撞死裝置
+            if getattr(e, "code", None) == "CONN_FAILED":
+                device_lost = True
         # visual 斷言的 obs 名稱對齊
         obs = dict(ex.obs)
         for a in item.get("assertions", []):
@@ -340,7 +343,7 @@ def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader:
         rep_obs.append(dict(obs))
         C.atomic_write(rep_dir / "observations.json", json.dumps({k2: v for k2, v in obs.items()}, ensure_ascii=False, default=str, indent=1))
         C.atomic_write(rep_dir / "verdict.json", json.dumps({"status": status, "error": err, "assertions": results, "evidence": ex.evidence}, ensure_ascii=False, default=str, indent=1))
-        reps.append({"rep": k, "status": status, "error": err, "assertions": results, "evidence_count": len(ex.evidence), "elapsed_s": round(dev.now() - ex.t0, 2)})
+        reps.append({"rep": k, "status": status, "error": err, "assertions": results, "evidence_count": len(ex.evidence), "elapsed_s": round(dev.now() - ex.t0, 2), "device_lost": device_lost})
         if status != "ok":
             break
         rep_results.append(results)
@@ -374,7 +377,8 @@ def run_item(item: dict, pack: dict, dev_factory, run_dir: pathlib.Path, reader:
         if errored and not blocked:
             v = {"verdict": "NEEDS_HUMAN", "reason": f"執行錯誤：{errored}"}
     out = {"id": item["id"], "title": item["title"], "category": item.get("category"), "folder": item.get("folder"), "tier": item["tier"],
-           **v, "reps": reps, "baseline": item.get("baseline"), "dir": str(item_dir)}
+           **v, "reps": reps, "baseline": item.get("baseline"), "dir": str(item_dir),
+           "device_lost": any(r.get("device_lost") for r in reps)}
     C.atomic_write(item_dir / "verdict.json", json.dumps(out, ensure_ascii=False, default=str, indent=1))
     return out
 
@@ -447,21 +451,43 @@ def main() -> None:
                 "llm": llm.meta() if llm else None, "bugs": bugs}
     C.atomic_write(run_dir / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=1))
     results, t0 = [], time.time()
-    for it in items:
+    # 🔴 裝置健康熔斷（2026-10-29）：adb 層已保守（try_reconnect≤3），但裝置整個失聯
+    # （BlueStacks 視窗 OOM 消失）時，逐 item 重撞死裝置每個付 ~78s 重連稅 → N item 累積耗盡
+    # 上游 900s 逾時。連續 DEVICE_LOST_LIMIT 個 item 因 CONN_FAILED 失敗即中止，剩餘標 NEEDS_HUMAN。
+    DEVICE_LOST_LIMIT = 2
+    consecutive_lost = 0
+    aborted = False
+    for idx, it in enumerate(items):
+        if aborted:
+            results.append({"id": it["id"], "title": it["title"], "category": it.get("category"), "folder": it.get("folder"), "tier": it["tier"],
+                            "verdict": "NEEDS_HUMAN", "reason": "裝置失聯中止後未執行（device lost）",
+                            "reps": [], "baseline": it.get("baseline"), "dir": None})
+            continue
         blocked, na = gate(it, pack, tiers)
         if blocked or na:
             v = O.item_verdict([], blocked=blocked, na=na)
             results.append({"id": it["id"], "title": it["title"], "category": it.get("category"), "folder": it.get("folder"), "tier": it["tier"], **v,
                             "reps": [], "baseline": it.get("baseline"), "dir": None})
             continue
-        results.append(run_item(it, pack, dev_factory, run_dir, reader, visual, llm, a.timeout_s, a.mode))
+        r = run_item(it, pack, dev_factory, run_dir, reader, visual, llm, a.timeout_s, a.mode)
+        results.append(r)
+        if r.get("device_lost"):
+            consecutive_lost += 1
+            if consecutive_lost >= DEVICE_LOST_LIMIT:
+                aborted = True  # 下一圈起把剩餘 item 標 NEEDS_HUMAN，不再碰死裝置
+        else:
+            consecutive_lost = 0
         C.atomic_write(run_dir / "results.json", json.dumps({"results": results}, ensure_ascii=False, default=str, indent=1))
     counts = {v: sum(1 for r in results if r["verdict"] == v) for v in C.VERDICTS}
-    manifest.update(finished_at=C.now(), elapsed_s=round(time.time() - t0, 1), counts=counts, items=len(results), llm=llm.meta() if llm else None)
+    manifest.update(finished_at=C.now(), elapsed_s=round(time.time() - t0, 1), counts=counts, items=len(results), llm=llm.meta() if llm else None, aborted=aborted)
     C.atomic_write(run_dir / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=1))
     C.atomic_write(run_dir / "results.json", json.dumps({"results": results}, ensure_ascii=False, default=str, indent=1))
-    C.emit({"run": str(run_dir), "items": len(results), "counts": counts, "elapsed_s": manifest["elapsed_s"],
-            "next": f"python aiqa_report.py --run {run_dir}"}, {"stage": "run", **(llm.meta() if llm else {})})
+    emit_payload = {"run": str(run_dir), "items": len(results), "counts": counts, "elapsed_s": manifest["elapsed_s"],
+                    "next": f"python aiqa_report.py --run {run_dir}"}
+    if aborted:
+        emit_payload["aborted"] = "device_lost"
+        emit_payload["next"] = "裝置失聯中止（BlueStacks 視窗消失？）→ 重啟 Pie64 實例確認後重跑；本次已落盤部分結果"
+    C.emit(emit_payload, {"stage": "run", **(llm.meta() if llm else {})})
 
 
 if __name__ == "__main__":
