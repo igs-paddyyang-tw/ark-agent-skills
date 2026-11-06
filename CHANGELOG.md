@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-06 (列車 r35：ark-game-spec 2.10.0 —— capture stage：實機取素材 → 競品分析素材包)
+
+> 來源：aiqa（墨驗）歡樂聖誕取素材閉環 ⑥ Pack；原為 aiqa 專案腳本 `aiqa_asset_pack.py`，依「換專案還用得上 → 技能」技能化（nana `docs/reports/2026-11-06-aiqa-competitor-asset-capability-review.md` R-03）。
+
+- 新 `scripts/gdd/gdd_capture.py`＋`gs_run --stage capture --capture <dir> [--repo] [--odds-json] [--out] [--no-zip]`：asset-map.yaml → gdd-pack → `gdd_run --export` →（有 analysis.md）`gs_bundle` → zip
+- 賠率取機率設定檔 `odds[符號][連線數−1]`（列序＝`display_codes`）→ gdd `[5 連, 4 連, 3 連]`
+- 守門 exit 2：截圖須 `_masked`、code 須在 `display_codes`、同碼僅一筆 `role: symbol`
+- 觸發詞補「競品分析素材包、取素材打包」；測試 `test_gdd_capture.py`（3 passed；全套 60 passed、21 skipped〔需 ffmpeg〕）
+
 ## 2026-11-06 (列車 r34：ark-mobile-adb 2.6.1 —— aiqa_run 裝置失聯熔斷)
 
 > 來源：aiqa-team 消費端本地修改回貢（mirror_sync 判定 LOCAL；與上游 2.6.0 economy batch 模式三方合併）。

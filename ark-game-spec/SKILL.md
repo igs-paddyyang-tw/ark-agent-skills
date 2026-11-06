@@ -2,7 +2,7 @@
 name: ark-game-spec
 description: |
   遊戲規格書 executor（製程 A+B 段）：競品影片分析 → 機制分析 → 規格草稿與決議 → dev-ready spec／config-spec → GDD 素材總覽與交付夾；入口 gs_run --stage，與 ark-game-prob、ark-game-quicktest 三件套。
-  使用此 skill 當提及：遊戲規格書、規格書、GDD、遊戲企劃、素材總覽、企劃樣板、交付夾、合成一份 HTML、gdd-pack、圖騰對照表、競品影片分析、拆解競品機制、
+  使用此 skill 當提及：遊戲規格書、規格書、GDD、遊戲企劃、素材總覽、企劃樣板、交付夾、競品分析素材包、取素材打包、合成一份 HTML、gdd-pack、圖騰對照表、競品影片分析、拆解競品機制、
   抽幀、contact sheet、evidence、機制規格草稿、Open Questions、decisions.yaml、dev-ready spec、config-spec、state machine、
   qa checklist、圖文規格書、遊戲 atlas、遊戲圖鑑、domain pack、新增遊戲類型、answer key、POC benchmark。
   不適用於：機率規格書／參數表／隱性規則（→ ark-game-prob）、Go 快測／RTP 模擬／odds.json（→ ark-game-quicktest）、
@@ -14,8 +14,8 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "2.9.1"
-  updated: 2026-10-29
+  version: "2.10.0"
+  updated: 2026-11-06
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: both }
@@ -69,7 +69,7 @@ metadata:
 | `scripts/video/` | `vu_run.py`（fetch → timeline → events → keyframes → sheets → transcript → evidence；`--domain auto` 只產 detect sheets）、各 `vu_*.py`、`detectors/`（8 個 deterministic 偵測器 REGISTRY）| 影片入口；調偵測器看 `references/video-calibration.md` |
 | `scripts/analysis/` | `ga_detect.py`（LLM 判 domain）、`ga_run.py`（observe → analyze → validate → kb_match）、`ga_report.py`（md-report + html）、`wev_fetch.py`（網頁 evidence，type: web）| 機制分析；fake provider 跑測試 |
 | `scripts/spec/` | `gs_run.py --stage draft\|decide\|dev`（舊 1.x 三段）、`gs_draft / gs_review / gs_decide / gs_dev / gs_metrics / spec_lint`、**`gs_restore`**（2.3：已上線還原，`--stage restore`）、**`gs_publish`**（2.4：定版件收進 data 家，`--stage publish`）| 規格草稿 → 決議 → dev-spec；還原 config-spec |
-| `scripts/gdd/` | `gdd_extract.py`（規格書 xlsx → gdd-pack）、`gdd_from_spec.py`（spec run → gdd-pack）、`gdd_lint.py`、`gdd_build.py`（素材總覽.html + todo.md）、**`gdd_export.py`**（2.1：gdd-pack → 企劃樣板交付夾，與 `gdd_common.ASSET_DIRS` 三夾定版同結構）、`gdd_run.py`（lint → build [→ export]）、`gdd_common.py`（`ASSET_DIRS` 三夾定版名、`bundle_html_name`；本 stage 自用 helper）| 企劃規格書 |
+| `scripts/gdd/` | `gdd_extract.py`（規格書 xlsx → gdd-pack）、`gdd_from_spec.py`（spec run → gdd-pack）、`gdd_lint.py`、`gdd_build.py`（素材總覽.html + todo.md）、**`gdd_export.py`**（2.1：gdd-pack → 企劃樣板交付夾，與 `gdd_common.ASSET_DIRS` 三夾定版同結構）、`gdd_run.py`（lint → build [→ export]）、**`gdd_capture.py`**（2.10：實機取素材 asset-map → gdd-pack → 交付夾 → 單檔 → zip）、`gdd_common.py`（`ASSET_DIRS` 三夾定版名、`bundle_html_name`；本 stage 自用 helper）| 企劃規格書 |
 | `scripts/atlas/` | `atlas_run.py`（`--run` 或 `--gdd`）、`atlas_compile / atlas_from_gdd / atlas_figures / atlas_lint / atlas_build / atlas_register` | 圖文書、圖書館上架 |
 | `scripts/bundle/` | **`gs_bundle.py`**（2.2）：bundle.yaml（md 段 + 至多一段 gdd-pack）→ 圖文內嵌的單檔 HTML；素材總覽頁當外殼、md 段插入 nav／main，交給 ark-html-report `html_images` 縮圖 → WebP → 去重 → 內嵌；`--check` 驗戳記 | 競品分析與規格書要合成一份可寄出的 HTML 時；契約 `references/bundle-contract.md` |
 | `scripts/pack/` | `pack_resolve.py`（`--list` / `--domain`）、`pack_lint.py`（`--all`）、`pack_new.py` | 新增 / 修改 domain pack |
@@ -101,6 +101,10 @@ metadata:
 │   寫 bundle.yaml（parts：md 段 + gdd 段，順序即頁面順序）→ python scripts/gs_run.py --stage bundle --bundle <bundle.yaml>
 │   → <out>.html（圖 WebP 內嵌、去重，零外部請求）+ <out>.bundle.json；超過 budget_mb → exit 3，改 --quality lite
 │   只有 md（沒有 gdd-pack）也行：用內建簡版外殼；md 圖可寫 symbols/xxx.png 直接共用規格書素材
+├─ 實機截到的素材（取素材閉環 ④ 產的 asset-map.yaml＋*_masked 截圖）要變成「競品分析素材包」（2.10）
+│   python scripts/gs_run.py --stage capture --capture <素材目錄> [--repo <aidev 根>] [--odds-json <live.json>]
+│   → data/gdd/<slug>/（gdd-pack＋export/ 交付夾＋<遊戲>_競品分析素材.html 單檔＋zip）；賠率取 live.json odds[符號][連線數−1]
+│   └─ 守門 exit 2：截圖沒有 _masked、code 不在 display_codes、同碼兩筆 role=symbol（其他外觀標 performance）
 ├─ 只有一句話概念 → 創作模式：讀 references/concept-gdd-template.md + genre-guides.md，Understanding Lock 後產 docs/<name>-gdd.md；數值一律「建議值待測試」
 ├─ 新遊戲類型（麻將 / 棋牌 / 街機）→ python scripts/pack/pack_new.py --domain <d> --display-name <名> → 填 pack → --stage pack --domain <d>
 ├─ 分析／規格定版要收進 data 家 → python scripts/gs_run.py --stage publish --run <run> [--dest data/slot/<slug>]（無 --dest 讀 ARK_GAME_ROOT）[--dry-run]
@@ -134,10 +138,19 @@ data/atlas/<slug>/ atlas.yaml · NN-*.md · assets/figures/ · site/index.html �
 | video | 預算 hard_max（exit 9）、evidence 已存在未 --force（exit 3）| 抽幀失控、覆寫唯讀 evidence |
 | analyze | `ga_analyze.postprocess`、`ga_validate`（exit 6）、`report_lint` | 未宣告 key、壞 evidence、口白撐 OBSERVED、UNKNOWN > 60% |
 | spec | `spec_lint` 四分法（NUM-OUTSIDE / OBS-EVIDENCE / KB-REF / UNKNOWN-Q / DECIDED-D / NAME / SECTIONS / PACK:*）、gs_dev 三道（defer / 必填 / value≠null）| 區塊外數字、沒 evidence 的 OBSERVED、競品值偷渡成定案 |
+| capture | 截圖須 `_masked`、code ∈ 機率設定檔 `display_codes`、同碼僅一筆 `role: symbol`（exit 2）；下游 gdd／bundle 守門照舊 | 未遮蔽玩家資訊的截圖、對錯碼、重複符號 |
 | gdd | `gdd_lint` 8 組（YAML / SYM / SCR / INFO / I18N / RULES / INJECT / ASSET）；`gdd_export` 交付夾守門（HTML 每個圖片連結都要在三夾內）| 圖檔不存在、參考圖當定案、odds 不是 3 值、注入、交付夾斷鏈 |
 | bundle | md 段注入（script／iframe／on*=）、md 圖找不到 → exit 2；預算 `budget_mb`、內嵌後殘留本機圖片連結 → exit 3；`--check` 戳記過期 → exit 3 | 寄出的 HTML 破圖、爆大小、夾帶可執行碼 |
 | atlas | `atlas_lint` 10 組（含 ATL-NUM：書裡沒有 spec 沒有的數字、ATL-STALE）| 憑空數字、過期來源 |
 | pack | `pack_lint` 20 餘組（PACK-ITEMS 恰 10 項、PACK-KB-TAGS 受控詞彙…）| pack 契約破壞 |
+
+## 2.10 變更：capture stage（實機取素材 → 競品分析素材包）
+
+- 來源：aiqa（墨驗）歡樂聖誕取素材閉環 ⑥ Pack，原為 aiqa 專案腳本 `aiqa_asset_pack.py`；依「換專案還用得上 → 技能」技能化（aiqa 能力盤點 R-03）
+- `scripts/gdd/gdd_capture.py`＋`gs_run --stage capture`：asset-map.yaml → gdd-pack → `gdd_run --export` →（有 analysis.md）`gs_bundle` → zip；只組裝既有零件
+- asset-map 欄位：`slug`、`game`、`symbols[{code, name, file, group, role?, evidence?, flag?, desc?}]`、`screens[{feature, step, title, file, desc?}]`、`features[{id, title, rules}]`，選填 `title_en／game_id／server_id／platform／unlock_level／captured／captured_by／capture_log／spec_extra`
+- 🔴 賠率契約：`odds[符號][連線數−1]`（`[0, 10, 50, 200, 1000]` 是 1～5 連），轉成 gdd 的 `[5 連, 4 連, 3 連]`
+- 測試 `test_gdd_capture.py`（完整鏈、未遮蔽／未知碼／同碼重複守門）；試點：歡樂聖誕（ho-ho-ho）14 符號、8 截圖、zip 8.3 MB
 
 ## 2.8 變更：佈局契約 v3.8（素材版控分層）
 

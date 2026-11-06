@@ -9,6 +9,8 @@
   python scripts/gs_run.py --stage gdd     --from xlsx --xlsx <規格書.xlsx> --out <pack>  # gdd_extract → lint → build
   python scripts/gs_run.py --stage gdd     --from spec --run <run> --out <pack>           # gdd_from_spec → lint → build
   …上面三種加 --export [--export-out <dir>] [--export-all-assets]                                 # 再產企劃樣板交付夾（與 ASSET_DIRS 三夾定版同結構）
+  python scripts/gs_run.py --stage capture --capture <素材目錄> [--repo <aidev 根>] [--odds-json <live.json>] [--out <pack>] [--no-zip]
+        # 2.10.0：實機取素材（asset-map.yaml＋_masked 截圖）→ gdd-pack → 素材總覽＋交付夾 →（有 analysis.md）單檔 HTML → zip
   python scripts/gs_run.py --stage atlas   --run <run> --slug <slug> | --gdd <pack> [--out data/atlas] [--library …]
   python scripts/gs_run.py --stage bundle  --bundle <bundle.yaml> [--quality lite|standard|hi] [--check]   # 競品分析 md + gdd-pack → 圖文單檔 HTML（需 ark-html-report ≥ 1.2）
   python scripts/gs_run.py --stage pack    [--domain <d> | --all]                          # pack_lint
@@ -43,6 +45,7 @@ STAGES = {
     "decide": HERE / "spec" / "gs_run.py",
     "dev": HERE / "spec" / "gs_run.py",
     "gdd": HERE / "gdd" / "gdd_run.py",
+    "capture": HERE / "gdd" / "gdd_capture.py",
     "atlas": HERE / "atlas" / "atlas_run.py",
     "pack": HERE / "pack" / "pack_lint.py",
     "restore": HERE / "spec" / "gs_restore.py",
@@ -144,6 +147,8 @@ def main() -> None:
             + (["--all-assets"] if a.export_all_assets else [])
         results["gdd"] = step(STAGES["gdd"], ["--pack", pack] + exp + rest)["data"]
         C.emit(results, {"stage": "gdd"})
+    if st == "capture":
+        C.emit(step(STAGES["capture"], opt(("--out", a.out)) + rest)["data"], {"stage": "capture"})
     if st == "atlas":
         args = opt(("--run", a.run), ("--gdd", a.gdd), ("--slug", a.slug), ("--out", a.out), ("--from", a.src)) + rest
         C.emit(step(STAGES["atlas"], args)["data"], {"stage": "atlas"})
