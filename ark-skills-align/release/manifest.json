@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r36",
-  "commit": "f8cc23e",
-  "generated_at": "2026-11-06T13:53:45+08:00",
+  "release": "skills-2026.11-r37",
+  "commit": "6d50efd",
+  "generated_at": "2026-11-09T14:14:32+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -109,14 +109,17 @@
       "updated": "2026-10-30"
     },
     "ark-browser-tool": {
-      "version": "3.0.2",
-      "tree_hash": "sha256:6fff984f4e908e1ffbd7253e14c21d01b2c537121da1f226a42794b4b8cd0f5f",
-      "contract_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "4.0.0",
+      "tree_hash": "sha256:bb447075712dd35930584fdf71cec25875b80071d67151c77b07ec641cede3a3",
+      "contract_hash": "sha256:adac990500fe1281acbcd3664ae73474bb33ec09eebf843e7ae094d7b6c43c7a",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],
-      "replaces": [],
-      "updated": "2026-10-29"
+      "replaces": [
+        "webwright",
+        "webwright-mcp"
+      ],
+      "updated": "2026-11-09"
     },
     "ark-code-spec-validator": {
       "version": "1.2.0",
