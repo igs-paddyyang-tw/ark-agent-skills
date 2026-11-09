@@ -1,0 +1,3 @@
+playwright>=1.48        # 安裝後另跑：python -m playwright install chromium
+pyyaml>=6.0             # YAML 劇本（只用 JSON 劇本可不裝）
+Pillow>=9.0             # 選配：wait_stable 用像素差；沒有就只比雜湊

@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-09 (ark-browser-tool 4.0.0 —— 拿掉 Webwright，改為獨立 Playwright 劇本執行器)
+
+> 來源：aiqa 網頁測試 SOP 設計（nana `projects/aiqa-team-agent/docs/designs/2026-11-09-web-test-sop-design.md`）；Paddy：不要另一組 LLM API、要能獨立跑腳本測 Web 介面。
+
+- **⚠️ Breaking**：移除 Microsoft Webwright（需另一組 LLM API key、判定權在模型）與 `webwright_run`／`webwright_craft` MCP 工具設定。
+  遷移：原「執行任務」改寫成劇本 `browser_tool.py run <scenario.yaml>`；原「產出可重用工具」→ 劇本本身就是可重跑資產。消費端 game-team-agent、paddy-bot ai-dev-agent 同步後需裝 `requirements.txt` 並 `python -m playwright install chromium`
+- 新 `scripts/browser_tool.py`（form: executor）：`doctor`／`shot`／`run`；劇本 `browser-scenario/1`（goto／click 選擇器或座標／fill／read／eval／wait_until／wait_stable／expect…／offline／repeat）；判定在腳本，exit 0 PASS／1 FAIL／2 ENV／3 BLOCK；輸出 report.json＋report.md＋shots＋trace.zip＋console.jsonl
+- Canvas／WebGL 遊戲：`browser: {gl: true}` 軟體 GL、座標點擊、頁面掛勾讀狀態；範例 `assets/examples/pgp-slot-smoke.yaml` 在 aidev 豬來蓋福（PixiJS＋Go，Docker Desktop）實測 5 局資產守恆與 HUD＝Server 結算全 PASS
+- 網域守門（離開 `allowed_origins` → BLOCK）、頁面健康（page error／console error／4xx·5xx 預設判 FAIL）
+- negative trigger 修正：`ark-quality-gates`（取代已 deprecated 的 ark-test-runner）
+- 測試 `scripts/tests/test_browser_tool.py`（13 passed，本機 HTML 端到端）
+
 ## 2026-11-06 (列車 r36：ark-skills-align 2.15.1 —— mirror_sync 在 Windows 不再留下半刪的 skill)
 
 > 來源：aidev mirror_sync 實際套用時連續撞到兩種 Windows 狀況，`apply_one` 先刪本地再改名，中途失敗會留下只刪一半的 skill。

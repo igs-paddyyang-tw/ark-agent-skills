@@ -1,0 +1,55 @@
+# pixi-game-platform（PixiJS Client ＋ Go Server）slot 冒煙：真人點擊 ＋ 資產守恆核帳
+# 實測對象：aidev 豬來蓋福（huffnpuff）Docker Desktop 部署 http://localhost:3030
+#   py scripts/browser_tool.py run assets/examples/pgp-slot-smoke.yaml [--base-url http://localhost:3031] [--var spins=10]
+# 觀測點：#boot[data-state] 開機狀態；window.__pgp（hud／presentLog）是 Client 的除錯掛勾，只讀不改
+# 座標以 viewport 540x960 校準；換遊戲或改版面要重新量（先 shot 再看圖）
+schema: browser-scenario/1
+name: pgp-slot-smoke
+base_url: http://localhost:3030
+browser: {gl: true}                 # Canvas／WebGL：headless 用軟體 GL
+viewport: {width: 540, height: 960}
+vars:
+  spins: 5
+  spin_btn: {x: 270, y: 832}
+  plus_btn: {x: 470, y: 840}
+  minus_btn: {x: 370, y: 840}
+checks: {console_errors: fail, page_errors: fail, failed_requests: fail}
+
+steps:
+  - name: 開遊戲（加速演出）
+    goto: "/?speed=30"
+  - name: 等到可玩
+    wait_for: {selector: '#boot[data-state="playable"]', state: attached}
+    timeout: 40000
+  - wait_stable: {threshold: 0.01}
+    timeout: 20000
+  - shot: playable
+  - name: 起始餘額大於 0
+    expect: {js: "window.__pgp.hud.balance", gt: 0}
+  - read: {as: bet0, js: "window.__pgp.hud.bet"}
+
+  - name: 點加注
+    click: "${plus_btn}"
+  - name: 押注變大
+    wait_until: {js: "window.__pgp.hud.bet > v.bet0"}
+  - name: 點減注
+    click: "${minus_btn}"
+  - name: 押注回到原值
+    wait_until: {js: "window.__pgp.hud.bet === v.bet0"}
+
+  - repeat:
+      times: "${spins}"
+      steps:
+        - read: {as: bal0, js: "window.__pgp.hud.balance"}
+        - read: {as: n0, js: "window.__pgp.presentLog.filter(e => e.type === 'round-end').length"}
+        - name: 點旋轉
+          click: "${spin_btn}"
+        - name: 等這局結束
+          wait_until: {js: "window.__pgp.presentLog.filter(e => e.type === 'round-end').length > v.n0 && !window.__pgp.hud.busy"}
+          timeout: 30000
+        - read: {as: ev, js: "window.__pgp.presentLog.filter(e => e.type === 'round-end').at(-1)"}
+        - name: 資產守恆（餘額＝前－押注＋贏分）
+          expect: {js: "window.__pgp.hud.balance === v.bal0 - window.__pgp.hud.bet + v.ev.totalWin", equals: true}
+        - name: HUD 餘額＝Server 結算
+          expect: {js: "window.__pgp.hud.balance === v.ev.balanceAfter", equals: true}
+  - shot: final

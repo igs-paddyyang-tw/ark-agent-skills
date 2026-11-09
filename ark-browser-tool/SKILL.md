@@ -1,272 +1,130 @@
 ---
 name: ark-browser-tool
 description: |
-  瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。
-  Code-first 範式 — 模型寫 Playwright 腳本而非逐步預測點擊，
-  產出可重用程式 + 截圖 + 日誌。含 self-reflection 驗證機制。
-  同時保留 Playwright MCP 作為輕量互動備選。
-  使用此 Skill 當使用者提及瀏覽器自動化、Webwright、MCP browser、
-  Playwright MCP、browser tool、
-  瀏覽器測試、截圖驗證、visual testing、看一下畫面、
-  確認 UI、E2E 驗證、localhost 預覽、craft tool、
-  或任何需要瀏覽器自動化或視覺化驗證 Web 產出的場景。
-  專責瀏覽器互動自動化、測試、截圖。大規模網頁抓取/反擷取請用 ark-web-scraper。
-  不適用於：網頁內容抓取/網頁擷取/web scraping 請用 ark-web-scraper；網頁自動化測試請用 ark-quality-gates。
+  獨立的網頁操作與測試工具（executor 型，捆綁 Playwright 腳本，不需要任何 LLM／API key）。
+  browser_tool.py 三個子命令：doctor（環境檢查）、shot（開頁截圖＋console 錯誤／失敗請求）、
+  run（照 YAML／JSON 劇本逐步操作與斷言 → PASS／FAIL／BLOCK＋report.md＋截圖＋trace 可重播）。
+  DOM 頁面用 selector 與文字斷言；Canvas／WebGL 遊戲（PixiJS）用座標點擊＋頁面掛勾讀狀態＋軟體 GL。
+  判定只由腳本做（AI 寫劇本、讀報告），exit code 0／1／2／3 可直接接 CI 或 agent 流程。
+  使用此 Skill 當使用者提及：網頁測試、web 介面測試、瀏覽器測試、瀏覽器自動化、E2E 驗證、截圖驗證、
+  看一下畫面、確認 UI、localhost 預覽、網頁冒煙測試、H5 遊戲測試、Canvas 遊戲測試、PixiJS 測試、
+  Docker 部署的網頁驗收、響應式／手機尺寸檢查、Playwright 腳本、測試劇本。
+  不適用於：大規模網頁內容擷取請用 ark-web-scraper；pytest 單元測試請用 ark-quality-gates；
+  Android 模擬器（BlueStacks）上的 App 測試請用 ark-mobile-adb；Web 遊戲 Client 建置與 e2e 範本請用 ark-web-game。
 metadata:
   schema_version: "1.2"
+  # 只列測試實際跑過的：scripts/tests 以本機 HTML 端到端（13 passed）
+  tested_against:
+    playwright: "1.58.0"
+    chromium: "headless shell（playwright install chromium）"
   status: active
   category: pipeline
-  form: instruction
+  form: executor
   domain: general
   outputs:
-    - format: md
-      audience: ai
+    # report.json（browser-report/1）歸 data；report.md 給人與 AI
+    - { format: data, audience: ai }
+    - { format: md, audience: both }
+  render: none
+  depends_on: []
+  # 4.0.0 拿掉 Webwright（需另一組 LLM key）與 webwright_run／webwright_craft MCP 工具
+  replaces: [webwright, webwright-mcp]
   author: paddyyang
-  version: "3.0.2"
-  updated: 2026-10-29
+  version: "4.0.0"
+  updated: 2026-11-09
 ---
 
-# ark-browser-tool
+# ark-browser-tool 4.0
 
-瀏覽器自動化工具 — 使用 Microsoft Webwright（code-first terminal-native web agent）。
+> **一句話**：用一份劇本描述「怎麼操作、怎樣算對」，`browser_tool.py` 用 Playwright 照做並判定，留下截圖與可重播的 trace。
+> 不呼叫任何 LLM：AI（或人）負責寫劇本與讀報告，**判定權在腳本**。
 
 ## 觸發條件
 
-- 「Webwright」、「瀏覽器自動化」、「MCP browser」
-- 「browser tool」、「瀏覽器測試」、「截圖驗證」、「visual testing」
-- 「看一下畫面」、「確認 UI」、「E2E 驗證」
-- 「localhost 預覽」、「craft tool」、「可重用腳本」
-- 前端任務完成後的驗證階段
+- 「網頁測試」「web 介面測試」「瀏覽器測試」「E2E」「截圖驗證」「看一下畫面」「確認 UI」
+- 「localhost 預覽」「Docker 部署驗收」「H5／Canvas／PixiJS 遊戲測試」「手機尺寸」
+- 前端或 Web 遊戲改完後的驗證階段
 
-## Negative Trigger（不適用，指路）
+## Negative Trigger（指路）
 
-- **網頁抓取 / web scraping / 擷取網頁內容 / 大規模抓取 / 反爬** → 請用 `ark-web-scraper`
-- **pytest / 測試覆蓋率 / coverage** → 請用 `ark-quality-gates`
+| 需求 | 用 |
+|---|---|
+| 大量擷取網頁內容 | `ark-web-scraper` |
+| pytest 單元測試 | `ark-quality-gates` |
+| BlueStacks／Android App | `ark-mobile-adb` |
+| 建 Web 遊戲 Client、Client 的 e2e 範本 | `ark-web-game` |
 
-## 三方邊界（一句話各自定位）
+## 安裝
 
-- **ark-web-scraper**：大規模網頁抓取 / 反爬（資料擷取為目的）
-- **ark-browser-tool**（本 skill）：瀏覽器互動 / 截圖 / E2E 視覺驗證
-- **ark-quality-gates**：pytest 執行與 coverage
-
-## 核心理念
-
-```
-傳統 web agent：預測下一個 click → 逐步操作 → 無產出物
-Webwright：寫 Playwright 腳本 → 執行 → 產出可重用程式
+```bash
+pip install -r requirements.txt          # playwright、pyyaml（Pillow 選配）
+python -m playwright install chromium    # 約 150 MB，裝在使用者目錄
+python scripts/browser_tool.py doctor --url http://localhost:3030
 ```
 
-**範式轉移**：瀏覽器是可拋棄的工具，程式碼才是持久產出。
+`doctor` 回 `ok: true` 才往下。
 
----
+## 三個子命令
 
-## 架構（~1K LoC harness）
-
-```
-┌─────────────────────────────────────────┐
-│ Runner Loop                              │
-│                                          │
-│  1. Send context（task + workspace）→ Model │
-│  2. Model emit bash command              │
-│  3. Environment 執行 → 回傳 output       │
-│  4. 迭代直到 final_script.py 通過驗證    │
-└─────────────────────────────────────────┘
+```bash
+S=.kiro/skills/ark-browser-tool/scripts
+# 1. 環境
+python $S/browser_tool.py doctor [--url URL]
+# 2. 單頁截圖＋健康資訊（看畫面、量座標）
+python $S/browser_tool.py shot URL [--viewport 540x960 | --device "iPhone 13"] [--gl] [--wait-selector SEL] [--wait-ms 5000] [--out DIR]
+# 3. 跑劇本
+python $S/browser_tool.py run SCENARIO.yaml [--base-url URL] [--var k=v] [--out DIR] [--headed] [--video] [--no-trace]
 ```
 
-三個模組：
-- **Runner** — 迴圈控制、context 組裝
-- **Model** — LLM endpoint（GPT/Claude/Qwen）
-- **Environment** — terminal 執行 + 檔案系統
+| exit | 意義 |
+|---|---|
+| 0 | PASS |
+| 1 | FAIL（步驟失敗、頁面錯誤、console error、4xx／5xx）|
+| 2 | 環境或劇本錯誤（沒有 playwright、格式錯）|
+| 3 | BLOCK（離開允許網域等，要人處理）|
 
----
+stdout 是單一 JSON（verdict、失敗數、findings、報告路徑）；完整證據在輸出資料夾：`report.json`、`report.md`、`shots/`、`trace.zip`（`python -m playwright show-trace trace.zip` 重播）、`console.jsonl`。
 
-## 兩種操作模式
+## 劇本長這樣
 
-### 模式 A：`webwright_run`（執行任務）
-
-一次性完成瀏覽器任務，產出結果。
-
-```
-輸入：task description + start_url
-輸出：final_script.py + screenshots/ + trajectory.json
-```
-
-適用：資料擷取、表單填寫、搜尋、驗證
-
-### 模式 B：`webwright_craft`（產出可重用工具）
-
-產出參數化 CLI 工具，可重複使用。
-
-```
-輸入：task description + start_url
-輸出：可重用 CLI 工具（python script with argparse）
+```yaml
+schema: browser-scenario/1
+name: login-smoke
+base_url: http://localhost:8080
+viewport: {width: 1280, height: 720}
+steps:
+  - goto: /login
+  - fill: {selector: "#user", value: "${user}"}
+  - click: "button[type=submit]"
+  - expect_url: /home
+  - expect_text: {selector: ".welcome", contains: "歡迎"}
+  - shot: home
 ```
 
-適用：重複性任務（航班比價、票務查詢、定期擷取）
+完整動作（goto／click／fill／read／eval／wait_until／wait_stable／expect…／offline／repeat）與判定規則：`references/scenario-schema.md`。
 
----
+## Canvas／WebGL 遊戲
 
-## Self-Reflection 驗證
+- 劇本加 `browser: {gl: true}`；按鈕用 `click: {x, y}`（先 `shot` 量座標）
+- 數值優先讀頁面掛勾（如 pixi-game-platform 的 `window.__pgp.hud`），用 `wait_until` 等一局結束
+- 標準斷言：資產守恆、HUD＝Server 結算、0 頁面錯誤
+- 範例：`assets/examples/pgp-slot-smoke.yaml`（aidev 豬來蓋福 Docker 部署實測 PASS）；細節 `references/canvas-games.md`
 
-任務不是「模型說完成」就完成：
+## 規則
 
-```
-1. 產出 final_script.py
-2. 在 fresh folder 重新執行（排除環境殘留）
-3. 儲存 logs + screenshots
-4. self_reflection 判斷是否真正成功
-5. 失敗 → 回到 Runner Loop 修正
-```
-
----
-
-## 產出物結構
-
-每次執行產出：
-
-```
-workspace/
-├── final_script.py          # 最終可執行腳本
-├── final_script_log.txt     # 執行日誌
-├── screenshots/             # 關鍵截圖
-├── self_reflect_result.json # 驗證結果
-└── trajectory.json          # 完整操作軌跡
-```
-
----
-
-## MCP 整合
-
-產出 2 個高階 MCP Tools（取代舊版 7 個細粒度 Tools）：
-
-```python
-@mcp.tool()
-async def webwright_run(task: str, start_url: str, max_steps: int = 50) -> dict:
-    """執行瀏覽器任務，回傳結果 + 截圖路徑。"""
-
-@mcp.tool()
-async def webwright_craft(task: str, start_url: str) -> dict:
-    """產出可重用 CLI 工具腳本。"""
-```
-
-### MCP 設定
-
-```json
-{
-  "mcpServers": {
-    "webwright": {
-      "command": "python",
-      "args": ["-m", "webwright.mcp_server"],
-      "env": {
-        "WEBWRIGHT_MODEL": "gpt-5.4",
-        "WEBWRIGHT_MAX_STEPS": "100"
-      }
-    }
-  }
-}
-```
-
----
-
-## 前置條件
-
-- Python 3.10+
-- Playwright：`pip install playwright && playwright install chromium`
-- Webwright：`pip install webwright`（或 `pip install -e .` from repo）
-- LLM API Key（使用現有 team 設定）
-
----
+1. **判定只在腳本**：不讓模型說「看起來成功」就算成功；沒有斷言的劇本只是操作，不是測試
+2. **斷言要能抓錯**：新劇本寫完，故意改一個期望值跑一次，確認會 FAIL
+3. **證據必留**：失敗當下自動截圖；預設錄 trace
+4. **只讀不改**：`eval` 用來讀狀態或觸發 UI 本來就能做的事，不直接改遊戲或頁面狀態造假
+5. **不可逆操作不自動做**：付費、刪除、送出正式表單、登入 MFA → 劇本停在前一步，請人處理
+6. **網域守門**：預設只允許 `base_url` 的網域；要跨網域就明列 `allowed_origins`
 
 ## 與 Playwright MCP 的關係
 
-| | Webwright | Playwright MCP |
-|---|---|---|
-| **範式** | Code-first（寫腳本） | Tool-first（逐步呼叫） |
-| **產出** | 可重用 script + 截圖 + log | 單次操作結果 |
-| **驗證** | self-reflection + fresh rerun | 無 |
-| **Token** | 批次生成，少量迭代 | 每步一次 snapshot |
-| **適用** | 複雜/長任務、重複任務 | 簡單互動、快速預覽 |
+IDE 裡想臨時「看一下」可以用 Playwright MCP（`npx @playwright/mcp@latest --headless`），但它每步一次 snapshot、不留可重跑的劇本。
+要**測試**、要**留證據**、要**重跑**，一律寫劇本跑 `browser_tool.py run`。
 
-**策略**：Webwright 為主要模式，Playwright MCP 作為輕量備選（快速截圖/簡單互動）。
+## 升級說明（3.x → 4.0.0，Breaking）
 
-### Playwright MCP 備選設定
-
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest", "--headless"]
-    }
-  }
-}
-```
-
----
-
-## 常用場景
-
-### 網頁資料擷取
-
-```
-webwright_run(
-  task="搜尋 'LLM cost optimization 2026' 並擷取前 5 筆結果標題和連結",
-  start_url="https://www.google.com"
-)
-```
-
-### 產出可重用搜尋工具
-
-```
-webwright_craft(
-  task="建立 Google 搜尋工具，接受 query 參數，回傳前 10 筆結果",
-  start_url="https://www.google.com"
-)
-→ 產出 google_search_tool.py（可重複呼叫）
-```
-
-### 前端視覺驗證
-
-```
-webwright_run(
-  task="開啟頁面，截圖 desktop/tablet/mobile 三種尺寸，確認佈局正確",
-  start_url="http://localhost:3000"
-)
-```
-
-### 表單 E2E 測試
-
-```
-webwright_run(
-  task="填寫註冊表單（name=Test, email=test@example.com），提交並確認成功訊息",
-  start_url="http://localhost:3000/register"
-)
-```
-
----
-
-## 與開發流程整合
-
-```
-RED → GREEN → REFACTOR → WEBWRIGHT VERIFY → COMMIT
-```
-
-### 視覺檢查清單
-
-Webwright 執行後自動產出截圖，確認：
-- [ ] 頁面正常載入（無白屏/錯誤）
-- [ ] 佈局符合設計
-- [ ] 文字可讀（無溢出/截斷）
-- [ ] 互動元素可操作
-- [ ] 響應式正確
-
----
-
-## 注意事項
-
-- Webwright 需要 LLM API Key 才能運作（使用 team 現有設定）
-- 設定 `max_steps` 上限避免 token 失控（預設 50，上限 100）
-- 整合 `cost_guard` 監控每次執行的 token 消耗
-- Pin Webwright 版本（preview 階段 API 可能變動）
-- 長任務自動 context compaction（歷史摘要 + workspace 保留具體產出）
-- 官方 repo：https://github.com/microsoft/Webwright
+- 移除 Webwright（需另一組 LLM API key、判定權在模型）與 `webwright_run`／`webwright_craft` MCP 工具
+- 改為捆綁腳本：原「執行任務」→ `run` 劇本；原「產出可重用工具」→ 劇本本身就是可重跑的資產
