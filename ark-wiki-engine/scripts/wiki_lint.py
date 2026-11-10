@@ -2,7 +2,7 @@
 
 用途：檢查 wiki/ 目錄下所有頁面的品質問題。
 - frontmatter 必要欄位驗證
-- 孤立頁面偵測（無任何 inbound wikilink）
+- 孤立頁面偵測（無任何 inbound wikilink；frontmatter `related:` 雙向計入，`overview` 除外）
 - 斷裂 wikilink（指向不存在的頁面）
 - status 過期提醒
 
@@ -63,6 +63,8 @@ def lint_wiki(wiki_dir: Path, errors_only: bool = False,
     all_pages = {}  # filename_stem → path
     all_inbound: dict[str, int] = {}  # page_name → inbound count
     all_outbound: dict[str, list[str]] = {}  # page_name → list of targets
+    # [3.2.0] frontmatter `related:` 宣告（page_name → 目標）；Pass 2 雙向計入孤立判定
+    all_related: dict[str, list[str]] = {}
 
     # Pass 1: 收集所有頁面 + 驗證 frontmatter
     for f in md_files:
@@ -139,6 +141,13 @@ def lint_wiki(wiki_dir: Path, errors_only: bool = False,
             except ValueError:
                 pass
 
+        # related：「相關」是對稱關係 —— A 宣告與 B 相關，A、B 兩邊都不算孤立（Pass 2 處理）
+        rel_raw = fm.get("related") or []
+        if isinstance(rel_raw, str):
+            rel_raw = [x for x in rel_raw.split(",")]
+        all_related[page_name] = [
+            str(x).strip().strip("[]").split("|")[0].strip() for x in rel_raw if str(x).strip()]
+
         # Wikilinks
         links = extract_wikilinks(content)
         all_outbound[page_name] = links
@@ -168,13 +177,23 @@ def lint_wiki(wiki_dir: Path, errors_only: bool = False,
                             f"（red link —— 若被多頁引用代表真的該建這一頁）"
                 })
 
+    # related 雙向計入（3.2.0）。🔴 `overview` 不給雙向分：ingest 預設 `related: [overview]`，
+    # 若算進去，只要有 overview 頁，每一頁都會「連到」它 → 孤立偵測形同失效。
+    # 目標頁不存在的 related 不給任何一方分（等同 red link，不能讓宣告者因此脫離孤立）。
+    for page_name, targets in all_related.items():
+        for target in targets:
+            if target == "overview" or target == page_name or target not in all_pages:
+                continue
+            all_inbound[target] = all_inbound.get(target, 0) + 1
+            all_inbound[page_name] = all_inbound.get(page_name, 0) + 1
+
     if not errors_only:
         for page_name, path in all_pages.items():
             if page_name not in all_inbound and page_name != "overview":
                 warnings.append({
                     "file": str(path.relative_to(wiki_dir)),
                     "level": "warning",
-                    "msg": "孤立頁面（無任何 inbound wikilink）"
+                    "msg": "孤立頁面（無任何 inbound wikilink，也沒有任何 related 關聯）"
                 })
 
     return {

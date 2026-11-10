@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-10 (ark-wiki-engine 3.2.0 —— wiki_lint 孤立頁判定把 `related:` 雙向計入)
+
+> 來源：kiro-bot 櫃 `2026-11-09-agent-backend-model-reorg` 已在 `related:` 宣告與改名頁相關，lint 仍報孤立；補一行連結要手寫 wiki（禁止），ingest 又跳過既有頁 → 沒有合法修法。
+
+- 「相關」是對稱關係：A 的 `related:` 有 B（且 B 存在）→ A、B 都不算孤立；`[[b|顯示]]` 寫法也認得
+- 🔴 三個邊界不給分：`overview`（ingest 預設 `related: [overview]`，算進去孤立偵測全滅）、指向不存在的頁、自我宣告
+- 影響實測（本機各櫃孤立數 舊→新）：kiro-bot 1→0、shared 1→0、nana-agent 20→8、nana shared 22→9、ninja-agent 89→82、hoyeah-bq 48→9、hoyeah 25→3；抽查 hoyeah-bq 被放掉的 39 頁，關聯分散（單一目標最多 5 頁），沒有樞紐頁漏洞
+- 測試 `scripts/tests/test_lint_related_symmetric.py` 6 項（反證：拿掉雙向 → 2 紅；拿掉 overview 排除 → 1 紅）；全套 130 passed
+
 ## 2026-11-10 (ark-wiki-engine 3.1.0 —— 新增 `wiki_taxonomy.py retag`：白名單建好後修存量頁 tags)
 
 > 來源：kiro-bot 知識櫃首次建白名單（24 個 tag），存量 12 頁有 10 頁帶未核准 tag，卻沒有合法修法：wiki 禁手寫，而 `wiki_ingest` 遇既有頁回 `already_exists` 跳過、且只產空骨架 —— 重新 ingest 只能先刪頁，整理過的內容會被換成空章節。

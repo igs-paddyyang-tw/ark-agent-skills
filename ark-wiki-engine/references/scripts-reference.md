@@ -101,6 +101,9 @@ error：缺必填欄位（含 `trust`）、`llm-distilled` 未帶 `approved`、
 `approved:false` 卻非 `seedling`、tag 不在白名單、斷裂 wikilink。
 warning：孤立頁面、建議欄位、非法枚舉值、`seedling` 逾期。
 
+> **孤立頁判定（3.2.0）**：別頁內文有 `[[我]]`，**或** frontmatter `related:` 與任何既有頁有關聯（雙向：我宣告它或它宣告我），就不算孤立。
+> `related: [overview]`（ingest 預設值）不算、指向不存在頁的 related 不算、自我宣告不算 —— 否則孤立偵測會被預設值整個關掉。
+
 ## wiki_graph.py — 圖譜
 
 ```bash
