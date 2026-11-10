@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-10 (ark-wiki-engine 3.1.0 —— 新增 `wiki_taxonomy.py retag`：白名單建好後修存量頁 tags)
+
+> 來源：kiro-bot 知識櫃首次建白名單（24 個 tag），存量 12 頁有 10 頁帶未核准 tag，卻沒有合法修法：wiki 禁手寫，而 `wiki_ingest` 遇既有頁回 `already_exists` 跳過、且只產空骨架 —— 重新 ingest 只能先刪頁，整理過的內容會被換成空章節。
+
+- **新增 `retag` 子命令**：`--map old=new`（可重複，`new` 留空＝移除）＋`--drop-unknown`＋`--dry_run`＋`--by`＋`--json`
+  - 只改 frontmatter 的 `tags:`（inline／block list 皆可），內文、BOM、CRLF 逐位元組保留；frontmatter 定位共用 `_wikilib._FM_RE`（AC-003）
+  - 🔴 `--map` 目標必須已在白名單，否則 exit 2 且一個檔都不改 —— 不讓 retag 變成繞過受控詞彙的後門
+  - 對照後會變成沒有 tag 的頁跳過並 exit 1；仍有殘留未知 tag 也 exit 1，訊息附「加 `--map …=<已核准 tag>` 或 `--drop-unknown`」
+  - 每頁變更 append 到 schema 同層 `log.md`（`retag | 頁 | by | 舊 → 新`，與 approve 平行）；改完自動重建索引（`--no-index` 可關）
+- 測試 `scripts/tests/test_taxonomy_retag.py` 10 項（反證：寫檔不保留換行 → CRLF 測試紅；對照目標不驗白名單 → 白名單測試紅）；全套 124 passed
+- SKILL.md 決策樹與硬規則 1 補 retag（行數維持 220）；`references/scripts-reference.md` 補用法與 exit code
+- 順帶：README 目錄重產（ark-browser-tool 4.0.0 後未重跑，contract 測試的 README 守門原本是紅的）
+
 ## 2026-11-09 (ark-browser-tool 4.0.0 —— 拿掉 Webwright，改為獨立 Playwright 劇本執行器)
 
 > 來源：aiqa 網頁測試 SOP 設計（nana `projects/aiqa-team-agent/docs/designs/2026-11-09-web-test-sop-design.md`）；Paddy：不要另一組 LLM API、要能獨立跑腳本測 Web 介面。

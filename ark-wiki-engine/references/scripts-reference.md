@@ -129,7 +129,15 @@ python scripts/wiki_taxonomy.py check   --schema ... page1.md page2.md [--json]
 python scripts/wiki_taxonomy.py propose --schema ... new-tag --reason "..." --by agent
 python scripts/wiki_taxonomy.py approve --schema ... new-tag      # 人工執行
 python scripts/wiki_taxonomy.py migrate --schema ... --wiki_dir ...
+python scripts/wiki_taxonomy.py retag   --schema ... --wiki_dir ... --map cli=kiro-cli --map 架構= \
+                                        [--drop-unknown] [--dry_run] [--no-index] [--by agent] [--json]
 ```
+
+> **retag（3.1.0）**：白名單建好後修存量頁的唯一正路 —— `wiki_ingest` 遇既有頁回 `already_exists` 跳過，且只產空骨架，
+> 不能拿來改 tag。retag 只改 frontmatter 的 `tags:`（inline／block 皆可），內文、BOM、CRLF 逐位元組保留；
+> `--map` 目標必須已在白名單（否則 exit 2、一個檔都不改）；`NEW` 留空＝移除；對照後去重。
+> exit：0＝全部合規、1＝仍有殘留未知 tag 或某頁會變成沒有 tag（該頁跳過）、2＝對照表不合法。
+> 每頁變更 append 到 schema 同層 `log.md`（`retag | 頁 | by | 舊 → 新`），改完自動重建索引（`--no-index` 可關）。
 
 > ⚠️ 白名單解析要求 `- ` 清單**緊接** `## tags 白名單` 標題。
 > 格式不合 → 白名單靜默變空集合，而空集合的語意是

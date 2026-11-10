@@ -17,8 +17,8 @@ metadata:
   category: pipeline
   form: executor
   domain: general
-  version: "3.0.5"
-  updated: 2026-10-29
+  version: "3.1.0"
+  updated: 2026-11-10
   outputs:
     # wiki_query／wiki_context 的 JSON 契約歸 data（`json` 非合法 format，同 ark-db-query：不為單一 skill 放寬守門）
     - { format: data, audience: ai }
@@ -74,7 +74,7 @@ v3 把它變成真實可執行的 `scripts/wiki_query.py`，索引落在 `knowle
 ├─ 要把 wiki 內容帶進回答或提詞？ → wiki_context.py --budget_chars
 ├─ meta.index_fresh = false？      → 答案照用，另提醒維護者跑 wiki_index.py build
 ├─ 匯入 raw / 報告入庫（產骨架非蒸餾）？ → wiki_ingest.py（guard/taxonomy 內建，勿 --no-guard）
-├─ 新概念沒有合法 tag？            → wiki_taxonomy.py propose（不自創）
+├─ 新概念沒有合法 tag？            → wiki_taxonomy.py propose（不自創）；存量頁改 tag → retag（勿重新 ingest）
 ├─ 健檢 / CI？                     → wiki_lint.py --json（以 exit code 為準）
 ├─ 圖譜 / 孤兒頁？                 → wiki_graph.py
 └─ 專案還沒有 knowledge/？          → build_wiki.py <dir> <name>
@@ -131,7 +131,7 @@ python $S/build_wiki.py   ./myproject demo --install-skill ./myproject/.kiro/ski
 
 ## 三條硬規則（由腳本強制，不靠 LLM 記得）
 
-1. **受控詞彙** —— 頁面 tags 只能用 `schema.md` 白名單；新概念 `wiki_taxonomy propose` → 人工 `approve`。
+1. **受控詞彙** —— 頁面 tags 只能用 `schema.md` 白名單；新概念 `wiki_taxonomy propose` → 人工 `approve`；存量頁用 `retag --map old=new`（只動 frontmatter，目標須已核准）。
    `wiki_ingest --schema` 遇未知 tag **exit 1 且不落盤**。
 2. **Guard-first ingest** —— 任何 raw 入庫前必過 `wiki_guard`；違規進 `raw/_quarantine/` 不入庫。
    順序寫死在 `ingest_file`，**窮舉參數組合皆無法跳過**（測試釘住）。`--no-guard` 僅限除錯，

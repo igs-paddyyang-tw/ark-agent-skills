@@ -74,7 +74,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
 | `ark-agent-cli` | ⚙️ 執行 | 通用 | 統一 Agent CLI 閘道（kiro／claude／gemini／codex 同一介面）＋背景 sub-agent（分段執行、checkpoint 續跑、預設唯讀、空轉熔斷、用量統計、終態回報），… |
-| `ark-browser-tool` | 📝 指示 | 通用 | 瀏覽器自動化工具：使用 Microsoft Webwright（terminal-native web agent 框架）。 |
+| `ark-browser-tool` | ⚙️ 執行 | 通用 | 獨立的網頁操作與測試工具（executor 型，捆綁 Playwright 腳本，不需要任何 LLM／API key）。 |
 | `ark-community-cli` | ⚙️ 執行 | 🎮 遊戲 | 社群訊息蒐集與分析的 CLI skill：以標準 SOP 從 Discord（自家伺服器，bot 唯讀）與 X／Twitter（日本市場， X API v2 pay-per-use）取得訊息，統一 s… |
 | `ark-db-query` | ⚙️ 執行 | 通用 | Agent 直接呼叫的多資料庫查詢工具箱（executor 型，捆綁可執行 scripts/，非產碼食譜）。 |
 | `ark-pipeline-recipes` | 📝 指示 | 通用 | 資料管線與 LLM 工具的產碼食譜集：照食譜在專案裡寫出標準模組（圖表、ETL 轉換與匯出、 KPI 計算、異常偵測與告警、LLM 成本追蹤、翻譯、LLM 摘要／分析／意圖解析、管線資料契約）。 |
