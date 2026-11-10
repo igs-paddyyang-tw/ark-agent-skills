@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r38",
-  "commit": "9b49388",
-  "generated_at": "2026-11-10T17:20:16+08:00",
+  "release": "skills-2026.11-r39",
+  "commit": "a67bbad",
+  "generated_at": "2026-11-10T17:27:25+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -645,9 +645,9 @@
       "updated": "2026-10-29"
     },
     "ark-wiki-engine": {
-      "version": "3.1.0",
-      "tree_hash": "sha256:32b130d5330f4166c12cef903ab6cb2e7563cfccc78ec6a93d9e9b9ac5593cf1",
-      "contract_hash": "sha256:06f34ce32d977b0f23ce48ac6d5695dbd8ca4523bf1488dc66fa515b897f579e",
+      "version": "3.2.0",
+      "tree_hash": "sha256:d1063353a5f9e1b36d3e18433e5bc1cc9e239f432d965df467167442cab33972",
+      "contract_hash": "sha256:a6676594ec238ced1d28c040c380cb29c660ca914cc5e8bee7c57499ee4e7c13",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],
