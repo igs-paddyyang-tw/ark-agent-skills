@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-11-12 (ark-md-report 1.2.0 —— 公開版發佈工具：去敏 must、報告 HTML 產生器、公開版掃描)
+
+> 來源：fish-bot、slot-bot 的報告發佈流程（2026-11-03 起多輪實跑）。兩邊工具各寫一份、規則已分岔，fish-bot 產 mermaid 報告還要用 `../slot-bot/` 相對路徑呼叫 slot-bot 的腳本。nana 提案、Paddy 選「併入 ark-md-report」。
+
+- **`public_scan.py`**：兩層規則 —— 通用（commit 編號、IP、本機路徑、金鑰與 token、email、審查評等值）內建；專案敏感詞（內部 repo、主機、資料庫名、缺陷編號）用 `--rules <json>` 放專案 repo，不進共用技能。掃到 0 個檔案算失敗；`--json`；exit 0／1／2
+  - commit 規則要求同時含字母與數字（排除純數字與 CSS 色碼）；「verdict」單字不算，只抓 `verdict: <frontmatter-contract 枚舉值>`
+  - 實測：nana-bot 作品集上 fish-bot、slot-bot 既有公開版 34 個檔案，通用規則 0 命中
+- **`build_report_html.py`**：由 slot-bot `kb_go_report/build_report_html.py` 一般化（拿掉專案字樣、可 import 的 `build()`、P0 嚴重度標色）；**併入 fish-bot `postprocess_mermaid_html.py` 的後處理**（標籤 CSS、刪未引用 `<symbol>`），預設開啟。附 `render_mermaid.mjs`、`report_html.css`
+  - 修一個移植時的 bug：後處理原以 `figure.mm` 判斷是否補 CSS，新產出的頁面只有 `class="fig mm"`，CSS 永遠不會補（測試抓到，反證：改回舊條件 → 1 紅）
+  - 實測：fish-bot 2026-11-06 MVP 製程報告公開版重建，mermaid 6 張、殘留 symbol 0、掃描 0 命中
+- **`public_edit.py`**：`must()`／`must_all()`／`strip_frontmatter()`，目標必須剛好命中一次，否則拋 `EditMiss`
+- 不收：fish-bot `svg_fit_check.py`（綁定該專案自繪 SVG 的 class 慣例，不通用）、各專案的去敏替換清單與簡報產生器
+- `references/public-release.md`；SKILL.md 補「公開版發佈」一節
+- 測試 `scripts/tests/test_md_report_public_release.py` 26 項（反證：拿掉 IP／本機路徑／email 規則各 1 紅）；ark-md-report 全部 40 passed
+
 ## 2026-11-10 (ark-wiki-engine 3.2.0 —— wiki_lint 孤立頁判定把 `related:` 雙向計入)
 
 > 來源：kiro-bot 櫃 `2026-11-09-agent-backend-model-reorg` 已在 `related:` 宣告與改名頁相關，lint 仍報孤立；補一行連結要手寫 wiki（禁止），ingest 又跳過既有頁 → 沒有合法修法。

@@ -9,10 +9,10 @@ description: |
   「報告要能入 wiki」「雙軌報告」，或任何分析結論需要被下游 agent/wiki/日報消費的場景。
   不適用於：給人看的網頁視圖請用 ark-html-report；報告要進知識庫由 ark-wiki-engine ingest，不要自己寫進 wiki/。
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   schema_version: "1.2"
   status: active
-  updated: 2026-10-30
+  updated: 2026-11-12
   author: paddyyang
   category: document
   form: instruction
@@ -110,7 +110,11 @@ metadata:
 scripts/
 ├── report_lint.py      # 契約驗證（frontmatter/枚舉/ID/統計/禁詞/章節）
 ├── report_pair.py      # 雙軌漂移檢查（MD↔HTML 配對 + sha256 戳記）
-└── report_register.py  # 索引註冊（_index.md + log.md + wiki source 建議）
+├── report_register.py  # 索引註冊（_index.md + log.md + wiki source 建議）
+│   ── 對外發佈（1.2.0，見下方「公開版發佈」）──
+├── public_edit.py      # 去敏替換 must()：目標必須剛好命中一次
+├── build_report_html.py# 報告 MD → 長文 HTML（mermaid 預渲染＋後處理；--public）
+└── public_scan.py      # 公開版掃描：通用規則＋專案規則，0 命中才可放
 ```
 
 ### report_lint.py — 契約守門
@@ -167,6 +171,19 @@ date|type|subject|verdict|p0|p1|p2|score|path
 5. python scripts/report_register.py {report.md}
 6. reply「報告已落盤 {path}｜verdict: {x}｜P0:{n}｜lint: PASS」
 ```
+
+### 公開版發佈 — 報告要對外（不用登入就看得到）時
+
+```
+1. 內部完整版照上面 1～5 步做完（lint PASS）
+2. 專案自己的去敏腳本（import public_edit.must）→ 公開版 MD 另存，不覆蓋內部版
+3. python scripts/build_report_html.py <公開版.md> <公開版.html> --asof "…" --public --back "<網址>|<文字>"
+4. python scripts/public_scan.py <公開版目錄> --rules <專案規則.json>   → 必須 0 命中
+5. 放到發佈位置；commit 訊息留「上架：<檔名>｜里程碑：…｜決策：…｜類型：stage|tech」
+```
+
+內部 repo 名、主機、資料庫名等專案敏感詞放**專案自己的規則檔**，不放進本技能。
+完整規則、要拿掉的五類、踩過的坑：`references/public-release.md`。
 
 ---
 
