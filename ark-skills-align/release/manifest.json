@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r39",
-  "commit": "a67bbad",
-  "generated_at": "2026-11-10T17:27:25+08:00",
+  "release": "skills-2026.11-r40",
+  "commit": "f78e750",
+  "generated_at": "2026-11-12T18:02:49+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -413,9 +413,9 @@
       "updated": "2026-10-20"
     },
     "ark-md-report": {
-      "version": "1.1.0",
-      "tree_hash": "sha256:84c40beba17847e88ffceb41381de7a965ba976ccc4afad66f8f4598f0606795",
-      "contract_hash": "sha256:ddc138318a2fd60e7da0a965a8fdf700c719be4c55cadf547e2c6089e61cb573",
+      "version": "1.2.0",
+      "tree_hash": "sha256:b9332819c24a7a74d3660192006fcdffe5c48c392d588e5463e33b9278d4f22b",
+      "contract_hash": "sha256:4c049b32e49eaccfc974b5b5339104303c4e5fb5e0439da890e8cd7c2b29ed8a",
       "status": "active",
       "category": "document",
       "depends_on": [
@@ -425,7 +425,7 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-10-30"
+      "updated": "2026-11-12"
     },
     "ark-mobile-adb": {
       "version": "2.6.1",
@@ -546,9 +546,9 @@
       "updated": "2026-11-05"
     },
     "ark-skills-align": {
-      "version": "2.15.1",
-      "tree_hash": "sha256:c3d2b35da82753553a6a178e40f746200572dab0c9873123750723033ed1e6f1",
-      "contract_hash": "sha256:26caa415989bf9cff9b97eb51addc2375dfe0b26db00b3723f3532c1465a24e9",
+      "version": "2.16.0",
+      "tree_hash": "sha256:dd994f4e0df1086c06ce496b594641885a19ba603cebe599487ce65026b5ccbd",
+      "contract_hash": "sha256:a722caa07ae75653c6854a7c9aaf4f3a2e2b44043e13cab07c451461c99c5d53",
       "status": "active",
       "category": "ops",
       "depends_on": [
