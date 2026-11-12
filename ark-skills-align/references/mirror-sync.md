@@ -50,11 +50,14 @@ skill 狀態：
 ## 介面
 
 ```bash
-python ark-skills-align/scripts/mirror_sync.py plan  --upstream <skills repo> --target <team 根> [--keep PATH ...] [--json]
-python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> [--keep PATH ...] [--only SKILL ...] --yes
+python ark-skills-align/scripts/mirror_sync.py plan  --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--json]
+python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--only SKILL ...] --yes
 ```
 
 - 掃描 `<team 根>` 與 `<team 根>/projects/*` 各自的技能複本；symlink 目錄跳過。
+- **`--root-only`（2.16.0）**：只掃 `<team 根>` 本身。`projects/` 底下是**別的 repo**（例：kiro-cli 的 15 個專案）時必帶，否則會越界改寫他人複本。
+- **`agents/*` 不會被掃**：多 agent team 要逐個 agent 目錄當 target（`for t in . agents/*/; do … --target $t; done`）。
+- 消費端一律放**實體複本**，不要 symlink 到另一個消費端（會讀到對方的客製版、對方刪 skill 就斷；2026-11-12 ninja-bot 69 個 symlink 已改實體）。
 - **佈局雙讀（2.13.0 起，ark-agent-os 3.0 前）**：該目錄有 `.ark/ark.yaml` → `.ark/skills`；否則 `.kiro/skills`。同一目錄只取一處，不會兩份都寫（判定在 `scripts/ark_layout.py`）。
 - 只處理上游也有的 skill；本地獨有的 skill（domain / local_only）不碰。
 - `--keep PATH`：skill 內相對路徑或其前綴（可重複），例如 `kb_registry.json`、`artifacts`。
@@ -74,19 +77,14 @@ python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --
 - `mirror_sync.py check --target <team 根>`：複本內容與鎖不符（被手改）、鎖裡有但複本不見、`.ark` 佈局卻沒有鎖 → exit 1；legacy `.kiro` 佈局**明說跳過**（不寫鎖、不算通過也不算失敗）
 - legacy 佈局的 plan／apply 行為與 2.12.0 完全相同
 
-## 上游 clone 特例（kiro-cli）
+## 上游 clone 位置（2026-11-12 起）
 
-kiro-cli 的 `.kiro/skills` **就是 ark-agent-skills 的 git clone**（不是消費端複本），`.claude/skills` 是指向它的 symlink；
-另外有 8 個消費端 wrapper（各專案 doctor.sh／check_skills_residue.sh）寫死 `$HOME/kiro-cli/.kiro/skills/scripts/check_consumers.py`。
-kiro-cli 遷移到 `.ark` 時（ark-agent-os M5）照下面做，**舊路徑全部保持可用**：
+- **上游開發 clone＝`~/kiro-cli/github/shared/ark-agent-skills`**（各消費端 `--upstream` 指這裡；wrapper 預設值同步改，可用 `ARK_SKILLS_UPSTREAM` 覆寫）
+- kiro-cli 的 `.kiro/skills` **不再是上游 clone**，改為 kiro-bot 的客製消費端複本（進 kiro-bot repo）；`.claude/skills` 仍是指向它的 symlink
+- 新 clone 要裝 pre-push hook：`ln -s ../../scripts/hooks/pre-push .git/hooks/pre-push`
+- 對齊 kiro-cli 自己：`mirror_sync … --target ~/kiro-cli --root-only`
 
-1. `git -C kiro-cli/.kiro/skills status` 乾淨、已推上游
-2. 整個 clone 搬到 `.ark/skills`（`mv`，保留 `.git`）
-3. `.kiro/skills` → symlink `../.ark/skills`；`.claude/skills` → symlink `../.ark/skills`
-4. 驗證：`git -C .ark/skills status` 正常；`ls .kiro/skills/scripts/check_consumers.py`、`ls .claude/skills/ark-skills-align/SKILL.md` 都找得到；各消費端 `mirror_sync --upstream ~/kiro-cli/.kiro/skills` 仍可用
-5. 3.0 移除 legacy 前，再通知 8 個 wrapper 改指 `.ark/skills`
-
-> mirror_sync 掃描時跳過 symlink，所以 kiro-cli 根目錄的 `.kiro/skills` symlink 不會被當成另一份複本。
+> 舊做法（clone 搬到 `.ark/skills` 保留 `.git`、`.kiro/skills` 改 symlink）已作廢。
 
 ## 驗收
 
@@ -99,3 +97,4 @@ kiro-cli 遷移到 `.ark` 時（ark-agent-os M5）照下面做，**舊路徑全�
 7. `--help` exit 0 且不在 cwd 產生檔案。
 8. 本地獨有且符合上游 `.gitignore` 的檔（如 wiki `.index/`）不算本地資料，對齊後不保留。
 9. `--accept-upstream` 的 skill：local-mod 改按 stale 對齊；`--keep` 仍優先。
+10. `--root-only`：`projects/*` 的複本不被列出也不被改；不帶時照舊兩處都掃。

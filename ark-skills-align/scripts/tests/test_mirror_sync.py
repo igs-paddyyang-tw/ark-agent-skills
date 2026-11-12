@@ -313,3 +313,17 @@ def test_apply_one_handles_readonly_and_in_place_fallback(tmp_path, monkeypatch)
     M.apply_one(loc2, up, M.SkillReport(base=".", name="ark-x"))
     assert (loc2 / "SKILL.md").read_text(encoding="utf-8") == "new" and (loc2 / "scripts" / "a.py").exists()
     assert not (loc2 / "scripts" / "old_only.json").exists() and not list(loc2.parent.glob("*.mirror-sync-*"))
+
+
+def test_root_only_skips_projects(env):
+    """--root-only：projects/* 是別的 repo（kiro-cli）時不可越界；不帶旗標則照舊兩處都掃（反證）。"""
+    up, v1, team = env
+    root = _place(team, ".", v1)
+    other = _place(team, "projects/other-repo", v1)
+    assert {r.base for r in M.run(up, team, [], None, do_apply=False)} == {".", "projects/other-repo"}
+    [r] = M.run(up, team, [], None, do_apply=False, root_only=True)
+    assert r.base == "."
+    before = {k: v.read_bytes() for k, v in M._files(other).items()}
+    assert M.main(["apply", "--upstream", str(up), "--target", str(team), "--root-only", "--yes"]) == 0
+    assert {k: v.read_bytes() for k, v in M._files(root).items()} == _tracked_upstream(up)
+    assert {k: v.read_bytes() for k, v in M._files(other).items()} == before, "projects/* 不可被改"

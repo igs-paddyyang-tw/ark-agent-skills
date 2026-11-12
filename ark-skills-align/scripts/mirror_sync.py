@@ -5,8 +5,8 @@
 本地內容曾存在於上游歷史 → 過期，可對齊；從未存在 → 本地修改，不覆蓋、列出待審。
 
 用法:
-    python mirror_sync.py plan  --upstream <skills repo> --target <team 根> [--keep PATH ...] [--json]
-    python mirror_sync.py apply --upstream <skills repo> --target <team 根> [--keep PATH ...] [--only SKILL ...]
+    python mirror_sync.py plan  --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--json]
+    python mirror_sync.py apply --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--only SKILL ...]
                                 [--accept-upstream SKILL ...] --yes
 
 exit: 0 正常；2 參數錯誤／apply 未帶 --yes；3 上游不是 git repo。
@@ -152,13 +152,15 @@ def _kept(rel: str, keep: list[str]) -> bool:
     return any(rel == k or rel.startswith(k.rstrip("/") + "/") for k in keep)
 
 
-def skill_dirs(target: Path) -> list[Path]:
+def skill_dirs(target: Path, root_only: bool = False) -> list[Path]:
     """team 根與 projects/* 底下的技能複本（symlink 跳過）。
 
     每個目錄各自判佈局：有 `.ark/ark.yaml` → `.ark/skills`，否則 `.kiro/skills`
     （ark-agent-os 3.0 前雙讀；同一目錄只取一處，不會兩份都寫）。
+    `root_only`：只看 target 本身 —— target 的 projects/ 底下是**別的 repo** 時（例：kiro-cli）必須帶，
+    否則會越界改寫他人的複本。`agents/*` 一律不掃，要逐個 agent 目錄當 target。
     """
-    roots = [target] + sorted(p for p in (target / "projects").glob("*") if p.is_dir())
+    roots = [target] if root_only else [target] + sorted(p for p in (target / "projects").glob("*") if p.is_dir())
     cands = [skills_dir(r) for r in roots]
     return [d for d in cands if d.is_dir() and not d.is_symlink()]
 
@@ -331,10 +333,10 @@ def write_lock(d: Path, upstream: Path, up_root: Path) -> Path | None:
     return lk
 
 
-def check_locks(target: Path) -> list[str]:
+def check_locks(target: Path, root_only: bool = False) -> list[str]:
     """比對 `.ark` 佈局複本與版本鎖；回傳問題清單（空＝一致）。legacy 佈局明說跳過。"""
     problems: list[str] = []
-    for d in skill_dirs(target):
+    for d in skill_dirs(target, root_only):
         ws = d.parent.parent
         rel = ws.relative_to(target).as_posix()
         if find_ark_dirs(ws)[0] != ARK:
@@ -355,13 +357,13 @@ def check_locks(target: Path) -> list[str]:
 
 
 def run(upstream: Path, target: Path, keep: list[str], only: list[str] | None,
-        do_apply: bool, accept: list[str] | None = None) -> list[SkillReport]:
+        do_apply: bool, accept: list[str] | None = None, root_only: bool = False) -> list[SkillReport]:
     """掃描 target 全部複本；do_apply 時對齊 STALE。`accept`：審過可用上游覆蓋的 skill 名。"""
     reports: list[SkillReport] = []
     with tempfile.TemporaryDirectory() as tmp:
         up_root = Path(tmp)
         history = export_upstream(upstream, up_root)
-        for d in skill_dirs(target):
+        for d in skill_dirs(target, root_only):
             base = d.parent.parent.relative_to(target).as_posix()
             for local in sorted(p for p in d.iterdir() if p.is_dir() and not p.is_symlink()):
                 up = up_root / local.name
@@ -412,12 +414,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--only", action="append", help="只處理指定 skill（可重複）")
     ap.add_argument("--accept-upstream", action="append", default=[], metavar="SKILL",
                     help="人工審過、確認本地修改只是舊版的 skill：本地修改改用上游覆蓋（可重複）")
+    ap.add_argument("--root-only", action="store_true",
+                    help="只處理 target 本身，不掃 target/projects/*（projects/ 底下是別的 repo 時必帶）")
     ap.add_argument("--yes", action="store_true", help="apply 必填")
     ap.add_argument("--json", action="store_true", help="輸出 JSON")
     a = ap.parse_args(argv)
 
     if a.verb == "check":
-        problems = check_locks(a.target.resolve())
+        problems = check_locks(a.target.resolve(), a.root_only)
         for msg in problems:
             print(f"❌ {msg}")
         print("✅ 版本鎖一致" if not problems else f"\n{len(problems)} 項不一致")
@@ -430,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         reports = run(a.upstream.resolve(), a.target.resolve(), a.keep, a.only, a.verb == "apply",
-                      a.accept_upstream)
+                      a.accept_upstream, a.root_only)
     except NotADirectoryError as e:
         print(f"❌ {e}", file=sys.stderr)
         return 3

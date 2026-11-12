@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-12 (ark-skills-align 2.16.0 —— mirror_sync `--root-only`；上游 clone 改到 github/shared)
+
+> 來源：kiro-bot 上游搬家（kiro-cli `docs/plans/2026-11-12-skills-upstream-relocation-plan.md`）。kiro-cli 根目錄底下 `projects/` 是 15 個他人 repo，`--target ~/kiro-cli` 會越界改寫。
+
+- **`mirror_sync.py --root-only`**：只掃 target 本身（plan／apply／check 皆適用）；測試 `test_root_only_skips_projects`（反證：讓旗標失效 → 1 紅）
+- `references/mirror-sync.md`：上游 clone 位置改 `~/kiro-cli/github/shared/ark-agent-skills`、kiro-cli `.kiro/skills` 改為 kiro-bot 客製複本；舊「clone 搬 `.ark/skills`」作法作廢；補 `agents/*` 要逐個當 target、消費端不可 symlink 到另一個消費端
+- 消費端 wrapper 已同步改預設上游：ai-workshop、game、hoyeah、nana-bot、ninja-bot（`check_skills_residue.sh`）、fish／slot／slotverse（`doctor.sh`，新增 `ARK_SKILLS_UPSTREAM` 覆寫）
+
 ## 2026-11-12 (ark-md-report 1.2.0 —— 公開版發佈工具：去敏 must、報告 HTML 產生器、公開版掃描)
 
 > 來源：fish-bot、slot-bot 的報告發佈流程（2026-11-03 起多輪實跑）。兩邊工具各寫一份、規則已分岔，fish-bot 產 mermaid 報告還要用 `../slot-bot/` 相對路徑呼叫 slot-bot 的腳本。nana 提案、Paddy 選「併入 ark-md-report」。
