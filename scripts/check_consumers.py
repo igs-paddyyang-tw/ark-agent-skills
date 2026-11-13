@@ -62,7 +62,9 @@ YAML_PATH = re.compile(r"^\s*-\s+(ark-[a-z0-9-]+)/\s*(?:#.*)?$")
 SKIP_DIRS = {".git", ".venv", "node_modules", "__pycache__", "state", ".index"}
 
 
-MANIFEST = "ark-skills-align/release/manifest.json"
+#: 2026-11-13 ark-skills-align → ark-skills-sync；舊列車（≤ r40）的 manifest 在舊路徑，查歷史時兩個都看
+MANIFEST = "ark-skills-sync/release/manifest.json"
+MANIFEST_OLD = "ark-skills-align/release/manifest.json"
 _STATUS_DEP = re.compile(r"^\s+status:\s*deprecated\s*$", re.M)
 _VERSION = re.compile(r"^\s+version:\s*[\"']?(\d+\.\d+\.\d+)", re.M)
 
@@ -339,12 +341,14 @@ def previous_train(repo: Path) -> tuple[str, str, dict[str, str]]:
     """
     f = repo / MANIFEST
     if not f.is_file():
+        f = repo / MANIFEST_OLD
+    if not f.is_file():
         return "", "", {}
     cur = json.loads(f.read_text(encoding="utf-8")).get("release", "")
-    log = subprocess.run(["git", "log", "--format=%H", "--", MANIFEST],
+    log = subprocess.run(["git", "log", "--format=%H", "--", MANIFEST, MANIFEST_OLD],
                          capture_output=True, text=True, cwd=repo)
     for sha in log.stdout.split() if log.returncode == 0 else []:
-        txt = _git_show(repo, sha, MANIFEST)
+        txt = _git_show(repo, sha, MANIFEST) or _git_show(repo, sha, MANIFEST_OLD)
         if not txt:
             continue
         m = json.loads(txt)

@@ -31,7 +31,7 @@
 **兩種形態都算 deprecated**，都不列入目錄也不計入總數，但會在頁尾另立一節
 說明去向 —— 直接消失會讓還在用舊 skill 的人找不到遷移路徑。詳見 `scan()`。
 
-判定結果與 `ark-skills-align/scripts/audit_skills.py` 對帳：兩者的
+判定結果與 `ark-skills-sync/scripts/audit_skills.py` 對帳：兩者的
 active / deprecated 數字必須一致，不一致代表其中一方的判定漏了形態。
 """
 # ── Change Log ────────────────────────────────────────────
@@ -66,7 +66,7 @@ SECTIONS = [
     ("document",             "⑤ 文件輸出 Document",        "MD / Office"),
     ("ops",                  "⑥ 維運 Ops",                 "診斷 / 驗證"),
 ]
-#: 與 ark-skills-align/scripts/audit_skills.py 的 FORM_CODES／DOMAIN_CODES 一致
+#: 與 ark-skills-sync/scripts/audit_skills.py 的 FORM_CODES／DOMAIN_CODES 一致
 #: （scripts/tests/test_taxonomy_vocab.py 守）
 FORM_LABEL = {"executor": "⚙️ 執行", "instruction": "📝 指示"}
 DOMAIN_LABEL = {"general": "通用", "game": "🎮 遊戲"}

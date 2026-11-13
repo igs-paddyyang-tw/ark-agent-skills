@@ -124,7 +124,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-github-cli` | ⚙️ 執行 | 通用 | git／GitHub 統一閘道：讀（同步平台文件到 knowledge/github/、程式碼與 issue／PR 搜尋）＋寫（開發收尾：memory 瘦身、索引同步、具名 commit／push，有… |
 | `ark-grafana-query` | ⚙️ 執行 | 通用 | Grafana 監控查詢工具箱（executor 型），agent 用 bash 直接呼叫 scripts/ 下的腳本。 |
 | `ark-mobile-adb` | ⚙️ 執行 | 🎮 遊戲 | Android／BlueStacks 裝置操作（Python CLI 直接包 adb）＋遊戲 AI QA（aiqa：測試清單生成、執行、報告、按鍵精靈式 macro、playtest 試玩報告）。 |
-| `ark-skills-align` | ⚙️ 執行 | 通用 | ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 對齊、同步與稽核專用 skill。 |
+| `ark-skills-sync` | ⚙️ 執行 | 通用 | ark-agent-skills（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的 skills 生命週期技能： 專案（消費端）安裝… |
 | `ark-weknora-cli` | ⚙️ 執行 | 通用 | WeKnora 企業 RAG 知識庫的 CLI 閘道：智能體／知識庫問答（含 citation）、業務口徑路由與 SQL 決策（永不執行 BigQuery，交 ark-db-query）、知識寫入與更… |
 
 ## 🗑️ 已移除（保留供遷移）
@@ -146,6 +146,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-planning-with-files` | 已併入 ark-superpowers（「工作模式 → files（長任務持久化）」；原文在 references/modes/files.md） |
 | `ark-project-planning` | 已併入 ark-superpowers（「工作模式 → plan（流程與派工）」；原文在 references/modes/plan-workflow.md） |
 | `ark-security-audit` | 已併入 ark-quality-gates（security 關（內建規則＋bandit／pip-audit），可直接執行；原產碼食譜在 references/recipes/security-audit.md） |
+| `ark-skills-align` | 已併入 ark-skills-sync（skills 生命週期：專案安裝／更新／健檢、回貢上游、稽核、整併、發列車） |
 | `ark-test-runner` | 已併入 ark-quality-gates（tests 關（pytest＋覆蓋率），可直接執行；原產碼食譜在 references/recipes/test-runner.md） |
 | `ark-translator` | 已併入 ark-pipeline-recipes（讀 references/translator.md） |
 | `ark-uml-generator` | 已併入 ark-superpowers（設計階段「設計圖（Mermaid）」；原文在 references/uml-diagrams.md） |

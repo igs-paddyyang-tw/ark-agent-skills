@@ -5,14 +5,14 @@ description: |
   使用此 Skill 當使用者想要從零建立 Skill、編輯或優化既有 Skill、
   執行評估測試 Skill、基準測試 Skill 效能（有/無 skill 對照）、
   或優化 Skill 的 description 以提升觸發準確度。
-  不適用於：整庫批次稽核/合併/回填請用 ark-skills-align；
+  不適用於：整庫批次稽核/合併/回填請用 ark-skills-sync；
   提詞與 AI 內文的規格驗證請用 ark-prompt-spec-validator；
   code vs spec 一致性請用 ark-code-spec-validator。
 metadata:
   schema_version: "1.2"
   status: active
-  updated: 2026-11-05
-  version: "2.0.2"
+  updated: 2026-11-13
+  version: "2.0.3"
   category: process
   form: instruction
   domain: general
@@ -102,7 +102,7 @@ python scripts/quick_validate.py <skill_dir>    # frontmatter + ark schema v1（
 python scripts/package_skill.py <skill_dir> [dist/]
 python scripts/tests/test_cli_contract.py       # 若本次有改 scripts/
 ```
-quick_validate 是本地快篩；入庫前的權威守門是 `ark-skills-align` 的 audit_skills.py。
+quick_validate 是本地快篩；入庫前的權威守門是 `ark-skills-sync` 的 audit_skills.py。
 
 ## 撰寫指南
 

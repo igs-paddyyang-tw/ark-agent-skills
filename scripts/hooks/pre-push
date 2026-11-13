@@ -49,7 +49,7 @@ if [[ -n "$(printf '%s' "$majorbump" | grep -v '^$')" ]]; then
   printf '%s' "$majorbump" | grep -v '^$' | sed 's|^|    |'
   echo "pre-push: 建議產 Alignment Notice 廣播到 team 頻道（D-1）："
   echo "          python3 $REPO/scripts/check_consumers.py --impact --json impact.json"
-  echo "          python3 $REPO/ark-skills-align/scripts/notice_build.py impact.json --out docs/reports/review/\$(date +%F)-align-notice.md"
+  echo "          python3 $REPO/ark-skills-sync/scripts/notice_build.py impact.json --out docs/reports/review/\$(date +%F)-align-notice.md"
   echo "          （併入改 stub 的舊名，另跑一次不帶參數的 check_consumers.py 看哪些消費端還沒裝接手者）"
 fi
 

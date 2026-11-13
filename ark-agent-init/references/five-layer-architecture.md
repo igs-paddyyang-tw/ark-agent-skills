@@ -21,7 +21,7 @@
 | 換一個專案還用得上嗎？ | ✅ | ❌ |
 | 綁本專案的資料檔、模板、主機、帳號？ | 否（設定走 `.env`） | 是 |
 | 誰維護 | 上游 skills repo（提案 → 審批 → apply） | 本專案自己 |
-| 怎麼更新 | `sync_skills` / `ark-skills-align` 的 `mirror_sync` 從上游對齊 | 直接改、直接 commit |
+| 怎麼更新 | `ark-skills-sync` 的 `skills_sync.py update`（依 `skills-manifest.yaml`）從上游對齊 | 直接改、直接 commit |
 
 - 🔴 **skill 目錄下的 `scripts/` 屬技能層**（技能的實作），不是本文的「腳本」。
 - **升格規則**：腳本被第二個專案需要 → 抽掉寫死值改走 `.env` → 回貢上游成技能。

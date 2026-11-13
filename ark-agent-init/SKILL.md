@@ -23,8 +23,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.8.0"
-  updated: 2026-11-05
+  version: "2.8.1"
+  updated: 2026-11-13
 ---
 
 # ark-agent-init
@@ -42,7 +42,7 @@ metadata:
 | 🧠 **大腦 BRAIN** | `.kiro/steering/`（`SOUL` 人格 · `BRAIN` 判準 · `CODE` · `USER` 畫像）＋ workspace 根 `AGENTS.md` 規範，always-on 常駐注入 | **個人化的根** —— 換一組 steering = 換一個 agent（決定它是誰、怎麼判斷、紅線在哪） | 依角色選模板渲染 SOUL；`--profile` 讓根目錄 manager 由指定角色渲染（§--profile） |
 | 📝 **記憶 Memory** | `memory/`（四層：`BRAIN.md` 判準 → `MEMORY.md` 導覽 → `memory.md` 蒸餾 → `daily/`+`archive/` 流水） | **成長的時間軸** —— 記得經歷過什麼、踩過什麼坑 | 產 `memory/daily`+`archive` 骨架與 `memory.md` 四分節；蒸餾走 `memory-distill` 排程（見 `references/memory-architecture.md`，門檻 ark_team_agent ≥ 1.11.0） |
 | 📚 **知識 Knowledge** | `knowledge/`（`raw` → ingest → `wiki` 四層搜尋；五類來源櫃） | **成長的能力庫** —— 查得到領域知識，問一次之後都在 | 依 `team.yaml` `knowledge_sources` 產五櫃骨架 + 自動補 `knowledge_search_order`（見 `references/knowledge-sources-map.md`） |
-| 🖐️ **技能 Skill** | `.kiro/skills/<name>/`（上游 ark-agent-skills 複本）+ 套件內建 | **手腳** —— 跨專案共用的基本必要能力（怎麼做一件標準的事） | 依 `role-skills-map.md` 複製子集；更新走 `sync_skills`／`ark-skills-align` `mirror_sync`；修改只能提案回上游 |
+| 🖐️ **技能 Skill** | `.kiro/skills/<name>/`（上游 ark-agent-skills 複本）+ 套件內建 | **手腳** —— 跨專案共用的基本必要能力（怎麼做一件標準的事） | 依 `role-skills-map.md` 複製子集；更新走 `sync_skills`／`ark-skills-sync` `mirror_sync`；修改只能提案回上游 |
 | 🔌 **腳本 Script** | `scripts/`、bot 的根 `skills/` 業務模組、`mcp.json` 外部工具 | **外接工具** —— 綁本專案資料／主機／帳號的附屬客製能力 | 產 `scripts/` 骨架；被第二個專案需要 → 去寫死值後升格成技能回貢 |
 
 > **一句話**：大腦給 agent「個性」、記憶給它「經歷」、知識庫給它「專業」、技能給它「手腳」、腳本給它「外接工具」。這也是 `assets/steering/BRAIN.md`「五層資源」準則的上層視角 —— BRAIN 範本管「agent 執行時怎麼用這五層」，本段管「建置時怎麼把它們裝起來」。

@@ -10,7 +10,7 @@ description: |
   「SKILL.md 檢查」「steering 文件驗證」「AI 內文驗證」「提詞 eval」「這份提詞 agent 跑得動嗎」
   「提詞回歸測試」「LLM 評測」「prompt 評分」「模型品質」「模型切換前後效果對比」
   「多次取樣通過率」。不適用於：驗證 Python code 與 spec 一致性請用 ark-code-spec-validator；
-  單一 skill 的建立與 description 優化請用 ark-skill-creator；整庫稽核請用 ark-skills-align；
+  單一 skill 的建立與 description 優化請用 ark-skill-creator；整庫稽核請用 ark-skills-sync；
   pytest 單元測試請用 ark-quality-gates。
 metadata:
   author: paddyyang
@@ -25,8 +25,8 @@ metadata:
   depends_on:
     - { name: ark-md-report, version: "^1.0.0" }
   status: active
-  version: "1.3.0"
-  updated: 2026-10-29
+  version: "1.3.1"
+  updated: 2026-11-13
 ---
 
 # ark-prompt-spec-validator
@@ -125,7 +125,7 @@ python <ark-md-report>/scripts/report_register.py docs/reports/review/<date>-pro
 
 ## 邊界
 
-- 不修改被驗證的提詞；只報告。修 description 交 ark-skill-creator，批次改庫交 ark-skills-align
+- 不修改被驗證的提詞；只報告。修 description 交 ark-skill-creator，批次改庫交 ark-skills-sync
 - 不驗 code（FastAPI route / import / test）；那是 ark-code-spec-validator
 - L2 `judge` 結果永遠不進總分，只作參考；要進總分請改寫成可斷言的 `expect`
 - 沒有 evals yaml 時只出 L1 報告，並在 Actions 章節提議 3 個最該寫的 eval 案例

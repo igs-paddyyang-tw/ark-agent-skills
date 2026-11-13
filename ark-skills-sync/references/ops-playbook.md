@@ -1,4 +1,4 @@
-# ark-skills-align — 維運手冊（ops-playbook）
+# ark-skills-sync — 維運手冊（ops-playbook）
 
 > SKILL.md 只留「怎麼用」的精要;這裡收「為什麼這樣設計」的敘事與踩坑（2026-09-14~17 累積）。
 > 通用判準（共用工作樹 D、看結果 E、反證新檢查 A）在根 `AGENTS.md`，本檔不重複。

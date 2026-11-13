@@ -36,7 +36,7 @@
 | 查資料庫 / BQ 取數 | `ark-db-query` | role: analyst/data-eng |
 | 資料清洗轉換 / 匯出檔案(md/csv/json) | `ark-pipeline-recipes`（etl-pipeline 頁） | role: analyst/data-eng |
 | 建新 skill / 改 skill / 測 skill 效能 | `ark-skill-creator` | role: ai-dev/coder |
-| 建/校整庫 skill、metadata 稽核 | `ark-skills-align` | role: admin |
+| 建/校整庫 skill、metadata 稽核；專案安裝／更新 skills | `ark-skills-sync` | role: admin＋manager |
 | 做前端介面 / 設計系統 | `ark-frontend-design` | role: designer |
 | 互動數據儀表板 | `ark-html-dashboard`；靜態圖表 → `ark-pipeline-recipes`（chart-generator 頁） | role: analyst |
 | 建新 agent workspace(.kiro 骨架) | `ark-agent-init` | 一次性任務 |

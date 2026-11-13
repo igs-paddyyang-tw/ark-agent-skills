@@ -13,6 +13,6 @@
 > init 併入主檔後**必須刪除**，不得留在 steering/（否則重複注入）。小寫提詞（非標準檔）一律進 `.kiro/prompts/`。
 
 README 分類表：新增一列 `ark-agent-role-profile`（category: process），
-或跑 `ark-skills-align` 的 README 同步流程。
+或跑 `ark-skills-sync` 的 README 同步流程。
 
 角色一覽永遠由 `profile_lint.py --list-roles` 導出，**不要**手寫進 role-templates.md。

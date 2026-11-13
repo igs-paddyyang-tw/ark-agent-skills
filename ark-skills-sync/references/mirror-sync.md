@@ -50,8 +50,8 @@ skill 狀態：
 ## 介面
 
 ```bash
-python ark-skills-align/scripts/mirror_sync.py plan  --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--json]
-python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--only SKILL ...] --yes
+python ark-skills-sync/scripts/mirror_sync.py plan  --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--json]
+python ark-skills-sync/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> [--root-only] [--keep PATH ...] [--only SKILL ...] --yes
 ```
 
 - 掃描 `<team 根>` 與 `<team 根>/projects/*` 各自的技能複本；symlink 目錄跳過。

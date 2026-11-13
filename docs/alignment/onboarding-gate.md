@@ -14,7 +14,7 @@
 
 ## Gate 2：Taxonomy 歸屬
 
-- [ ] ark-skills-align/references/taxonomy.md 已加入
+- [ ] ark-skills-sync/references/taxonomy.md 已加入
 - [ ] backfill_metadata.py CATEGORY_MAP 已同步
 
 ## Gate 3：Audit 清零

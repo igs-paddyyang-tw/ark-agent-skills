@@ -1,3 +1,5 @@
+> 🔻 2026-11-13：v2 matrix（align_sync）停用中，新專案改用 `skills-manifest.yaml`＋`skills_sync.py`（見 `sop-install-remove.md`）。本頁保留給尚未遷移的部署。
+
 # consumer-contract.md — 消費端契約（skills-matrix.yaml + skills.lock.json）
 
 消費端（team repo）對齊 skill 版本的兩份檔:matrix（宣告，git）+ lock（實際，本機不進 git）。
@@ -10,9 +12,9 @@ schema_version: "1.0"
 upstream:
   repo: https://github.com/igs-paddyyang-tw/ark-agent-skills.git
   release: skills-2026.09-r2              # 對齊單位（C-2）；個別 skill 只能例外 pin
-  manifest_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/ark-skills-align/release/manifest.json
-  index_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/ark-skills-align/release/index.json
-  local_clone: ~/kiro-cli/.kiro/skills    # apply 從這個 clone 的 git 歷史取列車內容（--upstream 可覆寫）
+  manifest_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/ark-skills-sync/release/manifest.json
+  index_url: https://raw.githubusercontent.com/igs-paddyyang-tw/ark-agent-skills/main/ark-skills-sync/release/index.json
+  local_clone: ~/kiro-cli/github/shared/ark-agent-skills   # apply 從這個 clone 的 git 歷史取列車內容（--upstream 可覆寫）
 tiers:
   base:   { policy: same-version }        # 全隊同版；major 不一致 P0（AL-301）、minor P1（AL-302）
   role:   { policy: range, default: "^major" }

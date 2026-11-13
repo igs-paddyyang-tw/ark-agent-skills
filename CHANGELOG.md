@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-11-13 (ark-skills-sync 3.0.0 —— ark-skills-align 併入；專案自助安裝／更新／啟動檢查)
+
+> 來源：kiro-cli `docs/designs/skills-sync-architecture-design.md`（Paddy 11-13：規範由 skill 與 ark-agent-os 套件帶著，不再同步進各 agent 的大腦／記憶）。
+> 專案層原型 `kiro-cli/scripts/skills_sync.py`（另一 session 11-13）移入本 skill。
+
+- **Breaking：`ark-skills-align` → `ark-skills-sync`**（`git mv` 保留歷史）。舊名成 deprecated stub，`scripts/` 留 7 支轉呼檔（align_sync／mirror_sync／check_consumers／audit_skills／gen_manifest／notice_build／backfill_metadata），套件 `skills_verify` 與各專案寫死的舊路徑過渡期照常可用
+- **`skills_sync.py`（新入口）**：`status／plan／update／install／remove／doctor／residue`；依 `<.kiro|.ark>/skills-manifest.yaml` 決定根目錄要哪些（沒有 manifest＝以已安裝的為準、不增刪）；targets 預設 `.`＋`agents/*`、永不掃 `projects/*`
+  - `doctor`：套件啟動檢查用、**離線可跑**；MISSING／BROKEN／RESIDUE，可選比對上游 STALE／LOCAL；`--repair` 只從套件內建版補 MISSING／BROKEN；掃到 0 個目錄不算通過；上游連不到不算失敗
+- **共用模組**：`upstream.py`（上游優先序 `--upstream` → `$ARK_SKILLS_UPSTREAM`／`$ARK_AGENT_SKILLS_DIR` → manifest → `~/kiro-cli/github/shared/ark-agent-skills` → 公開 URL 完整歷史 clone 到 `~/.cache/ark-agent-skills`）；`skilltree.py`（tree_hash／contract_hash 由 gen_manifest 搬出、演算法不變 —— 46 個 skill 與 r40 manifest 逐一相同；`parse_frontmatter`、`skill_state`）
+- **`mirror_sync` 2.17 行為**：上游有、本地同名目錄缺 `SKILL.md` → 報 `BROKEN`（原本當非 skill 略過 → 假綠燈；11-13 實測 8 agent×10 個空殼）
+- 5 份 SOP：`sop-consumer-update`、`sop-install-remove`（manifest 格式、三段判準）、`sop-startup-doctor`（套件契約）、`sop-contribute-upstream`、`sop-release-train`
+- 列車 manifest 改在 `ark-skills-sync/release/`；`check_consumers`、`align_sync`、`audit_skills` 查歷史時新舊路徑都認。⚠️ v2 matrix 以 raw URL 讀 `main/ark-skills-align/release/manifest.json` 的部署（只剩 aidev，服務停用中）會 404 → align_sync 停用，改用 skills_sync
+- 引用改名：ark-skill-creator 2.0.3、ark-prompt-spec-validator 1.3.1、ark-agent-init 2.8.1、ark-agent-role-profile 1.5.1；pre-push hook、gen_readme、docs
+- 測試 `test_skills_sync.py` 15 項（全 skill 57 passed）；反證：拿掉 mirror_sync BROKEN 分支 → 1 紅、`skill_state` 永遠 OK → 1 紅；audit P0／P1＝0（P2／P3 與 r40 相同）
+
 ## 2026-11-12 (ark-skills-align 2.16.0 —— mirror_sync `--root-only`；上游 clone 改到 github/shared)
 
 > 來源：kiro-bot 上游搬家（kiro-cli `docs/plans/2026-11-12-skills-upstream-relocation-plan.md`）。kiro-cli 根目錄底下 `projects/` 是 15 個他人 repo，`--target ~/kiro-cli` 會越界改寫。

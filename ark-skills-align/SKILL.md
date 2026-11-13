@@ -1,114 +1,44 @@
 ---
 name: ark-skills-align
 description: |
-  ark-agent-skills repo（https://github.com/igs-paddyyang-tw/ark-agent-skills.git）的
-  對齊、同步與稽核專用 skill。依 Alignment Directive（對齊指令文件）執行整併：
-  合併重複 skill、建 deprecated stub、全庫 frontmatter 回填 schema v1
-  （category/outputs/render/depends_on/status）、觸發詞衝突治理、README 分類表同步，
-  並以 deterministic 稽核腳本 audit_skills.py 守門（P0/P1 清零才放行）。
-  使用此 skill 當使用者要求「對齊 ark-agent-skills」「同步 skill 庫」「稽核 skill 庫」
-  「整併 skills」「合併重複 skill」「回填 skill metadata」「檢查觸發詞衝突」
-  「執行 skills 整併計畫 / alignment directive」，或消費端「對齊 team 的 skill 版本」
-  「升版 skill」「這個 agent 的 skill 是哪一版」，
-  或任何需要批次修改、驗證、重組 ark-agent-skills repo 的場景。
-  單一 skill 的建立/優化不用此 skill（改用 ark-skill-creator）。
+  [DEPRECATED — 已併入 ark-skills-sync（skills 生命週期：專案安裝／更新／健檢、回貢上游、稽核、整併、發列車）]
+  原說明（保留觸發詞，讓舊說法仍導向新位置）：ark-agent-skills repo 的對齊、同步與稽核專用 skill。
+  使用此 skill 當使用者要求「對齊 ark-agent-skills」「同步 skill 庫」「稽核 skill 庫」「整併 skills」
+  「合併重複 skill」「回填 skill metadata」「檢查觸發詞衝突」「執行 skills 整併計畫 / alignment directive」，
+  或消費端「對齊 team 的 skill 版本」「升版 skill」「這個 agent 的 skill 是哪一版」。
 metadata:
-  version: "2.16.0"
-  author: paddyyang
+  version: "3.0.0"
   schema_version: "1.2"
+  status: deprecated
+  updated: 2026-11-13
   category: ops
-  form: executor
+  form: instruction
   domain: general
-  outputs:
-    - { format: md, audience: ai }
-    - { format: data, audience: ai }
-  render: none
-  depends_on:
-    - { name: ark-md-report, version: "^1.0.0" }
-  status: active
-  updated: 2026-11-06
+  author: paddyyang
 ---
 
-# ark-skills-align
+# ark-skills-align（已併入 ark-skills-sync）
 
-ark-agent-skills 庫的維運 skill，兩個模式。與 ark-skill-creator 分工:creator 管**單一 skill**，align 管**整個庫**。
-
-> 敘事、踩坑與判準（不進排程/三段判準/邊界宣告/多 session 協定/版本對齊判準）見
-> `references/ops-playbook.md` 與 `references/judgment-checklist.md`;通用判準在根 `AGENTS.md`。
-> 標準手順見 `references/alignment-workflow.md`;frontmatter 規格見 `references/metadata-schema.md`;
-> 消費端契約（matrix/lock schema）見 `references/consumer-contract.md`;鏡像同步規格見 `references/mirror-sync.md`。
-
-## 模式一:upstream（維護者/CI，在 repo 根執行）
-
-管**庫的一致性 + 版本基底**。
+2026-11-13 起，整套內容（腳本、references、列車 release/）搬到 **`ark-skills-sync`**，並新增專案端入口
+`skills_sync.py`（status／plan／update／install／remove／doctor／residue）。規範與情境路由見 `ark-skills-sync/SKILL.md`。
 
 ```bash
-# 稽核（P0/P1 清零才放行；穩定規則 ID AL-xxx）
-python ark-skills-align/scripts/audit_skills.py --repo . --json baseline.json
-# 版本回填 semver + depends_on 物件化
-python ark-skills-align/scripts/backfill_metadata.py --repo . --versions
-# 產 release manifest + index（audit 全綠才打 tag）
-python ark-skills-align/scripts/gen_manifest.py --repo . --release skills-YYYY.MM-rN --out ark-skills-align/release
-#   ⚠️ 不帶 --out 會寫到 repo 根 release/（錯位置）；在乾淨工作樹最後產
-#   🔴 manifest **另開一個 commit**（`chore: 列車 rN manifest`），不要 amend 進內容 commit ——
-#      amend 會讓 manifest 記的 commit 變成孤兒（r12～r18 都是）；align_sync 以「含該 manifest 的 commit」為準
-# 移除/改名前後反向掃消費端
-python ark-skills-align/scripts/check_consumers.py --name ark-foo
-#   不帶 --name：列懸空引用＋「已併入、stub 仍在」的舊名（矩陣／SOUL 還寫舊名、或複本旁沒有接手者 → 回 1）
-# 與上一班列車比 major 升版 → Alignment Notice
-python ark-skills-align/scripts/check_consumers.py --impact --json impact.json
-python ark-skills-align/scripts/notice_build.py impact.json --out docs/reports/review/<date>-align-notice.md
+python3 <ark-agent-skills>/ark-skills-sync/scripts/skills_sync.py status
 ```
 
-守門規則（`AL-xxx` 穩定 ID，exit 0/1/2）:既有 AL-001~024（frontmatter/category/觸發詞/
-stub/orphan/懸空…）+ 版本系列 AL-101（version 非 semver，過渡 P2）/AL-104（depends_on 無範圍）/
-AL-107（消費端型缺 tested_against）。改動走 Alignment Directive 的 D-x，文件沒有的決策不執行。
-
-## 模式二:consumer（team 的 manager 總機 `<專案>-agent`，在 team repo 根執行）
-
-管**這個 team 手上 skill 的版本對齊**。資料在 `skills-matrix.yaml`（git）、狀態在
-`.kiro/skills.lock.json`（本機不進 git，每機一份）。
+消費端若還沒有 `ark-skills-sync`（mirror_sync 不會自動安裝新 skill）：
 
 ```bash
-python .kiro/skills/ark-skills-align/scripts/align_sync.py plan --waves      # 列差異，不改檔
-python .kiro/skills/ark-skills-align/scripts/align_sync.py apply --wave 1 --yes --upstream <ark-agent-skills clone>
-#   私訊 manager 確認才升（C-5）；從「manifest 是該列車的那個 commit」git archive 取檔，tree_hash 對上 manifest 才換上、寫 lock
-#   上游路徑也可寫在 skills-matrix.yaml 的 upstream.local_clone；找不到列車 → 先在 clone 裡 git fetch
-python .kiro/skills/ark-skills-align/scripts/align_sync.py verify             # AL-203 drift/AL-301 base tier
-python .kiro/skills/ark-skills-align/scripts/align_sync.py verify --remote    # 對上游 manifest，出 lag/breaking
-python .kiro/skills/ark-skills-align/scripts/align_sync.py heartbeat          # 送 team 頻道（同版只寫 health）
-python .kiro/skills/ark-skills-align/scripts/align_sync.py resolve <path>     # 這個複本是哪版？
+git -C ~/kiro-cli/github/shared/ark-agent-skills archive HEAD ark-skills-sync | tar -x -C .kiro/skills/
 ```
 
-沒接 align_sync（無 matrix／lock，或 `local_mirror` 指向別台）的 team，用**本機鏡像同步**：
-逐檔比 git blob 歷史，過期才對齊、上游從未有過的本地修改不覆蓋（規格 `references/mirror-sync.md`）。
+## 過渡期相容
 
-```bash
-python ark-skills-align/scripts/mirror_sync.py plan  --upstream <skills repo> --target <team 根>   # 列 STALE/LOCAL/NEWER
-python ark-skills-align/scripts/mirror_sync.py apply --upstream <skills repo> --target <team 根> --keep kb_registry.json --yes
-```
+`scripts/` 底下保留同名轉呼檔（argv 原封轉給 `../../ark-skills-sync/scripts/` 的同名腳本），讓寫死舊路徑的
+套件 `skills_verify`、各專案 wrapper 與文件繼續可用。列車 manifest 改在 `ark-skills-sync/release/`（r40 以前的在本目錄歷史裡）。
 
-LOCAL（本地修改）先判斷是否回貢上游，**不要用 --keep 蓋過真修正**；審過確認只是上游歷史之前的舊版，才用 `--accept-upstream <skill>` 覆蓋。
+## 版本
 
-對齊單位是 **release train**（`skills-YYYY.MM-rN`），個別 skill 只能例外 pin（附 reason）。
-tier 策略:base 全隊同版（Loop 五件套，major 不一致 P0）· role 走範圍 · domain（local_only）自由。
-升級走波次:wave 1 manager → wave 2 leaders → wave 3 workers，每波 verify P0/P1=0 才下一波。
-
-## 版本感知（套件實例，排程呼叫）
-
-套件（ark_team_agent/ark_bot_agent）預設段掛排程，每日 `verify --remote` + `heartbeat`:
-拉上游 manifest 反查本機版本 → 寫 lock → 一行 heartbeat 送 team 頻道 + `/api/health`。
-上游 `pre-push` 只在 major/契約變更時廣播 Alignment Notice（`notice_build.py`）。
-> 🔴 套件預設段/scheduler/api-health 在 paddy 開發源（交接項），本 skill 只提供 align_sync 腳本。
-
-## 收尾（強制）
-
-1. audit P0/P1=0 + check_consumers 對本次移除的名字回 0（併入改 stub 時：`--impact` 列出要通知的消費端；mirror_sync 不會自動裝接手者）
-2. drift/verify report:ark-md-report review 型，存 `docs/reports/review/{date}-align-*.md`
-3. 獨立 commit（pathspec，不 `git add -A`），message 帶 `[refs: alignment-directive]` 或 D-x
-
-## 邊界
-
-- 不重寫任何 skill 核心邏輯;只動 description/frontmatter/reference/stub/版本
-- 不動 Office 四工具（保持官方可升級）
-- 單一 skill 建立/eval → ark-skill-creator
+| 版本 | 日期 | 變更 |
+|---|---|---|
+| 3.0.0 | 2026-11-13 | **Breaking**：併入 `ark-skills-sync`，本目錄只留轉址與轉呼腳本 |
