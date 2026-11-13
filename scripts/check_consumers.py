@@ -46,13 +46,16 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 SKILLS_REPO = Path(__file__).resolve().parent.parent
-DEFAULT_CONSUMERS = SKILLS_REPO.parent.parent / "projects"
+#: 2026-11-13：上游 clone 搬到 ~/kiro-cli/github/shared/，不能再用「上游往上兩層」推算消費端位置
+#: （舊值假設上游在 kiro-cli/.kiro/skills）。改為環境變數優先、否則固定 ~/kiro-cli/projects。
+DEFAULT_CONSUMERS = Path(os.environ.get("ARK_CONSUMERS_ROOT") or Path.home() / "kiro-cli" / "projects")
 
 #: SOUL.md 的 skill 條列格式：- `ark-x` — `.kiro/skills/ark-x/SKILL.md`
 SOUL_BULLET = re.compile(r"^-\s+`(ark-[a-z0-9-]+)`\s+—")

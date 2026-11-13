@@ -50,7 +50,7 @@ def build(impact: dict) -> str:
         "## Verdict",
         "",
         f"列車 `{rel}` 含 **{len(breaking)}** 個破壞性升版，影響 **{len(affected)}** 個消費端部署。"
-        f"消費端需依下方 Actions 執行 `align_sync` 對齊——判定 **{verdict}**（需行動，非資料損毀）。",
+        f"消費端需依下方 Actions 執行 `skills_sync` 對齊——判定 **{verdict}**（需行動，非資料損毀）。",
         "",
         "## Findings",
         "",
@@ -82,16 +82,16 @@ def build(impact: dict) -> str:
         fm += [
             "| ID | 動作 | 對應 Finding | 負責 |",
             "|----|------|--------------|------|",
-            f"| A-1 | 該部署 manager（`<專案>-agent`）改 `skills-matrix.yaml` 的 release | {fids} | 各消費端 manager |",
-            f"| A-2 | `align_sync.py plan --waves` → 逐波 `apply --wave N --yes`（私訊 manager 確認，C-5） | {fids} | 各消費端 manager |",
-            f"| A-3 | `align_sync.py verify` 直到 P0/P1=0 才算對齊完成 | {fids} | 各消費端 manager |",
+            f"| A-1 | 在專案根 `skills_sync.py status`（ark-skills-sync；沒裝就用上游 clone 那支），看缺少／空殼／舊名／STALE／LOCAL | {fids} | 各消費端 manager／admin |",
+            f"| A-2 | `skills_sync.py update --apply`（補裝接手者與空殼、對齊 STALE；LOCAL 先判斷）；舊名用 `--prune` 或 `remove`，並改掉 SOUL／矩陣裡的舊名 | {fids} | 各消費端 manager／admin |",
+            f"| A-3 | 再跑 `status` 全 ✅（或只剩已知 LOCAL）＋反證；pathspec 提交進自己的 repo | {fids} | 各消費端 manager／admin |",
         ]
     else:
         fm.append("無需行動。")
 
     fm += ["", "## 邊界聲明", "",
            "- 本通知僅宣告破壞性升版與影響面，**不代消費端執行 sync**（各 manager 自行決定時機）。",
-           "- `affected` 清單為 `check_consumers` 掃描當下的部署複本，實際版本以各端 `skills.lock.json` 為準。",
+           "- `affected` 清單為 `check_consumers` 掃描當下的部署複本，實際狀態以各端 `skills_sync.py status` 為準。",
            "- 消費端若已透過 `policy: sync` 於重啟時自動重建，可能已對齊，無需重複 apply。",
            ""]
     return "\n".join(fm)
