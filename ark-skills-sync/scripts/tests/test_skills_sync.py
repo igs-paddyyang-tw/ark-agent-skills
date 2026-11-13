@@ -216,3 +216,15 @@ def test_remove_dirty_refuses_without_force(env):
     assert (proj / ".kiro" / "skills" / "ark-tool").exists(), "髒的不可刪"
     assert _run(proj, up, "remove", "ark-tool", "--force") == 0
     assert not (proj / ".kiro" / "skills" / "ark-tool").exists()
+
+
+def test_references_to_tracked_only_and_skips_skills(env):
+    """引用掃描只看已追蹤檔：venv 等未追蹤／忽略檔與 skills 複本本身不列（11-13 實跑：掃 venv 卡住）。"""
+    up, proj = env
+    (proj / "SOUL.md").write_text("用 ark-tool 做事\n", encoding="utf-8")
+    (proj / "venv").mkdir()
+    (proj / "venv" / "x.py").write_text("ark-tool\n", encoding="utf-8")
+    assert _run(proj, up, "install", "ark-tool") == 0
+    _git(proj, "add", "SOUL.md", ".kiro")
+    hits = S.references_to(proj, ["ark-tool"])
+    assert hits == ["SOUL.md:1:用 ark-tool 做事"], hits

@@ -177,12 +177,11 @@ def prune(root: Path, target: Path, names: list[str], force: bool = False) -> li
 
 
 def references_to(root: Path, names: list[str]) -> list[str]:
+    """已追蹤檔中仍寫舊名的地方（git grep：只看版控內容，不掃 venv／忽略檔；skills 複本本身與記憶、產出除外）。"""
     pat = "|".join(re.escape(n) for n in names)
-    r = subprocess.run(["grep", "-rnE", "--exclude-dir=.git", "--exclude-dir=skills", "--exclude-dir=memory",
-                        "--exclude-dir=output", "--exclude-dir=knowledge", "--exclude-dir=node_modules",
-                        "--exclude-dir=projects", "--exclude-dir=github", pat, "."],
-                       cwd=root, capture_output=True, text=True)
-    return [h for h in r.stdout.splitlines() if "/skills/" not in h][:15]
+    r = _git(root, "grep", "-nE", pat, "--", ".", ":(exclude,glob)**/skills/**", ":(exclude)memory",
+             ":(exclude)output", ":(exclude)knowledge", ":(exclude)CHANGELOG.md")
+    return r.stdout.splitlines()[:15]
 
 
 # ── doctor（套件啟動檢查；離線可用） ──────────────────────────────────────────

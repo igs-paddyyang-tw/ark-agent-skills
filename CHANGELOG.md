@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-11-13 (ark-skills-sync 3.0.2 —— remove 掃引用改 git grep，不再掃 venv 卡住)
+
+- kiro-cli 實跑：`remove` 列舊名引用時遞迴 grep 整個專案根，掃進 `venv`／`.venv-os` 超過 3 分鐘（原型只掃指定路徑，移植時放寬造成的回歸）
+- 改用 `git grep`：只看已追蹤檔，排除 skills 複本、memory、output、knowledge、CHANGELOG；kiro-cli 實測 0.7 秒
+- 測試 `test_references_to_tracked_only_and_skips_skills`（反證：換回遞迴 grep → 1 紅）；59 passed
+
 ## 2026-11-13 (ark-skills-sync 3.0.1 —— remove／--prune 遇到未提交修改不再拋 traceback)
 
 - kiro-cli 實跑：`update --apply` 先把 ark-skills-align 換成 stub，接著 `remove ark-skills-align` → `git rm` 因有未提交修改拒絕、腳本直接 traceback
