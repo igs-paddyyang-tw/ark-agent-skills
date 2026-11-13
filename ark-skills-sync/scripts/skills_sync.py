@@ -152,15 +152,26 @@ def install(U: Path, target: Path, names: list[str]) -> None:
         raise SystemExit(f"❌ 安裝失敗：{names}")
 
 
-def prune(root: Path, target: Path, names: list[str]) -> list[str]:
-    """只 git rm 已進版控的複本；未追蹤的列出交人處理（不做遞迴刪除）。"""
+def prune(root: Path, target: Path, names: list[str], force: bool = False) -> list[str]:
+    """只 git rm 已進版控的複本；未追蹤的列出交人處理（不做遞迴刪除）。
+
+    目錄內有未提交修改時預設不刪（可能是本地客製）；確認可丟（例：剛被 update 換成 stub）才帶 force。
+    """
     done = []
     for n in names:
         p = skills_dir(target) / n
+        rel = os.path.relpath(p, root)
         if _git(root, "ls-files", "--error-unmatch", "--", str(p / "SKILL.md")).returncode != 0:
-            print(f"  ⚠ {os.path.relpath(p, root)} 未進版控，不代刪：請自行處理")
+            print(f"  ⚠ {rel} 未進版控，不代刪：請自行處理")
             continue
-        _git(root, "rm", "-r", "-q", "--", str(p), check=True)
+        dirty = _git(root, "status", "--porcelain", "--", str(p)).stdout.strip()
+        if dirty and not force:
+            print(f"  ⚠ {rel} 有未提交的修改，不刪（確認可丟再加 --force）：\n    " + dirty.replace("\n", "\n    ")[:400])
+            continue
+        r = _git(root, "rm", "-r", "-q", *(["-f"] if force else []), "--", str(p))
+        if r.returncode != 0:
+            print(f"  ⚠ {rel} git rm 失敗：{(r.stderr or r.stdout).strip()[:200]}")
+            continue
         done.append(n)
     return done
 
@@ -254,6 +265,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--from", dest="frm", default=".")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--prune", action="store_true")
+    ap.add_argument("--force", action="store_true", help="remove／--prune：目錄有未提交修改也刪")
     ap.add_argument("--bundle", help="doctor：套件內建 templates/skills（可修 MISSING／BROKEN）")
     ap.add_argument("--require", action="append", default=[], help="doctor：TARGET=a,b（TARGET 用 * 表全部）")
     ap.add_argument("--repair", action="store_true", help="doctor：只從 --bundle 補 MISSING／BROKEN")
@@ -302,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
             install(U, t, a.names)
             print(f"✅ 已安裝 {', '.join(a.names)} → {os.path.relpath(skills_dir(t), root)}（未 commit）")
         else:
-            gone = prune(root, t, a.names)
+            gone = prune(root, t, a.names, a.force)
             print(f"✅ 已 git rm：{', '.join(gone) or '（無）'}（未 commit）")
             hits = references_to(root, a.names)
             print("文件中仍引用（改成接手者或拿掉）：" + ("\n  " + "\n  ".join(hits) if hits else "無"))
@@ -316,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
             t = root / r["target"]
             install(U, t, sorted(set(r["missing"]) | set(r["broken"])))
             if a.prune:
-                prune(root, t, (r["extra"] if r["target"] == "." and mpath else []) + r["residue"])
+                prune(root, t, (r["extra"] if r["target"] == "." and mpath else []) + r["residue"], a.force)
             M.run(U, t, [], None, do_apply=True, root_only=True)
         rows = analyse(root, mf, U, up)                 # 結果以重掃為準，不信剛才的動作
     if a.json:

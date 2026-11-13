@@ -203,3 +203,16 @@ def test_doctor_flags_local_deprecated_residue_offline(env):
     _install(up, proj / ".kiro" / "skills", "ark-old")
     rep = S.doctor(proj, {}, None, {}, repair=False, upstream_mode="off")
     assert rep["targets"][0]["residue"] == ["ark-old"]
+
+
+def test_remove_dirty_refuses_without_force(env):
+    """有未提交修改的複本：預設不刪（可能是客製）、--force 才刪；不可丟 traceback。"""
+    up, proj = env
+    assert _run(proj, up, "install", "ark-tool") == 0
+    _git(proj, "add", "-A")
+    _git(proj, "commit", "-q", "-m", "x")
+    (proj / ".kiro" / "skills" / "ark-tool" / "SKILL.md").write_text("changed", encoding="utf-8")
+    assert _run(proj, up, "remove", "ark-tool") == 0
+    assert (proj / ".kiro" / "skills" / "ark-tool").exists(), "髒的不可刪"
+    assert _run(proj, up, "remove", "ark-tool", "--force") == 0
+    assert not (proj / ".kiro" / "skills" / "ark-tool").exists()

@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-11-13 (ark-skills-sync 3.0.1 —— remove／--prune 遇到未提交修改不再拋 traceback)
+
+- kiro-cli 實跑：`update --apply` 先把 ark-skills-align 換成 stub，接著 `remove ark-skills-align` → `git rm` 因有未提交修改拒絕、腳本直接 traceback
+- 修正：目錄有未提交修改時預設**不刪**並列出修改（可能是本地客製）；確認可丟才帶新旗標 `--force`；`git rm` 失敗改為警告
+- 測試 `test_remove_dirty_refuses_without_force`（反證：還原為舊行為 → 1 紅）；58 passed
+
 ## 2026-11-13 (ark-skills-sync 3.0.0 —— ark-skills-align 併入；專案自助安裝／更新／啟動檢查)
 
 > 來源：kiro-cli `docs/designs/skills-sync-architecture-design.md`（Paddy 11-13：規範由 skill 與 ark-agent-os 套件帶著，不再同步進各 agent 的大腦／記憶）。
