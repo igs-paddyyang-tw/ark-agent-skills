@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r43",
-  "commit": "016144b",
-  "generated_at": "2026-11-13T11:45:31+08:00",
+  "release": "skills-2026.11-r44",
+  "commit": "97215bf",
+  "generated_at": "2026-11-13T14:38:48+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -31,9 +31,9 @@
       "updated": "2026-11-02"
     },
     "ark-agent-init": {
-      "version": "2.8.1",
-      "tree_hash": "sha256:9c81ceee07f9e0a7449f1f35699c2bfbe692cc0c0ac9ce8ab349548aa0ce87ae",
-      "contract_hash": "sha256:a45d14ba43f11243f5a11d8f747e1b54e5dfeb3e09165505efbfb04f66826a3a",
+      "version": "2.9.0",
+      "tree_hash": "sha256:41550b7df3e23f1158b17bed7415e70da66fba65f50deaf5a513b5232e00e91b",
+      "contract_hash": "sha256:7445d2e5282dc341ca04b44d007ad84b5de35c69496d6ceb3b749615d71db26f",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [],
