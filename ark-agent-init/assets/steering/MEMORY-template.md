@@ -12,19 +12,23 @@ inclusion: always
 | 想找什麼 | 去哪 | 誰寫 | 進 context |
 |---|---|---|---|
 | 可複用判準（怎麼判斷） | `.kiro/steering/BRAIN.md` | ✋ 人 | ✅ 常駐 |
-| 導覽 + 判準級里程碑 | 本檔 | ✋ 人 | ✅ 常駐（保持瘦身） |
+| 導覽 + 常駐定案 + 最近 20 行里程碑 | 本檔 | ✋ 人 | ✅ 常駐（≤ 20 KB，`memory_check.py` 守門） |
 | 持久事實（下個月還有用） | `memory/memory.md` | 🤖 `memory-distill` 蒸餾 | 🔸 可選 |
 | 近期事件流水 | `memory/daily/YYYY-MM-DD.md` | 🤖 bot 自動／✋ team 收尾手寫 | ❌ 不注入 |
-| 舊事件歸檔 | `memory/archive/YYYY-MM.md` | 🤖 `_builtin:memory-consolidate` | ❌ 按需查 |
+| 舊事件、輪替出去的里程碑 | `memory/archive/YYYY-MM.md` | 🤖 `_builtin:memory-consolidate`／✋ `memory_check.py --rotate` | ❌ 按需查 |
 
 ## 📌 專案快照
 
 - **建立日期：** {DATE}
 - **狀態：** 初始化
 
-## 📌 近期里程碑（一行索引，細節在 daily／archive）
+## 🔒 常駐定案（一行一條；有新定案就改寫該條，不追加）
 
-- （尚無）—— 格式：`- **YYYY-MM-DD** {一句話判準級結論} → memory/archive/YYYY-MM.md`
+- （尚無）
+
+## 📌 近期里程碑（最近 20 行、每行 ≤ 160 字；滿了 `memory_check.py --rotate`）
+
+- （尚無）—— 格式：`- **YYYY-MM-DD** {一句話判準級結論} → {細節指路}`
 
 ## 待辦
 
@@ -33,5 +37,5 @@ inclusion: always
 ---
 
 > 🔴 **什麼不寫這裡**：每次任務的進度、排程巡檢結果、一次性操作 → 寫 `memory/daily/`。
-> 只有「下週還要被常駐讀到的判準」才升級成一行里程碑。
-> 本檔 > 20 KB 或堆滿 `## YYYY-MM-DD` 事件分節 = 角色顛倒，照 `references/memory-architecture.md` §遷移 瘦身。
+> 只有「下週還要被常駐讀到的判準」才升級成一句里程碑；加之前跑 `memory_check.py`（rc≠0 不提交）。
+> 上限：整檔 ≤ 20 KB、里程碑 ≤ 20 行、每行 ≤ 160 字、待辦 ≤ 15 項、`## YYYY-MM-DD` 分節 ≤ 5 —— 超過照 `references/memory-architecture.md` §2.1 處理。

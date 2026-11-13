@@ -31,7 +31,7 @@
 ## 開場與收尾
 
 - **開場**：讀 `.kiro/steering/BRAIN.md`、`MEMORY.md`（Kiro／Claude 會自動載入），再讀 `memory/daily/` 最新 1～2 天
-- **收尾**：完成一件事寫 `memory/daily/今天.md`（`## HH:MM [<來源>] <標題>` ＋ 3～6 行）；判準級結論才在 `MEMORY.md` 加一行
+- **收尾**：完成一件事寫 `memory/daily/今天.md`（`## HH:MM [<來源>] <標題>` ＋ 3～6 行）；判準級結論才在 `MEMORY.md` 里程碑加一句（加之前跑守門，見「記憶怎麼用」）
 
 ## 回覆使用者規則
 
@@ -49,10 +49,17 @@
 
 | 落點 | 角色 | 規則 |
 |---|---|---|
-| `.kiro/steering/MEMORY.md` | 記憶導覽＋判準級里程碑＋常青段 | 每次注入，保持 < 20 KB；只加「下週還要常駐讀到的判準」一行 |
+| `.kiro/steering/MEMORY.md` | 記憶導覽＋🔒 常駐定案＋最近 20 行里程碑＋常青段 | 每次注入；**上限**見下方，`memory_check.py` 守門 |
 | `memory/memory.md` | 持久事實四分節 | 排程自動蒸餾，**不手寫** |
 | `memory/daily/YYYY-MM-DD.md` | 事件流水的正式落點 | 完成一件事就寫 |
-| `memory/archive/` | 舊事件 | 按需查 |
+| `memory/archive/` | 舊事件、輪替出去的里程碑 | 按需查 |
+
+- 🔴 **MEMORY.md 只有「加」沒有「移出」就一定會長大**（實例：遷移後 8 KB，四週長回 34 KB）。所以：
+  - **里程碑是滾動窗口**：最多 20 行、每行一句結論＋指路（≤ 160 字）；細節（數字、檔名、反證）留在 daily／決策紀錄
+  - **長期有效的拍板**放「🔒 常駐定案」，一行一條，有新定案就**改寫那一條**，不追加
+  - **待辦**完成就刪（≤ 15 項），細節放計畫文件
+- **加里程碑前、收尾時**跑 `python3 .kiro/skills/ark-agent-init/scripts/memory_check.py`；rc≠0 不提交；里程碑滿 20 行先 `--rotate`（舊的依月份 append 到 `memory/archive/`）
+- `memory/memory.md` 骨架沒填或超過 14 天沒更新 = 蒸餾沒在跑（守門會警告）；IDE-only workspace 把長期事實寫進 BRAIN 或「🔒 常駐定案」
 
 ## 知識庫規則
 

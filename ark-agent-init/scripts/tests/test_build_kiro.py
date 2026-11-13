@@ -612,3 +612,36 @@ def test_entry_files_are_not_overwritten(project):
                    capture_output=True, text=True, check=True)
     for f in ("AGENTS.md", "CLAUDE.md"):
         assert (project / f).read_text(encoding="utf-8") == f"# 手寫 {f}\n"
+
+
+def test_validate_flags_list_style_milestones(project):
+    """2.9.0 盲區修正：清單式里程碑（`- **日期**`）過多／過長，原本 0 個日期分節 → 完全沒警告（fish-bot 11-13 實測）。"""
+    mm = project / "agents" / "leader-agent" / ".kiro" / "steering" / "MEMORY.md"
+    rows = "".join(f"- **2026-10-{i:02d}** 結論 {i}\n" for i in range(1, 26)) + "- **2026-11-01** " + "長" * 200 + "\n"
+    mm.write_text("# x\n\n## 📌 近期里程碑\n\n" + rows + "\n## 待辦\n\n- [ ] a\n", encoding="utf-8")
+    out = _validate(project)
+    assert "里程碑 26 行 > 20" in out, out
+    assert "字 > 160" in out, out
+
+
+def test_validate_warns_stale_distill(project):
+    import os
+    import time
+    mm = project / "agents" / "admin-agent" / "memory" / "memory.md"
+    old = time.time() - 30 * 86400
+    os.utime(mm, (old, old))
+    assert "蒸餾（memory-distill）沒在跑" in _validate(project)
+
+
+def test_memory_check_selftest_and_rotate(tmp_path):
+    import memory_check as mc
+    assert mc.selftest() == 0
+    ws = tmp_path / "ws"
+    mem = ws / ".kiro" / "steering" / "MEMORY.md"
+    mem.parent.mkdir(parents=True)
+    rows = "".join(f"- **2026-09-{i:02d}** 舊 {i}\n" for i in range(1, 26))
+    mem.write_text("# x\n\n## 📌 近期里程碑\n\n" + rows + "\n## 待辦\n", encoding="utf-8")
+    assert mc.main(["--root", str(ws)]) == 1
+    assert mc.main(["--root", str(ws), "--rotate"]) == 0
+    assert "- **2026-09-01** 舊 1" in (ws / "memory" / "archive" / "2026-09.md").read_text(encoding="utf-8")
+    assert len(mc.milestones(mem.read_text(encoding="utf-8"))) == 20

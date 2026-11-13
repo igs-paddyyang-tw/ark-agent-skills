@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-13 (ark-agent-init 2.9.0 —— MEMORY.md 加上限與移出規則：滾動窗口、`memory_check.py` 守門、蒸餾健康度)
+
+> 來源：fish-bot 交接單（kiro-cli `docs/issues/2026-11-13-from-fish-bot-ark-agent-init-memory.md`；報告 fish-bot `docs/reports/review/2026-11-13-fish-bot-memory-architecture-alignment.md`）。
+> fish-bot 遷移後 MEMORY.md 四週 8 KB → 34 KB：範本只有「加一行里程碑」，沒有窗口、單行上限、移出規則；`--validate` 只數 `## 日期` 分節，清單式里程碑全是盲區。
+
+- **`scripts/memory_check.py`（新，原型 fish-bot D-254）**：整檔 ≤ 20 KB、里程碑 ≤ 20 行、每行 ≤ 160 字、待辦 ≤ 15、`## 日期` 分節 ≤ 5，超標 rc=1 且每條附改法；`--rotate` 依月份 append 到 `memory/archive/`（冪等、位元組核對）；`--json`；`--selftest`；佈局自動判斷（`.ark/brain` 或 `.kiro/steering`）
+  - 蒸餾健康度：`memory/memory.md` 仍是骨架或 > 14 天未更新 → ⚠️（不影響 rc）
+  - 里程碑跑出「## 📌 近期里程碑」分節外 → 視為違規（守門讀不到 = 失效）
+- **`build_kiro.py --validate`**：MEMORY.md 判定改呼叫 `memory_check.problems`（規則只有一份），並加蒸餾健康度警告；訊息措辭與舊版相容（「N 個日期事件分節」「KB > 20 KB」）
+- **範本**：`MEMORY-template.md` 新增「🔒 常駐定案」（一行一條、改寫不追加），里程碑標題寫明窗口與單行上限；`assets/AGENTS.md`「記憶怎麼用」寫入上限與移出規則（單一權威）；`BRAIN.md` 第 3 條、`file-generation-rules.md` 同步
+- **文件**：`memory-architecture.md` 新增 §2.1 上限與移出規則，§6 守門表補 3 項
+- 實測：kiro-cli 19.4 KB（3 行 > 160 字）、paddy-bot 23 行（多行 > 300 字）、wukong-bot 1 行過長 → 都會紅；fish-bot（已修）通過並正確報蒸餾骨架警告
+- 測試：65 passed（新 3 項）；反證：換回舊 `build_kiro.py` → 清單式里程碑與蒸餾警告 2 紅
+
 ## 2026-11-13 (ark-skills-sync 3.0.2 —— remove 掃引用改 git grep，不再掃 venv 卡住)
 
 - kiro-cli 實跑：`remove` 列舊名引用時遞迴 grep 整個專案根，掃進 `venv`／`.venv-os` 超過 3 分鐘（原型只掃指定路徑，移植時放寬造成的回歸）

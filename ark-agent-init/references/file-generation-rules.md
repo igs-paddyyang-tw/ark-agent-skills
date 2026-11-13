@@ -83,7 +83,8 @@
 
 ## 🧭 記憶住在哪          ← BRAIN / MEMORY / memory.md / daily / archive 五列表
 ## 📌 專案快照            ← 常青段（狀態／定版結構／技術決策）
-## 📌 近期里程碑          ← 一行索引：- **YYYY-MM-DD** {判準級結論} → memory/archive/YYYY-MM.md
+## 🔒 常駐定案            ← 一行一條，改寫不追加
+## 📌 近期里程碑          ← 最近 20 行、每行 ≤ 160 字：- **YYYY-MM-DD** {判準級結論} → {指路}（memory_check.py 守門）
 ## 待辦
 ```
 

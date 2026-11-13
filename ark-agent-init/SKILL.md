@@ -23,7 +23,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.8.1"
+  version: "2.9.0"
   updated: 2026-11-13
 ---
 
@@ -298,6 +298,7 @@ Kiro 的 steering 是**多檔 + `inclusion` 分層**，比單一 `AGENTS.md` 表
 - [ ] 專案根 `AGENTS.md` 有「⚠️ reply 必用」+ MCP 工具表 + 編號選項 + 終端回饋 + SDD 流程；`audit_agents_layout.py` 通過
 - [ ] `steering/CODE.md` 有程式碼規範（Python 專案時）
 - [ ] `steering/MEMORY.md` 是導覽骨架（記憶住在哪 + 快照 + 里程碑索引），**無「每完成一個段落」**
+- [ ] `python3 scripts/memory_check.py --root <agent 目錄>` 通過（整檔 ≤ 20 KB、里程碑 ≤ 20 行且每行 ≤ 160 字、待辦 ≤ 15；滿了 `--rotate`）—— 規則 `references/memory-architecture.md` §2.1
 - [ ] 每個 agent 有 `memory/daily/`、`memory/archive/`、`memory/memory.md` 四分節（`--validate` 無記憶 ⚠️）
 - [ ] `SOUL.md` 包含八段式全部 8 個段落
 - [ ] `USER.md` 有個人特徵 + 溝通風格 + 目標 + 習慣四段

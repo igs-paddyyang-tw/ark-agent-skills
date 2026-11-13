@@ -53,6 +53,8 @@ import yaml
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DIR = SKILL_ROOT / "assets"
+if str(Path(__file__).resolve().parent) not in sys.path:   # 同目錄的 memory_check（2.9.0）
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 STEERING_ASSETS = ASSETS_DIR / "steering"
 AGENTS_ASSETS = ASSETS_DIR / "agents"
 
@@ -908,13 +910,14 @@ def _validate_memory(agent_dir: Path, kiro_dir: Path, prefix: str) -> list[str]:
         warns.append(f"⚠️ {prefix}：缺 memory/ 骨架（daily/ 或 memory.md）—— 見 references/memory-architecture.md §4②")
     mm = kiro_dir / "steering" / "MEMORY.md"
     if mm.is_file():
+        # 2.9.0：判定交給 memory_check（整檔、清單式里程碑行數與單行長度、待辦數、日期分節），守門只有一份規則
+        import memory_check as _mc
         text = mm.read_text(encoding="utf-8", errors="replace")
-        size = len(text.encode("utf-8"))
-        if size > MEMORY_MD_MAX_BYTES:
-            warns.append(f"⚠️ {prefix}/steering/MEMORY.md：{size // 1024} KB > {MEMORY_MD_MAX_BYTES // 1024} KB（always-on 注入）—— 照 §4③ 瘦身")
-        dated = len(_DATED_SECTION_RE.findall(text))
-        if dated > MEMORY_MD_MAX_DATED:
-            warns.append(f"⚠️ {prefix}/steering/MEMORY.md：{dated} 個日期事件分節 > {MEMORY_MD_MAX_DATED}（事件流水該在 memory/daily、archive）")
+        for p in _mc.problems(text):
+            warns.append(f"⚠️ {prefix}/steering/MEMORY.md：{p}")
+    import memory_check as _mc2
+    if (dw := _mc2.distill_warning(agent_dir)):
+        warns.append(f"⚠️ {prefix}：{dw}")
     steering = kiro_dir / "steering"
     if steering.is_dir():
         for f in sorted(steering.glob("*.md")):

@@ -16,12 +16,29 @@
 | 層 | 落點 | 誰寫 | 進 context | 內容 |
 |---|---|---|---|---|
 | 判準 | `.kiro/steering/BRAIN.md` | ✋ 人 | ✅ 常駐 | 怎麼判斷、紅線、讀寫順序 |
-| 導覽 + 里程碑 | `.kiro/steering/MEMORY.md` | ✋ 人 | ✅ 常駐 | 「記憶住在哪」表 + 一行里程碑索引 + 常青段（專案快照／定版結構／技術決策） |
+| 導覽 + 里程碑 | `.kiro/steering/MEMORY.md` | ✋ 人 | ✅ 常駐 | 「記憶住在哪」表 + 🔒 常駐定案 + 最近 20 行里程碑（§2.1）+ 常青段（專案快照／定版結構／技術決策） |
 | 持久事實 | `memory/memory.md` | 🤖 `memory-distill` | 🔸 可選 | 四分節：環境慣例／工具怪癖／人與偏好／進行中長期事項，≤ 2000 tokens |
 | 事件流水 | `memory/daily/YYYY-MM-DD.md` | 🤖 bot 自動／✋ team 手寫 | ❌ | 每次任務的做了什麼／決定／踩坑，≤ 150 字 |
 | 舊事件 | `memory/archive/YYYY-MM.md` | 🤖 `_builtin:memory-consolidate` | ❌ 按需 | > 14 天的 daily 與 MEMORY.md 日期分節（非破壞搬移） |
 
 **單一權威**：記憶規則只寫在根 `AGENTS.md`「記憶怎麼用」一節；`BRAIN.md`、`MEMORY.md`、各 `SOUL.md` 只引用，不另立規則。
+
+### 2.1 常駐檔的上限與移出規則（2.9.0）
+
+> 根因（fish-bot 2026-11-13）：舊規範只寫「加一行里程碑」，沒寫窗口、長度與移出 —— 每次收尾都觸發「加」，
+> 沒人搬走，遷移後四週 8 KB → 34 KB（里程碑 101 行佔 76%）。`--validate` 只數 `## 日期` 分節，清單式里程碑全是盲區。
+
+| 項目 | 上限 | 超過怎麼辦 |
+|---|---|---|
+| 整檔 | ≤ 20 KB | `--rotate`，長內容移到 archive／決策紀錄 |
+| 里程碑（`- **YYYY-MM-DD**`） | 最近 20 行 | `scripts/memory_check.py --rotate`：舊的依月份 append 到 `memory/archive/YYYY-MM.md`（冪等、位元組核對） |
+| 里程碑單行 | ≤ 160 字 | 只留一句結論＋指路；細節在 daily／決策紀錄 |
+| 待辦 | ≤ 15 項 | 完成就刪；細節放計畫文件 |
+| `## YYYY-MM-DD` 分節 | ≤ 5 | 搬 archive |
+
+- **🔒 常駐定案**：長期有效的拍板一行一條，有新定案**改寫那一條**（窗口輪替不會把它搬走）
+- **守門**：`python3 scripts/memory_check.py`（agent 工作目錄執行；`--json` 給程式用；`--selftest` 反證）。rc≠0 不提交
+- **蒸餾健康度**：`memory/memory.md` 仍是骨架或 > 14 天沒更新 → 警告（daemon 沒在跑時持久事實會回流 MEMORY.md）
 
 ### bot 與 team 部署的差異
 
@@ -134,13 +151,16 @@ python .kiro/skills/ark-agent-init/scripts/build_kiro.py --validate .   # 2.2.0 
 # 隔天：看 03:20 的 log 與 memory/memory.md 的 mtime，確認蒸餾有跑
 ```
 
-## 6. `build_kiro.py --validate` 的記憶守門（2.2.0 起，皆為 ⚠️ 警告）
+## 6. `build_kiro.py --validate` 的記憶守門（2.2.0 起，皆為 ⚠️ 警告；2.9.0 起判定交給 `memory_check.py`）
 
 | 警告 | 判準 | 處置 |
 |---|---|---|
 | 缺 `memory/` 骨架 | agent 工作目錄沒有 `memory/daily/` 或 `memory/memory.md` | 照 §4 ② 補 |
 | MEMORY.md 過大 | > 20 KB | 照 §4 ③ 瘦身 |
 | MEMORY.md 堆事件流水 | `## YYYY-MM-DD` 日期分節 > 5 個 | 搬 archive，留一行里程碑 |
+| 清單式里程碑過多／過長（2.9.0） | `- **日期**` > 20 行、單行 > 160 字 | `memory_check.py --rotate`、縮成一句 |
+| 待辦過多（2.9.0） | > 15 項 | 完成就刪、細節進計畫 |
+| 蒸餾沒在跑（2.9.0） | `memory/memory.md` 骨架或 > 14 天未更新 | 檢查 daemon 與 `memory-distill` 排程 |
 | 舊規範殘留 | steering 內含「每完成一個段落」 | 照 §4 ④ 改寫 |
 
 ## 7. 風險與邊界
