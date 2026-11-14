@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-14 (ark-game-quicktest 2.4.0 —— 收編魚機快測：fishsim 輸出契約 × 打法模型 → gate／打法敏感度／命中率對理論)
+
+> 來源：aidev 兩款魚機實跑（一般廳單人版、貓魚傳說）；提案 aidev `docs/plans/2026-11-fish-skill-gap-proposal.md` P-2（Paddy 2026-11-14 拍板）。
+> 原技能只有老虎機範本；魚機沒有「一手」、結果還受玩家打哪條魚影響，快測要「開火模擬 × 打法模型」。貓魚 v1.1 random 三種子都過關，專打金魚卻 1.0144——只有多打法快測抓得到。
+
+- **`scripts/fish/qt_fish_run.py`（新）**：讀 `qt-config.yaml`（tool／config／bet／per_frame／runs[aim, seeds, shots]／gate），編譯並平行跑專案的 fishsim → `rtp-report.json`（含 config／qt-config sha16）＋md（ark-md-report data 型，report_lint 過）＋html；路徑以 `--root` 為基準，`--out-dir`／`--runs-dir`／`--shots` 可覆寫；exit 0 過關／3 不過／2 執行失敗
+  - gate：random 各種子總 RTP 都在 target ± tolerance
+  - 打法敏感度：最偏打法偏離 > `aim_deviation`（預設 1%）標 P2、總 RTP > 1 標 P1；只跑 random 也標 P2（漏洞抓不到）
+  - ⑤ 回填：各魚種命中率（game_rate ÷ 倍率）與附加獎勵率（drop_ppm）實測 vs 理論 95% 區間；欄位名可在 qt-config 覆寫
+- **`references/fish-quicktest-contract.md`（新）**：fishsim 旗標與輸出 JSON 契約、理論值公式、Findings 規則；Go 模擬器留在各專案，技能只定契約與報告
+- **SKILL.md**：description 加魚機觸發詞、資產地圖與決策樹加魚機、新增「魚機快測（2.4.0）」一節
+- 驗收：貓魚傳說 v1.2 重跑 20M × 6 組，gate.totals 0.958037／0.957704／0.959714 與專案原報告逐字相同
+- 測試：51 passed（新 20 項，假 fishsim 不跑 Go）
+
 ## 2026-11-13 (ark-agent-init 2.9.0 —— MEMORY.md 加上限與移出規則：滾動窗口、`memory_check.py` 守門、蒸餾健康度)
 
 > 來源：fish-bot 交接單（kiro-cli `docs/issues/2026-11-13-from-fish-bot-ark-agent-init-memory.md`；報告 fish-bot `docs/reports/review/2026-11-13-fish-bot-memory-architecture-alignment.md`）。

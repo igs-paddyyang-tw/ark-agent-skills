@@ -1,9 +1,10 @@
 ---
 name: ark-game-quicktest
 description: |
-  Go 快測膠合層（製程 C2 段）：config-spec → odds.json 骨架 → lint → 跑 Go 快測 → rtp-report 與三向 verdict（只回報數值不下結論）；機率規格書已移至 ark-game-prob。
+  Go 快測膠合層（製程 C2 段）：config-spec → odds.json 骨架 → lint → 跑 Go 快測 → rtp-report 與三向 verdict（只回報數值不下結論）；2.4 起另收魚機快測（fishsim 契約 × 打法模型 → gate／打法敏感度／命中率對理論）；機率規格書已移至 ark-game-prob。
   使用此 skill 當使用者或 agent 提及：快測、RTP 模擬、Monte Carlo、odds.json、輪帶權重、觸發率驗證、三向守門、
-  spec_lint 第二向、快測報告、report_1.0.0.txt、config-spec 轉快測設定、跑 Go 快測、RTP 誤差、體感區間。
+  spec_lint 第二向、快測報告、report_1.0.0.txt、config-spec 轉快測設定、跑 Go 快測、RTP 誤差、體感區間、
+  魚機快測、fishsim、開火模擬、打法敏感度、打法漏洞、魚種命中率對理論、掉珠率驗證。
   不適用於：機率規格書與 prob-spec（→ ark-game-prob）、設計機率架構與 K 卡取捨（→ ark-game-prob）、
   改 game_process.go 的玩法邏輯（人／工程師）、決議 Open Questions（→ ark-grill-me）、
   產 config-spec（→ ark-game-spec gs_dev）。
@@ -14,8 +15,8 @@ metadata:
   category: process
   form: executor
   domain: game
-  version: "2.3.1"
-  updated: 2026-11-05
+  version: "2.4.0"
+  updated: 2026-11-14
   outputs:
     - { format: data, audience: ai }
     - { format: md, audience: ai }
@@ -58,9 +59,11 @@ metadata:
 | `scripts/qt_run.py` | lint → 複製範本到 `engine/` → patch main.go（含 v1.2 的 odds 載入路徑跟版本、固定 seed `--seed`）/ game_process.go 常數 → `go run .` → qt_report | 跑快測 |
 | `scripts/qt_report.py` | `report_<ver>.txt` → `rtp-report.json` → md-report（三向 verdict）；v1.2 加 `template_caveats`（偵測範本已知偏差 F-1/F-2/F-5/F-6/F-7，md「範本已知偏差」節）；`--publish docs/reports/data` | 已有報告檔、只要驗證 |
 | `references/quicktest-contract.md` | quicktest.yaml（目標）/ odds.json 語意 / rtp-report.json / 三向規則 | 建目標檔、改 lint 時 |
-| `scripts/tests/` | golden：範本 `report_1.0.0.txt` 解析與三向、範本 odds 通過 lint、null/provenance 阻斷、決議填值 | 改腳本後 |
+| `scripts/tests/` | golden：範本 `report_1.0.0.txt` 解析與三向、範本 odds 通過 lint、null/provenance 阻斷、決議填值；`test_qt_fish_run.py` 用假 fishsim（`fixtures/fish/fake_fishsim.py`）測魚機 gate／findings／區間／路徑 | 改腳本後 |
 | `references/quicktest-targets.template.yaml` | quicktest.yaml 範本：單版 target_rtp／rtp_tolerance／feel，多版 `versions[]`（qt_report `--version-id`） | 新遊戲要建目標檔時複製改 |
 | `scripts/port/`（2.2.0 路線 C）| C++ 快測 → Go 移植與 Go 世代 live 重跑：`cpp/cpp_trace.py`（g++ -m32 編原 C++、固定 seed、逐局追蹤）、`go/portkit`（SFMT19937 與 C++ 逐位元相同、MSVC rand、平行執行、Go 快測報表格式）、`cpp_parity.py`（同 seed 逐局對照）、`gen_config.py`（config-map → config json＋逐鍵來源標記 live／xlsx／engine／ruled／filled:*）；SOP `references/cpp-port-sop.md` | 舊遊戲（C++／Go 世代）重跑快測、還原線上機率 |
+| `scripts/fish/qt_fish_run.py`（2.4.0）| 魚機快測：qt-config.yaml → 平行跑專案的 fishsim（打法 × 種子）→ `rtp-report.json`＋md（ark-md-report data 型，report_lint）＋html；gate、打法敏感度、命中率／附加獎勵率 vs 理論 95% 區間；exit 0／3／2 | 魚機 ④⑤ 快測 |
+| `references/fish-quicktest-contract.md`（2.4.0）| 魚機 qt-config 欄位、fishsim 旗標與輸出 JSON 契約、理論值公式、Findings 規則 | 新魚機接快測、寫 fishsim 時 |
 | `references/restore-stages-sop.md`（2.2.1）| 還原局每款流程 ⓪→④→③⑤→⑥-lite→⑦ 與 W1 26 款累積規律（找對版本、目標 RTP 取法、砍分五型、保底／天井、引擎坑）；gen_config 多層輪帶、expr 可用 symbol_map | 舊遊戲批次還原到單機試玩 |
 
 ## 決策樹
@@ -90,8 +93,26 @@ metadata:
 │     ├─ python scripts/port/cpp_parity.py --cpp-src <C++ 專案> --engine data/slot/<slug>/quicktest/engine --config …/cpp-original.json --n 1000000 --out …/port/parity.json
 │     ├─ python scripts/port/gen_config.py --map …/_tuning/config-map.yaml --root data/slot/<slug> --engine …/cpp-original.json --out …/config/live.json
 │     └─ 上線款不改線上值；對不上 → 敏感度分析＋G-xx 待裁定（範例：cash-mania、forest-bash、cakebonanza；SOP references/cpp-port-sop.md）
+├─ 魚機（2.4.0）：不走範本，見下方「魚機快測」節（`scripts/fish/qt_fish_run.py`）
 └─ 要機率規格書 / 參數表 / 隱性規則 → 用 **ark-game-prob**（`ps_run.py --qt data/quicktest/<slug>`）；本 skill 的 `qt_run --probspec` 會轉呼叫同層 ark-game-prob（未給 `--prob-out` 時落點交 ps_run 依 `ARK_GAME_ROOT` 決定）
 ```
+
+## 魚機快測（2.4.0）
+
+魚機沒有「一手」，最小單位是一發，結果還受打法影響 → 快測＝**開火模擬 × 打法模型**。技能不帶模擬器：
+每款魚機在 go-server 寫 `cmd/fishsim`，照 `references/fish-quicktest-contract.md` 吐 JSON 即可接。
+
+```bash
+# 在專案根目錄（路徑以 --root 為基準，預設 cwd）
+python scripts/fish/qt_fish_run.py --qt-config data/fish/<slug>/quicktest/qt-config.yaml --shots 1000000   # 煙霧
+python scripts/fish/qt_fish_run.py --qt-config data/fish/<slug>/quicktest/qt-config.yaml                   # 照 runs 全跑
+python scripts/fish/qt_fish_run.py --qt-config … --out-dir output/fish/<slug>/qt-check                       # 不覆蓋定版報告
+```
+
+- qt-config：`tool`（fishsim 的 Go 套件目錄或執行檔）、`config`、`bet`、`per_frame`、`runs[{aim, seeds, shots}]`、`gate{total, tolerance}`；選配 `slug`／`title`／`out_dir`／`runs_dir`／`bonus_key`（預設 bead）／`aim_deviation`（預設 0.01）／`fields`（設定檔欄位名覆寫）
+- 判準：gate＝random × 3 種子、20M 發（一般廳 50M），三個都在目標 ± 容許內；**必跑最偏打法**（richest／cheapest／最佳比值），偏離 > 1% 標 P2、總 RTP > 1 標 P1；命中率＝game_rate ÷ 倍率、附加獎勵率＝drop_ppm ÷ 1e6，二項 95% 區間外格數 > run 數 ÷ 4 標 P2
+- 產物：`rtp-report.json`（設定檔與 qt-config sha16）＋`<date>-quicktest-<slug>.md`＋`.html`；原始 JSON 落 `output/fish/<slug>/qt-runs/`
+- 首例：貓魚傳說（`data/fish/cat-fish/quicktest/`）；收編驗收 gate.totals 與專案版逐字相同（0.958037／0.957704／0.959714）
 
 ## 目錄
 
