@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-16 (ark-svg-animation 0.2.0 —— M2：13 種體型、物種登錄表、gen／preview)
+
+- 新體型 rig：`ray`（雙翼波動）、`flat`（緣鰭行進波、雙眼同側）、`puffer`（脹縮＋刺）、`lobster`（腹節、尾扇、觸角、前螯）、`cephalopod`（8 觸手行進波）、`jelly`（傘體收縮、觸手、`arc` 電弧）、`turtle`（前鰭划水）、`snail`（腹足波動）、`serpent`（節鏈行進波，取代 Spine 部件魚）、`token`（野牛／猴／孫悟空／貓魚徽章）
+- `scripts/species.mjs` 物種登錄表（JS 模組而非 JSON：瀏覽器、node、Vite 都能 import）：fish-bot 海王2 上場魚種 33 種本體，有辨識特徵者指定配色；`creature()`／`classify()` 預設使用登錄表；gold 變體蓋過登錄表配色
+- CLI：`list`、`gen --out`（逐格 .svg＋manifest.json）、`preview --out`（單檔 HTML，依 size 縮放、點一下看被捕）
+- boss 外圈調細調淡（原本搶過魚身）；verify 預設樣本＝登錄表全部＋前綴／旋風寫法；未登錄訊息改指 `species.mjs` 並列出合法體型
+- 驗證：fish-bot 規格 §1.2 名單 40 個名稱 × 4 變體 `--strict` 全過、最大單格 2.39 KB（長 160）；測試 14 項；反證：把章魚體型拼錯 → 測試 2 紅＋verify 報未登錄
+
 ## 2026-11-16 (ark-svg-animation 0.1.0 —— 新 skill（experimental）：原創向量生物逐格動畫產生器，M1)
 
 > 來源：kiro-cli `docs/specs/ark-svg-animation-spec.md`／`designs/`／`plans/`。Paddy 11-16：fish-bot 海王2「有海王圖用海王圖，其餘（缺圖魚、部件式骨架魚、素材沒建出來時）一律 SVG，像素圖退場」；上游原本沒有 SVG 動畫 skill（只有像素的 ark-pixel-animation）。

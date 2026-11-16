@@ -3,7 +3,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { creature, classify, renderPhase, RIGS } from '../svg_anim.mjs';
+import { creature, classify, renderPhase, RIGS, SPECIES } from '../svg_anim.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import * as fusiform from '../rigs/fusiform.mjs';
 import { checkSecurity, checkSize, checkSeam, checkDeterminism, checkWellFormed, verify, SAMPLE } from '../verify_svg.mjs';
 
@@ -91,4 +95,41 @@ test('verify：樣本全過；0 個物種不算通過', () => {
   const rep = verify(SAMPLE);
   assert.ok(rep.ok, rep.problems.join('\n'));
   assert.equal(verify([]).ok, false);
+});
+
+
+// ── M2：13 種體型、登錄表、gen／preview ─────────────────────────────────────
+test('13 種體型都有 rig 且都被登錄表用到', () => {
+  assert.equal(Object.keys(RIGS).length, 13);
+  const used = new Set(Object.values(SPECIES).map((r) => r.archetype));
+  for (const a of Object.keys(RIGS)) assert.ok(used.has(a), `體型 ${a} 沒有任何物種使用`);
+  for (const [n, r] of Object.entries(SPECIES)) assert.ok(RIGS[r.archetype], `${n} 的體型 ${r.archetype} 不存在`);
+});
+
+test('登錄表：配色與參數生效；gold 變體蓋過登錄表配色；未登錄標 fallback', () => {
+  const svg = creature({ name: 'NEMO' }).frames.swim[0];
+  assert.match(svg, /#ff7a1a/, '小丑魚用登錄表的橘色');
+  assert.doesNotMatch(creature({ name: 'NEMO', variants: ['gold'] }).frames.swim[0], /#ff7a1a/);
+  assert.equal(creature({ name: 'FLASH_SHARK' }).meta.archetype, 'jelly', '電光水母：名字有 SHARK 但登錄為水母');
+  assert.equal(creature({ name: 'NO_SUCH_FISH' }).meta.fallback, true);
+  assert.equal(creature({ name: 'NO_SUCH_FISH' }, {}).meta.fallback, true);
+  assert.equal(classify('LINE_PUFFER_FISH').archetype, 'puffer');
+});
+
+test('verify：登錄表全部物種 × 4 變體在 --strict 下全過', () => {
+  const rep = verify(SAMPLE, { strict: true });
+  assert.ok(rep.ok, rep.problems.slice(0, 5).join('\n'));
+  assert.ok(rep.checked >= 33);
+});
+
+test('CLI gen／preview：產出檔案與 manifest；未知指令 rc=2', () => {
+  const tmp = mkdtempSync(path.join(tmpdir(), 'svga-'));
+  const cli = path.join(dir, 'svg_anim.mjs');
+  execFileSync(process.execPath, [cli, 'gen', '--out', tmp, '--names', 'SHARK,BOMB_CRAB', '--length', '80']);
+  const m = JSON.parse(readFileSync(path.join(tmp, 'manifest.json'), 'utf8'));
+  assert.deepEqual(Object.keys(m.species).sort(), ['BOMB_CRAB', 'SHARK']);
+  assert.ok(existsSync(path.join(tmp, m.species.SHARK.frames.catch[2])));
+  execFileSync(process.execPath, [cli, 'preview', '--out', path.join(tmp, 'p.html'), '--names', 'NEMO']);
+  assert.match(readFileSync(path.join(tmp, 'p.html'), 'utf8'), /NEMO/);
+  assert.throws(() => execFileSync(process.execPath, [cli, 'nope'], { stdio: 'pipe' }), (e) => e.status === 2);
 });

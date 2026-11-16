@@ -15,7 +15,7 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "0.1.0"
+  version: "0.2.0"
   updated: 2026-11-16
   outputs:
     - { format: data, audience: ai }
@@ -25,8 +25,28 @@ metadata:
 # ark-svg-animation
 
 > 規格／設計／計畫：kiro-cli `docs/specs/ark-svg-animation-spec.md`、`docs/designs/ark-svg-animation-design.md`、`docs/plans/ark-svg-animation-plan.md`。
-> **0.1.0（M1）**：體型 `fusiform`（紡錘魚）、`shark`（鯊／鯨）、`crab`（蟹，配件 bomb／electrode／drill／wheel）；
-> 其餘 10 種體型、物種登錄表（`assets/species.json`）、`gen`／`preview`／`sheet` 子命令在 M2～M3。
+> **0.2.0（M2）**：13 種體型、物種登錄表 `scripts/species.mjs`（fish-bot 海王2 上場魚種 33 種本體＋前綴／旋風寫法）、`list`／`gen`／`preview`。
+> M3：`sheet`（PixiJS spritesheet）、references。
+
+## 體型
+
+| 體型 | 代表物種 | 動畫 |
+|---|---|---|
+| `fusiform` 紡錘魚 | 小丑魚、蝴蝶魚、獅子魚、旗魚、鮟鱇、鯒 | 擺尾＋胸鰭 |
+| `shark` 鯊／鯨 | 鯊、鋸鯊、虎鯨 | 全身 S 形 |
+| `ray` 魟 | 魟、光魟 | 雙翼波動 |
+| `flat` 比目魚 | 比目魚 | 緣鰭行進波 |
+| `puffer` 河豚 | 河豚、巨河豚 | 脹縮＋刺 |
+| `crab` 蟹 | 炸彈／電磁／鑽頭／轉輪蟹 | 步足交替、螯開合、配件 |
+| `lobster` 龍蝦 | 龍蝦 | 腹節擺、尾扇、觸角 |
+| `cephalopod` 頭足 | 章魚 | 8 觸手行進波 |
+| `jelly` 水母 | 小水母、電光水母（`arc`） | 傘體收縮、觸手拖曳、電弧 |
+| `turtle` 海龜 | 海龜 | 前鰭划水 |
+| `snail` 海螺 | 海螺魚 | 腹足波動、觸角 |
+| `serpent` 分節長體 | 狂暴火龍（Spine 部件魚的替代） | 節鏈行進波 |
+| `token` 角色徽章 | 野牛、金猴爺、孫悟空、貓魚 | 浮動＋耳／角擺 |
+
+新增物種：在 `scripts/species.mjs` 加一行（`archetype`、`size`、可選 `params`／`palette`／`variants`／`accessory`），跑 `verify_svg.mjs --strict`。
 
 ## 規範
 
@@ -45,7 +65,10 @@ creature({ name: 'BOMB_CRAB', length: 104, facing: 'right', variants: ['gold'] }
 
 ```bash
 S=.kiro/skills/ark-svg-animation/scripts
+node $S/svg_anim.mjs list                                              # 登錄的物種
 node $S/svg_anim.mjs frames SHARK --length 160 [--state swim|catch] [--facing up|right] [--variant gold,twister,boss] [--json]
+node $S/svg_anim.mjs gen --out out/svg [--names A,B|all] [--length 100]  # 逐格 .svg＋manifest.json
+node $S/svg_anim.mjs preview --out preview.html [--names all] [--base 90] # 單檔預覽（點一下看被捕）
 node $S/verify_svg.mjs [--expect names.txt] [--strict] [--json]      # 守門；0 個物種＝失敗
 node --test $S/tests/*.test.mjs
 ```
@@ -75,4 +98,5 @@ node --test $S/tests/*.test.mjs
 
 | 版本 | 日期 | 變更 |
 |---|---|---|
+| 0.2.0 | 2026-11-16 | M2：其餘 10 種體型、物種登錄表 33 種、`list`／`gen`／`preview`、boss 外圈調淡；測試 14 項 |
 | 0.1.0 | 2026-11-16 | M1：核心（確定性、配色、變體、被捕曲線、facing）、3 種體型、守門與 10 項測試（每項反證會紅） |

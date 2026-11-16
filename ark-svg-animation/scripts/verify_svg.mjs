@@ -88,7 +88,7 @@ export function checkDeterminism(gen, spec) {
 }
 
 /** 一隻生物的全部檢查 */
-export function checkCreature(spec, { gen = creature, phase = renderPhase, registry = {} } = {}) {
+export function checkCreature(spec, { gen = creature, phase = renderPhase, registry } = {}) {
   const problems = [], warnings = [];
   let out;
   try { out = gen(spec, registry); } catch (e) { return { problems: [`產生失敗：${e.message}`], warnings }; }
@@ -100,13 +100,15 @@ export function checkCreature(spec, { gen = creature, phase = renderPhase, regis
     if (vb.size > 1) problems.push(`${state} 各格 viewBox 不同 → 錨點會跳；rig.extent 要涵蓋全部相位`);
   }
   problems.push(...checkSeam(out.frames.swim ?? [], phase(spec, 1, registry)).map((m) => `swim ${m}`));
-  if (out.meta?.fallback) warnings.push(`未登錄：以 ${out.meta.archetype} 代替 → 在 species.json 補登錄`);
+  if (out.meta?.fallback) warnings.push(`未登錄或體型名稱不存在：以 ${out.meta.archetype} 代替 → 在 scripts/species.mjs 補登錄，或把 archetype 改成 ${Object.keys(RIGS).join('／')} 其一`);
   return { problems, warnings };
 }
 
-export const SAMPLE = ['NEMO', 'SHARK', 'BOMB_CRAB', 'LASER_CRAB', 'DRILL_CRAB', 'WHEEL_CRAB', 'TWIST_NEMO', 'SINGLE_GURNARD'];
+import { SPECIES } from './svg_anim.mjs';
+/** 預設樣本＝登錄表全部物種＋前綴／旋風各一（名稱解析也一起驗） */
+export const SAMPLE = [...Object.keys(SPECIES), 'TWIST_NEMO', 'SINGLE_GURNARD', 'LINE_PUFFER_FISH'];
 
-export function verify(names, { strict = false, gen = creature, phase = renderPhase, registry = {}, variants = [[], ['gold'], ['boss'], ['twister']] } = {}) {
+export function verify(names, { strict = false, gen = creature, phase = renderPhase, registry, variants = [[], ['gold'], ['boss'], ['twister']] } = {}) {
   const rows = [];
   for (const name of names) for (const vs of variants) {
     const r = checkCreature({ name, length: 104, variants: vs }, { gen, phase, registry });
