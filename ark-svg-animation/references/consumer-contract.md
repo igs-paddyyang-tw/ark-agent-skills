@@ -44,3 +44,14 @@ const textures = frames.swim.map((svg) => /* Graphics.svg(svg) → renderer.gene
 
 PixiJS：`const sheet = await Assets.load('SHARK.json'); new AnimatedSprite(sheet.animations.swim)`。
 驗收：`sheet.mjs --check <dir> [--pixi <pixi.min.js>]`（PNG 尺寸＝JSON、每格非空白、真的 PixiJS 讀得進）。
+
+## PixiJS Graphics 直接解析（0.5.0 起）
+
+不轉貼圖、想用 `new Graphics().svg(svg)` 的專案（例：aidev 魚機）傳 `profile: 'flat'`：
+
+```js
+creature({ name: 'NEMO', length: 104, profile: 'flat' });
+asset('plate', { shape: 'circle', profile: 'flat' });
+```
+
+flat 沒有漸層、裁切花紋與 transform（Pixi 8.6.6 不支援）；限制與驗證方式見 `references/gamekit.md`。

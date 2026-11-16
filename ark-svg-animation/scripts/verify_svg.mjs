@@ -1,16 +1,18 @@
 #!/usr/bin/env node
-// verify_svg.mjs —— ark-svg-animation 守門（規格 AC-1～AC-5、AC-8）。
+// verify_svg.mjs —— ark-svg-animation 守門（規格 AC-1～AC-5、AC-8；0.5.0 起加 gamekit AC-G1～G3）。
 //
 //   node verify_svg.mjs                         # 內建樣本（每種體型＋變體）
 //   node verify_svg.mjs --expect names.txt      # 每行一個物種名（例：fish-bot 41 種）；未登錄（fallback）列為警告
 //   node verify_svg.mjs --expect names.txt --strict   # 未登錄也算失敗
 //   node verify_svg.mjs --json
+//   （gamekit：每個 kind 樣本 × 4 theme × texture／flat；生物另驗 flat profile。PixiJS 實機比對另跑 pixi_check.mjs）
 // exit：0 全過／1 有違規（或掃到 0 個物種）／2 參數錯
 //
 // 每個檢查都是獨立匯出的函式，tests/ 直接餵壞輸入做反證。
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { creature, renderPhase, RIGS } from './svg_anim.mjs';
+import { asset, KINDS, SAMPLES as KIT_SAMPLES, THEMES, BUDGET } from './gamekit.mjs';
 
 export const MAX_FRAME_BYTES = 4096;
 const FORBIDDEN = [
@@ -80,6 +82,27 @@ export function checkSeam(frames, next) {
   return out;
 }
 
+/**
+ * flat profile（PixiJS GraphicsContext.svg() 直接解析；規格 FR-10）：
+ * Pixi 8.6.6 不吃漸層／裁切／transform、polygon／polyline 的 points 用 /\d+/g 解析（小數與負號會壞）、只讀 style 上色。
+ */
+const FLAT_FORBIDDEN = [
+  [/<(?:linear|radial)Gradient\b|url\(#/, '漸層', '改用實色（draw.mjs flat 會取漸層平均色）'],
+  [/<clipPath\b|clip-path=/, '裁切', 'flat 下略過被裁切的花紋'],
+  [/\stransform=/, 'transform', '變換要烘焙進座標（draw.mjs 的矩陣）'],
+  [/<(?:polygon|polyline|line|rect)\b/, 'polygon／polyline／line／rect', '一律改 <path>（Pixi 用 /\\d+/g 讀 points，小數與負號會被拆開）'],
+  [/rgba\(|\sopacity=|\sfill-opacity=|\sstroke-opacity=/, '透明度屬性或 rgba()', '透明度寫進 style 的 fill-opacity／stroke-opacity'],
+  [/\s(?:fill|stroke|stroke-width)="/, 'fill／stroke 屬性', '上色一律寫 style（Pixi 有 style 就忽略屬性；子元素也關不掉繼承的填色）'],
+  [/<g\b/, '<g>', '群組攤平（樣式會往下繼承、關不掉）'],
+];
+export function checkFlat(svg) {
+  const out = FLAT_FORBIDDEN.filter(([re]) => re.test(svg)).map(([, what, fix]) => `flat 不可有${what} → ${fix}`);
+  const bare = (svg.match(/<(?:path|circle|ellipse)\b(?![^>]*\sstyle=")[^>]*>/g) ?? []).length;
+  if (bare) out.push(`flat 有 ${bare} 個圖元沒有 style → 每個圖元都要自帶 style（fill:none 也要寫）`);
+  if (/style="[^"]*stroke:#[^"]*"/.test(svg) && /style="(?![^"]*stroke-width)[^"]*stroke:#/.test(svg)) out.push('flat 有描邊但沒有 stroke-width → Pixi 會用預設 1 px');
+  return out;
+}
+
 const sha = (x) => createHash('sha256').update(JSON.stringify(x)).digest('hex');
 
 /** 確定性：同參數產兩次必須逐位元組相同 */
@@ -133,9 +156,65 @@ export function verify(names, { strict = false, gen = creature, phase = renderPh
   const problems = rows.flatMap((r) => r.problems.map((p) => `${r.name}${r.variants.length ? `[${r.variants}]` : ''}：${p}`));
   const warnings = [...new Set(rows.flatMap((r) => r.warnings.map((w) => `${r.name}：${w}`)))];
   problems.push(...checkIdsUnique(all).map((m) => `同頁內嵌：${m}`));
+  // 生物 flat profile：每種一次（無變體＋boss 各一，boss 有 g 透明度與外圈）
+  let flatN = 0;
+  for (const name of names) for (const vs of [[], ['boss']]) {
+    const spec = { name, length: 104, variants: vs, profile: 'flat' };
+    let out; try { out = gen(spec, registry); } catch (e) { problems.push(`${name}[flat]：產生失敗 ${e.message}`); continue; }
+    problems.push(...checkDeterminism((x) => gen(x, registry), spec).map((m) => `${name}[flat]：${m}`));
+    for (const [state, frames] of Object.entries(out.frames)) frames.forEach((svg, i) => {
+      flatN++;
+      [...checkSecurity(svg), ...checkWellFormed(svg), ...checkSize(svg, MAX_FRAME_BYTES * 2), ...checkFlat(svg)].forEach((m) => problems.push(`${name}[flat] ${state}[${i}] ${m}`));
+    });
+  }
   if (strict) problems.push(...warnings);
   if (!names.length) problems.push('掃到 0 個物種 —— 範圍是空的，不是通過');
-  return { checked: names.length, frames: rows.length, rigs: Object.keys(RIGS), problems, warnings, ok: problems.length === 0 };
+  return { checked: names.length, frames: rows.length, flatFrames: flatN, rigs: Object.keys(RIGS), problems, warnings, ok: problems.length === 0 };
+}
+
+/**
+ * gamekit：每個 kind 的樣本 × 每個 theme × texture／flat。
+ * 檢查：確定性、安全（含禁 <text>）、結構、分類尺寸預算（flat 2 倍：執行期解析、不走網路）、flat 規則、同頁 id、換 theme 會變色。
+ */
+export function verifyKit({ kinds = Object.keys(KINDS), themes = Object.keys(THEMES), samples = KIT_SAMPLES, gen = asset } = {}) {
+  const problems = [], all = [];
+  let n = 0;
+  for (const kind of kinds) {
+    const list = samples[kind] ?? [];
+    if (!list.length) { problems.push(`${kind}：沒有樣本 → 在 gamekit.mjs 的 SAMPLES 補，範圍是空的不是通過`); continue; }
+    list.forEach((spec, si) => {
+      const byTheme = new Set();
+      for (const th of themes) for (const profile of ['texture', 'flat']) {
+        const full = { ...spec, theme: th, profile }, tag = `${kind}#${si}[${th}/${profile}]`;
+        let out; try { out = gen(kind, full); } catch (e) { problems.push(`${tag}：產生失敗 ${e.message}`); continue; }
+        n++;
+        problems.push(...checkDeterminism((x) => gen(kind, x), full).map((m) => `${tag}：${m}`));
+        const budget = (BUDGET[out.meta.category] ?? BUDGET.ui) * (profile === 'flat' ? 2 : 1);
+        [...checkSecurity(out.svg), ...checkWellFormed(out.svg), ...checkSize(out.svg, budget), ...(profile === 'flat' ? checkFlat(out.svg) : [])].forEach((m) => problems.push(`${tag} ${m}`));
+        if (profile === 'texture') { all.push(out.svg); byTheme.add(out.svg); }
+      }
+      if (themes.length > 1 && byTheme.size < 2) problems.push(`${kind}#${si}：換 theme 輸出完全相同 → 顏色要取自 theme token，不要寫死`);
+    });
+  }
+  problems.push(...checkIdsUnique(all).map((m) => `gamekit 同頁內嵌：${m}`));
+  if (!n) problems.push('gamekit 掃到 0 張 —— 範圍是空的，不是通過');
+  return { checked: n, kinds, themes, problems, ok: problems.length === 0 };
+}
+
+/** pixi_check 的樣本：gamekit 全部 kind × theme（flat）＋每種體型一隻（flat，游動第 0 格與被捕第 1 格） */
+export function flatSamples() {
+  const items = [];
+  for (const [kind, list] of Object.entries(KIT_SAMPLES)) list.forEach((spec, i) => {
+    for (const th of Object.keys(THEMES)) items.push({ name: `${kind}#${i}[${th}]`, svg: asset(kind, { ...spec, theme: th, profile: 'flat' }).svg });
+  });
+  const seen = new Set();
+  for (const name of SAMPLE) {
+    const out = creature({ name, length: 104, profile: 'flat', variants: ['boss'] });
+    if (seen.has(out.meta.archetype)) continue;
+    seen.add(out.meta.archetype);
+    items.push({ name: `${name}.swim0`, svg: out.frames.swim[0] }, { name: `${name}.catch1`, svg: out.frames.catch[1] });
+  }
+  return items;
 }
 
 const isMain = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
@@ -148,9 +227,13 @@ if (isMain) {
     catch (e) { console.error(`❌ 讀不到 --expect：${e.message}`); process.exit(2); }
   }
   const rep = verify(names, { strict: args.includes('--strict') });
+  const kitRep = verifyKit();
+  rep.kit = { checked: kitRep.checked, kinds: kitRep.kinds };
+  rep.problems.push(...kitRep.problems.map((p) => `gamekit ${p}`));
+  rep.ok = rep.problems.length === 0;
   if (args.includes('--json')) console.log(JSON.stringify(rep, null, 2));
   else {
-    console.log(`ark-svg-animation verify：${rep.checked} 種 × ${rep.frames / Math.max(1, rep.checked)} 變體｜體型 ${rep.rigs.join('、')}`);
+    console.log(`ark-svg-animation verify：${rep.checked} 種 × ${rep.frames / Math.max(1, rep.checked)} 變體＋flat ${rep.flatFrames} 格｜體型 ${rep.rigs.join('、')}｜gamekit ${rep.kit.checked} 張（${rep.kit.kinds.join('、')}）`);
     for (const p of rep.problems) console.log('❌', p);
     for (const w of rep.warnings) console.log('⚠️', w);
     if (rep.ok) console.log('✅ 通過');

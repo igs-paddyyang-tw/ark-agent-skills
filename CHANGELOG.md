@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-11-16 (ark-svg-animation 0.5.0 —— gamekit M5：向量字形、theme、flat profile（PixiJS Graphics 相容）)
+
+> 計畫：kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md`（Paddy 11-16 選 1：擴充本 skill 收魚機＋老虎機必要圖元素）。
+> 參考 aidev 神燈寶藏／豬來蓋福 `gen_art.py`、魚機 `svg.ts` 的**做法**（造型與配色重新原創，不帶入任何專案素材）。
+
+- 核心抽成 `scripts/draw.mjs`（生物與 gamekit 共用）；**texture 的 `creature()` 輸出與 0.4.0 逐位元組相同**（測試快照守門）
+- 🔴 `flat` profile：讀 PixiJS 8.6.6 `SVGParser` 原始碼確認 —— polygon／polyline 的 points 用 `/\d+/g` 解析（小數與負號被拆開）、只讀 style 上色、子元素關不掉繼承的填色、不吃漸層（`url(#…)` 直接丟錯）／裁切／transform → flat 一律輸出 path／circle／ellipse＋完整 style，變換以仿射矩陣烘焙、漸層取平均色、略過裁切花紋
+- `glyphs.mjs`：原創切角筆畫字（A–Z、0–9、`+ - × . , ! ? : / % $ ¥ #`），一律轉 path（aidev 兩款共 33 張圖依賴本機 CJK 字型）；未支援字元報錯列字
+- `themes.mjs`：4 組原創主題（royal-gold、jade-jungle、deep-sea、neon-night）＋覆寫物件；漸層物件 `{ lg | rg }`，id＝定義內容雜湊（同 id 必同定義）
+- `gamekit.mjs`：`asset(kind, spec)`；本版 kind：`label`（描邊字）、`plate`（arch／circle／shield／diamond 底板）；`list`／`preview`
+- 守門：`verify_svg` 加 `checkFlat`、`verifyKit`（kind × theme × profile：確定性、禁 `<text>`、分類預算、換 theme 必變色）、生物 flat 504 格；`pixi_check.mjs` 用真的 PixiJS 與瀏覽器比形狀（遮罩擴 1 px 互相涵蓋率 ≥ 0.95）
+  - 反證：texture SVG 餵 Pixi → 漸層丟錯；小數 polygon → 涵蓋率 0.456；texture 字 → 0.874（Pixi 不讀 linejoin／linecap）—— 全紅
+  - 調整：原用 IoU，Pixi 不開抗鋸齒、細線差 1 px 就掉到 0.6～0.8（不是解析錯誤）→ 改擴 1 px 涵蓋率
+- 測試 29 項（含 PixiJS 實機，需 `ARK_SVGA_PIXI`）
+
 ## 2026-11-16 (ark-svg-animation 0.4.0 —— 畫質：漸層立體感、三圓眼睛、貝茲身形、花紋裁切、glow；id 不衝突)
 
 > 參考 fish-bot `svgart.ts`（D-285）的**做法**（只取幾何與渲染技巧；其配色取自公司素材，不帶入）。
