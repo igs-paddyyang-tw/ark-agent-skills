@@ -15,18 +15,19 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "0.2.0"
+  version: "0.3.0"
   updated: 2026-11-16
   outputs:
     - { format: data, audience: ai }
+    - { format: png, audience: human }
   render: none
 ---
 
 # ark-svg-animation
 
 > 規格／設計／計畫：kiro-cli `docs/specs/ark-svg-animation-spec.md`、`docs/designs/ark-svg-animation-design.md`、`docs/plans/ark-svg-animation-plan.md`。
-> **0.2.0（M2）**：13 種體型、物種登錄表 `scripts/species.mjs`（fish-bot 海王2 上場魚種 33 種本體＋前綴／旋風寫法）、`list`／`gen`／`preview`。
-> M3：`sheet`（PixiJS spritesheet）、references。
+> **0.3.0（M3）**：13 種體型、物種登錄表 33 種、`list`／`gen`／`preview`、**`sheet.mjs`（PixiJS spritesheet，headless Chromium 截圖成拼圖）**。
+> 使用方怎麼接：`references/consumer-contract.md`；體型與參數：`references/archetypes.md`；新增物種：`references/species-registry.md`。
 
 ## 體型
 
@@ -69,6 +70,8 @@ node $S/svg_anim.mjs list                                              # 登錄�
 node $S/svg_anim.mjs frames SHARK --length 160 [--state swim|catch] [--facing up|right] [--variant gold,twister,boss] [--json]
 node $S/svg_anim.mjs gen --out out/svg [--names A,B|all] [--length 100]  # 逐格 .svg＋manifest.json
 node $S/svg_anim.mjs preview --out preview.html [--names all] [--base 90] # 單檔預覽（點一下看被捕）
+node $S/sheet.mjs --out out/sheets [--names all] [--length 100] [--scale 2]  # PixiJS spritesheet（每種 PNG＋JSON＋index.json）
+node $S/sheet.mjs --check out/sheets [--pixi node_modules/pixi.js/dist/pixi.min.js]   # 尺寸／空白格／真的 PixiJS 讀得進
 node $S/verify_svg.mjs [--expect names.txt] [--strict] [--json]      # 守門；0 個物種＝失敗
 node --test $S/tests/*.test.mjs
 ```
@@ -98,5 +101,6 @@ node --test $S/tests/*.test.mjs
 
 | 版本 | 日期 | 變更 |
 |---|---|---|
+| 0.3.0 | 2026-11-16 | M3：`sheet.mjs`（headless Chromium 一次截圖＝拼圖、TexturePacker hash JSON 含 anchor 與 animations、PNG 自解碼驗非空白、`--pixi` 用真的 PixiJS 解析）、references 三份；測試 17 項 |
 | 0.2.0 | 2026-11-16 | M2：其餘 10 種體型、物種登錄表 33 種、`list`／`gen`／`preview`、boss 外圈調淡；測試 14 項 |
 | 0.1.0 | 2026-11-16 | M1：核心（確定性、配色、變體、被捕曲線、facing）、3 種體型、守門與 10 項測試（每項反證會紅） |

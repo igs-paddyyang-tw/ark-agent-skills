@@ -24,7 +24,7 @@ import * as serpent from './rigs/serpent.mjs';
 import * as token from './rigs/token.mjs';
 import SPECIES from './species.mjs';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 export const RIGS = { fusiform, shark, crab, ray, flat, puffer, lobster, cephalopod, jelly, turtle, snail, serpent, token };
 export { SPECIES };
 export const DEFAULT_FRAMES = { swim: 4, catch: 3 };

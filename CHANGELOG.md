@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-16 (ark-svg-animation 0.3.0 —— M3：PixiJS spritesheet、references)
+
+- `scripts/sheet.mjs`：每種一組 `<NAME>.png`＋`<NAME>.json`（TexturePacker hash，含 `anchor`、`animations.swim／catch`）＋`index.json`；作法＝把所有格依座標排進透明背景 HTML，headless Chromium 截一張圖即拼圖（與瀏覽器 `Graphics.svg()` 同引擎，座標自己排 → JSON 必對得上）；Chromium 依 `$ARK_SVGA_CHROME` → `~/.cache/ms-playwright` → PATH 找，找不到明說跳過（exit 3）
+- `--check`：PNG 尺寸＝JSON、透明通道、每格非空白（內建最小 PNG 解碼，不引第三方）、animations 指向存在的格；`--pixi <pixi.min.js>` 在 headless Chromium 跑真的 `Spritesheet.parse`（實測 PixiJS 8.6.6 讀進 33 組）
+  - 踩坑：內嵌 1 MB 的 pixi.min.js 讓 `--dump-dom` 撐爆 node 輸出緩衝（ENOBUFS）→ 改 `<script src>`；圖片非同步解碼在 dump 之後才完成 → 解析檢查改用同尺寸空 TextureSource（像素由 PNG 檢查負責）
+- 33 種 sheet 7.5 秒產完；references：`consumer-contract.md`（引用方式、API、spritesheet 格式）、`species-registry.md`、`archetypes.md`
+- 測試 17 項（新增 3 項：排版／JSON、拼圖尺寸不符與空白格反證、PixiJS 壞 JSON 反證）；缺 Chromium 或 `ARK_SVGA_PIXI` 時明說跳過
+
 ## 2026-11-16 (ark-svg-animation 0.2.0 —— M2：13 種體型、物種登錄表、gen／preview)
 
 - 新體型 rig：`ray`（雙翼波動）、`flat`（緣鰭行進波、雙眼同側）、`puffer`（脹縮＋刺）、`lobster`（腹節、尾扇、觸角、前螯）、`cephalopod`（8 觸手行進波）、`jelly`（傘體收縮、觸手、`arc` 電弧）、`turtle`（前鰭划水）、`snail`（腹足波動）、`serpent`（節鏈行進波，取代 Spine 部件魚）、`token`（野牛／猴／孫悟空／貓魚徽章）
