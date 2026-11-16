@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r45",
-  "commit": "4bccbb9",
-  "generated_at": "2026-11-14T09:54:15+08:00",
+  "release": "skills-2026.11-r46",
+  "commit": "c4b634a",
+  "generated_at": "2026-11-16T16:48:05+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
