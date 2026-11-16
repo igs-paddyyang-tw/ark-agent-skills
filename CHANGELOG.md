@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-16 (ark-svg-animation 0.1.0 —— 新 skill（experimental）：原創向量生物逐格動畫產生器，M1)
+
+> 來源：kiro-cli `docs/specs/ark-svg-animation-spec.md`／`designs/`／`plans/`。Paddy 11-16：fish-bot 海王2「有海王圖用海王圖，其餘（缺圖魚、部件式骨架魚、素材沒建出來時）一律 SVG，像素圖退場」；上游原本沒有 SVG 動畫 skill（只有像素的 ark-pixel-animation）。
+
+- `scripts/svg_anim.mjs`：零相依 ESM、瀏覽器與 node 共用；`creature(spec) → { frames: { swim, catch }, meta }`、`renderPhase()`；FNV-1a 種子＋mulberry32 只抽個體差、動畫只用相位函式 → 逐位元組確定；變體 twister／gold／boss；被捕曲線（閃白 → 抖動 → 縮小淡出）；facing up／right；拒絕外部圖片參數
+- 體型 rig：`fusiform`、`shark`（S 形擺動）、`crab`（三腳步態、螯開合、配件 bomb／electrode／drill／wheel）
+- `scripts/verify_svg.mjs`：確定性、安全（script／事件／href／url／style／text）、結構、單格 ≤ 4 KB、循環接縫（等速以中位數為準＋t＝1 週期性，容許對稱零件換位）、0 個物種＝失敗
+  - 守門第一次跑就抓到轉輪蟹輪子一循環轉 90°（3 根輪輻 60° 對稱 → 首尾不接）→ 改 60°；反證：改回 90° → 紅
+  - 接縫原本只比首尾，會把「畫面相同、零件換位」誤判；改兩段式。原本用平均當基準，一大步會把平均拉高而躲過 → 改中位數（反證抓到）
+- 測試 `tests/svg_anim.test.mjs` 10 項：確定性、格數與 viewBox、facing、拒絕外部圖片、名稱解析、安全／結構／體積／接縫／確定性各自的反證、原始碼不用 Math.random／Date
+- M2 起：其餘 10 種體型、物種登錄表（fish-bot 41 種）、`gen`／`preview`、`sheet`（PixiJS spritesheet）
+
 ## 2026-11-14 (ark-game-quicktest 2.4.0 —— 收編魚機快測：fishsim 輸出契約 × 打法模型 → gate／打法敏感度／命中率對理論)
 
 > 來源：aidev 兩款魚機實跑（一般廳單人版、貓魚傳說）；提案 aidev `docs/plans/2026-11-fish-skill-gap-proposal.md` P-2（Paddy 2026-11-14 拍板）。

@@ -33,7 +33,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 <!-- BEGIN GENERATED CATALOGUE -->
 
-> **49 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
+> **50 個 Skill**，三軸分類：職能（`category`，分節）× 形態（`form`：⚙️ 執行＝跑自帶腳本／📝 指示＝照 SKILL.md 做）× 領域（`domain`）。
 > 本節由 `scripts/gen_readme.py` 依各 `SKILL.md` 的 frontmatter 產生，**不要手動編輯**。
 
 ## ① 流程鏈 Process
@@ -45,7 +45,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-agent-role-profile` | 📝 指示 | 通用 | 以三檔位訪談（quick / standard / deep）引出 agent 的角色定位，產出結構化 `role-profile.yaml`（identity / stance / scope / … |
 | `ark-agent-team-design` | 📝 指示 | 通用 | 從業務目標設計 agent team 的編制：三檔位訪談（quick 套用編制樣板 / standard 6 題 / deep 交 ark-grill-me 拷問），產出 `team-spec.yam… |
 | `ark-code-spec-validator` | 📝 指示 | 通用 | 驗證 code 與 spec/design 文件的一致性，產出 Drift Report。 |
-| `ark-game-quicktest` | ⚙️ 執行 | 🎮 遊戲 | Go 快測膠合層（製程 C2 段）：config-spec → odds.json 骨架 → lint → 跑 Go 快測 → rtp-report 與三向 verdict（只回報數值不下結論）；機率… |
+| `ark-game-quicktest` | ⚙️ 執行 | 🎮 遊戲 | Go 快測膠合層（製程 C2 段）：config-spec → odds.json 骨架 → lint → 跑 Go 快測 → rtp-report 與三向 verdict（只回報數值不下結論）；2.… |
 | `ark-grill-me` | 📝 指示 | 通用 | 在實作前拷問設計：AI 逐一提問決策樹的每個分支，直到人類與 AI 達成共識。 |
 | `ark-mcp-builder` | 📝 指示 | 通用 | 建立高品質 MCP（Model Context Protocol）Server 的指南， 讓 LLM 能透過設計良好的 Tools 與外部服務互動。 |
 | `ark-prompt-spec-validator` | ⚙️ 執行 | 通用 | 驗證 Markdown 提詞與 AI 內文（SKILL.md、agent system prompt、steering 文件、 給 AI 看的 wiki/報告內文）是否符合 ark-agent-ski… |
@@ -84,7 +84,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 
 ## ④ 呈現層 View
 
-> 輸出：HTML / 視覺（給人看）｜`category: view`｜5 個
+> 輸出：HTML / 視覺（給人看）｜`category: view`｜6 個
 
 | Skill | 形態 | 領域 | 定位 |
 |-------|------|------|------|
@@ -93,6 +93,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-html-dashboard` | 📝 指示 | 通用 | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
 | `ark-html-report` | 📝 指示 | 通用 | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
 | `ark-pixel-animation` | ⚙️ 執行 | 🎮 遊戲 | 產出復古遊戲像素動畫 executor（單檔 HTML，Canvas 2D 或 PixiJS）：低解析邏輯畫布、固定色盤、整數倍放大、8–12 FPS 點陣節奏， 角色待機／集氣／施法／收招等循環動作… |
+| `ark-svg-animation` | ⚙️ 執行 | 🎮 遊戲 | 原創向量生物逐格動畫產生器（executor，零相依 ESM，瀏覽器與 node 共用）：依「體型＋物種名」產生俯視或側視的游動、被捕動畫 （SVG 字串陣列＋meta：viewBox、錨點、身體框、… |
 
 ## ⑤ 文件輸出 Document
 
