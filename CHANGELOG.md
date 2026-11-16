@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-16 (ark-svg-animation 0.4.0 —— 畫質：漸層立體感、三圓眼睛、貝茲身形、花紋裁切、glow；id 不衝突)
+
+> 參考 fish-bot `svgart.ts`（D-285）的**做法**（只取幾何與渲染技巧；其配色取自公司素材，不帶入）。
+
+- 核心新圖元：`path`（貝茲）、`eye`（眼白＋瞳孔＋反光）、`clip`（花紋裁切在身體輪廓內）、`g`（繞軸旋轉）；填色 `'grad'`（放射漸層亮→主→暗）、`'glow'`；新變體 `glow`（登錄表：火龍、光魟、金猴爺、孫悟空）
+- 13 種 rig 主體改漸層、眼睛改三圓；`fusiform` 重寫：貝茲流線身形、尾鰭繞尾柄旋轉（`swing` 度）、條紋裁切在身體內、中線脊
+- 🔴 id 設計：漸層／裁切 id＝種子＋外觀雜湊（變體、尺寸、朝向、配色、參數）＋狀態格號 —— 同頁內嵌多張圖不衝突（fish-bot 踩過「預覽頁漸層 id 互撞全部變綠」）
+- `verify_svg`：新增 `checkIdsUnique`（同 id 必為同定義；完全相同的圖貼兩次不算衝突）；接縫比對前去掉 id／`url(#…)`（id 含格號數字，不是座標）
+  - 守門抓到：`g` 在 rot＝0 時省略 transform → 第 0 格結構不同 → 改為有給 rot 就一律輸出
+  - 反證抓到：外觀雜湊漏了 params（同物種不同體寬會共用裁切 id、切錯）→ 補上；反證：拿掉 params → 1 紅
+- 最大單格 3.07 KB（轉輪蟹＋boss＋glow，長 160）；33 組 sheet 重產、PixiJS 8.6.6 全部讀進；測試 21 項
+
 ## 2026-11-16 (ark-svg-animation 0.3.0 —— M3：PixiJS spritesheet、references)
 
 - `scripts/sheet.mjs`：每種一組 `<NAME>.png`＋`<NAME>.json`（TexturePacker hash，含 `anchor`、`animations.swim／catch`）＋`index.json`；作法＝把所有格依座標排進透明背景 HTML，headless Chromium 截一張圖即拼圖（與瀏覽器 `Graphics.svg()` 同引擎，座標自己排 → JSON 必對得上）；Chromium 依 `$ARK_SVGA_CHROME` → `~/.cache/ms-playwright` → PATH 找，找不到明說跳過（exit 3）

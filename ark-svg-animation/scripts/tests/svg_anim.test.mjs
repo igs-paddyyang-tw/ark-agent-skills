@@ -9,7 +9,7 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import * as fusiform from '../rigs/fusiform.mjs';
-import { checkSecurity, checkSize, checkSeam, checkDeterminism, checkWellFormed, verify, SAMPLE } from '../verify_svg.mjs';
+import { checkSecurity, checkSize, checkSeam, checkDeterminism, checkWellFormed, checkIdsUnique, verify, SAMPLE } from '../verify_svg.mjs';
 
 const dir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -132,4 +132,45 @@ test('CLI gen／preview：產出檔案與 manifest；未知指令 rc=2', () => {
   execFileSync(process.execPath, [cli, 'preview', '--out', path.join(tmp, 'p.html'), '--names', 'NEMO']);
   assert.match(readFileSync(path.join(tmp, 'p.html'), 'utf8'), /NEMO/);
   assert.throws(() => execFileSync(process.execPath, [cli, 'nope'], { stdio: 'pipe' }), (e) => e.status === 2);
+});
+
+// ── 0.4.0：漸層、眼睛、裁切、光暈；同頁內嵌不撞 id ────────────────────────────
+export function allIds(svgs) {
+  return svgs.flatMap((s) => [...s.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+}
+
+test('同一頁內嵌多張 SVG：所有 id 唯一（fish-bot D-285 踩過漸層互撞）', () => {
+  const svgs = ['NEMO', 'SHARK', 'BOMB_CRAB', 'FIRE_DRAGON', 'GIANT_NEMO'].flatMap((n) => { const f = creature({ name: n, variants: ['glow'] }).frames; return [...f.swim, ...f.catch]; });
+  const ids = allIds(svgs);
+  assert.ok(ids.length > 20, `應該有漸層／裁切 id，實際 ${ids.length}`);
+  assert.equal(new Set(ids).size, ids.length, '有重複 id');
+  // 每個 url(#x) 都要在同一張圖內有定義
+  for (const s of svgs) for (const [, ref] of s.matchAll(/url\(#([^)]+)\)/g)) assert.ok(s.includes(`id="${ref}"`), `懸空參照 ${ref}`);
+});
+
+test('同參數不同 params（體寬）：id 也要不同 —— 裁切依幾何而定', () => {
+  const a = creature({ name: 'NEMO' }).frames.swim[0], b = creature({ name: 'NEMO', params: { bodyW: 0.6 } }).frames.swim[0];
+  assert.deepEqual(checkIdsUnique([a, b]), []);
+  assert.notDeepEqual(allIds([a]), allIds([b]));
+});
+
+test('新圖元：漸層填色、三圓眼睛、花紋裁切、光暈', () => {
+  const nemo = creature({ name: 'NEMO' }).frames.swim[0];
+  assert.match(nemo, /<radialGradient /);
+  assert.match(nemo, /<clipPath /);
+  assert.equal((nemo.match(/<circle /g) ?? []).length, 6, '兩隻眼睛 × 3 圓');
+  assert.match(creature({ name: 'NEMO', variants: ['glow'] }).frames.swim[0], /stop-opacity="0"/);
+  const caught = creature({ name: 'NEMO' }).frames.catch[0];
+  assert.doesNotMatch(caught, /stop-color="#ff7a1a"/, '被捕閃白也要套到漸層色');
+});
+
+test('同種魚不同版本（變體／尺寸）同頁：id 不撞；verify 的唯一性檢查反證會紅', () => {
+  const svgs = [creature({ name: 'NEMO' }), creature({ name: 'NEMO', variants: ['gold'] }), creature({ name: 'NEMO', length: 200 })].flatMap((g) => [...g.frames.swim, ...g.frames.catch]);
+  assert.deepEqual(checkIdsUnique(svgs), []);
+  const one = creature({ name: 'NEMO' }).frames.swim[0];
+  assert.deepEqual(checkIdsUnique([one, one]), [], '同一張貼兩次：定義相同，不算衝突');
+  // 反證：同 id、不同定義（把漸層顏色改掉）→ 必紅
+  const forged = one.replace(/stop-color="#[0-9a-f]{6}"/, 'stop-color="#000000"');
+  assert.notEqual(forged, one);
+  assert.equal(checkIdsUnique([one, forged]).length, 1, '同 id 不同定義要紅');
 });

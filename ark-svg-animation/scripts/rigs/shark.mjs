@@ -3,7 +3,7 @@
 const TAU = Math.PI * 2;
 const N = 9; // 輪廓取樣段數（體積與平滑度的取捨：單格 ≤ 4 KB）
 
-export const defaults = { bodyW: 0.26, sway: 0.07, fin: 0.34, tail: 0.3, snout: 0.12, belly: true, eye: 0.025 };
+export const defaults = { bodyW: 0.26, sway: 0.07, fin: 0.34, tail: 0.3, snout: 0.12, belly: true, eye: 0.03 };
 
 export function individual(rnd) {
   return { bodyW: 0.23 + rnd() * 0.06, fin: 0.3 + rnd() * 0.08 };
@@ -37,9 +37,9 @@ export function parts(t, p, c) {
     { k: 'polygon', pts: [[tx - 0.02, 0.84], tip(-1), [tx, 0.94], tip(1), [tx + 0.02, 0.84]], fill: c.dark },
     { k: 'polygon', pts: [[off(finY) - p.bodyW * 0.4, finY], [off(finY) - p.bodyW / 2 - p.fin, finY + 0.16], [off(finY) - p.bodyW * 0.3, finY + 0.12]], fill: c.dark },
     { k: 'polygon', pts: [[off(finY) + p.bodyW * 0.4, finY], [off(finY) + p.bodyW / 2 + p.fin, finY + 0.16], [off(finY) + p.bodyW * 0.3, finY + 0.12]], fill: c.dark },
-    { k: 'polygon', pts: [...left, ...right], fill: c.main, stroke: c.dark, sw: 0.015 },
+    { k: 'polygon', pts: [...left, ...right], fill: 'grad', stroke: c.dark, sw: 0.015 },
     ...(p.belly ? [{ k: 'polyline', pts: ys.slice(2, N - 1).map((y) => [off(y), y]), stroke: c.light, sw: 0.02, op: 0.7 }] : []),
-    { k: 'circle', cx: -p.bodyW * 0.22, cy: 0.1, r: p.eye, fill: c.eye },
-    { k: 'circle', cx: p.bodyW * 0.22, cy: 0.1, r: p.eye, fill: c.eye },
+    { k: 'eye', cx: -p.bodyW * 0.22, cy: 0.1, r: p.eye },
+    { k: 'eye', cx: p.bodyW * 0.22, cy: 0.1, r: p.eye },
   ];
 }

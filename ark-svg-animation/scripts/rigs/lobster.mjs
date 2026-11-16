@@ -14,9 +14,9 @@ export function parts(t, p, c) {
     ...[-1, 1].map((sd) => ({ k: 'ellipse', cx: sd * (p.w * 0.4 + 0.1), cy: 0.04, rx: 0.045, ry: 0.07, fill: c.main, stroke: c.dark, sw: 0.012 })),
     { k: 'polygon', pts: [[tx, ty], [tx - 0.12 - fan, 1], [tx, 0.97], [tx + 0.12 + fan, 1]], fill: c.dark },
     ...segs.reverse(),
-    { k: 'ellipse', cx: 0, cy: 0.28, rx: p.w / 2, ry: 0.16, fill: c.main, stroke: c.dark, sw: 0.015 },
+    { k: 'ellipse', cx: 0, cy: 0.28, rx: p.w / 2, ry: 0.16, fill: 'grad', stroke: c.dark, sw: 0.015 },
     { k: 'ellipse', cx: 0, cy: 0.28, rx: p.w * 0.22, ry: 0.11, fill: c.light, op: 0.5 },
-    { k: 'circle', cx: -p.w * 0.25, cy: 0.15, r: p.eye, fill: c.eye },
-    { k: 'circle', cx: p.w * 0.25, cy: 0.15, r: p.eye, fill: c.eye },
+    { k: 'eye', cx: -p.w * 0.25, cy: 0.15, r: p.eye * 1.3 },
+    { k: 'eye', cx: p.w * 0.25, cy: 0.15, r: p.eye * 1.3 },
   ];
 }

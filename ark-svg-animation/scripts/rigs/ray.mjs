@@ -7,11 +7,11 @@ export function parts(t, p, c) {
   const f = Math.sin(t * TAU), tipX = p.wing * (1 - 0.06 * f), tipY = 0.42 + f * p.flap, sway = Math.sin(t * TAU - 1) * 0.05;
   return [
     { k: 'polyline', pts: [[0, 0.66], [sway * 0.5, 0.84], [sway, 1]], stroke: c.dark, sw: 0.02, cap: 'round' },
-    { k: 'polygon', pts: [[0, 0.06], [-0.1, 0.14], [-tipX, tipY], [-0.14, 0.6], [0, 0.7], [0.14, 0.6], [tipX, tipY], [0.1, 0.14]], fill: c.main, stroke: c.dark, sw: 0.015 },
+    { k: 'polygon', pts: [[0, 0.06], [-0.1, 0.14], [-tipX, tipY], [-0.14, 0.6], [0, 0.7], [0.14, 0.6], [tipX, tipY], [0.1, 0.14]], fill: 'grad', stroke: c.dark, sw: 0.015 },
     { k: 'polygon', pts: [[-0.08, 0.1], [-0.13, 0.02], [-0.04, 0.08]], fill: c.dark },
     { k: 'polygon', pts: [[0.08, 0.1], [0.13, 0.02], [0.04, 0.08]], fill: c.dark },
     { k: 'ellipse', cx: 0, cy: 0.4, rx: 0.12, ry: 0.22, fill: c.light, op: 0.45 },
-    { k: 'circle', cx: -0.07, cy: 0.16, r: p.eye, fill: c.eye },
-    { k: 'circle', cx: 0.07, cy: 0.16, r: p.eye, fill: c.eye },
+    { k: 'eye', cx: -0.07, cy: 0.16, r: p.eye * 1.3 },
+    { k: 'eye', cx: 0.07, cy: 0.16, r: p.eye * 1.3 },
   ];
 }

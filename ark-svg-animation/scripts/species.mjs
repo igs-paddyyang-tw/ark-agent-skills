@@ -22,7 +22,7 @@ export default {
   KILLER_WHALE: { archetype: 'shark', size: 1.5, params: { bodyW: 0.3 }, palette: P('#1b1f27', '#000000', '#ffffff') },
   // ── ray 魟 ──
   MANTARAY: { archetype: 'ray', size: 1.2, palette: P('#3b4a63', '#1a2232', '#d9e4f2') },
-  LIGHT_MANTARAY: { archetype: 'ray', size: 1.3, palette: P('#3fb7d9', '#14566b', '#e8fbff'), variants: ['boss'] },
+  LIGHT_MANTARAY: { archetype: 'ray', size: 1.3, palette: P('#3fb7d9', '#14566b', '#e8fbff'), variants: ['boss', 'glow'] },
   // ── 其他體型 ──
   FLAT_FISH: { archetype: 'flat', size: 0.8, palette: P('#b59a6a', '#5c4a2c', '#efe2c4') },
   PUFFER_FISH: { archetype: 'puffer', size: 0.55, palette: P('#e9c46a', '#7a5a1a', '#fff6d8') },
@@ -33,7 +33,7 @@ export default {
   FLASH_SHARK: { archetype: 'jelly', size: 1.0, params: { arc: true }, palette: P('#59c8f2', '#1a5a7a', '#e9fbff') }, // 電光水母（伺服器名沿用 SHARK）
   SEA_TURTLE: { archetype: 'turtle', size: 1.0, palette: P('#4a8a5a', '#1e3d26', '#d6efb8') },
   SNAIL_FISH: { archetype: 'snail', size: 0.6, palette: P('#c98a5a', '#5a3218', '#f6dcc0') },  // 海螺魚
-  FIRE_DRAGON: { archetype: 'serpent', size: 1.8, palette: P('#d8361e', '#5e0f05', '#ffb43a'), variants: ['boss'] },  // Spine 部件魚的替代
+  FIRE_DRAGON: { archetype: 'serpent', size: 1.8, palette: P('#d8361e', '#5e0f05', '#ffb43a'), variants: ['boss', 'glow'] },  // Spine 部件魚的替代
   // ── crab 蟹（配件見 classify 規則；這裡固定登錄，讓 --strict 不報未登錄）──
   BOMB_CRAB: { archetype: 'crab', size: 0.9, accessory: 'bomb' },
   LASER_CRAB: { archetype: 'crab', size: 0.9, accessory: 'electrode' },
@@ -42,7 +42,7 @@ export default {
   WHEEL_CRAB: { archetype: 'crab', size: 0.95, accessory: 'wheel' },
   // ── token 角色徽章（非水生）──
   BISON: { archetype: 'token', size: 1.2, params: { kind: 'bison' }, palette: P('#6b4a2e', '#2e1d10', '#c9a77c') },
-  HOYEAH_FISH: { archetype: 'token', size: 1.2, params: { kind: 'monkey' }, variants: ['gold'] },   // 金猴爺
-  SUN_WUKONG: { archetype: 'token', size: 1.3, params: { kind: 'wukong' }, palette: P('#c8742e', '#5a2e0e', '#ffd28a') },
+  HOYEAH_FISH: { archetype: 'token', size: 1.2, params: { kind: 'monkey' }, variants: ['gold', 'glow'] },   // 金猴爺
+  SUN_WUKONG: { archetype: 'token', size: 1.3, params: { kind: 'wukong' }, palette: P('#c8742e', '#5a2e0e', '#ffd28a') , variants: ['glow'] },
   CAT_FISH: { archetype: 'token', size: 1.1, params: { kind: 'cat' }, palette: P('#8c8c99', '#3a3a44', '#e6e6ee') },
 };

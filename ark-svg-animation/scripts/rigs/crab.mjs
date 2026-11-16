@@ -67,10 +67,12 @@ export function parts(t, p, c) {
   return [
     ...[0, 1, 2].flatMap((i) => [leg(-1, i, t, p, c), leg(1, i, t, p, c)]),
     ...claw(-1, t, p, c), ...claw(1, t, p, c),
-    { k: 'ellipse', cx: 0, cy: 0.55, rx: p.shellW / 2, ry: p.shellH / 2, fill: c.main, stroke: c.dark, sw: 0.02 },
+    { k: 'ellipse', cx: 0, cy: 0.55, rx: p.shellW / 2, ry: p.shellH / 2, fill: 'grad', stroke: c.dark, sw: 0.02 },
     { k: 'ellipse', cx: 0, cy: 0.5, rx: p.shellW * 0.3, ry: p.shellH * 0.25, fill: c.light, op: 0.5 },
-    { k: 'circle', cx: -p.shellW * 0.14, cy: 0.38, r: p.eye, fill: c.eye },
-    { k: 'circle', cx: p.shellW * 0.14, cy: 0.38, r: p.eye, fill: c.eye },
+    { k: 'polyline', pts: [[-p.shellW * 0.14, 0.43], [-p.shellW * 0.14, 0.38]], stroke: c.dark, sw: 0.02 },
+    { k: 'polyline', pts: [[p.shellW * 0.14, 0.43], [p.shellW * 0.14, 0.38]], stroke: c.dark, sw: 0.02 },
+    { k: 'eye', cx: -p.shellW * 0.14, cy: 0.37, r: p.eye * 1.2 },
+    { k: 'eye', cx: p.shellW * 0.14, cy: 0.37, r: p.eye * 1.2 },
     ...accessory(p.accessory, t, p, c),
   ];
 }

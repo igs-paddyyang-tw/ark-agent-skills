@@ -8,7 +8,7 @@ export function parts(t, p, c) {
   const segs = Array.from({ length: N }, (_, i) => {
     const y = 0.2 + (i / (N - 1)) * 0.72, r = p.r * (1 - i * 0.07);
     return [
-      { k: 'circle', cx: x(y), cy: y, r, fill: c.main, stroke: c.dark, sw: 0.012 },
+      { k: 'circle', cx: x(y), cy: y, r, fill: 'grad', stroke: c.dark, sw: 0.012 },
       { k: 'polygon', pts: [[x(y) - r * 0.35, y - r * 0.2], [x(y), y - r * 1.25], [x(y) + r * 0.35, y - r * 0.2]], fill: c.light },
     ];
   }).reverse().flat();

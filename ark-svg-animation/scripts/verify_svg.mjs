@@ -39,7 +39,8 @@ export function checkSize(svg, max = MAX_FRAME_BYTES) {
   return n > max ? [`${(n / 1024).toFixed(1)} KB > ${(max / 1024).toFixed(0)} KB → 減少輪廓取樣段數或合併圖元`] : [];
 }
 
-const nums = (s) => (s.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+// 比對前去掉 id 與 url(#…) 參照：它們含格號（s0、c1）與種子，不是座標（0.4.0 起有漸層 id）
+const nums = (s) => (s.replace(/\sid="[^"]*"|url\(#[^)]*\)/g, '').match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
 function dist(a, b) {
   if (a.length !== b.length) return Infinity;
   let d = 0;
@@ -87,6 +88,20 @@ export function checkDeterminism(gen, spec) {
   return a === b ? [] : ['兩次輸出不同 → 找出非確定來源（Math.random、Date、物件走訪順序）'];
 }
 
+/**
+ * 同頁內嵌時 id 不衝突：同一個 id 的定義（漸層、裁切）必須完全相同。
+ * 完全相同的圖貼兩次（例：SINGLE_GURNARD 與 GURNARD 是同一張）不算衝突 —— 定義一樣，畫出來就一樣。
+ * 真正會錯的是「同 id、不同定義」：瀏覽器只取第一個，第二張圖會套到別人的漸層或裁切（fish-bot D-285 踩過）。
+ */
+export function checkIdsUnique(svgs) {
+  const defs = new Map(), bad = new Set();
+  for (const s of svgs) for (const [whole, , id] of s.matchAll(/<(radialGradient|linearGradient|clipPath)\sid="([^"]+)"[\s\S]*?<\/\1>/g)) {
+    if (defs.has(id) && defs.get(id) !== whole) bad.add(id);
+    defs.set(id, whole);
+  }
+  return bad.size ? [`${bad.size} 個 id 定義衝突（同 id、不同內容；例：${[...bad].slice(0, 3).join('、')}）→ id 前綴要含種子＋外觀雜湊（變體、尺寸、配色、參數）＋格號`] : [];
+}
+
 /** 一隻生物的全部檢查 */
 export function checkCreature(spec, { gen = creature, phase = renderPhase, registry } = {}) {
   const problems = [], warnings = [];
@@ -109,13 +124,15 @@ import { SPECIES } from './svg_anim.mjs';
 export const SAMPLE = [...Object.keys(SPECIES), 'TWIST_NEMO', 'SINGLE_GURNARD', 'LINE_PUFFER_FISH'];
 
 export function verify(names, { strict = false, gen = creature, phase = renderPhase, registry, variants = [[], ['gold'], ['boss'], ['twister']] } = {}) {
-  const rows = [];
+  const rows = [], all = [];
   for (const name of names) for (const vs of variants) {
     const r = checkCreature({ name, length: 104, variants: vs }, { gen, phase, registry });
     rows.push({ name, variants: vs, ...r });
+    try { const f = gen({ name, length: 104, variants: vs }, registry).frames; all.push(...f.swim, ...f.catch); } catch { /* 產生失敗已在 checkCreature 報 */ }
   }
   const problems = rows.flatMap((r) => r.problems.map((p) => `${r.name}${r.variants.length ? `[${r.variants}]` : ''}：${p}`));
   const warnings = [...new Set(rows.flatMap((r) => r.warnings.map((w) => `${r.name}：${w}`)))];
+  problems.push(...checkIdsUnique(all).map((m) => `同頁內嵌：${m}`));
   if (strict) problems.push(...warnings);
   if (!names.length) problems.push('掃到 0 個物種 —— 範圍是空的，不是通過');
   return { checked: names.length, frames: rows.length, rigs: Object.keys(RIGS), problems, warnings, ok: problems.length === 0 };

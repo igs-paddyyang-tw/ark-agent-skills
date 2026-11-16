@@ -15,7 +15,7 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "0.3.0"
+  version: "0.4.0"
   updated: 2026-11-16
   outputs:
     - { format: data, audience: ai }
@@ -53,7 +53,8 @@ metadata:
 
 1. **只產原創向量圖**：不讀任何外部圖片、不臨摹公司素材（傳 `image`／`href`／`src` 參數直接拒絕）
 2. **確定性**：同參數＋同版號 → 逐位元組相同；動畫只用相位函式（t＝i/n），不用 `Math.random`／時間／字型
-3. **安全**：輸出只有圖元（`polygon`／`ellipse`／`circle`／`polyline`／`g`），沒有 script、事件屬性、外部參照、文字
+3. **安全**：輸出只有圖元（`path`／`polygon`／`ellipse`／`circle`／`polyline`／`g`）與 `<defs>` 內的漸層、裁切；沒有 script、事件屬性、外部參照、文字
+5. **id 不衝突**：漸層／裁切 id＝物種種子＋外觀雜湊（變體、尺寸、朝向、配色、參數）＋狀態格號；同頁內嵌多張圖時同 id 必為同定義（`verify_svg` 驗）
 4. 改 rig 或核心後跑 `verify_svg.mjs`（rc≠0 不提交）；造型改變就升版號（`meta.version`），使用方據此重建快取
 
 ## 用法
@@ -83,7 +84,7 @@ node --test $S/tests/*.test.mjs
 | `archetype`／`params`／`palette`／`accessory`／`seed` | 覆寫 |
 | `facing` | `up`（預設，頭朝 −y 俯視）／`right`（側向） |
 | `frames` | `{ swim, catch }` 格數（預設 4／3） |
-| `variants` | `twister`（旋風外圈）、`gold`（金色）、`boss`（外光） |
+| `variants` | `twister`（旋風外圈）、`gold`（金色）、`boss`（淡外圈）、`glow`（光暈：亮色淡出到透明） |
 
 `meta`：`version`、`archetype`、`viewBox`、`anchor`（身體中心 0～1）、`bodyBox`、`hitRadius`（參考值）、`fallback`（未登錄、以預設體型代替）
 
@@ -101,6 +102,7 @@ node --test $S/tests/*.test.mjs
 
 | 版本 | 日期 | 變更 |
 |---|---|---|
+| 0.4.0 | 2026-11-16 | 畫質：參考 fish-bot 作法（只取做法，不取其素材配色）—— 放射漸層立體感、三圓眼睛（眼白＋瞳孔＋反光）、紡錘魚貝茲身形＋尾鰭繞尾柄旋轉＋花紋裁切在身體內、`glow` 變體；id 含外觀雜湊、verify 驗同頁 id 定義不衝突；測試 21 項 |
 | 0.3.0 | 2026-11-16 | M3：`sheet.mjs`（headless Chromium 一次截圖＝拼圖、TexturePacker hash JSON 含 anchor 與 animations、PNG 自解碼驗非空白、`--pixi` 用真的 PixiJS 解析）、references 三份；測試 17 項 |
 | 0.2.0 | 2026-11-16 | M2：其餘 10 種體型、物種登錄表 33 種、`list`／`gen`／`preview`、boss 外圈調淡；測試 14 項 |
 | 0.1.0 | 2026-11-16 | M1：核心（確定性、配色、變體、被捕曲線、facing）、3 種體型、守門與 10 項測試（每項反證會紅） |

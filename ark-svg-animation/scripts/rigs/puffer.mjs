@@ -12,11 +12,9 @@ export function parts(t, p, c) {
   return [
     { k: 'polygon', pts: [[0, cy + r * 0.9], [-0.12 + sway, 0.98], [0.12 + sway, 0.98]], fill: c.dark },
     ...spikes,
-    { k: 'circle', cx: 0, cy, r, fill: c.main, stroke: c.dark, sw: 0.015 },
+    { k: 'circle', cx: 0, cy, r, fill: 'grad', stroke: c.dark, sw: 0.015 },
     { k: 'ellipse', cx: 0, cy: cy + r * 0.25, rx: r * 0.6, ry: r * 0.45, fill: c.light, op: 0.55 },
-    { k: 'circle', cx: -r * 0.42, cy: cy - r * 0.5, r: p.eye, fill: c.white },
-    { k: 'circle', cx: r * 0.42, cy: cy - r * 0.5, r: p.eye, fill: c.white },
-    { k: 'circle', cx: -r * 0.42, cy: cy - r * 0.5, r: p.eye * 0.55, fill: c.eye },
-    { k: 'circle', cx: r * 0.42, cy: cy - r * 0.5, r: p.eye * 0.55, fill: c.eye },
+    { k: 'eye', cx: -r * 0.42, cy: cy - r * 0.5, r: p.eye },
+    { k: 'eye', cx: r * 0.42, cy: cy - r * 0.5, r: p.eye },
   ];
 }

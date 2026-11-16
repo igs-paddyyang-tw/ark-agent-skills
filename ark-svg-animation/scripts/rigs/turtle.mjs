@@ -15,9 +15,9 @@ export function parts(t, p, c) {
     flipper(-1, 0.72, p.flip * 0.5, 0.5 - s * 0.3, c), flipper(1, 0.72, p.flip * 0.5, 0.5 - s * 0.3, c),
     { k: 'polygon', pts: [[-0.03, 0.8], [0, 0.92], [0.03, 0.8]], fill: c.dark },
     { k: 'ellipse', cx: 0, cy: 0.12, rx: 0.09, ry: 0.11, fill: c.light, stroke: c.dark, sw: 0.012 },
-    { k: 'ellipse', cx: 0, cy: 0.5, rx: p.rx, ry: p.ry, fill: c.main, stroke: c.dark, sw: 0.02 },
+    { k: 'ellipse', cx: 0, cy: 0.5, rx: p.rx, ry: p.ry, fill: 'grad', stroke: c.dark, sw: 0.02 },
     ...[[0, 0.38], [-0.11, 0.5], [0.11, 0.5], [0, 0.62]].map(([x, y]) => ({ k: 'ellipse', cx: x, cy: y, rx: 0.07, ry: 0.06, fill: c.dark, op: 0.45 })),
-    { k: 'circle', cx: -0.04, cy: 0.08, r: p.eye, fill: c.eye },
-    { k: 'circle', cx: 0.04, cy: 0.08, r: p.eye, fill: c.eye },
+    { k: 'eye', cx: -0.04, cy: 0.08, r: p.eye * 1.2 },
+    { k: 'eye', cx: 0.04, cy: 0.08, r: p.eye * 1.2 },
   ];
 }

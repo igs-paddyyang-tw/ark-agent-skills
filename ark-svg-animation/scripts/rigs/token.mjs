@@ -23,10 +23,10 @@ export function parts(t, p, c) {
   return [
     ...ears[kind] ?? [],
     ...extra.filter((o) => o.k === 'polygon' && o.fill === c.accent),
-    { k: 'circle', cx: 0, cy, r, fill: c.main, stroke: c.dark, sw: 0.02 },
+    { k: 'circle', cx: 0, cy, r, fill: 'grad', stroke: c.dark, sw: 0.02 },
     ...face,
-    { k: 'circle', cx: -r * 0.32, cy: cy - r * 0.05, r: r * 0.11, fill: c.eye },
-    { k: 'circle', cx: r * 0.32, cy: cy - r * 0.05, r: r * 0.11, fill: c.eye },
+    { k: 'eye', cx: -r * 0.32, cy: cy - r * 0.05, r: r * 0.13 },
+    { k: 'eye', cx: r * 0.32, cy: cy - r * 0.05, r: r * 0.13 },
     { k: 'ellipse', cx: 0, cy: cy + r * 0.3, rx: r * 0.18, ry: r * 0.1, fill: c.dark, op: 0.7 },
     ...extra.filter((o) => !(o.k === 'polygon' && o.fill === c.accent)),
   ];

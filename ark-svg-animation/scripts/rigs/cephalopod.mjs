@@ -14,9 +14,9 @@ export function parts(t, p, c) {
   });
   return [
     ...arms,
-    { k: 'ellipse', cx: 0, cy: 0.24, rx: p.head * 0.9, ry: p.head, fill: c.main, stroke: c.dark, sw: 0.015 },
+    { k: 'ellipse', cx: 0, cy: 0.24, rx: p.head * 0.9, ry: p.head, fill: 'grad', stroke: c.dark, sw: 0.015 },
     { k: 'ellipse', cx: 0, cy: 0.17, rx: p.head * 0.45, ry: p.head * 0.35, fill: c.light, op: 0.45 },
-    { k: 'circle', cx: -p.head * 0.45, cy: 0.33, r: p.eye, fill: c.eye },
-    { k: 'circle', cx: p.head * 0.45, cy: 0.33, r: p.eye, fill: c.eye },
+    { k: 'eye', cx: -p.head * 0.45, cy: 0.33, r: p.eye * 1.4 },
+    { k: 'eye', cx: p.head * 0.45, cy: 0.33, r: p.eye * 1.4 },
   ];
 }

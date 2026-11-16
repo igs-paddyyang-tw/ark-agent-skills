@@ -24,7 +24,7 @@ import * as serpent from './rigs/serpent.mjs';
 import * as token from './rigs/token.mjs';
 import SPECIES from './species.mjs';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';
 export const RIGS = { fusiform, shark, crab, ray, flat, puffer, lobster, cephalopod, jelly, turtle, snail, serpent, token };
 export { SPECIES };
 export const DEFAULT_FRAMES = { swim: 4, catch: 3 };
@@ -122,25 +122,63 @@ export function resolve(spec, registry = SPECIES) {
 }
 
 // ── 圖元 → SVG ──────────────────────────────────────────────────────────────
+// ctx：{ L 身長像素, pal 配色, k 閃白比例, id 本格唯一前綴, defs 收集的漸層／裁切 }
+// 0.4.0：fill 'grad'＝身體放射漸層（亮→主→暗，立體感）；'glow'＝亮色淡出到透明（光暈）。
+//   id＝物種種子＋狀態＋格號 —— 同一頁內嵌多張 SVG 時不互撞（fish-bot D-285 踩過），且逐位元組確定。
+function fillOf(v, ctx) {
+  if (v === 'none') return 'none';
+  if (v === 'grad' || v === 'glow') return `url(#${grad(v, ctx)})`;
+  return v && ctx.k ? mix(v, ctx.pal.white, ctx.k) : v;
+}
+
+function grad(kind, ctx) {
+  const id = `${ctx.id}${kind[0]}`;
+  if (!ctx.defs.has(id)) {
+    const c = (v) => (ctx.k ? mix(v, ctx.pal.white, ctx.k) : v);
+    ctx.defs.set(id, kind === 'grad'
+      ? `<radialGradient id="${id}" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="${c(ctx.pal.light)}"/><stop offset=".5" stop-color="${c(ctx.pal.main)}"/><stop offset="1" stop-color="${c(ctx.pal.dark)}"/></radialGradient>`
+      : `<radialGradient id="${id}"><stop offset="0" stop-color="${c(ctx.pal.light)}" stop-opacity=".7"/><stop offset="1" stop-color="${c(ctx.pal.light)}" stop-opacity="0"/></radialGradient>`);
+  }
+  return id;
+}
+
 /** 樣式：筆寬、虛線一律是正規化單位（× 身長），透明度 0～1 */
-function paint(o, pal, k, L) {
-  const col = (v) => (v && k ? mix(v, pal.white, k) : v);
+function paint(o, ctx) {
+  const { L } = ctx;
   let s = '';
-  if (o.fill !== undefined) s += ` fill="${o.fill === 'none' ? 'none' : col(o.fill)}"`;
-  if (o.stroke) s += ` stroke="${col(o.stroke)}" stroke-width="${num(Math.max(0.6, (o.sw ?? 0.015) * L))}"`;
+  if (o.fill !== undefined) s += ` fill="${fillOf(o.fill, ctx)}"`;
+  if (o.stroke) s += ` stroke="${fillOf(o.stroke, ctx)}" stroke-width="${num(Math.max(0.6, (o.sw ?? 0.015) * L))}"`;
   if (o.cap) s += ` stroke-linecap="${o.cap}"`;
+  if (o.join) s += ` stroke-linejoin="${o.join}"`;
   if (o.op !== undefined && o.op !== 1) s += ` opacity="${num(o.op)}"`;
   if (o.dash) s += ` stroke-dasharray="${o.dash.map((d) => num(d * L)).join(' ')}"`;
   return s;
 }
 
-function shape(o, L, pal, k) {
-  const X = (v) => num(v * L), P = (pts) => pts.map(([x, y]) => `${X(x)},${X(y)}`).join(' ');
+/** path 指令（正規化座標）：['M',x,y] ['L',x,y] ['Q',x1,y1,x,y] ['C',x1,y1,x2,y2,x,y] ['Z'] */
+function pathD(d, L) {
+  return d.map(([c, ...v]) => c + v.map((n) => num(n * L)).join(',')).join(' ');
+}
+
+function shape(o, ctx) {
+  const { L } = ctx, X = (v) => num(v * L), P = (pts) => pts.map(([x, y]) => `${X(x)},${X(y)}`).join(' ');
   switch (o.k) {
-    case 'ellipse': return `<ellipse cx="${X(o.cx)}" cy="${X(o.cy)}" rx="${X(o.rx)}" ry="${X(o.ry)}"${o.rot ? ` transform="rotate(${num(o.rot)} ${X(o.cx)} ${X(o.cy)})"` : ''}${paint(o, pal, k, L)}/>`;
-    case 'circle': return `<circle cx="${X(o.cx)}" cy="${X(o.cy)}" r="${X(o.r)}"${paint(o, pal, k, L)}/>`;
-    case 'polygon': return `<polygon points="${P(o.pts)}"${paint(o, pal, k, L)}/>`;
-    case 'polyline': return `<polyline points="${P(o.pts)}" fill="none"${paint({ ...o, fill: undefined }, pal, k, L)}/>`;
+    case 'ellipse': return `<ellipse cx="${X(o.cx)}" cy="${X(o.cy)}" rx="${X(o.rx)}" ry="${X(o.ry)}"${o.rot !== undefined ? ` transform="rotate(${num(o.rot)} ${X(o.cx)} ${X(o.cy)})"` : ''}${paint(o, ctx)}/>`;
+    case 'circle': return `<circle cx="${X(o.cx)}" cy="${X(o.cy)}" r="${X(o.r)}"${paint(o, ctx)}/>`;
+    case 'polygon': return `<polygon points="${P(o.pts)}"${paint(o, ctx)}/>`;
+    case 'polyline': return `<polyline points="${P(o.pts)}" fill="none"${paint({ ...o, fill: undefined }, ctx)}/>`;
+    case 'path': return `<path d="${pathD(o.d, L)}"${paint(o, ctx)}/>`;
+    // 眼睛：眼白＋瞳孔＋反光點（一個圖元展開成三個圓）
+    case 'eye': return [{ k: 'circle', cx: o.cx, cy: o.cy, r: o.r, fill: ctx.pal.white }, { k: 'circle', cx: o.cx, cy: o.cy - o.r * 0.15, r: o.r * 0.6, fill: ctx.pal.eye }, { k: 'circle', cx: o.cx - o.r * 0.25, cy: o.cy - o.r * 0.4, r: o.r * 0.22, fill: ctx.pal.white }].map((c) => shape(c, ctx)).join('');
+    // 裁切：花紋只畫在 shape 範圍內（不溢出身體輪廓）
+    case 'clip': {
+      const id = `${ctx.id}c${ctx.clip = (ctx.clip ?? 0) + 1}`;
+      ctx.defs.set(id, `<clipPath id="${id}">${shape({ ...o.shape, fill: undefined, stroke: undefined, op: undefined }, ctx)}</clipPath>`);
+      return `<g clip-path="url(#${id})">${o.children.map((c) => shape(c, ctx)).join('')}</g>`;
+    }
+    // 群組：可繞 (ox, oy) 旋轉 rot 度（例：尾鰭以尾柄為軸擺動）
+    // rot 有給就一律輸出（含 0°）：各格結構一致，接縫檢查才比得起來（0.4.0 守門抓到：第 0 格省略 transform → 結構不同）
+    case 'g': return `<g${o.rot !== undefined ? ` transform="rotate(${num(o.rot)} ${X(o.ox ?? 0)} ${X(o.oy ?? 0)})"` : ''}${o.op !== undefined && o.op !== 1 ? ` opacity="${num(o.op)}"` : ''}>${o.children.map((c) => shape(c, ctx)).join('')}</g>`;
     default: throw new Error(`未知圖元 ${o.k}`);
   }
 }
@@ -148,6 +186,7 @@ function shape(o, L, pal, k) {
 function variantParts(r, ext) {
   const out = { before: [], after: [] };
   const R = Math.min(ext.halfW, (ext.y1 - ext.y0) / 2) * 0.98, cy = (ext.y0 + ext.y1) / 2;
+  if (r.variants.includes('glow')) out.before.push({ k: 'circle', cx: 0, cy, r: R, fill: 'glow' });
   if (r.variants.includes('twister')) out.before.push({ k: 'circle', cx: 0, cy, r: R, fill: 'none', stroke: '#7fe0ff', sw: 0.025, op: 0.6, dash: [R * 0.6, R * 0.3] });
   if (r.variants.includes('boss')) out.before.push({ k: 'circle', cx: 0, cy, r: R, fill: 'none', stroke: r.pal.light, sw: 0.022, op: 0.28 });
   return out;
@@ -166,20 +205,23 @@ export function catchKey(i, n) {
   return { white: lerp(a.white, b.white), rot: lerp(a.rot, b.rot), scale: lerp(a.scale, b.scale), op: lerp(a.op, b.op) };
 }
 
-function frame(r, t, ext, ck) {
+function frame(r, t, ext, ck, tag = 'x') {
   const L = r.length, pad = Math.max(2, L * 0.04);
   const vw = ext.halfW * 2 * L + pad * 2, vh = (ext.y1 - ext.y0) * L + pad * 2;
   const parts = r.rig.parts(t, r.p, r.pal);
   const v = variantParts(r, ext);
-  const k = ck ? ck.white : 0;
-  const body = [...v.before, ...parts, ...v.after].map((o) => shape(o, L, r.pal, k)).join('');
+  // id 前綴＝物種種子＋外觀雜湊（變體、尺寸、朝向、配色、參數）＋狀態格號 —— 同種魚不同版本同頁也不撞（裁切依尺寸而定，撞了會切錯）
+  const look = fnv1a(JSON.stringify([r.variants, r.length, r.facing, r.pal, r.p])).toString(36);
+  const ctx = { L, pal: r.pal, k: ck ? ck.white : 0, id: `a${r.seed.toString(36)}${look}${tag}`, defs: new Map() };
+  const body = [...v.before, ...parts, ...v.after].map((o) => shape(o, ctx)).join('');
+  const defs = ctx.defs.size ? `<defs>${[...ctx.defs.values()].join('')}</defs>` : '';
   const ox = ext.halfW * L + pad, oy = -ext.y0 * L + pad, cy = ((ext.y0 + ext.y1) / 2) * L;
   let tf = `translate(${num(ox)} ${num(oy)})`;
   if (ck) tf += ` translate(0 ${num(cy)}) rotate(${num(ck.rot)}) scale(${num(ck.scale * 100) / 100}) translate(0 ${num(-cy)})`;
   let W = vw, H = vh, outer = '';
   if (r.facing === 'right') { W = vh; H = vw; outer = ` transform="translate(${num(vh)} 0) rotate(90)"`; }
   const op = ck && ck.op !== 1 ? ` opacity="${num(ck.op)}"` : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${num(W)} ${num(H)}" width="${num(W)}" height="${num(H)}"><g${outer}><g transform="${tf}"${op}>${body}</g></g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${num(W)} ${num(H)}" width="${num(W)}" height="${num(H)}">${defs}<g${outer}><g transform="${tf}"${op}>${body}</g></g></svg>`;
 }
 
 /**
@@ -191,8 +233,8 @@ function frame(r, t, ext, ck) {
 export function creature(spec, registry = SPECIES) {
   const r = resolve(spec, registry);
   const ext = r.rig.extent(r.p);
-  const swim = Array.from({ length: r.frames.swim }, (_, i) => frame(r, i / r.frames.swim, ext));
-  const caught = Array.from({ length: r.frames.catch }, (_, i) => frame(r, (i / Math.max(1, r.frames.catch)) * 0.5, ext, catchKey(i, r.frames.catch)));
+  const swim = Array.from({ length: r.frames.swim }, (_, i) => frame(r, i / r.frames.swim, ext, undefined, `s${i}`));
+  const caught = Array.from({ length: r.frames.catch }, (_, i) => frame(r, (i / Math.max(1, r.frames.catch)) * 0.5, ext, catchKey(i, r.frames.catch), `c${i}`));
   const L = r.length, pad = Math.max(2, L * 0.04);
   const vw = ext.halfW * 2 * L + pad * 2, vh = (ext.y1 - ext.y0) * L + pad * 2;
   const [W, H] = r.facing === 'right' ? [vh, vw] : [vw, vh];
@@ -211,7 +253,7 @@ export function creature(spec, registry = SPECIES) {
 /** 任意相位 t 的單格（swim 狀態）—— verify 用 t＝1 檢查循環接縫與週期性 */
 export function renderPhase(spec, t, registry = SPECIES) {
   const r = resolve(spec, registry);
-  return frame(r, t, r.rig.extent(r.p));
+  return frame(r, t, r.rig.extent(r.p), undefined, 'p');
 }
 
 // ── CLI（node 專用；fs 動態載入，函式庫在瀏覽器照常可用） ───────────────────────

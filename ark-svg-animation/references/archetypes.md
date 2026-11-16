@@ -5,7 +5,7 @@
 
 | 體型 | 主要參數 | 動畫曲線 |
 |---|---|---|
-| `fusiform` | `bodyW` `bodyLen` `tailW` `sway` `fin` `stripes` | 尾鰭 `sin(2πt)·sway`、胸鰭相位差 π/2 |
+| `fusiform` | `bodyW` `bodyLen` `tailW` `swing`（度） `fin` `stripes` `eye` | 尾鰭繞尾柄旋轉 `sin(2πt)·swing`°、胸鰭相位差 π/2；貝茲身形、花紋裁切在身體內 |
 | `shark` | `bodyW` `sway` `fin` `tail` `snout` | 中線偏移 `sin(2πt)·sway·y²`（頭穩尾擺） |
 | `crab` | `shellW` `shellH` `leg` `claw` `open` `accessory` | 步足三腳步態（相位差 π）、螯開合；轉輪一循環轉 60°（3 輻對稱） |
 | `ray` | `wing` `flap` `tail` | 翼尖 y `0.42＋sin·flap`、x 微縮 |
@@ -21,3 +21,9 @@
 
 被捕（catch，所有體型共用）：3 格關鍵值〔閃白 0.6→0.25→0.1、旋轉 0→12°→−6°、縮放 1→1.05→0.8、透明度 1→1→0.4〕，格數不同時內插。
 變體：`twister`（虛線旋風外圈）、`gold`（金色系）、`boss`（淡外圈）。
+
+## 圖元（rig 可用）
+
+`ellipse`、`circle`、`polygon`、`polyline`、`path`（`d`：`['M',x,y]`／`['L',…]`／`['Q',…]`／`['C',…]`／`['Z']`）、
+`eye`（`cx cy r` → 眼白＋瞳孔＋反光）、`clip`（`shape`＋`children`：子圖元只畫在 shape 內）、`g`（`rot` 繞 `ox oy` 旋轉；給了 `rot` 就一律輸出，含 0°，各格結構才一致）。
+填色：顏色字串，或 `'grad'`（身體放射漸層：亮→主→暗）、`'glow'`（亮色淡出到透明）。筆寬 `sw`、虛線 `dash` 皆為正規化單位。
