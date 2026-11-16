@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-16 (ark-svg-animation 0.6.0 —— gamekit M6：老虎機符號、介面、共用演出物（15 種 kind）)
+
+> 計畫 kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md` M6。造型全為原創通用物件；aidev 兩款的角色、Logo、題材物件不收。
+
+- 新 kind：`royal`（A／K／Q／J／10／9）、`badge`（WILD／SCATTER／FREE／BONUS）、`icon`（crown、gem、chest、coin、key、bell、trophy、star、seven、goldbar、clover、heart；可放進底板）、`frame`（1～3 級）、
+  `reel_bg`／`reel_frame`（列×行參數）、`panel`、`button`（spin／auto／plus／minus／turbo／stop）、`bg`（rays／stars／sea）、`jp_plate`（四級＋金額）、`win_banner`（動畫 6 格）、`fg_banner`、`coin`（動畫 6 格）
+- `asset()` 支援動畫 kind（`frames`、`meta.frames`）、`assetPhase()`；`COVERAGE` 對照表：magic-lamp 31/31、huffnpuff 27/27（非專屬 100%；專屬 3／18）
+- draw：`g` 支援等比縮放 `s`（沒給時輸出不變，快照守門）；flat 的放射光暈改疊 6 層同心形狀（原本平均色是一整片實心圓）
+- 🔴 守門抓到：Win 橫幅放射光先壓扁（y×0.5）再旋轉 → 轉 30° 不再對稱、每循環跳一下；**只有 flat 抓得到**（座標烘焙），texture 的旋轉藏在 `transform` 屬性裡、比對只差一個數字 → 改成不壓扁
+- `verify_svg`：動畫 kind 驗各格同尺寸＋接縫；`verifyCoverage`；pixi_check 302 張全過；測試 34 項（反證：相位不回原點、對照表 kind 不存在、未知選項）
+
 ## 2026-11-16 (ark-svg-animation 0.5.0 —— gamekit M5：向量字形、theme、flat profile（PixiJS Graphics 相容）)
 
 > 計畫：kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md`（Paddy 11-16 選 1：擴充本 skill 收魚機＋老虎機必要圖元素）。

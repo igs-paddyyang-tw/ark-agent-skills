@@ -218,7 +218,12 @@ function texShape(o, ctx) {
       return `<g clip-path="url(#${id})">${o.children.map((c) => texShape(c, ctx)).join('')}</g>`;
     }
     // 群組：可繞 (ox, oy) 旋轉 rot 度；rot 有給就一律輸出（含 0°）—— 各格結構一致，接縫檢查才比得起來
-    case 'g': return `<g${o.rot !== undefined ? ` transform="rotate(${num(o.rot)} ${X(o.ox ?? 0)} ${X(o.oy ?? 0)})"` : ''}${o.op !== undefined && o.op !== 1 ? ` opacity="${num(o.op)}"` : ''}>${o.children.map((c) => texShape(c, ctx)).join('')}</g>`;
+    case 'g': {
+      // s：繞 (ox, oy) 等比縮放（0.6.0；gamekit 圖示放進底板用）—— 沒給 s 時輸出與 0.4.0 相同
+      let tf = o.rot !== undefined ? `rotate(${num(o.rot)} ${X(o.ox ?? 0)} ${X(o.oy ?? 0)})` : '';
+      if (o.s !== undefined) tf += `${tf ? ' ' : ''}translate(${X(o.ox ?? 0)} ${X(o.oy ?? 0)}) scale(${n2(o.s)}) translate(${X(-(o.ox ?? 0))} ${X(-(o.oy ?? 0))})`;
+      return `<g${tf ? ` transform="${tf}"` : ''}${o.op !== undefined && o.op !== 1 ? ` opacity="${num(o.op)}"` : ''}>${o.children.map((c) => texShape(c, ctx)).join('')}</g>`;
+    }
     case 'text': return textShape(o, ctx, I);
     default: throw new Error(`未知圖元 ${o.k}`);
   }
@@ -228,8 +233,34 @@ function eyeParts(o, ctx) {
   return [{ k: 'circle', cx: o.cx, cy: o.cy, r: o.r, fill: ctx.pal.white }, { k: 'circle', cx: o.cx, cy: o.cy - o.r * 0.15, r: o.r * 0.6, fill: ctx.pal.eye }, { k: 'circle', cx: o.cx - o.r * 0.25, cy: o.cy - o.r * 0.4, r: o.r * 0.22, fill: ctx.pal.white }];
 }
 
+/**
+ * flat 的放射淡出（光暈）：Pixi 沒有漸層 → 疊 K 層同心形狀，每層透明度＝該半徑區間的落差，疊起來近似原本的淡出。
+ * 只處理以中心為原點的放射漸層（cx＝cy＝0.5、r＝0.5，即 glowFill 的預設），其他照平均色。
+ */
+const GLOW_LAYERS = 6;
+function radialLayers(o) {
+  const g = o.fill;
+  if (!g || typeof g !== 'object' || !g.rg || (g.cx ?? 0.5) !== 0.5 || (g.cy ?? 0.5) !== 0.5 || (g.r ?? 0.5) !== 0.5) return null;
+  const st = g.rg, alphas = st.map((x) => x[2] ?? 1);
+  if (Math.max(...alphas) - Math.min(...alphas) < 0.05) return null;
+  const at = (f) => {                                   // f：0 中心 → 1 邊緣
+    for (let i = 1; i < st.length; i++) if (f <= st[i][0]) { const a = st[i - 1], b = st[i], u = (f - a[0]) / ((b[0] - a[0]) || 1); return (a[2] ?? 1) + ((b[2] ?? 1) - (a[2] ?? 1)) * u; }
+    return st[st.length - 1][2] ?? 1;
+  };
+  const color = avgColor(st.map((x) => x[1])), out = [];
+  for (let j = GLOW_LAYERS; j >= 1; j--) {
+    const f = j / GLOW_LAYERS, a = Math.max(0, at(f - 1 / GLOW_LAYERS) - at(f));
+    if (a > 0.004) out.push({ f, fill: color, op: (o.op ?? 1) * a });
+  }
+  return out;
+}
+
 function flatShape(o, ctx, m) {
   const { L } = ctx, sc = scaleOf(m);
+  if ((o.k === 'circle' || o.k === 'ellipse') && !o.stroke) {
+    const layers = radialLayers(o);
+    if (layers) return layers.map((l) => flatShape(o.k === 'circle' ? { ...o, r: o.r * l.f, fill: l.fill, op: l.op } : { ...o, rx: o.rx * l.f, ry: o.ry * l.f, fill: l.fill, op: l.op }, ctx, m)).join('');
+  }
   const pt = (x, y) => ap(m, x * L, y * L).map(num).join(',');
   switch (o.k) {
     case 'circle': { const [x, y] = ap(m, o.cx * L, o.cy * L); return `<circle cx="${num(x)}" cy="${num(y)}" r="${num(o.r * L * sc)}"${flatStyle(o, ctx, m)}/>`; }
@@ -242,7 +273,8 @@ function flatShape(o, ctx, m) {
     case 'eye': return eyeParts(o, ctx).map((c) => flatShape(c, ctx, m)).join('');
     case 'clip': return '';                          // Graphics 不支援裁切：略過花紋（寧缺不溢出輪廓）
     case 'g': {
-      const m2 = o.rot ? mul(m, rotate(o.rot, (o.ox ?? 0) * L, (o.oy ?? 0) * L)) : m;
+      let m2 = o.rot ? mul(m, rotate(o.rot, (o.ox ?? 0) * L, (o.oy ?? 0) * L)) : m;
+      if (o.s !== undefined) { const ox = (o.ox ?? 0) * L, oy = (o.oy ?? 0) * L; m2 = mul(m2, mul(translate(ox, oy), mul(scale(Math.round(o.s * 100) / 100), translate(-ox, -oy)))); }
       const sub = { ...ctx, op: (ctx.op ?? 1) * (o.op ?? 1) };
       return o.children.map((c) => flatShape(c, sub, m2)).join('');
     }

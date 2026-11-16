@@ -2,7 +2,7 @@
 name: ark-svg-animation
 description: |
   原創遊戲向量美術產生器（executor，零相依 ESM，瀏覽器與 node 共用）：① 生物逐格動畫 —— 依「體型＋物種名」產生游動、被捕動畫
-  （SVG 字串陣列＋meta：viewBox、錨點、身體框、碰撞參考半徑）；② gamekit —— 魚機／slot 必要圖元素（0.5.0 起：描邊字、符號底板；
+  （SVG 字串陣列＋meta：viewBox、錨點、身體框、碰撞參考半徑）；② gamekit —— 魚機／slot 必要圖元素（0.6.0：描邊字、底板、撲克符號、WILD／SCATTER 徽章、12 種通用物件、符號框、轉輪底／框、面板、圓鈕、背景、JP 牌、Win 橫幅、FG 橫幅、金幣；
   主題 theme、原創向量字形轉 path、flat profile 給 PixiJS Graphics.svg() 直接解析）。同參數逐位元組相同；verify_svg.mjs 守門
   （確定性、安全、體積、循環接縫、flat 規則），pixi_check.mjs 用真的 PixiJS 比對形狀。
   用途：遊戲素材缺圖補位、骨架（Spine）魚的替代、新遊戲的原創 UI／符號美術、素材管線未產出時的執行期補位。
@@ -18,7 +18,7 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "0.5.0"
+  version: "0.6.0"
   updated: 2026-11-16
   outputs:
     - { format: data, audience: ai }
@@ -29,7 +29,7 @@ metadata:
 # ark-svg-animation
 
 > 規格／設計／計畫：kiro-cli `docs/specs/ark-svg-animation-spec.md`、`docs/designs/ark-svg-animation-design.md`、`docs/plans/ark-svg-animation-plan.md`。
-> gamekit 升級計畫：kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md`（M5 0.5.0 字形／theme／flat ✅；M6 老虎機元素、M7 魚機元素＋產生器 CLI、M8 1.0.0）。
+> gamekit 升級計畫：kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md`（M5 字形／theme／flat ✅、M6 老虎機元素＋共用演出物 ✅；M7 魚機元素＋產生器 CLI、M8 1.0.0）。
 > 使用方怎麼接：`references/consumer-contract.md`；體型與參數：`references/archetypes.md`；新增物種：`references/species-registry.md`；**gamekit：`references/gamekit.md`**。
 
 ## 體型
@@ -68,6 +68,8 @@ import { creature } from './svg_anim.mjs';
 import { asset } from './gamekit.mjs';
 asset('label', { text: 'BIG WIN', size: 72, fill: 'gold', theme: 'royal-gold' });   // → { svg, meta }
 asset('plate', { shape: 'shield', theme: 'deep-sea', profile: 'flat' });            // PixiJS new Graphics().svg(svg)
+asset('royal', { letter: 'K' }); asset('icon', { name: 'chest', metal: 'silver' }); asset('button', { icon: 'spin' });
+asset('win_banner', { tier: 'mega' });                                              // 動畫：{ svg, frames（6 格）, meta }
 creature({ name: 'NEMO', length: 104, profile: 'flat' });
 const { frames, meta } = creature({ name: 'SHARK', length: 160 });       // frames.swim（4 格）／frames.catch（3 格）
 creature({ name: 'BOMB_CRAB', length: 104, facing: 'right', variants: ['gold'] });
@@ -109,13 +111,15 @@ node --test $S/tests/*.test.mjs
 | 循環接縫 | ① 等速：每一步（含最後一格 → t＝1）≤ 步長中位數 × 1.5 ② 週期：t＝1 與第一格的排序後數字集合相同（容許對稱零件換位） |
 | 涵蓋 | `--expect` 清單中未登錄的列警告（`--strict` 算失敗）；0 個物種算失敗 |
 | flat 規則 | 無漸層／裁切／transform／`<g>`／polygon／polyline／rgba／fill 屬性；每個圖元自帶 style、描邊有 stroke-width |
-| gamekit | 每個 kind 樣本 × 4 theme × 兩種 profile：確定性、禁 `<text>`、分類預算（符號 6 KB、UI／字 8 KB、背景 16 KB；flat 2 倍）、換 theme 必變色 |
+| gamekit | 每個 kind 樣本 × 4 theme × 兩種 profile：確定性、禁 `<text>`、分類預算（符號 6 KB、UI／字 8 KB、演出 12 KB、背景 16 KB；flat 2 倍）、換 theme 必變色；動畫 kind 驗接縫 |
+| 覆蓋率 | `COVERAGE`：aidev 兩款老虎機素材別名 → kind；非專屬別名必須全部產得出來（角色／Logo／題材物件列為專屬，不計缺漏） |
 | PixiJS 實機（`pixi_check.mjs`） | 同一張 flat SVG：Pixi `Graphics.svg()` 與瀏覽器各畫一次，遮罩擴 1 px 後互相涵蓋率 ≥ 0.95 |
 
 ## 版本
 
 | 版本 | 日期 | 變更 |
 |---|---|---|
+| 0.6.0 | 2026-11-16 | gamekit M6：`royal`、`badge`、`icon`（12 種）、`frame`、`reel_bg`、`reel_frame`、`panel`、`button`、`bg`、`jp_plate`、`win_banner`（動畫）、`fg_banner`、`coin`（動畫）；`assetPhase`、`COVERAGE`（aidev 兩款非專屬 100%）；flat 光暈改多層同心；`g` 支援等比縮放；測試 34 項 |
 | 0.5.0 | 2026-11-16 | gamekit M5：核心抽成 `draw.mjs`（生物 texture 輸出逐位元組不變，快照守門）、`flat` profile（PixiJS 8.6.6 `Graphics.svg()` 相容）、原創向量字形 `glyphs.mjs`（A–Z、0–9、符號）、`themes.mjs`（4 組原創配色）、`gamekit.mjs`（`label`、`plate`）、`pixi_check.mjs`；測試 29 項 |
 | 0.4.0 | 2026-11-16 | 畫質：參考 fish-bot 作法（只取做法，不取其素材配色）—— 放射漸層立體感、三圓眼睛（眼白＋瞳孔＋反光）、紡錘魚貝茲身形＋尾鰭繞尾柄旋轉＋花紋裁切在身體內、`glow` 變體；id 含外觀雜湊、verify 驗同頁 id 定義不衝突；測試 21 項 |
 | 0.3.0 | 2026-11-16 | M3：`sheet.mjs`（headless Chromium 一次截圖＝拼圖、TexturePacker hash JSON 含 anchor 與 animations、PNG 自解碼驗非空白、`--pixi` 用真的 PixiJS 解析）、references 三份；測試 17 項 |
