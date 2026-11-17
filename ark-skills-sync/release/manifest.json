@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r48",
-  "commit": "4ca00bc",
-  "generated_at": "2026-11-17T17:51:03+08:00",
+  "release": "skills-2026.11-r49",
+  "commit": "4368f82",
+  "generated_at": "2026-11-17T18:04:25+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -593,6 +593,16 @@
         "ark-planning-with-files"
       ],
       "updated": "2026-11-05"
+    },
+    "ark-svg-animation": {
+      "version": "1.0.0",
+      "tree_hash": "sha256:008a04d121f74722b3a0b9f700699e4fc7481d35c72d921a34515b0b955c6b70",
+      "contract_hash": "sha256:47b022e4a2af3e1ac7afdcdfd97a65912defedefc17772f892b977f5e7b0c973",
+      "status": "active",
+      "category": "view",
+      "depends_on": [],
+      "replaces": [],
+      "updated": "2026-11-17"
     },
     "ark-telegram-sender": {
       "version": "2.2.0",
