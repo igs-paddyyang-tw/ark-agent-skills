@@ -1,7 +1,7 @@
 // kit/fish.mjs —— 魚機元素（0.7.0；計畫 T7）：cannon、bullet、net（一次性動畫）、bead、lock（循環動畫）。
 // 魚種本身走 creature()（生物 rig），不在這裡。座標：cannon 以 200×280 為基準、其他 256 基準；L＝size／基準。
 import { metal } from '../themes.mjs';
-import { rr, arcPts, starPts, tri, shade, glowFill, highlight, sparkle, WHITE } from './util.mjs';
+import { rr, arcPts, starPts, tri, shade, glowFill, highlight, sparkle, boldText, WHITE } from './util.mjs';
 
 // ── 砲台：砲管朝上（−y），旋轉中心＝底座圓心 (100, 196) → meta.anchor ────────────────
 // 等級：1 單管銀、2 雙管金、3 三管金、4 三管＋側翼、5 三管＋側翼＋光環（上限 5；遊戲自己對應倍率）
@@ -113,11 +113,70 @@ const lock = {
   },
 };
 
-export const FISH_KINDS = { cannon, bullet, net, bead, lock };
+
+// ── 魚潮來襲橫幅（循環 6 格）：兩層正弦浪由右往左捲動，一循環前進 1 個波長（t＝1 與 t＝0 同形）＋主字 ───────────
+const tide_banner = {
+  category: 'fx', anim: { frames: 6 },
+  build(s, th, t = 0) {
+    const w = s.w ?? 720, h = s.h ?? 220, SAMPLES = 24, x0 = 18, x1 = w - 18, bottom = h * 0.92 - 6, lam = (x1 - x0) / 2;
+    // 浪只畫在橫幅內（flat 沒有裁切 → 範圍自己收：左右內縮避開圓角、底部停在橫幅底緣）
+    const wave = (base, amp, phase, fill, op) => {
+      const pts = Array.from({ length: SAMPLES + 1 }, (_, i) => {
+        const x = x0 + ((x1 - x0) * i) / SAMPLES;
+        return [x, base + amp * Math.sin(2 * Math.PI * ((x - x0) / lam + t + phase))];
+      });
+      return { k: 'polygon', pts: [...pts, [x1, bottom], [x0, bottom]], fill, op };
+    };
+    return {
+      w, h, alias: s.alias ?? 'tide_banner',
+      parts: [
+        { k: 'path', d: rr(2, h * 0.08, w - 4, h * 0.84, 22), fill: tri(shade(th.primary.dark)), stroke: th.ink, sw: 5 },
+        wave(h * 0.66, h * 0.07, 0, th.primary.light, 0.45),
+        wave(h * 0.76, h * 0.06, 0.5, th.accent.light, 0.5),
+        { k: 'path', d: rr(2, h * 0.08, w - 4, h * 0.84, 22), fill: 'none', stroke: metal(th, 'gold'), sw: 4 },
+        boldText(s.text ?? 'FISH TIDE', { x: w / 2, y: h * 0.42, maxSize: h * 0.3, maxW: w * 0.78, fill: metal(th, 'gold'), ink: th.ink }),
+      ],
+    };
+  },
+};
+
+// ── Boss 出場警示（循環 4 格）：暗紅帶＋上下警示斜紋（固定）＋WARNING 與外光脈動 ─────────────────────────
+const boss_warning = {
+  category: 'fx', anim: { frames: 4 },
+  build(s, th, t = 0) {
+    const w = s.w ?? 720, h = s.h ?? 200, red = shade(s.color ?? '#e0202f'), pulse = 0.5 + 0.5 * Math.cos(2 * Math.PI * t);
+    const stripes = (y0, y1) => {
+      const out = [], sw = 28, slant = y1 - y0;
+      for (let x = -slant; x < w; x += sw * 2) {
+        const pts = [[x, y1], [x + sw, y1], [x + sw + slant, y0], [x + slant, y0]].map(([px, py]) => [Math.min(w - 4, Math.max(4, px)), py]);
+        out.push({ k: 'polygon', pts, fill: '#ffd21a' });
+      }
+      return out;
+    };
+    return {
+      w, h, alias: s.alias ?? 'boss_warning',
+      parts: [
+        { k: 'ellipse', cx: w / 2, cy: h / 2, rx: w * 0.5, ry: h * 0.5, fill: glowFill(red.light, 0.25 + 0.35 * pulse) },
+        { k: 'path', d: rr(4, h * 0.18, w - 8, h * 0.64, 10), fill: tri(red), stroke: th.ink, sw: 5 },
+        { k: 'polygon', pts: [[4, h * 0.18], [w - 4, h * 0.18], [w - 4, h * 0.3], [4, h * 0.3]], fill: '#1a0a0a' },
+        ...stripes(h * 0.18, h * 0.3),
+        { k: 'polygon', pts: [[4, h * 0.7], [w - 4, h * 0.7], [w - 4, h * 0.82], [4, h * 0.82]], fill: '#1a0a0a' },
+        ...stripes(h * 0.7, h * 0.82),
+        ...[w * 0.08, w * 0.92].map((x) => ({ k: 'polygon', pts: [[x, h * 0.36], [x + h * 0.15, h * 0.62], [x - h * 0.15, h * 0.62]], fill: '#ffd21a', stroke: th.ink, sw: 4, join: 'round' })),
+        boldText(s.text ?? 'WARNING', { x: w / 2, y: h / 2, maxSize: h * 0.3, maxW: w * 0.66, fill: WHITE, ink: '#1a0a0a' }),
+        { k: 'path', d: rr(4, h * 0.18, w - 8, h * 0.64, 10), fill: WHITE, op: 0.18 * pulse },
+      ],
+    };
+  },
+};
+
+export const FISH_KINDS = { cannon, bullet, net, bead, lock, tide_banner, boss_warning };
 export const FISH_SAMPLES = {
   cannon: [1, 2, 3, 4, 5].map((level) => ({ level })),
   bullet: [{}, { color: '#ff5a7a', size: 48 }],
   net: [{}, { color: '#3ee0d0' }],
   bead: [{}, { color: '#36c2ff' }],
   lock: [{}],
+  tide_banner: [{}, { text: 'WAVE' }],
+  boss_warning: [{}, { text: 'BOSS', color: '#9b30ff' }],
 };

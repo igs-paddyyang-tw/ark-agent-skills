@@ -17,7 +17,7 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 | `profile` | `texture`（預設：轉貼圖、wg_pack_assets → WebP）／`flat`（PixiJS `new Graphics().svg(svg)` 直接用） |
 | `alias` | 輸出別名（對應 `assets.yaml` 的圖名）；不給就用 kind 預設 |
 
-## kind（0.6.0）
+## kind（0.10.0，30 種）
 
 | kind | 參數 | 分類（預算） |
 |---|---|---|
@@ -41,6 +41,22 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 | `net` | 🎞️ 一次性（`loop:false`）6 格：張開＋淡出，最後一格＝t＝1；`size`（160）、`color` | fx |
 | `bead` | `size`（60）、`color` | symbol |
 | `lock` | 🎞️ 循環 4 格：四個角括號轉 90°＋中心脈動；`size`（120）、`color` | fx |
+
+
+**0.10.0 新增（aidev 回饋 §2；數字欄位不給＝空槽，由遊戲執行期疊字）**
+
+| kind | 參數 | 分類 |
+|---|---|---|
+| `fg_intro` | 🎞️ 6 格（16 道光轉 22.5°）；`mode` free／bonus、`text`、`count`（次數圓章）、`unit`（SPINS）、`w`／`h`（720×520） | fx |
+| `multiplier` | `value`（2～100，可帶 ×；依倍率分色）、`shape` burst／pill、`color`、`size`（128） | symbol |
+| `fg_counter` | `label`（FREE SPINS）、`value`、`w`／`h`（300×120） | ui |
+| `info_bar` | `labels`（1～5 格，預設 WIN／BALANCE／BET）、`values`、`w`／`h`（720×110） | ui |
+| `dialog` | `title`、`buttons` 0／1／2、`buttonText`、`close`（關閉鈕，預設有）、`w`／`h`（560×360） | ui |
+| `loading_bar` | `value` 0～1、`part` all／track／fill（遊戲自己裁 fill 長度）、`w`／`h`（480×56） | ui |
+| `coin_burst` | 🎞️ 一次性 8 格；`count`（1～40）、`seed`、`size`（360） | fx |
+| `jp_marquee` | 🎞️ 4 格燈泡追逐；`tier`、`label`、`value`、`w`／`h`（600×140） | fx |
+| `tide_banner` | 🎞️ 6 格兩層浪捲動一個波長；`text`（FISH TIDE）、`w`／`h`（720×220） | fx |
+| `boss_warning` | 🎞️ 4 格脈動；`text`（WARNING）、`color`、`w`／`h`（720×200） | fx |
 
 🎞️ 動畫 kind：`asset()` 回 `{ svg（第 0 格）, frames, meta.frames, meta.loop }`；`frames` 參數改格數；`assetPhase(kind, spec, t)` 取任意相位。
 海底背景用 `bg`（`motif: 'sea'`）；魚種本身走 `creature()`。

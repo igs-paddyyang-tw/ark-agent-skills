@@ -41,8 +41,9 @@ export function checkSize(svg, max = MAX_FRAME_BYTES) {
   return n > max ? [`${(n / 1024).toFixed(1)} KB > ${(max / 1024).toFixed(0)} KB → 減少輪廓取樣段數或合併圖元`] : [];
 }
 
-// 比對前去掉 id 與 url(#…) 參照：它們含格號（s0、c1）與種子，不是座標（0.4.0 起有漸層 id）
-const nums = (s) => (s.replace(/\sid="[^"]*"|url\(#[^)]*\)/g, '').match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+// 比對前去掉 id、url(#…) 參照與色碼：id 含格號與種子、色碼 #ff3b5c 裡的數字（3、5）不是座標
+// （0.10.0 跑馬燈只換燈泡顏色，舊版把色碼當座標 → 誤報「不等速」變化 150 萬）
+const nums = (s) => (s.replace(/\sid="[^"]*"|url\(#[^)]*\)|#[0-9a-fA-F]{3,8}\b/g, '').match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
 function dist(a, b) {
   if (a.length !== b.length) return Infinity;
   let d = 0;

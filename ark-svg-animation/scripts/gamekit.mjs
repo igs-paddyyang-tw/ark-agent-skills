@@ -18,6 +18,7 @@ import { SLOT_KINDS, SLOT_SAMPLES } from './kit/slot.mjs';
 import { UI_KINDS, UI_SAMPLES } from './kit/ui.mjs';
 import { FX_KINDS, FX_SAMPLES } from './kit/fx.mjs';
 import { FISH_KINDS, FISH_SAMPLES } from './kit/fish.mjs';
+import { HUD_KINDS, HUD_SAMPLES } from './kit/hud.mjs';
 
 export { THEMES };
 
@@ -53,7 +54,7 @@ const BASE_KINDS = {
   },
 };
 
-export const KINDS = { ...BASE_KINDS, ...SLOT_KINDS, ...UI_KINDS, ...FX_KINDS, ...FISH_KINDS };
+export const KINDS = { ...BASE_KINDS, ...SLOT_KINDS, ...UI_KINDS, ...HUD_KINDS, ...FX_KINDS, ...FISH_KINDS };
 
 function render(b, th, profile) {
   const ctx = { L: b.L ?? 1, pal: { white: '#ffffff', eye: th.ink, ...th.primary }, k: 0, id: 'k', gid: 'k', defs: new Map(), profile };
@@ -94,7 +95,7 @@ export const SAMPLES = {
   label: [{ text: 'BIG WIN', size: 72 }, { text: 'FREE GAMES', size: 48, fill: 'gold' }, { text: 'X10', size: 64, fill: 'silver' },
     { text: 'ABCDEFGHIJKLM', size: 40 }, { text: 'NOPQRSTUVWXYZ', size: 40 }, { text: '0123456789', size: 40 }, { text: '+-×.,!?:/%$¥#', size: 40 }],
   plate: Object.keys(PLATES).flatMap((shape) => [{ shape }, { shape, color: 'accent', rim: 'silver', size: 200 }]),
-  ...SLOT_SAMPLES, ...UI_SAMPLES, ...FX_SAMPLES, ...FISH_SAMPLES,
+  ...SLOT_SAMPLES, ...UI_SAMPLES, ...HUD_SAMPLES, ...FX_SAMPLES, ...FISH_SAMPLES,
 };
 
 /**

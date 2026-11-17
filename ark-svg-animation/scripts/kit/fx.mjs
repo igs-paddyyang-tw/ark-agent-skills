@@ -1,7 +1,9 @@
 // kit/fx.mjs —— 魚機／老虎機共用演出物（0.6.0；計畫 T6）：jp_plate、win_banner（動畫）、fg_banner、coin（動畫）。
 // 動畫 kind：build(spec, theme, t) 以相位 t＝i/n 產生，t＝1 必須回到 t＝0（verify 的 checkSeam 驗等速＋週期）。
 import { metal } from '../themes.mjs';
-import { rr, starPts, shade, glowFill, sparkle, boldText, WHITE } from './util.mjs';
+import { fnv1a } from '../draw.mjs';
+import { mulberry32 } from '../svg_anim.mjs';
+import { rr, starPts, tri, shade, glowFill, sparkle, boldText, WHITE } from './util.mjs';
 
 const TIERS = ['Grand', 'Major', 'Minor', 'Mini'];
 
@@ -125,10 +127,92 @@ const coin = {
   },
 };
 
-export const FX_KINDS = { jp_plate, win_banner, fg_banner, coin };
+
+// ── FG／Bonus 進場（0.10.0）：16 道放射光一循環轉 22.5°＋緞帶主字＋次數圓章（count：'' 空槽）＋單位字 ──────────
+const INTRO = { free: { text: 'FREE GAMES', col: (th) => th.primary }, bonus: { text: 'BONUS', col: (th) => th.accent } };
+const fg_intro = {
+  category: 'fx', anim: { frames: 6 },
+  build(s, th, t = 0) {
+    const mode = s.mode ?? 'free', cfg = INTRO[mode];
+    if (!cfg) throw new Error(`fg_intro：mode 只能是 ${Object.keys(INTRO).join('／')}`);
+    const w = s.w ?? 720, h = s.h ?? 520, cx = w / 2, cy = h * 0.42, col = cfg.col(th), g = metal(th, 'gold'), N = 16, R = w * 0.5;
+    const rays = Array.from({ length: N }, (_, i) => {
+      const a = (i * 2 * Math.PI) / N, b = a + 0.12;
+      return { k: 'polygon', pts: [[cx, cy], [cx + R * Math.cos(a), cy + R * Math.sin(a)], [cx + R * Math.cos(b), cy + R * Math.sin(b)]], fill: col.light, op: 0.28 };
+    });
+    const dy = h * 0.74, dr = h * 0.17;
+    return {
+      w, h, alias: s.alias ?? `fg_intro_${mode}`,
+      parts: [
+        { k: 'circle', cx, cy, r: R * 0.9, fill: glowFill(col.light, 0.5) },
+        { k: 'g', rot: (t * 360) / N, ox: cx, oy: cy, children: rays },
+        ...ribbon(w, h * 0.84, th, col, { y0f: 0.3, y1f: 0.68 }),
+        boldText(s.text ?? cfg.text, { x: cx, y: h * 0.84 * 0.49, maxSize: h * 0.17, maxW: w * 0.72, fill: g, ink: th.ink }),
+        { k: 'circle', cx, cy: dy, r: dr + 10, fill: g, stroke: th.ink, sw: 6 },
+        { k: 'circle', cx, cy: dy, r: dr, fill: tri(shade(th.jp.Grand)), stroke: th.ink, sw: 4 },
+        { k: 'ellipse', cx: cx - dr * 0.25, cy: dy - dr * 0.5, rx: dr * 0.55, ry: dr * 0.2, fill: WHITE, op: 0.3 },
+        boldText(s.count ?? '', { x: cx, y: dy - dr * 0.1, maxSize: dr * 0.8, maxW: dr * 1.5, fill: WHITE, ink: th.ink }),
+        boldText(s.unit ?? 'SPINS', { x: cx, y: dy + dr * 0.62, maxSize: dr * 0.3, maxW: dr * 1.3, fill: th.accent.light, ink: th.ink }),
+        sparkle(w * 0.14, h * 0.16, h * 0.05, WHITE, 0.55 + 0.45 * Math.cos(2 * Math.PI * t)),
+        sparkle(w * 0.86, h * 0.2, h * 0.045, WHITE, 0.55 + 0.45 * Math.cos(2 * Math.PI * (t + 0.5))),
+      ],
+    };
+  },
+};
+
+// ── 金幣噴發（一次性 8 格）：N 枚金幣從底部中央往上拋、受重力落下、各自翻轉，最後 30% 淡出 ──────────────
+const coin_burst = {
+  category: 'fx', anim: { frames: 8, loop: false },
+  build(s, th, t = 0) {
+    const size = s.size ?? 360, n = s.count ?? 14, rnd = mulberry32(fnv1a(`coin_burst:${n}:${s.seed ?? 0}`));
+    if (!(n >= 1 && n <= 40)) throw new Error('coin_burst：count 要在 1～40');
+    const g = th.metal.gold, op = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3 * 0.9, parts = [];
+    for (let i = 0; i < n; i++) {
+      const ang = ((-150 + 120 * rnd()) * Math.PI) / 180, v = 0.55 + 0.35 * rnd(), r = 9 + 6 * rnd(), spin = 1 + Math.floor(rnd() * 3), ph = rnd();
+      const x = 128 + Math.cos(ang) * v * 150 * t, y = 210 + Math.sin(ang) * v * 260 * t + 230 * t * t;
+      const k = Math.max(0.12, Math.abs(Math.cos(Math.PI * (spin * t + ph))));
+      parts.push({ k: 'ellipse', cx: x, cy: y, rx: r * k, ry: r, fill: g[1][1], stroke: g[2][1], sw: 2.5, op },
+        { k: 'ellipse', cx: x - r * 0.25 * k, cy: y - r * 0.3, rx: r * 0.35 * k, ry: r * 0.25, fill: WHITE, op: op * 0.7 });
+    }
+    parts.unshift({ k: 'circle', cx: 128, cy: 200, r: 60 + 60 * t, fill: glowFill(th.accent.light, 0.6 * (1 - t)) });   // 光暈取 theme（金幣本身固定金色）
+    return { w: size, h: size, L: size / 256, alias: s.alias ?? 'fx_coin_burst', parts };
+  },
+};
+
+// ── 彩池跑馬燈底板（循環 4 格）：外框燈泡追逐（每 4 顆亮 1 顆，一循環前進 4 步）＋中央數字槽 ─────────────
+const jp_marquee = {
+  category: 'fx', anim: { frames: 4 },
+  build(s, th, t = 0) {
+    const tier = s.tier ?? 'Grand';
+    if (!TIERS.includes(tier)) throw new Error(`jp_marquee：tier 只能是 ${TIERS.join('／')}`);
+    const w = s.w ?? 600, h = s.h ?? 140, col = shade(th.jp[tier]), g = metal(th, 'gold'), step = Math.round(t * 4) % 4;
+    const parts = [
+      { k: 'path', d: rr(3, 3, w - 6, h - 6, 24), fill: tri(col), stroke: th.ink, sw: 6 },
+      { k: 'path', d: rr(14, 14, w - 28, h - 28, 16), fill: 'none', stroke: g, sw: 3 },
+    ];
+    const bulbs = [], gapX = (w - 40) / 14, gapY = (h - 40) / 3;
+    for (let i = 0; i <= 14; i++) bulbs.push([20 + i * gapX, 9]);
+    for (let i = 1; i <= 3; i++) bulbs.push([w - 9, 20 + i * gapY - gapY / 2]);
+    for (let i = 14; i >= 0; i--) bulbs.push([20 + i * gapX, h - 9]);
+    for (let i = 3; i >= 1; i--) bulbs.push([9, 20 + i * gapY - gapY / 2]);
+    bulbs.forEach(([x, y], i) => {
+      const on = (i + step) % 4 === 0;
+      parts.push({ k: 'circle', cx: x, cy: y, r: on ? 6 : 4.5, fill: on ? WHITE : th.accent.dark, stroke: th.ink, sw: 1.5 });
+    });
+    parts.push({ k: 'path', d: rr(w * 0.2, h * 0.24, w * 0.6, h * 0.52, 14), fill: '#000000', op: 0.4 },
+      boldText(s.label ?? `${tier.toUpperCase()}`, { x: w * 0.11, y: h / 2, maxSize: h * 0.18, maxW: w * 0.16, fill: WHITE, ink: th.ink }),
+      boldText(s.value ?? '', { x: w / 2, y: h / 2, maxSize: h * 0.36, maxW: w * 0.56, fill: g, ink: th.ink }));
+    return { w, h, alias: s.alias ?? `jp_marquee_${tier}`, parts };
+  },
+};
+
+export const FX_KINDS = { jp_plate, win_banner, fg_banner, coin, fg_intro, coin_burst, jp_marquee };
 export const FX_SAMPLES = {
   jp_plate: [...TIERS.map((tier) => ({ tier })), { tier: 'Major', value: '12,345.00' }, { tier: 'Grand', value: '' }],
   win_banner: Object.keys(WIN).map((tier) => ({ tier })),
   fg_banner: [{}, { sub: '×10' }, { text: '' }, { sub: '' }],
   coin: [{}, { size: 96 }],
+  fg_intro: [{}, { mode: 'bonus', count: '10' }],
+  coin_burst: [{}, { count: 24, seed: 3 }],
+  jp_marquee: [{}, { tier: 'Minor', value: '8,888.88' }],
 };

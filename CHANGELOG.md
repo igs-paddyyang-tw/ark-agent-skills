@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-17 (ark-svg-animation 0.10.0 —— aidev 回饋缺的 10 項：進場、倍率、次數板、資訊列、彈窗、載入條、金幣噴發、跑馬燈、魚潮、Boss 警示)
+
+> aidev 試用回饋 §2（kiro-cli `docs/issues/2026-11-17-from-aidev-ark-svg-gamekit-feedback.md`）。共 30 種 kind。
+
+- 老虎機：`fg_intro`（FG／Bonus 進場，動畫，次數圓章空槽）、`multiplier`（×2～×100，依倍率分色，burst／pill）、`fg_counter`、`info_bar`（1～5 格）、`dialog`（標題／0～2 按鈕／關閉鈕）、`loading_bar`（all／track／fill）、`coin_burst`（一次性 8 格，seed 決定軌跡）
+- 魚機：`tide_banner`（兩層浪一循環捲一個波長）、`boss_warning`（警示斜紋＋脈動）、`jp_marquee`（燈泡追逐）
+- 數字欄位一律可空槽（不給＝不出字），中文由遊戲疊
+- 🔴 守門修正：接縫檢查的數字擷取會把色碼（`#ff3b5c` 的 3、5）當座標 → 只換顏色的跑馬燈被誤報「不等速 150 萬」；改為先去掉色碼（反證：半徑跳動仍會紅）
+- 守門抓到：`coin_burst` 換 theme 輸出完全相同（只用金色）→ 光暈改取 theme；`tide_banner` 浪畫出橫幅外（flat 無裁切）→ 範圍自己收
+- 測試 53 項；pixi_check 478 張全過；生物 texture 輸出不變
+
 ## 2026-11-17 (ark-svg-animation 0.9.0 —— aidev 回饋：粗體字、撲克字實心、FG 橫幅加份量)
 
 > aidev 試用回饋（kiro-cli `docs/issues/2026-11-17-from-aidev-ark-svg-gamekit-feedback.md` §1）：轉 path 的字偏細、撲克字空心縮小不好認、FG 橫幅太細。
