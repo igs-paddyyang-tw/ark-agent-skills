@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-17 (ark-svg-animation 0.9.0 —— aidev 回饋：粗體字、撲克字實心、FG 橫幅加份量)
+
+> aidev 試用回饋（kiro-cli `docs/issues/2026-11-17-from-aidev-ark-svg-gamekit-feedback.md` §1）：轉 path 的字偏細、撲克字空心縮小不好認、FG 橫幅太細。
+
+- 字：kit 預設粗體（`BOLD` 1.55；撲克字與 7 用 `ROYAL_WEIGHT` 1.85）；`label` 加 `weight` 參數；`measure`／`layoutText` 吃 `weight`，加粗時字距跟著加（不會黏字）
+- `boldText()`：依「筆畫＋外框」精準算字高縮進框內，空字串回 null（＝空槽，renderer 自動略過）
+  - 🔴 新測試反證抓到：第一版公式少算外框，BIG WIN 在 180 px 框實際 182 px → 改精確公式
+- FG 橫幅：預設 760×280、緞帶佔 50% 高、上方徽冠（雙翼＋寶石）、`sub: ''` 空次數槽
+- 生物 texture 輸出不變（快照）；測試 47 項；pixi_check 全過
+
 ## 2026-11-17 (ark-svg-animation 0.8.0 —— 對照 aidev 神燈寶藏補選項：寶箱材質、符號底板、執行期文字空槽)
 
 > 計畫 M8 第一步：用 kit 重產神燈寶藏一整套，和 aidev `gen_art.py` 並排（31 個非專屬別名）。看出三個缺口，補上後兩邊逐項對得上（只剩 Logo、魔毯、彎刀是專屬）。

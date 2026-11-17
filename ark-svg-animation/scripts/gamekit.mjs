@@ -13,7 +13,7 @@ import { draw, num } from './draw.mjs';
 import { measure } from './glyphs.mjs';
 import { theme, metal, THEMES } from './themes.mjs';
 import { VERSION } from './svg_anim.mjs';
-import { plateParts, PLATES } from './kit/util.mjs';
+import { plateParts, PLATES, BOLD } from './kit/util.mjs';
 import { SLOT_KINDS, SLOT_SAMPLES } from './kit/slot.mjs';
 import { UI_KINDS, UI_SAMPLES } from './kit/ui.mjs';
 import { FX_KINDS, FX_SAMPLES } from './kit/fx.mjs';
@@ -34,12 +34,12 @@ const BASE_KINDS = {
     build(s, th) {
       const text = String(s.text ?? '');
       if (!text.trim()) throw new Error('label：text 必填');
-      const size = s.size ?? 64, u = size / 6;
-      const outline = s.outline ?? u * 0.45, padX = u * 0.5 + outline + 2, padY = padX;
-      const w = Math.ceil(measure(text, { spacing: s.spacing ?? 2 }) * u + padX * 2), h = Math.ceil(size + padY * 2);
+      const size = s.size ?? 64, u = size / 6, weight = s.weight ?? BOLD;
+      const outline = s.outline ?? u * 0.55, padX = u * weight * 0.5 + outline + 2, padY = padX;
+      const w = Math.ceil(measure(text, { spacing: s.spacing ?? 2, weight }) * u + padX * 2), h = Math.ceil(size + padY * 2);
       return {
         w, h, alias: s.alias ?? `label_${text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'x'}`,
-        parts: [{ k: 'text', str: text, x: w / 2, y: h / 2, size, align: 'center', spacing: s.spacing, fill: textFill(s.fill, th), ink: s.ink ?? th.text.stroke, outline }],
+        parts: [{ k: 'text', str: text, x: w / 2, y: h / 2, size, weight, align: 'center', spacing: s.spacing, fill: textFill(s.fill, th), ink: s.ink ?? th.text.stroke, outline }],
       };
     },
   },
@@ -57,7 +57,7 @@ export const KINDS = { ...BASE_KINDS, ...SLOT_KINDS, ...UI_KINDS, ...FX_KINDS, .
 
 function render(b, th, profile) {
   const ctx = { L: b.L ?? 1, pal: { white: '#ffffff', eye: th.ink, ...th.primary }, k: 0, id: 'k', gid: 'k', defs: new Map(), profile };
-  const { body, defs } = draw(b.parts, ctx);
+  const { body, defs } = draw(b.parts.filter(Boolean), ctx);   // null＝空槽（boldText 收到空字串）
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${num(b.w)} ${num(b.h)}" width="${num(b.w)}" height="${num(b.h)}">${profile === 'flat' ? '' : defs}${body}</svg>`;
 }
 

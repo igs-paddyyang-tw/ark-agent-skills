@@ -21,7 +21,7 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 
 | kind | 參數 | 分類（預算） |
 |---|---|---|
-| `label` | `text`（必填）、`size` 字高 px（64）、`fill`（`'gold'｜'silver'｜'bronze'`＝金屬漸層，或色碼）、`ink`、`outline`、`spacing` | text（8 KB） |
+| `label` | `text`（必填）、`size` 字高 px（64）、`weight`（粗細倍率，預設 1.55）、`fill`（`'gold'｜'silver'｜'bronze'`＝金屬漸層，或色碼）、`ink`、`outline`、`spacing` | text（8 KB） |
 | `plate` | `shape`：`arch`／`circle`／`shield`／`diamond`；`color`：`'primary'｜'accent'｜{ main, dark, light }`；`rim`；`size`（256） | symbol（6 KB） |
 | `royal` | `letter`：A／K／Q／J／10／9（字色固定、描邊與寶石跟 theme）；`color` 覆寫；`plate`＋`plateColor`（0.8.0：放進底板）；`size` | symbol |
 | `badge` | `type`：wild／scatter／free／bonus（0.7.0 起；原 `kind` 與 kit 設定撞名）；`text` 覆寫字；`shape`／`color` 覆寫底板 | symbol |
@@ -34,7 +34,7 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 | `bg` | `motif`：rays／stars／sea；`w`、`h`（720×1280） | bg（16 KB） |
 | `jp_plate` | `tier`：Grand／Major／Minor／Mini（色取 theme.jp）；`value`（有給就兩行：級別＋金額；`''`＝級別帶＋空金額槽，數字由遊戲執行期疊上） | ui |
 | `win_banner` | 🎞️ `tier`：big／mega／super；`text` 覆寫；6 格（放射光一循環轉 30°＋閃光） | fx（12 KB／格） |
-| `fg_banner` | `text`（FREE GAMES；`''`＝空橫幅，字由遊戲疊）、`sub`（例 `×10`） | fx |
+| `fg_banner` | `text`（FREE GAMES；`''`＝空橫幅，字由遊戲疊）、`sub`（例 `×10`；`''`＝空次數槽）、`w`／`h`（760×280）；0.9.0 起有徽冠、緞帶佔 50% 高 | fx |
 | `coin` | 🎞️ `size`（64）；6 格翻轉 | fx |
 | `cannon` | `level` 1～5（1 單管銀、2 雙管、3 三管、4 加側翼、5 加光環）；`size`＝高（140）；砲管朝上，`meta.anchor`＝底座圓心（旋轉中心） | symbol |
 | `bullet` | `size`（32）、`color` 覆寫 | symbol |
@@ -75,6 +75,8 @@ aidev 兩款老虎機＋兩款魚機的素材別名對照 kind（`verify_svg` �
 **專屬的原則**：角色、Logo、題材物件留在各專案（換一款遊戲就不通用）；kit 只收「每款老虎機都有」的東西。
 
 ## 字形（`glyphs.mjs`）
+
+- 0.9.0 起 kit 內的字一律粗體（`kit/util.mjs` 的 `BOLD`＝1.55、撲克字 `ROYAL_WEIGHT`＝1.85）；`measure(str, { weight })` 字距會加 (weight－1)，`boldText()` 依「筆畫＋外框」精準縮進框內、空字串回 null（空槽）
 
 - 原創切角筆畫字：A–Z、0–9、空白與 `+ - × . , ! ? : / % $ ¥ #`；小寫自動轉大寫
 - 格線 寬 0..4 × 高 0..6，筆畫是中心線；`layoutText(str, { x, y, size, align, spacing })` 回筆畫座標，`measure(str)` 回字寬

@@ -66,23 +66,26 @@ export function unsupported(str) {
   return [...new Set([...String(str).toUpperCase()].filter((ch) => !GLYPHS[ch]))];
 }
 
-/** 字寬（格線單位，不含外框）：Σ字寬＋字距 × (n－1) */
-export function measure(str, { spacing = 2 } = {}) {
+/**
+ * 字寬（格線單位，筆畫中心到中心，不含外框）：Σ字寬＋實際字距 × (n－1)。
+ * weight＝筆畫粗細倍率（1＝格線 1 單位）；字距跟著加 (weight－1)，加粗時字與字不會黏在一起（0.9.0）。
+ */
+export function measure(str, { spacing = 2, weight = 1 } = {}) {
   const chars = [...String(str).toUpperCase()];
-  return chars.reduce((a, ch) => a + (GLYPHS[ch]?.w ?? 4), 0) + spacing * Math.max(0, chars.length - 1);
+  return chars.reduce((a, ch) => a + (GLYPHS[ch]?.w ?? 4), 0) + (spacing + weight - 1) * Math.max(0, chars.length - 1);
 }
 
 /**
  * 排字：回傳筆畫（座標已換成呼叫端單位）。
  * @param {string} str
- * @param {{ x?:number, y?:number, size:number, align?:'left'|'center'|'right', spacing?:number }} o  y＝字的垂直中心；size＝字高
+ * @param {{ x?:number, y?:number, size:number, align?:'left'|'center'|'right', spacing?:number, weight?:number }} o  y＝字的垂直中心；size＝字高；weight＝筆畫粗細倍率
  * @returns {{ strokes: { pts:[number,number][], closed:boolean }[], width:number }}
  */
 export function layoutText(str, o) {
   const bad = unsupported(str);
   if (bad.length) throw new Error(`文字有未支援的字元：${bad.map((c) => `「${c}」`).join('')} → 內建只有 A–Z、0–9、空白與 + - × . , ! ? : / % $ ¥ #；中日文請自備 path`);
-  const u = o.size / 6, spacing = o.spacing ?? 2;
-  const total = measure(str, { spacing }) * u;
+  const u = o.size / 6, weight = o.weight ?? 1, spacing = (o.spacing ?? 2) + weight - 1;
+  const total = measure(str, { spacing: o.spacing ?? 2, weight }) * u;
   let pen = (o.x ?? 0) - (o.align === 'left' ? 0 : o.align === 'right' ? total : total / 2);
   const top = (o.y ?? 0) - o.size / 2, strokes = [];
   for (const ch of String(str).toUpperCase()) {

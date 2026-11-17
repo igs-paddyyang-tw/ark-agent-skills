@@ -1,5 +1,6 @@
 // kit/util.mjs —— gamekit 共用幾何（0.6.0）。座標單位由呼叫端決定（符號 256 基準、UI 用像素）。
 import { mix } from '../draw.mjs';
+import { measure } from '../glyphs.mjs';
 
 export { mix };
 export const WHITE = '#ffffff';
@@ -66,4 +67,28 @@ export function plateParts(th, shape = 'arch', color = 'primary', rim = 'gold') 
 /** 文字自動縮到寬度內（size＝最大字高；maxW＝可用寬度；同單位） */
 export function fitSize(measureGrid, maxSize, maxW) {
   return Math.min(maxSize, (maxW * 6) / Math.max(1, measureGrid));
+}
+
+/**
+ * 粗體預設（0.9.0；aidev 回饋：轉 path 的字偏細、比現有粗體弱）—— 橫幅、彩池牌、按鈕字、徽章都用它。
+ * 撲克符號另用 ROYAL_WEIGHT（盤面縮小後仍要像實心字）。
+ */
+export const BOLD = 1.55;
+export const ROYAL_WEIGHT = 1.85;
+
+/**
+ * 粗體描邊字圖元：自動縮到 maxW 內（含筆畫與外框），weight 預設 BOLD。
+ * @returns {object} draw 的 text 圖元；str 為空字串時回 null（空槽）
+ */
+export function boldText(str, { x, y, maxSize, maxW, weight = BOLD, fill, ink, outline, spacing } = {}) {
+  str = String(str ?? '');
+  if (!str) return null;
+  const grid = measure(str, { spacing: spacing ?? 2, weight });
+  // 實際寬＝(grid＋weight)·u＋2·外框，u＝size/6；外框預設 0.55u → size ≤ 6·maxW／(grid＋weight＋1.1)
+  // 指定外框時：size ≤ 6·(maxW－2·outline)／(grid＋weight)（守門測試反證抓到舊公式少算外框、超框 2 px）
+  const size = outline === undefined
+    ? Math.min(maxSize, (6 * maxW) / (grid + weight + 1.1))
+    : Math.min(maxSize, (6 * (maxW - 2 * outline)) / (grid + weight));
+  const ol = outline ?? (size / 6) * 0.55;
+  return { k: 'text', str, x, y, size, weight, spacing, fill, ink, outline: ol };
 }

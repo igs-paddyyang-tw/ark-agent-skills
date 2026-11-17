@@ -3,7 +3,7 @@
 import { fnv1a } from '../draw.mjs';
 import { metal, vgrad } from '../themes.mjs';
 import { mulberry32 } from '../svg_anim.mjs';
-import { rr, arcPts, starPts, tri, highlight, glowFill, WHITE } from './util.mjs';
+import { rr, arcPts, starPts, tri, highlight, glowFill, boldText, WHITE } from './util.mjs';
 
 const reelDims = (s) => {
   const cols = s.cols ?? 5, rows = s.rows ?? 3, cell = s.cell ?? 120, gap = s.gap ?? 6;
@@ -75,7 +75,7 @@ function arrowArc(a0, a1, th) {
 }
 const BUTTON_ICONS = {
   spin: (th) => [...arrowArc(200, 330, th), ...arrowArc(20, 150, th)],
-  auto: (th) => [{ k: 'text', str: 'AUTO', x: 128, y: 130, size: 46, fill: WHITE, ink: th.ink, outline: 5 }],
+  auto: (th) => [boldText('AUTO', { x: 128, y: 130, maxSize: 60, maxW: 168, fill: WHITE, ink: th.ink })],
   plus: (th) => [{ k: 'polygon', pts: [[112, 64], [144, 64], [144, 112], [192, 112], [192, 144], [144, 144], [144, 192], [112, 192], [112, 144], [64, 144], [64, 112], [112, 112]], ...ICON_STYLE(th) }],
   minus: (th) => [{ k: 'polygon', pts: [[64, 112], [192, 112], [192, 144], [64, 144]], ...ICON_STYLE(th) }],
   turbo: (th) => [{ k: 'polygon', pts: [[146, 40], [84, 142], [124, 142], [106, 218], [178, 108], [136, 108], [160, 40]], ...ICON_STYLE(th) }],

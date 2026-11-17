@@ -1,8 +1,7 @@
 // kit/slot.mjs —— 老虎機符號（0.6.0；計畫 T4）：royal、badge、icon、frame。256 基準、L＝size/256。
 // 造型全為本 skill 原創的通用物件；遊戲專屬角色（主角、反派、吉祥物）不在 kit 內。
-import { measure } from '../glyphs.mjs';
 import { metal } from '../themes.mjs';
-import { rr, starPts, tri, shade, glowFill, highlight, sparkle, plateParts, fitSize, WHITE } from './util.mjs';
+import { rr, starPts, tri, shade, glowFill, highlight, sparkle, plateParts, boldText, ROYAL_WEIGHT, WHITE } from './util.mjs';
 
 // 撲克字色相（固定，玩家靠顏色辨識；描邊與裝飾寶石跟 theme 走）
 const ROYAL = { A: '#e8424f', K: '#3f6fe0', Q: '#a046d8', J: '#2fae57', 10: '#f08a1c', 9: '#1fb3b0' };
@@ -14,9 +13,9 @@ const royal = {
     const ch = String(s.letter ?? 'A').toUpperCase();
     if (!ROYAL[ch]) throw new Error(`royal：letter 只能是 ${ROYAL_ORDER.join('／')}（收到「${ch}」）`);
     const col = shade(s.color ?? ROYAL[ch]), size = s.size ?? 256;
-    const fs = fitSize(measure(ch, { spacing: 1.5 }), 150, 196);
     const letter = [
-      { k: 'text', str: ch, x: 128, y: 136, size: fs, spacing: 1.5, fill: tri(col), ink: th.ink, outline: fs / 14 },
+      // 0.9.0：實心粗體（aidev 回饋：空心描邊字縮到盤面大小不好認）
+      boldText(ch, { x: 128, y: 136, maxSize: 156, maxW: 214, weight: ROYAL_WEIGHT, spacing: 1.2, fill: tri(col), ink: th.ink }),
       { k: 'polygon', pts: [[128, 18], [142, 34], [128, 50], [114, 34]], fill: tri(th.accent), stroke: th.ink, sw: 3 },
       sparkle(206, 200, 16, WHITE, 0.85),
     ];
@@ -41,14 +40,13 @@ const badge = {
     const kind = s.type ?? 'wild', b = BADGE[kind];
     if (!b) throw new Error(`badge：type 只能是 ${Object.keys(BADGE).join('／')}`);
     const text = s.text ?? b.text, size = s.size ?? 256;
-    const fs = fitSize(measure(text), 44, 156);
     return {
       w: size, h: size, L: size / 256, alias: s.alias ?? `sym_${kind}`,
       parts: [
         ...plateParts(th, s.shape ?? b.shape, s.color ?? b.color),
         sparkle(128, 70, 30, th.accent.light),
         { k: 'path', d: rr(14, 104, 228, 60, 14), fill: { lg: [[0, th.primary.dark], [1, th.ink]], x1: 0, y1: 0, x2: 0, y2: 1 }, stroke: metal(th, 'gold'), sw: 4 },
-        { k: 'text', str: text, x: 128, y: 134, size: fs, fill: metal(th, 'gold'), ink: th.ink, outline: fs / 12 },
+        boldText(text, { x: 128, y: 134, maxSize: 48, maxW: 206, fill: metal(th, 'gold'), ink: th.ink }),
         sparkle(60, 196, 12, WHITE, 0.8), sparkle(198, 190, 9, WHITE, 0.7),
       ],
     };
@@ -129,7 +127,7 @@ const ICONS = {
   ],
   seven: (th) => [
     { k: 'circle', cx: 128, cy: 128, r: 108, fill: glowFill(th.accent.light, 0.5) },
-    { k: 'text', str: '7', x: 128, y: 132, size: 176, fill: tri(shade('#e8303f')), ink: th.ink, outline: 12, weight: 1.15 },
+    boldText('7', { x: 128, y: 132, maxSize: 176, maxW: 200, weight: ROYAL_WEIGHT, fill: tri(shade('#e8303f')), ink: th.ink }),
     sparkle(196, 60, 16, WHITE, 0.9),
   ],
   goldbar: (th) => {
