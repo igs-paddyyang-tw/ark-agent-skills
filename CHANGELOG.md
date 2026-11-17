@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-17 (ark-svg-animation 0.11.0 —— scene：關鍵字／參考圖取色 → 原創遊戲背景)
+
+> Paddy：「遊戲背景參考關鍵字或上網找素材，轉成自創的 SVG 背景」；回應 aidev 回饋「通用 bg 沒題材感」。
+
+- `scene` kind：關鍵字（中英子字串）→ 氛圍（10 種）＋元素（地標 7：宮殿、金字塔、神殿、城堡、寶塔、城市、房子；地形／植物／天空／粒子 18）→ 分層程序產生剪影場景；直式／橫式；`meta.recipe` 回報 mood／elements／landmarks／unknown
+  - 避開單字誤中：「塔」會中金字塔、「山」會中火山 → 改用寶塔／佛塔、山脈／高山（測試鎖住）
+- `palette.mjs`：參考圖（png／jpg／webp／svg）→ headless Chromium k-means 取 k 色＋自動分派場景角色；色數不足自動補混色；🔴 只取顏色、不描形、圖用完即刪（流程與界線見 `references/scene.md`）
+- 實測：網路參考（Wikimedia Commons NPS 照片 CC BY 2.0）縮圖取色 → 產出沙漠夜景後刪圖；aidev 神燈寶藏背景取色 → 同構圖換成他們的配色
+- 修：金字塔群側塔偏移用了縮放倍率而非像素（三座疊在一起）
+- 測試 58 項；pixi_check 全過；texture 最大 13.1 KB（城市）
+
 ## 2026-11-17 (ark-svg-animation 0.10.0 —— aidev 回饋缺的 10 項：進場、倍率、次數板、資訊列、彈窗、載入條、金幣噴發、跑馬燈、魚潮、Boss 警示)
 
 > aidev 試用回饋 §2（kiro-cli `docs/issues/2026-11-17-from-aidev-ark-svg-gamekit-feedback.md`）。共 30 種 kind。

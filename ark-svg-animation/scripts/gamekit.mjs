@@ -19,6 +19,7 @@ import { UI_KINDS, UI_SAMPLES } from './kit/ui.mjs';
 import { FX_KINDS, FX_SAMPLES } from './kit/fx.mjs';
 import { FISH_KINDS, FISH_SAMPLES } from './kit/fish.mjs';
 import { HUD_KINDS, HUD_SAMPLES } from './kit/hud.mjs';
+import { SCENE_KINDS, SCENE_SAMPLES } from './kit/scene.mjs';
 
 export { THEMES };
 
@@ -54,7 +55,7 @@ const BASE_KINDS = {
   },
 };
 
-export const KINDS = { ...BASE_KINDS, ...SLOT_KINDS, ...UI_KINDS, ...HUD_KINDS, ...FX_KINDS, ...FISH_KINDS };
+export const KINDS = { ...BASE_KINDS, ...SLOT_KINDS, ...UI_KINDS, ...HUD_KINDS, ...FX_KINDS, ...FISH_KINDS, ...SCENE_KINDS };
 
 function render(b, th, profile) {
   const ctx = { L: b.L ?? 1, pal: { white: '#ffffff', eye: th.ink, ...th.primary }, k: 0, id: 'k', gid: 'k', defs: new Map(), profile };
@@ -80,7 +81,7 @@ export function asset(kind, spec = {}) {
   const n = def.anim ? Math.max(2, spec.frames ?? def.anim.frames) : 0, loop = def.anim?.loop !== false;
   const builds = def.anim ? Array.from({ length: n }, (_, i) => def.build(spec, th, loop ? i / n : i / (n - 1))) : [def.build(spec, th, 0)];
   const b = builds[0], svgs = builds.map((x) => render(x, th, profile));
-  const meta = { version: VERSION, kind, alias: b.alias, category: def.category, w: Number(num(b.w)), h: Number(num(b.h)), anchor: b.anchor ?? [0.5, 0.5], theme: th.name, profile };
+  const meta = { version: VERSION, kind, alias: b.alias, category: def.category, w: Number(num(b.w)), h: Number(num(b.h)), anchor: b.anchor ?? [0.5, 0.5], theme: th.name, profile, ...(b.info ? { recipe: b.info } : {}) };
   return def.anim ? { svg: svgs[0], frames: svgs, meta: { ...meta, frames: n, loop } } : { svg: svgs[0], meta };
 }
 
@@ -95,7 +96,7 @@ export const SAMPLES = {
   label: [{ text: 'BIG WIN', size: 72 }, { text: 'FREE GAMES', size: 48, fill: 'gold' }, { text: 'X10', size: 64, fill: 'silver' },
     { text: 'ABCDEFGHIJKLM', size: 40 }, { text: 'NOPQRSTUVWXYZ', size: 40 }, { text: '0123456789', size: 40 }, { text: '+-×.,!?:/%$¥#', size: 40 }],
   plate: Object.keys(PLATES).flatMap((shape) => [{ shape }, { shape, color: 'accent', rim: 'silver', size: 200 }]),
-  ...SLOT_SAMPLES, ...UI_SAMPLES, ...HUD_SAMPLES, ...FX_SAMPLES, ...FISH_SAMPLES,
+  ...SLOT_SAMPLES, ...UI_SAMPLES, ...HUD_SAMPLES, ...FX_SAMPLES, ...FISH_SAMPLES, ...SCENE_SAMPLES,
 };
 
 /**

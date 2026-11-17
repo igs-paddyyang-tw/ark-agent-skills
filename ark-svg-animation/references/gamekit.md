@@ -58,6 +58,8 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 | `tide_banner` | 🎞️ 6 格兩層浪捲動一個波長；`text`（FISH TIDE）、`w`／`h`（720×220） | fx |
 | `boss_warning` | 🎞️ 4 格脈動；`text`（WARNING）、`color`、`w`／`h`（720×200） | fx |
 
+**0.11.0 新增**：`scene`（`keywords` 必填，`w`／`h`、`seed`、`palette`、`elements`、`vignette`）—— 見 `references/scene.md`。
+
 🎞️ 動畫 kind：`asset()` 回 `{ svg（第 0 格）, frames, meta.frames, meta.loop }`；`frames` 參數改格數；`assetPhase(kind, spec, t)` 取任意相位。
 海底背景用 `bg`（`motif: 'sea'`）；魚種本身走 `creature()`。
 

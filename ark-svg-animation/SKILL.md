@@ -2,13 +2,13 @@
 name: ark-svg-animation
 description: |
   原創遊戲向量美術產生器（executor，零相依 ESM，瀏覽器與 node 共用）：① 生物逐格動畫 —— 依「體型＋物種名」產生游動、被捕動畫
-  （SVG 字串陣列＋meta：viewBox、錨點、身體框、碰撞參考半徑）；② gamekit —— 魚機／slot 必要圖元素（0.10.0：描邊字、底板、撲克符號、WILD／SCATTER 徽章、12 種通用物件、符號框、轉輪底／框、面板、圓鈕、背景、JP 牌、Win 橫幅、FG 橫幅、FG／Bonus 進場、倍率標籤、FG 次數板、資訊列、彈窗、載入條、金幣（翻轉／噴發）、彩池跑馬燈；魚機砲台 1～5 級、子彈、網、寶珠、鎖定框、魚潮橫幅、Boss 警示；kit.json 產生器（ark-web-game wg_pack_assets 直接呼叫）；
+  （SVG 字串陣列＋meta：viewBox、錨點、身體框、碰撞參考半徑）；② gamekit —— 魚機／slot 必要圖元素（0.11.0：描邊字、底板、撲克符號、WILD／SCATTER 徽章、12 種通用物件、符號框、轉輪底／框、面板、圓鈕、背景、JP 牌、Win 橫幅、FG 橫幅、FG／Bonus 進場、倍率標籤、FG 次數板、資訊列、彈窗、載入條、金幣（翻轉／噴發）、彩池跑馬燈；魚機砲台 1～5 級、子彈、網、寶珠、鎖定框、魚潮橫幅、Boss 警示；關鍵字產原創遊戲背景 scene（參考圖只取色：palette.mjs）；kit.json 產生器（ark-web-game wg_pack_assets 直接呼叫）；
   主題 theme、原創向量字形轉 path、flat profile 給 PixiJS Graphics.svg() 直接解析）。同參數逐位元組相同；verify_svg.mjs 守門
   （確定性、安全、體積、循環接縫、flat 規則），pixi_check.mjs 用真的 PixiJS 比對形狀。
   用途：遊戲素材缺圖補位、骨架（Spine）魚的替代、新遊戲的原創 UI／符號美術、素材管線未產出時的執行期補位。
   使用此 skill 當提及：SVG 動畫、向量動畫、SVG 魚、缺圖補位、素材補位、程式產生美術、生物動畫、魚種動畫、游動動畫、被捕動畫、
   原創向量圖、SVG 產生器、Spine 魚替代、骨架魚替代、spritesheet 補位、gamekit、slot 美術、slot 符號、魚機 UI、
-  BIG WIN 橫幅、描邊字、向量字形、符號底板、JP 牌、PixiJS Graphics SVG、flat SVG。
+  BIG WIN 橫幅、描邊字、向量字形、符號底板、JP 牌、PixiJS Graphics SVG、flat SVG、遊戲背景、關鍵字產背景、參考圖取色、色票。
   不適用於：像素點陣風格（→ ark-pixel-animation）、slot 驗證台的靜態佔位圖（→ ark-game-proto）、
   正式 Client 骨架與素材打包（→ ark-web-game）、一般網頁 UI 動效（→ ark-frontend-design）。
 metadata:
@@ -18,7 +18,7 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "0.10.0"
+  version: "0.11.0"
   updated: 2026-11-17
   outputs:
     - { format: data, audience: ai }
@@ -30,7 +30,7 @@ metadata:
 
 > 規格／設計／計畫：kiro-cli `docs/specs/ark-svg-animation-spec.md`、`docs/designs/ark-svg-animation-design.md`、`docs/plans/ark-svg-animation-plan.md`。
 > gamekit 升級計畫：kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md`（M5 字形／theme／flat ✅、M6 老虎機元素＋共用演出物 ✅、M7 魚機元素＋產生器 CLI ✅；M8 1.0.0）。
-> 使用方怎麼接：`references/consumer-contract.md`；體型與參數：`references/archetypes.md`；新增物種：`references/species-registry.md`；**gamekit：`references/gamekit.md`**。
+> 使用方怎麼接：`references/consumer-contract.md`；體型與參數：`references/archetypes.md`；新增物種：`references/species-registry.md`；**gamekit：`references/gamekit.md`**；**背景：`references/scene.md`**。
 
 ## 體型
 
@@ -87,6 +87,7 @@ node $S/sheet.mjs --check out/sheets [--pixi node_modules/pixi.js/dist/pixi.min.
 node $S/verify_svg.mjs [--expect names.txt] [--strict] [--json]      # 守門（生物＋gamekit）；0 個物種＝失敗
 node $S/gamekit.mjs --config kit.json --out art/ [--only a,b] [--list] [--profile flat]   # 產生器：<別名>.svg＋動畫格＋kit-manifest.json
 node $S/gamekit.mjs list                                               # gamekit 的 kind 與 theme
+node $S/palette.mjs --image ref.jpg [--json]                           # 參考圖 → 色票（只取色，給 scene 的 palette）
 node $S/gamekit.mjs preview --out kit.html [--profile texture|flat]    # 全部 kind × 4 theme
 ARK_SVGA_PIXI=node_modules/pixi.js/dist/pixi.min.js node $S/pixi_check.mjs   # flat 輸出：PixiJS 與瀏覽器形狀比對
 node --test $S/tests/*.test.mjs
@@ -121,6 +122,7 @@ node --test $S/tests/*.test.mjs
 
 | 版本 | 日期 | 變更 |
 |---|---|---|
+| 0.11.0 | 2026-11-17 | `scene`：關鍵字（中英）→ 原創遊戲背景（10 種氛圍、7 種地標、地形／植物／粒子共 25 種元素，`meta.recipe` 回報解析結果與不認得的詞）；`palette.mjs` 參考圖取色（k-means，只取色、圖用完即刪）＋`palette` 覆寫；測試 58 項 |
 | 0.10.0 | 2026-11-17 | aidev 回饋缺的 10 項：`fg_intro`🎞️、`multiplier`、`fg_counter`、`info_bar`、`dialog`、`loading_bar`、`coin_burst`🎞️（一次性）、`jp_marquee`🎞️、`tide_banner`🎞️、`boss_warning`🎞️；數字一律可空槽；接縫檢查忽略色碼；共 30 種 kind；測試 53 項 |
 | 0.9.0 | 2026-11-17 | aidev 回饋（字與 FG）：粗體字預設（`BOLD` 1.55、撲克字 1.85，實心可辨識）＋`weight` 參數，字距隨粗細加寬、`boldText` 精準縮進框內；FG 橫幅加高 760×280、徽冠、次數槽（`sub: ''`＝空槽）；測試 47 項 |
 | 0.8.0 | 2026-11-17 | 對照 aidev 神燈寶藏並排補選項：寶箱 `metal` 改箱體（金／銀／木）、`royal` 的 `plate`／`plateColor`（整組符號同底板）、執行期文字空槽（`jp_plate` `value: ''`、`fg_banner` `text: ''`）；slot 範例改全 arch 底板＋JP 空槽；測試 43 項 |
