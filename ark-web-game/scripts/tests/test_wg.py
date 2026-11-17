@@ -338,3 +338,37 @@ def test_release_safe_defaults_in_templates():
     assert cmd and all('"-dev"' not in ln for ln in cmd), cmd
     vite = (SKILL / "assets/client-template/games/__GAME__/vite.config.ts").read_text(encoding="utf-8")
     assert "sourcemap: true" not in vite and "PGP_SOURCEMAP" in vite
+
+
+def test_pack_assets_generator_by_suffix(tmp_path):
+    """0.13.0：generator 依副檔名 —— .mjs 用 node、.json 交給 ark-svg-animation gamekit；別名齊全才綠；不存在／不支援／缺別名必紅且說明。
+    用 --only-check（只跑來源＋對別名，不轉圖）：轉圖引擎另有 test_pack_assets_svg_engines。"""
+    if not shutil.which("node"):
+        pytest.skip("沒有 node")
+    kit_js = pathlib.Path(__file__).resolve().parents[3] / "ark-svg-animation" / "scripts" / "gamekit.mjs"
+    if not kit_js.is_file():
+        pytest.skip("同層沒有 ark-svg-animation")
+    (tmp_path / "kit.json").write_text(json.dumps({"theme": "deep-sea", "assets": {
+        "sym_AA": {"kind": "royal", "letter": "A"}, "ui_spin": {"kind": "button", "icon": "spin"}, "fx_coin": {"kind": "coin"}}}), encoding="utf-8")
+    (tmp_path / "gen.mjs").write_text("import fs from 'node:fs';const o=process.argv[process.argv.indexOf('--out')+1];fs.mkdirSync(o,{recursive:true});"
+                                      "fs.writeFileSync(o+'/bg.svg','<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"80\"/>');", encoding="utf-8")
+
+    def check(gen, images):
+        cfg = {"schema": "pgp-assets/1", "game_key": "k", "version": "0.1.0", "sources": {"art": {"generator": gen}},
+               "bundles": {"k-core": {"required": True, "images": images}}}
+        cp = tmp_path / "a.json"
+        cp.write_text(json.dumps(cfg), encoding="utf-8")
+        return run("wg_pack_assets.py", "--config", cp, "--only-check")
+
+    kit_imgs = {"sym_AA": "art:sym_AA", "ui_spin": "art:ui_spin", "coin0": "art:fx_coin_0", "coin5": "art:fx_coin_5"}
+    r = check("kit.json", kit_imgs)
+    assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
+    r = check("gen.mjs", {"bg": "art:bg"})
+    assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
+    # 反證：別名不在 kit 裡、產生器不存在、副檔名不支援
+    r = check("kit.json", {**kit_imgs, "sym_KK": "art:sym_KK"})
+    assert r.returncode != 0 and "sym_KK" in r.stdout + r.stderr
+    (tmp_path / "gen.txt").write_text("x", encoding="utf-8")
+    for bad, hint in (("missing.mjs", "產生器不存在"), ("gen.txt", "不支援的產生器副檔名")):
+        r = check(bad, {"bg": "art:bg"})
+        assert r.returncode != 0 and hint in r.stdout + r.stderr, r.stdout + r.stderr

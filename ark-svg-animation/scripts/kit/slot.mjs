@@ -36,8 +36,9 @@ const BADGE = {
 const badge = {
   category: 'symbol',
   build(s, th) {
-    const kind = s.kind ?? 'wild', b = BADGE[kind];
-    if (!b) throw new Error(`badge：kind 只能是 ${Object.keys(BADGE).join('／')}`);
+    if (s.kind !== undefined) throw new Error('badge：參數 kind 已改名為 type（0.7.0；kind 和 kit 設定的 kind 撞名）');
+    const kind = s.type ?? 'wild', b = BADGE[kind];
+    if (!b) throw new Error(`badge：type 只能是 ${Object.keys(BADGE).join('／')}`);
     const text = s.text ?? b.text, size = s.size ?? 256;
     const fs = fitSize(measure(text), 44, 156);
     return {
@@ -194,7 +195,7 @@ const frame = {
 export const SLOT_KINDS = { royal, badge, icon, frame };
 export const SLOT_SAMPLES = {
   royal: ROYAL_ORDER.map((letter) => ({ letter })),
-  badge: Object.keys(BADGE).map((kind) => ({ kind })),
+  badge: Object.keys(BADGE).map((type) => ({ type })),
   icon: [...ICON_NAMES.map((name) => ({ name })), { name: 'chest', metal: 'silver' }, { name: 'key', plate: 'circle' }],
   frame: [{ level: 1 }, { level: 2 }, { level: 3 }],
 };

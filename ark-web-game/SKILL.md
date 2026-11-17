@@ -15,7 +15,7 @@ metadata:
   category: scaffolder
   form: executor
   domain: game
-  version: "0.12.0"
+  version: "0.13.0"
   updated: 2026-11-05
   outputs:
     - { format: data, audience: ai }
@@ -128,6 +128,7 @@ metadata:
 
 | 版本 | 日期 | 內容 |
 |---|---|---|
+| 0.13.0 | 2026-11-17 | `wg_pack_assets` 的 generator 依副檔名：`.py` → python、`.mjs`／`.js` → node、`.json` → ark-svg-animation `gamekit.mjs --config`（原創 slot／魚機元素：撲克符號、徽章、轉輪框、按鈕、JP 牌、Win 橫幅、砲台…）；產生器不存在／副檔名不支援時明說怎麼改；測試 17 |
 | 0.12.0 | 2026-11-05 | .ark 工具中立佈局雙讀（ark-agent-os ≥ 2.2）：`smoke_ws.js` 預設技能路徑、e2e 範本找 `stage_build.py` 先 `.ark/skills` 再 `.kiro/skills`；說明文字補 `.ark` 路徑 |
 | 0.11.2 | 2026-10-29 | description 減肥（盤點 O-2）：前段功能敘述壓成一句，觸發清單與「不適用於」逐字保留；原前段移到正文「功能總覽」 |
 | 0.11.1 | 2026-10-27 | 資安進開發流程（Paddy：下次開發要注意資安）：決策樹加「資安」分支（開新遊戲、⑧ 測試環境、上線前三個檢查點）、守門表加資安兩列；`tools/sec_check.py` 進 client-template（新平台一開就有），`--game` 不再限兩款、可加 `--client` |

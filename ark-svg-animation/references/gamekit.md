@@ -24,7 +24,7 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 | `label` | `text`（必填）、`size` 字高 px（64）、`fill`（`'gold'｜'silver'｜'bronze'`＝金屬漸層，或色碼）、`ink`、`outline`、`spacing` | text（8 KB） |
 | `plate` | `shape`：`arch`／`circle`／`shield`／`diamond`；`color`：`'primary'｜'accent'｜{ main, dark, light }`；`rim`；`size`（256） | symbol（6 KB） |
 | `royal` | `letter`：A／K／Q／J／10／9（字色固定、描邊與寶石跟 theme）；`color` 覆寫；`size` | symbol |
-| `badge` | `kind`：wild／scatter／free／bonus；`text` 覆寫字；`shape`／`color` 覆寫底板 | symbol |
+| `badge` | `type`：wild／scatter／free／bonus（0.7.0 起；原 `kind` 與 kit 設定撞名）；`text` 覆寫字；`shape`／`color` 覆寫底板 | symbol |
 | `icon` | `name`：crown／gem／chest／coin／key／bell／trophy／star／seven／goldbar／clover／heart；`metal`（chest 的金屬）；`plate`（放進底板） | symbol |
 | `frame` | `level` 1～3（銅／銀／金；2 級角釘、3 級寶石）；`metal` 覆寫 | symbol |
 | `reel_bg` | `cols`、`rows`（1～8）、`cell`（120）、`gap`（6） | ui（8 KB） |
@@ -36,18 +36,41 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 | `win_banner` | 🎞️ `tier`：big／mega／super；`text` 覆寫；6 格（放射光一循環轉 30°＋閃光） | fx（12 KB／格） |
 | `fg_banner` | `text`（FREE GAMES）、`sub`（例 `×10`） | fx |
 | `coin` | 🎞️ `size`（64）；6 格翻轉 | fx |
+| `cannon` | `level` 1～5（1 單管銀、2 雙管、3 三管、4 加側翼、5 加光環）；`size`＝高（140）；砲管朝上，`meta.anchor`＝底座圓心（旋轉中心） | symbol |
+| `bullet` | `size`（32）、`color` 覆寫 | symbol |
+| `net` | 🎞️ 一次性（`loop:false`）6 格：張開＋淡出，最後一格＝t＝1；`size`（160）、`color` | fx |
+| `bead` | `size`（60）、`color` | symbol |
+| `lock` | 🎞️ 循環 4 格：四個角括號轉 90°＋中心脈動；`size`（120）、`color` | fx |
 
-🎞️ 動畫 kind：`asset()` 回 `{ svg（第 0 格）, frames, meta.frames }`；`frames` 參數改格數；`assetPhase(kind, spec, t)` 取任意相位。
-後續（M7）：`cannon`、`bullet`、`net`、`bead`、`lock`、海底背景。
+🎞️ 動畫 kind：`asset()` 回 `{ svg（第 0 格）, frames, meta.frames, meta.loop }`；`frames` 參數改格數；`assetPhase(kind, spec, t)` 取任意相位。
+海底背景用 `bg`（`motif: 'sea'`）；魚種本身走 `creature()`。
+
+## 產生器（kit.json）
+
+```json
+{ "theme": "royal-gold", "profile": "texture",
+  "assets": { "sym_AA": { "kind": "royal", "letter": "A" }, "win_big": { "kind": "win_banner", "tier": "big" } } }
+```
+
+```bash
+node gamekit.mjs --config kit.json --out art/            # art/<別名>.svg；動畫另有 <別名>_<i>.svg；kit-manifest.json（尺寸、錨點、格數）
+node gamekit.mjs --config kit.json --list                # 別名 寬x高 [×格數]
+```
+
+- 範例：`assets/kit.slot.example.json`（一款老虎機整套 31 個別名）、`assets/kit.fish.example.json`（魚機 17 個）
+- **ark-web-game `wg_pack_assets`（0.13.0 起）**：`assets.yaml` 的 `sources.art.generator` 指到 `kit.json` 就會呼叫本產生器（同一個 skills 根目錄下找 `ark-svg-animation`），再照常轉 WebP、打包
+- 壞設定（空的 assets、未知 kind、參數錯、`--only` 指到不存在的別名）一律 rc＝2 並列出是哪個別名
 
 ## 覆蓋率（`COVERAGE`）
 
-aidev 兩款老虎機的素材別名對照 kind（`verify_svg` 每次都跑）：
+aidev 兩款老虎機＋兩款魚機的素材別名對照 kind（`verify_svg` 每次都跑）：
 
 | 遊戲 | 別名數 | kit 產得出 | 專屬（不收） |
 |---|---|---|---|
 | 神燈寶藏 magic-lamp | 34 | 31 | 3：Logo、魔毯、彎刀 |
 | 豬來蓋福 huffnpuff | 45 | 27 | 18：Logo、三隻豬角色、狼演出、房屋／房間、磚木稻草、工具箱、捲尺 |
+| 魚機 fish | 7 | 6（砲台 3 級、子彈、網、背景） | 1：魚種（走 `creature()`） |
+| 貓魚 cat-fish | 7 | 3（砲台、子彈、寶珠） | 4：主角貓、對手、南瓜、魚種 |
 
 **專屬的原則**：角色、Logo、題材物件留在各專案（換一款遊戲就不通用）；kit 只收「每款老虎機都有」的東西。
 
@@ -78,6 +101,7 @@ aidev 兩款老虎機的素材別名對照 kind（`verify_svg` 每次都跑）�
 
 1. `gamekit.mjs` 的 `KINDS` 加 `{ category, build(spec, theme) → { w, h, L?, parts, alias, anchor? } }` —— 顏色一律取自 theme token
 2. `SAMPLES` 加涵蓋所有選項的樣本（沒有樣本＝verify 紅）
-3. 動畫 kind：`anim: { frames }`，`build(spec, theme, t)` 只用相位 t，t＝1 必須回到 t＝0（旋轉零件轉到對稱角；🔴 不要先壓扁再旋轉 —— 壓扁的放射光轉 30° 就不再對稱）
+3. 動畫 kind：`anim: { frames, loop? }`，`build(spec, theme, t)` 只用相位 t；循環的 t＝1 必須回到 t＝0（旋轉零件轉到對稱角；🔴 不要先壓扁再旋轉）。
+   接縫檢查一律比 **flat**（座標已烘焙）：texture 的旋轉藏在 `transform` 屬性裡，數字比對會兩頭錯（壓扁光看不出跳、對稱框卻被當成跳）
 4. `node verify_svg.mjs`、`ARK_SVGA_PIXI=… node pixi_check.mjs`、`node --test tests/*.test.mjs` 全綠；`gamekit.mjs preview` 目視
 5. 造型改變升 minor

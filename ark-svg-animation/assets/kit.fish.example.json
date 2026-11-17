@@ -1,0 +1,22 @@
+{
+  "theme": "deep-sea",
+  "assets": {
+    "bg_sea": { "kind": "bg", "motif": "sea", "w": 720, "h": 1280 },
+    "cannon_1": { "kind": "cannon", "level": 1 },
+    "cannon_2": { "kind": "cannon", "level": 2 },
+    "cannon_3": { "kind": "cannon", "level": 3 },
+    "cannon_4": { "kind": "cannon", "level": 4 },
+    "cannon_5": { "kind": "cannon", "level": 5 },
+    "bullet": { "kind": "bullet" },
+    "net": { "kind": "net" },
+    "bead": { "kind": "bead" },
+    "lock": { "kind": "lock" },
+    "fx_coin": { "kind": "coin", "size": 48 },
+    "jp_Grand": { "kind": "jp_plate", "tier": "Grand" },
+    "jp_Major": { "kind": "jp_plate", "tier": "Major" },
+    "jp_Minor": { "kind": "jp_plate", "tier": "Minor" },
+    "jp_Mini": { "kind": "jp_plate", "tier": "Mini" },
+    "win_big": { "kind": "win_banner", "tier": "big" },
+    "ui_panel": { "kind": "panel", "w": 720, "h": 160 }
+  }
+}

@@ -7,6 +7,7 @@
   dir        repo 內的「可出貨素材」資料夾（L2，進 git）：例 data/slot/<slug>/art/、pixi-game-platform/shared/sfx/
   env        環境變數指到的資料夾（舊做法；dir 不存在時才用）
   generator  原創美術產生器（例：games/<game>/art/gen_art.py --out <暫存>，產 SVG）；只在 --regen 或 dir 不存在時執行
+             .py → python、.mjs／.js → node、.json → ark-svg-animation gamekit 的 kit 設定（0.13.0）
 
 直通（pass-through，0.10.0）：
   圖：來源已是 .webp 且這張圖沒有 scale／max_side → 原位元組直接用（不再重壓，出貨位元組＝git 裡的檔）
@@ -68,6 +69,27 @@ def h8(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()[:8]
 
 
+def generator_cmd(gen: pathlib.Path, out: pathlib.Path) -> list[str]:
+    """generator 依副檔名決定怎麼跑（0.13.0）：
+    .py → python；.mjs／.js → node；.json → ark-svg-animation 的 gamekit.mjs --config（同一個 skills 根目錄下）。"""
+    if not gen.is_file():
+        die(f"產生器不存在：{gen} → 檢查 assets.yaml 的 sources.<名稱>.generator 路徑（相對於 assets.yaml）")
+    suf = gen.suffix.lower()
+    if suf == ".py":
+        return [sys.executable, str(gen), "--out", str(out)]
+    node = shutil.which("node")
+    if suf in (".mjs", ".js", ".json") and not node:
+        die(f"產生器 {gen.name} 需要 node（≥ 18）→ 安裝 node 或改用 .py 產生器")
+    if suf in (".mjs", ".js"):
+        return [node, str(gen), "--out", str(out)]
+    if suf == ".json":
+        kit = SCRIPTS.parent.parent / "ark-svg-animation" / "scripts" / "gamekit.mjs"
+        if not kit.is_file():
+            die(f"kit 設定 {gen.name} 需要 ark-svg-animation（找不到 {kit}）→ skills_sync.py install ark-svg-animation")
+        return [node, str(kit), "--config", str(gen), "--out", str(out)]
+    die(f"不支援的產生器副檔名「{suf}」：{gen.name} → 用 .py／.mjs／.js，或 ark-svg-animation 的 kit 設定 .json")
+
+
 class Sources:
     def __init__(self, cfg: dict, base: pathlib.Path, sets: dict[str, str], tmp: pathlib.Path, regen: set[str] | None = None):
         regen = regen or set()
@@ -95,7 +117,7 @@ class Sources:
             elif s.get("generator"):
                 gen = (base / s["generator"]).resolve()
                 out = tmp / f"gen-{name}"
-                r = subprocess.run([sys.executable, str(gen), "--out", str(out)], capture_output=True, text=True, encoding="utf-8")
+                r = subprocess.run(generator_cmd(gen, out), capture_output=True, text=True, encoding="utf-8")
                 if r.returncode != 0:
                     die(f"產生器失敗：{gen}", 2, stderr=r.stderr[-1500:])
                 roots.append(out)

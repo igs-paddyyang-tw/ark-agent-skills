@@ -195,7 +195,10 @@ export function verifyKit({ kinds = Object.keys(KINDS), themes = Object.keys(THE
           .forEach((m) => problems.push(`${tag}${out.frames ? `[${i}]` : ''} ${m}`)));
         if (out.frames) {
           if (new Set(out.frames.map((x) => /viewBox="([^"]+)"/.exec(x)?.[1])).size > 1) problems.push(`${tag} 各格 viewBox 不同 → 動畫格尺寸要固定`);
-          problems.push(...checkSeam(out.frames, phase(kind, full, 1)).map((m) => `${tag} ${m}`));
+          // 接縫一律比 flat（座標已烘焙）：texture 的旋轉藏在 transform 屬性裡，數字比對會兩頭錯 ——
+          // 壓扁的放射光轉 30° 看不出跳（M6）、對稱的鎖定框轉 90° 卻被當成跳（M7）
+          if (out.meta.loop !== false) { if (profile === 'flat') problems.push(...checkSeam(out.frames, phase(kind, full, 1)).map((m) => `${tag} ${m}`)); }
+          else if (new Set(out.frames).size < out.frames.length) problems.push(`${tag} 一次性動畫有重複的格 → 相位要從 t＝0 走到 t＝1`);
         }
         if (profile === 'texture') { all.push(...frames); byTheme.add(out.svg); }
       }

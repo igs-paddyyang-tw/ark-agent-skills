@@ -55,3 +55,10 @@ asset('plate', { shape: 'circle', profile: 'flat' });
 ```
 
 flat 沒有漸層、裁切花紋與 transform（Pixi 8.6.6 不支援）；限制與驗證方式見 `references/gamekit.md`。
+
+## 建置期整套產出（0.7.0 起）
+
+寫一份 `kit.json`（範例 `assets/kit.slot.example.json`／`kit.fish.example.json`），兩種接法：
+
+1. 直接跑：`node gamekit.mjs --config kit.json --out art/`
+2. ark-web-game：`assets.yaml` 的 `sources.art.generator: art/kit.json` → `wg_pack_assets` 自動呼叫並轉 WebP（需要 ark-web-game ≥ 0.13.0）

@@ -32,7 +32,7 @@ test('動畫 kind：格數、各格同尺寸、texture／flat 接縫都過；相
 
 test('參數守門：未知選項報錯並列出可用值', () => {
   assert.throws(() => asset('royal', { letter: 'Z' }), /A／K／Q／J／10／9/);
-  assert.throws(() => asset('badge', { kind: 'mystery' }), /wild/);
+  assert.throws(() => asset('badge', { type: 'mystery' }), /wild/);
   assert.throws(() => asset('icon', { name: 'sword' }), /crown/);
   assert.throws(() => asset('frame', { level: 4 }), /1／2／3/);
   assert.throws(() => asset('button', { icon: 'menu' }), /spin/);
@@ -52,7 +52,7 @@ test('flat 光暈：放射淡出改疊多層同心圓（不是一整片實心圓
 });
 
 test('符號類全部 256 基準可縮放：size 改變 → 尺寸跟著變、內容等比', () => {
-  for (const [kind, spec] of [['royal', { letter: 'K' }], ['badge', { kind: 'wild' }], ['icon', { name: 'bell' }], ['frame', { level: 3 }], ['button', { icon: 'plus' }]]) {
+  for (const [kind, spec] of [['royal', { letter: 'K' }], ['badge', { type: 'wild' }], ['icon', { name: 'bell' }], ['frame', { level: 3 }], ['button', { icon: 'plus' }]]) {
     const a = asset(kind, { ...spec, size: 128 });
     assert.deepEqual([a.meta.w, a.meta.h], [128, 128], kind);
     assert.match(a.svg, /viewBox="0 0 128 128"/);

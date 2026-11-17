@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-17 (ark-svg-animation 0.7.0 —— gamekit M7：魚機元素、kit.json 產生器；ark-web-game 0.13.0 —— generator 依副檔名)
+
+> 計畫 kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md` M7。
+
+- **ark-svg-animation 0.7.0**
+  - 魚機 kind：`cannon`（1～5 級，`meta.anchor`＝底座圓心）、`bullet`、`net`（一次性動畫：`loop:false`，第 i 格 t＝i/(n－1)）、`bead`、`lock`（循環）；`COVERAGE` 加 aidev 魚機／貓魚（fish 6/6、cat-fish 3，魚種標記走 `creature()`）
+  - 產生器 CLI：`gamekit.mjs --config kit.json --out <dir> [--only] [--list] [--profile]` → `<別名>.svg`、動畫格 `<別名>_<i>.svg`、`kit-manifest.json`；壞設定 rc＝2 並指出別名；範例 `assets/kit.slot.example.json`（31 個）、`kit.fish.example.json`（17 個）
+  - 🔴 接縫檢查一律比 flat：M7 的鎖定框（4 重對稱轉 90°）在 texture 被誤判成跳 —— 和 M6 的壓扁放射光（texture 看不出跳）是同一個盲點的兩面：texture 的旋轉藏在 `transform` 屬性
+  - 🔴 破壞性（experimental）：`badge` 參數 `kind` 改名 `type`（和 kit 設定的 `kind` 撞名，badge 根本沒辦法從 kit.json 設定）；傳舊名會報錯說明
+  - 一次性動畫改驗「各格都不同」；測試 40 項；pixi_check 350 張全過
+- **ark-web-game 0.13.0**：`wg_pack_assets` 的 generator 依副檔名 —— `.py` → python、`.mjs`／`.js` → node、`.json` → 同一 skills 根目錄下 ark-svg-animation 的 `gamekit.mjs --config`；產生器不存在／副檔名不支援／缺 node 時明說怎麼改；測試 17 項（反證：缺別名、不存在、不支援）
+
 ## 2026-11-16 (ark-svg-animation 0.6.0 —— gamekit M6：老虎機符號、介面、共用演出物（15 種 kind）)
 
 > 計畫 kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md` M6。造型全為原創通用物件；aidev 兩款的角色、Logo、題材物件不收。
