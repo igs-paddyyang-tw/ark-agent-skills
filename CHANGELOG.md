@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-17 (ark-wiki-engine 3.3.0 —— wiki_query L3 不再讓種子輸給鄰居)
+
+> fish-bot 回報（kiro-cli `docs/issues/2026-11-13-from-fish-bot-ark-wiki-engine-ranking.md`）：查「逐發對照彙整」，BM25 第 2 名的正解 `parity-testing` 開全部層後掉出前 6，被 knowledge-map 等樞紐頁蓋過。
+
+- 根因：`layer3()` 把種子（L1 前 3）排除在 L3 外 → 種子只拿一層 RRF 分數，鄰居（L1 有名次就）拿兩層；k=60 把名次差壓平，兩層必勝一層 → 等於懲罰 `related`／`[[ ]]` 寫得認真的頁
+- 修：種子也進 L3、權重高於所有鄰居（依原名次）；種子清單先去重（同頁可能同時在 L0、L1）—— 採 fish-bot 建議 1️⃣（改動最小）
+- 回歸測試 `test_query_l3_seeds.py`：A、B 強命中＋樞紐頁弱命中但互連 → A、B 必須在前；反證測試直接換回舊 `layer3` → 樞紐頁超車（另以 3.2.0 原檔實跑同 fixture：`hub1, hub2, a, b` vs 修後 `a, b, c, hub1, hub2`）
+- fish-bot 實資料驗收：前 3 名與純 BM25 相同（`fish-ai-dev-sop`、`parity-testing`、`fish-quicktest`），鄰居排在其後（召回保留）
+- 測試 132 項（全套）
+
 ## 2026-11-17 (ark-svg-animation 0.11.0 —— scene：關鍵字／參考圖取色 → 原創遊戲背景)
 
 > Paddy：「遊戲背景參考關鍵字或上網找素材，轉成自創的 SVG 背景」；回應 aidev 回饋「通用 bg 沒題材感」。

@@ -171,7 +171,7 @@ def layer1(query: str, postings: dict | None, pages: dict[str, dict] | None,
 
 def layer3(seed_pids: list[str], graph: dict | None,
            wiki_dir: Path, metadata: dict[str, dict]) -> list[tuple[str, float]]:
-    """圖譜擴散：seed 的 1-hop 出/入鄰居。graph.json 缺就現場解析。"""
+    """圖譜擴散：種子（依原名次，排最前）＋ seed 的 1-hop 出/入鄰居。graph.json 缺就現場解析。"""
     if graph is None:
         out: dict[str, list[str]] = {}
         inn: dict[str, list[str]] = {p: [] for p in metadata}
@@ -184,13 +184,16 @@ def layer3(seed_pids: list[str], graph: dict | None,
             for r in resolved:
                 inn.setdefault(r, []).append(pid)
         graph = {"out": out, "in": inn}
-    neigh: dict[str, float] = {}
+    # 🔴 3.3.0（fish-bot 回報）：種子自己也進 L3，且排在所有鄰居前面。
+    # 舊版種子不進 L3 → 種子只拿 L1 一層 RRF 分數，鄰居（L1 有名次就）拿兩層，k=60 把名次差壓平，
+    # 兩層必勝一層 → 最相關的頁輸給樞紐頁（knowledge-map 等），等於懲罰 related 寫得認真的頁。
+    out_l3: dict[str, float] = {pid: 2.0 + 1.0 / (rank + 1) for rank, pid in enumerate(seed_pids)}
     for rank, pid in enumerate(seed_pids):
         w = 1.0 / (rank + 1)
         for nb in (graph.get("out", {}).get(pid, []) + graph.get("in", {}).get(pid, [])):
-            if nb not in seed_pids:
-                neigh[nb] = max(neigh.get(nb, 0.0), w)
-    return sorted(neigh.items(), key=lambda kv: -kv[1])
+            if nb not in out_l3 or out_l3[nb] < 2.0:
+                out_l3[nb] = max(out_l3.get(nb, 0.0), w)
+    return sorted(out_l3.items(), key=lambda kv: -kv[1])
 
 
 def fallback_layer(query: str, wiki_dir: Path, metadata: dict[str, dict],
@@ -306,7 +309,7 @@ def run_query(wiki_dir: Path, query: str, args, domain: str = "") -> tuple[list[
     if "L2" in want_layers:
         skipped["L2"] = "no_embeddings" if not idx["embeddings"] else "not_implemented"
     if "L3" in want_layers:
-        seeds = [p for p, _ in (lr.get("L0", []) + lr.get("L1", []))][:3]
+        seeds = list(dict.fromkeys(p for p, _ in (lr.get("L0", []) + lr.get("L1", []))))[:3]   # 去重（同頁可能同時在 L0、L1）
         l3 = layer3(seeds, idx["graph"], wiki_dir, metadata) if seeds else []
         if l3:
             lr["L3"] = l3

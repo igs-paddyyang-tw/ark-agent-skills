@@ -93,7 +93,7 @@ python -m pytest ark-agent-bot-builder/scripts/tests/ -q   # scaffolder 產出�
 | `ark-html-dashboard` | 📝 指示 | 通用 | 產出 Self-contained 互動式 HTML 數據儀錶板，使用 Chart.js 圖表、 KPI 卡片、篩選器、排序表格，所有資料內嵌於單一 HTML 檔案。 |
 | `ark-html-report` | 📝 指示 | 通用 | 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。 |
 | `ark-pixel-animation` | ⚙️ 執行 | 🎮 遊戲 | 產出復古遊戲像素動畫 executor（單檔 HTML，Canvas 2D 或 PixiJS）：低解析邏輯畫布、固定色盤、整數倍放大、8–12 FPS 點陣節奏， 角色待機／集氣／施法／收招等循環動作… |
-| `ark-svg-animation` | ⚙️ 執行 | 🎮 遊戲 | 原創向量生物逐格動畫產生器（executor，零相依 ESM，瀏覽器與 node 共用）：依「體型＋物種名」產生俯視或側視的游動、被捕動畫 （SVG 字串陣列＋meta：viewBox、錨點、身體框、… |
+| `ark-svg-animation` | ⚙️ 執行 | 🎮 遊戲 | 原創遊戲向量美術產生器（executor，零相依 ESM，瀏覽器與 node 共用）：① 生物逐格動畫 —— 依「體型＋物種名」產生游動、被捕動畫 （SVG 字串陣列＋meta：viewBox、錨點、… |
 
 ## ⑤ 文件輸出 Document
 

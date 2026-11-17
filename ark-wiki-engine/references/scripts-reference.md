@@ -101,6 +101,8 @@ error：缺必填欄位（含 `trust`）、`llm-distilled` 未帶 `approved`、
 `approved:false` 卻非 `seedling`、tag 不在白名單、斷裂 wikilink。
 warning：孤立頁面、建議欄位、非法枚舉值、`seedling` 逾期。
 
+> **L3 圖譜擴散（3.3.0）**：種子（L0＋L1 去重後前 3 名）自己也進 L3 並排在所有鄰居前面，鄰居依種子名次加權；L1 的相對順序因此保留，鄰居只補召回、不會蓋過種子（舊版種子不進 L3，樞紐頁拿兩層 RRF 分數超車）。
+
 > **孤立頁判定（3.2.0）**：別頁內文有 `[[我]]`，**或** frontmatter `related:` 與任何既有頁有關聯（雙向：我宣告它或它宣告我），就不算孤立。
 > `related: [overview]`（ingest 預設值）不算、指向不存在頁的 related 不算、自我宣告不算 —— 否則孤立偵測會被預設值整個關掉。
 
