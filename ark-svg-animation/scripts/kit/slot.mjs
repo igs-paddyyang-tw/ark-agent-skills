@@ -15,15 +15,16 @@ const royal = {
     if (!ROYAL[ch]) throw new Error(`royal：letter 只能是 ${ROYAL_ORDER.join('／')}（收到「${ch}」）`);
     const col = shade(s.color ?? ROYAL[ch]), size = s.size ?? 256;
     const fs = fitSize(measure(ch, { spacing: 1.5 }), 150, 196);
-    return {
-      w: size, h: size, L: size / 256, alias: s.alias ?? `sym_${ch}`,
-      parts: [
-        { k: 'circle', cx: 128, cy: 132, r: 112, fill: glowFill(col.light, 0.45) },
-        { k: 'text', str: ch, x: 128, y: 136, size: fs, spacing: 1.5, fill: tri(col), ink: th.ink, outline: fs / 14 },
-        { k: 'polygon', pts: [[128, 18], [142, 34], [128, 50], [114, 34]], fill: tri(th.accent), stroke: th.ink, sw: 3 },
-        sparkle(206, 200, 16, WHITE, 0.85),
-      ],
-    };
+    const letter = [
+      { k: 'text', str: ch, x: 128, y: 136, size: fs, spacing: 1.5, fill: tri(col), ink: th.ink, outline: fs / 14 },
+      { k: 'polygon', pts: [[128, 18], [142, 34], [128, 50], [114, 34]], fill: tri(th.accent), stroke: th.ink, sw: 3 },
+      sparkle(206, 200, 16, WHITE, 0.85),
+    ];
+    // plate：放進底板（0.8.0；整組符號同一種底板時用 —— 例：全部 arch）
+    const parts = s.plate
+      ? [...plateParts(th, s.plate, s.plateColor ?? 'primary'), { k: 'g', s: 0.8, ox: 128, oy: 140, children: letter }]
+      : [{ k: 'circle', cx: 128, cy: 132, r: 112, fill: glowFill(col.light, 0.45) }, ...letter];
+    return { w: size, h: size, L: size / 256, alias: s.alias ?? `sym_${ch}`, parts };
   },
 };
 
@@ -73,12 +74,15 @@ const ICONS = {
     sparkle(104, 76, 14, WHITE, 0.9),
   ],
   chest: (th, s) => {
-    const m = s.metal ?? 'gold';
+    // metal：寶箱材質（0.8.0 起改變箱體，不只是箱帶）—— gold 金箱、silver 銀箱、bronze 木箱；不給＝theme 主色箱＋金箱帶
+    const MAT = { gold: [th.metal.gold[1][1], 'bronze'], silver: [th.metal.silver[1][1], 'gold'], bronze: ['#8a5a2b', 'bronze'] };
+    if (s.metal !== undefined && !MAT[s.metal]) throw new Error('icon chest：metal 只能是 gold／silver／bronze');
+    const body = s.metal ? shade(MAT[s.metal][0]) : th.primary, strap = s.metal ? MAT[s.metal][1] : 'gold';
     return [
-      { k: 'path', d: [['M', 44, 116], ['L', 44, 96], ['Q', 44, 52, 128, 52], ['Q', 212, 52, 212, 96], ['L', 212, 116], ['Z']], fill: tri(th.primary), stroke: th.ink, sw: 6 },
-      { k: 'path', d: rr(40, 112, 176, 100, 10), fill: tri(shade(th.primary.dark)), stroke: th.ink, sw: 6 },
-      ...[60, 180].map((x) => ({ k: 'path', d: rr(x, 54, 18, 158, 4), fill: metal(th, m), stroke: th.ink, sw: 3 })),
-      { k: 'path', d: rr(108, 100, 40, 48, 8), fill: metal(th, m), stroke: th.ink, sw: 4 },
+      { k: 'path', d: [['M', 44, 116], ['L', 44, 96], ['Q', 44, 52, 128, 52], ['Q', 212, 52, 212, 96], ['L', 212, 116], ['Z']], fill: tri(body), stroke: th.ink, sw: 6 },
+      { k: 'path', d: rr(40, 112, 176, 100, 10), fill: tri(shade(body.dark)), stroke: th.ink, sw: 6 },
+      ...[60, 180].map((x) => ({ k: 'path', d: rr(x, 54, 18, 158, 4), fill: metal(th, strap), stroke: th.ink, sw: 3 })),
+      { k: 'path', d: rr(108, 100, 40, 48, 8), fill: metal(th, strap), stroke: th.ink, sw: 4 },
       { k: 'circle', cx: 128, cy: 120, r: 6, fill: th.ink },
       { k: 'polygon', pts: [[124, 122], [132, 122], [134, 138], [122, 138]], fill: th.ink },
       highlight(100, 72, 40, 10, 0.3),
@@ -194,8 +198,8 @@ const frame = {
 
 export const SLOT_KINDS = { royal, badge, icon, frame };
 export const SLOT_SAMPLES = {
-  royal: ROYAL_ORDER.map((letter) => ({ letter })),
+  royal: [...ROYAL_ORDER.map((letter) => ({ letter })), { letter: 'K', plate: 'arch' }, { letter: '10', plate: 'circle', plateColor: 'accent' }],
   badge: Object.keys(BADGE).map((type) => ({ type })),
-  icon: [...ICON_NAMES.map((name) => ({ name })), { name: 'chest', metal: 'silver' }, { name: 'key', plate: 'circle' }],
+  icon: [...ICON_NAMES.map((name) => ({ name })), ...['gold', 'silver', 'bronze'].map((metal) => ({ name: 'chest', metal })), { name: 'key', plate: 'circle' }],
   frame: [{ level: 1 }, { level: 2 }, { level: 3 }],
 };

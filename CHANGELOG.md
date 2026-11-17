@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-17 (ark-svg-animation 0.8.0 —— 對照 aidev 神燈寶藏補選項：寶箱材質、符號底板、執行期文字空槽)
+
+> 計畫 M8 第一步：用 kit 重產神燈寶藏一整套，和 aidev `gen_art.py` 並排（31 個非專屬別名）。看出三個缺口，補上後兩邊逐項對得上（只剩 Logo、魔毯、彎刀是專屬）。
+
+- 寶箱 `metal` 原本只改箱帶 → 改箱體（gold 金箱、silver 銀箱、bronze 木箱）；不給時照舊（theme 主色＋金箱帶）
+- `royal` 加 `plate`／`plateColor`：aidev 整組符號都放同一種底板，kit 原本只有 icon 能放
+- 執行期文字空槽：`jp_plate` `value: ''`（級別帶＋空金額槽，彩金數字由遊戲疊）、`fg_banner` `text: ''`（多語系時字由遊戲疊）—— aidev 兩者都是空槽，kit 原本把字燒死
+- `assets/kit.slot.example.json`：符號改全 arch 底板、JP 改空槽；測試 43 項（反證：不支援材質報錯、空槽沒有字、有金額才兩組字）
+
 ## 2026-11-17 (ark-svg-animation 0.7.0 —— gamekit M7：魚機元素、kit.json 產生器；ark-web-game 0.13.0 —— generator 依副檔名)
 
 > 計畫 kiro-cli `docs/plans/ark-svg-animation-gamekit-plan.md` M7。

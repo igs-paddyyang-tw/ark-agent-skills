@@ -23,18 +23,18 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 |---|---|---|
 | `label` | `text`（必填）、`size` 字高 px（64）、`fill`（`'gold'｜'silver'｜'bronze'`＝金屬漸層，或色碼）、`ink`、`outline`、`spacing` | text（8 KB） |
 | `plate` | `shape`：`arch`／`circle`／`shield`／`diamond`；`color`：`'primary'｜'accent'｜{ main, dark, light }`；`rim`；`size`（256） | symbol（6 KB） |
-| `royal` | `letter`：A／K／Q／J／10／9（字色固定、描邊與寶石跟 theme）；`color` 覆寫；`size` | symbol |
+| `royal` | `letter`：A／K／Q／J／10／9（字色固定、描邊與寶石跟 theme）；`color` 覆寫；`plate`＋`plateColor`（0.8.0：放進底板）；`size` | symbol |
 | `badge` | `type`：wild／scatter／free／bonus（0.7.0 起；原 `kind` 與 kit 設定撞名）；`text` 覆寫字；`shape`／`color` 覆寫底板 | symbol |
-| `icon` | `name`：crown／gem／chest／coin／key／bell／trophy／star／seven／goldbar／clover／heart；`metal`（chest 的金屬）；`plate`（放進底板） | symbol |
+| `icon` | `name`：crown／gem／chest／coin／key／bell／trophy／star／seven／goldbar／clover／heart；`metal`（chest 材質：gold 金箱／silver 銀箱／bronze 木箱，0.8.0 起改箱體）；`plate`（放進底板） | symbol |
 | `frame` | `level` 1～3（銅／銀／金；2 級角釘、3 級寶石）；`metal` 覆寫 | symbol |
 | `reel_bg` | `cols`、`rows`（1～8）、`cell`（120）、`gap`（6） | ui（8 KB） |
 | `reel_frame` | 同上＋`border`（28）、`metal`；四條邊分開畫（Pixi 不支援挖洞路徑） | ui |
 | `panel` | `w`、`h`、`r` | ui |
 | `button` | `icon`：spin／auto／plus／minus／turbo／stop；`size`（spin 200、其他 120） | ui |
 | `bg` | `motif`：rays／stars／sea；`w`、`h`（720×1280） | bg（16 KB） |
-| `jp_plate` | `tier`：Grand／Major／Minor／Mini（色取 theme.jp）；`value`（有給就兩行：級別＋金額） | ui |
+| `jp_plate` | `tier`：Grand／Major／Minor／Mini（色取 theme.jp）；`value`（有給就兩行：級別＋金額；`''`＝級別帶＋空金額槽，數字由遊戲執行期疊上） | ui |
 | `win_banner` | 🎞️ `tier`：big／mega／super；`text` 覆寫；6 格（放射光一循環轉 30°＋閃光） | fx（12 KB／格） |
-| `fg_banner` | `text`（FREE GAMES）、`sub`（例 `×10`） | fx |
+| `fg_banner` | `text`（FREE GAMES；`''`＝空橫幅，字由遊戲疊）、`sub`（例 `×10`） | fx |
 | `coin` | 🎞️ `size`（64）；6 格翻轉 | fx |
 | `cannon` | `level` 1～5（1 單管銀、2 雙管、3 三管、4 加側翼、5 加光環）；`size`＝高（140）；砲管朝上，`meta.anchor`＝底座圓心（旋轉中心） | symbol |
 | `bullet` | `size`（32）、`color` 覆寫 | symbol |

@@ -17,7 +17,16 @@ const jp_plate = {
       { k: 'path', d: rr(10, 10, w - 20, h - 20, h * 0.22), fill: 'none', stroke: metal(th, 'gold'), sw: 4 },
       { k: 'ellipse', cx: w / 2, cy: h * 0.22, rx: w * 0.38, ry: h * 0.09, fill: WHITE, op: 0.25 },
     ];
-    if (s.value !== undefined) {
+    if (s.value === '') {
+      // 空金額槽（0.8.0）：上方級別帶＋下方深色槽，數字由遊戲執行期疊上去（aidev 的做法）
+      parts.length = 0;
+      parts.push(
+        { k: 'path', d: rr(3, 3, w - 6, h - 6, h * 0.24), fill: th.bg[1], stroke: metal(th, 'gold'), sw: 6 },
+        { k: 'path', d: rr(12, 10, w - 24, h * 0.34, h * 0.14), fill: { lg: [[0, col.light], [0.5, col.main], [1, col.dark]], x1: 0, y1: 0, x2: 0, y2: 1 }, stroke: th.ink, sw: 3 },
+        { k: 'text', str: label, x: w / 2, y: 10 + h * 0.17, size: h * 0.2, fill: WHITE, ink: th.ink, outline: 2.5 },
+        { k: 'path', d: rr(16, h * 0.5, w - 32, h * 0.38, h * 0.1), fill: '#000000', op: 0.35 },
+      );
+    } else if (s.value !== undefined) {
       const v = String(s.value);
       parts.push({ k: 'text', str: label, x: w / 2, y: h * 0.27, size: h * 0.15, fill: WHITE, ink: th.ink, outline: 2 },
         { k: 'text', str: v, x: w / 2, y: h * 0.63, size: fitSize(measure(v), h * 0.3, w * 0.78), fill: metal(th, 'gold'), ink: th.ink, outline: 3.5 });
@@ -73,11 +82,12 @@ const fg_banner = {
   category: 'fx',
   build(s, th) {
     const w = s.w ?? 760, h = s.h ?? 220, text = s.text ?? 'FREE GAMES', cx = w / 2;
-    const fs = fitSize(measure(text), h * 0.26, w * 0.66);
+    const fs = text ? fitSize(measure(text), h * 0.26, w * 0.66) : 0;
     const parts = [
       { k: 'ellipse', cx, cy: h / 2, rx: w * 0.46, ry: h * 0.46, fill: glowFill(th.primary.light, 0.45) },
       ...ribbon(w, h, th, th.primary),
-      { k: 'text', str: text, x: cx, y: h * 0.51, size: fs, fill: metal(th, 'gold'), ink: th.ink, outline: fs / 10 },
+      // text：''＝空橫幅（0.8.0；字由遊戲執行期疊上，例：多語系）
+      ...(text ? [{ k: 'text', str: text, x: cx, y: h * 0.51, size: fs, fill: metal(th, 'gold'), ink: th.ink, outline: fs / 10 }] : []),
     ];
     if (s.sub !== undefined) {
       const sub = String(s.sub), ss = fitSize(measure(sub), h * 0.2, w * 0.4);
@@ -111,8 +121,8 @@ const coin = {
 
 export const FX_KINDS = { jp_plate, win_banner, fg_banner, coin };
 export const FX_SAMPLES = {
-  jp_plate: [...TIERS.map((tier) => ({ tier })), { tier: 'Major', value: '12,345.00' }],
+  jp_plate: [...TIERS.map((tier) => ({ tier })), { tier: 'Major', value: '12,345.00' }, { tier: 'Grand', value: '' }],
   win_banner: Object.keys(WIN).map((tier) => ({ tier })),
-  fg_banner: [{}, { sub: '×10' }],
+  fg_banner: [{}, { sub: '×10' }, { text: '' }],
   coin: [{}, { size: 96 }],
 };

@@ -2,7 +2,7 @@
 name: ark-svg-animation
 description: |
   原創遊戲向量美術產生器（executor，零相依 ESM，瀏覽器與 node 共用）：① 生物逐格動畫 —— 依「體型＋物種名」產生游動、被捕動畫
-  （SVG 字串陣列＋meta：viewBox、錨點、身體框、碰撞參考半徑）；② gamekit —— 魚機／slot 必要圖元素（0.6.0：描邊字、底板、撲克符號、WILD／SCATTER 徽章、12 種通用物件、符號框、轉輪底／框、面板、圓鈕、背景、JP 牌、Win 橫幅、FG 橫幅、金幣；魚機砲台 1～5 級、子彈、網、寶珠、鎖定框；kit.json 產生器（ark-web-game wg_pack_assets 直接呼叫）；
+  （SVG 字串陣列＋meta：viewBox、錨點、身體框、碰撞參考半徑）；② gamekit —— 魚機／slot 必要圖元素（0.8.0：描邊字、底板、撲克符號、WILD／SCATTER 徽章、12 種通用物件、符號框、轉輪底／框、面板、圓鈕、背景、JP 牌、Win 橫幅、FG 橫幅、金幣；魚機砲台 1～5 級、子彈、網、寶珠、鎖定框；kit.json 產生器（ark-web-game wg_pack_assets 直接呼叫）；
   主題 theme、原創向量字形轉 path、flat profile 給 PixiJS Graphics.svg() 直接解析）。同參數逐位元組相同；verify_svg.mjs 守門
   （確定性、安全、體積、循環接縫、flat 規則），pixi_check.mjs 用真的 PixiJS 比對形狀。
   用途：遊戲素材缺圖補位、骨架（Spine）魚的替代、新遊戲的原創 UI／符號美術、素材管線未產出時的執行期補位。
@@ -18,8 +18,8 @@ metadata:
   category: view
   form: executor
   domain: game
-  version: "0.7.0"
-  updated: 2026-11-16
+  version: "0.8.0"
+  updated: 2026-11-17
   outputs:
     - { format: data, audience: ai }
     - { format: png, audience: human }
@@ -121,6 +121,7 @@ node --test $S/tests/*.test.mjs
 
 | 版本 | 日期 | 變更 |
 |---|---|---|
+| 0.8.0 | 2026-11-17 | 對照 aidev 神燈寶藏並排補選項：寶箱 `metal` 改箱體（金／銀／木）、`royal` 的 `plate`／`plateColor`（整組符號同底板）、執行期文字空槽（`jp_plate` `value: ''`、`fg_banner` `text: ''`）；slot 範例改全 arch 底板＋JP 空槽；測試 43 項 |
 | 0.7.0 | 2026-11-17 | gamekit M7：魚機 `cannon`（1～5 級）、`bullet`、`net`（一次性動畫）、`bead`、`lock`（循環）；產生器 CLI `--config kit.json`（wg_pack_assets 0.13.0 直接呼叫）＋ `assets/` 兩份範例；接縫一律比 flat；🔴 `badge` 參數 `kind` 改名 `type`；測試 40 項 |
 | 0.6.0 | 2026-11-16 | gamekit M6：`royal`、`badge`、`icon`（12 種）、`frame`、`reel_bg`、`reel_frame`、`panel`、`button`、`bg`、`jp_plate`、`win_banner`（動畫）、`fg_banner`、`coin`（動畫）；`assetPhase`、`COVERAGE`（aidev 兩款非專屬 100%）；flat 光暈改多層同心；`g` 支援等比縮放；測試 34 項 |
 | 0.5.0 | 2026-11-16 | gamekit M5：核心抽成 `draw.mjs`（生物 texture 輸出逐位元組不變，快照守門）、`flat` profile（PixiJS 8.6.6 `Graphics.svg()` 相容）、原創向量字形 `glyphs.mjs`（A–Z、0–9、符號）、`themes.mjs`（4 組原創配色）、`gamekit.mjs`（`label`、`plate`）、`pixi_check.mjs`；測試 29 項 |
