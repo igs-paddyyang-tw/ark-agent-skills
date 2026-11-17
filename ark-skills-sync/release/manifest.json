@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r47",
-  "commit": "a4309d8",
-  "generated_at": "2026-11-17T13:09:27+08:00",
+  "release": "skills-2026.11-r48",
+  "commit": "4ca00bc",
+  "generated_at": "2026-11-17T17:51:03+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -645,9 +645,9 @@
       "updated": "2026-10-29"
     },
     "ark-wiki-engine": {
-      "version": "3.2.0",
-      "tree_hash": "sha256:d1063353a5f9e1b36d3e18433e5bc1cc9e239f432d965df467167442cab33972",
-      "contract_hash": "sha256:a6676594ec238ced1d28c040c380cb29c660ca914cc5e8bee7c57499ee4e7c13",
+      "version": "3.3.0",
+      "tree_hash": "sha256:380745e077af460cd1a12d3711420d3880850b5a150e8d280940b9168d36dd62",
+      "contract_hash": "sha256:d3053099112dc1dca23597f8c8fec0b6808513f17b0f16cfb6bc1f853c20f52c",
       "status": "active",
       "category": "pipeline",
       "depends_on": [],
@@ -655,7 +655,7 @@
         "mcp-wiki-server",
         "team-mcp.wiki_query"
       ],
-      "updated": "2026-11-10"
+      "updated": "2026-11-17"
     },
     "ark-xlsx-tool": {
       "version": "1.0.1",
