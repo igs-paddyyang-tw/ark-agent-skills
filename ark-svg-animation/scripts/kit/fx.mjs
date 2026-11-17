@@ -164,17 +164,19 @@ const fg_intro = {
 const coin_burst = {
   category: 'fx', anim: { frames: 8, loop: false },
   build(s, th, t = 0) {
+    // 1.0.0（aidev 複驗建議）：改成從中央往四周放射（原本像往下灑、擠在中間且被底邊切掉）；
+    // 位移上限＋重力＋幣徑 ≤ 畫框半寬 → 整段動畫都在框內（測試鎖住）
     const size = s.size ?? 360, n = s.count ?? 14, rnd = mulberry32(fnv1a(`coin_burst:${n}:${s.seed ?? 0}`));
     if (!(n >= 1 && n <= 40)) throw new Error('coin_burst：count 要在 1～40');
-    const g = th.metal.gold, op = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3 * 0.9, parts = [];
+    const g = th.metal.gold, op = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3 * 0.9, parts = [], C = 124, e = 1 - (1 - t) * (1 - t);
     for (let i = 0; i < n; i++) {
-      const ang = ((-150 + 120 * rnd()) * Math.PI) / 180, v = 0.55 + 0.35 * rnd(), r = 9 + 6 * rnd(), spin = 1 + Math.floor(rnd() * 3), ph = rnd();
-      const x = 128 + Math.cos(ang) * v * 150 * t, y = 210 + Math.sin(ang) * v * 260 * t + 230 * t * t;
+      const ang = (2 * Math.PI * (i + 0.6 * rnd())) / n, D = 62 + 30 * rnd(), r = 9 + 5 * rnd(), spin = 1 + Math.floor(rnd() * 3), ph = rnd();
+      const x = 128 + Math.cos(ang) * D * e, y = C + Math.sin(ang) * D * e + 18 * t * t;
       const k = Math.max(0.12, Math.abs(Math.cos(Math.PI * (spin * t + ph))));
       parts.push({ k: 'ellipse', cx: x, cy: y, rx: r * k, ry: r, fill: g[1][1], stroke: g[2][1], sw: 2.5, op },
         { k: 'ellipse', cx: x - r * 0.25 * k, cy: y - r * 0.3, rx: r * 0.35 * k, ry: r * 0.25, fill: WHITE, op: op * 0.7 });
     }
-    parts.unshift({ k: 'circle', cx: 128, cy: 200, r: 60 + 60 * t, fill: glowFill(th.accent.light, 0.6 * (1 - t)) });   // 光暈取 theme（金幣本身固定金色）
+    parts.unshift({ k: 'circle', cx: 128, cy: C, r: 50 + 60 * t, fill: glowFill(th.accent.light, 0.6 * (1 - t)) });   // 光暈取 theme（金幣本身固定金色）
     return { w: size, h: size, L: size / 256, alias: s.alias ?? 'fx_coin_burst', parts };
   },
 };
@@ -185,7 +187,7 @@ const jp_marquee = {
   build(s, th, t = 0) {
     const tier = s.tier ?? 'Grand';
     if (!TIERS.includes(tier)) throw new Error(`jp_marquee：tier 只能是 ${TIERS.join('／')}`);
-    const w = s.w ?? 600, h = s.h ?? 140, col = shade(th.jp[tier]), g = metal(th, 'gold'), step = Math.round(t * 4) % 4;
+    const w = s.w ?? 600, h = s.h ?? 170, col = shade(th.jp[tier]), g = metal(th, 'gold'), step = Math.round(t * 4) % 4;
     const parts = [
       { k: 'path', d: rr(3, 3, w - 6, h - 6, 24), fill: tri(col), stroke: th.ink, sw: 6 },
       { k: 'path', d: rr(14, 14, w - 28, h - 28, 16), fill: 'none', stroke: g, sw: 3 },
@@ -197,11 +199,12 @@ const jp_marquee = {
     for (let i = 3; i >= 1; i--) bulbs.push([9, 20 + i * gapY - gapY / 2]);
     bulbs.forEach(([x, y], i) => {
       const on = (i + step) % 4 === 0;
-      parts.push({ k: 'circle', cx: x, cy: y, r: on ? 6 : 4.5, fill: on ? WHITE : th.accent.dark, stroke: th.ink, sw: 1.5 });
+      parts.push({ k: 'circle', cx: x, cy: y, r: on ? 6.5 : 4.5, fill: on ? WHITE : th.accent.dark });   // 燈泡不描邊（flat 體積；各格結構一致，接縫只比半徑與顏色）
     });
-    parts.push({ k: 'path', d: rr(w * 0.2, h * 0.24, w * 0.6, h * 0.52, 14), fill: '#000000', op: 0.4 },
-      boldText(s.label ?? `${tier.toUpperCase()}`, { x: w * 0.11, y: h / 2, maxSize: h * 0.18, maxW: w * 0.16, fill: WHITE, ink: th.ink }),
-      boldText(s.value ?? '', { x: w / 2, y: h / 2, maxSize: h * 0.36, maxW: w * 0.56, fill: g, ink: th.ink }));
+    // 1.0.0（aidev 複驗建議：級別字太小）：改上下兩列 —— 上排級別字（labelSize 可調）、下排數字槽
+    parts.push(boldText(s.label ?? `${tier.toUpperCase()}`, { x: w / 2, y: h * 0.3, maxSize: s.labelSize ?? h * 0.22, maxW: w * 0.62, fill: WHITE, ink: th.ink }),
+      { k: 'path', d: rr(w * 0.1, h * 0.47, w * 0.8, h * 0.37, 14), fill: '#000000', op: 0.4 },
+      boldText(s.value ?? '', { x: w / 2, y: h * 0.655, maxSize: h * 0.28, maxW: w * 0.74, fill: g, ink: th.ink }));
     return { w, h, alias: s.alias ?? `jp_marquee_${tier}`, parts };
   },
 };

@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-11-17 (ark-svg-animation 1.0.0 —— 轉 active 進列車；aidev 複驗通過＋3 個建議)
+
+> aidev 複驗（kiro-cli `docs/issues/2026-11-17-from-aidev-ark-svg-gamekit-0.10-verify.md`）：上次 3 項品質＋10 個新元素通過，可以 1.0.0；另附 3 個不擋版建議，本版一併處理。
+
+- `royal`：放進同色系底板時字色自動改金（A 紅字配紅底看不清）；使用者指定 `color` 則照用；`color` 給錯型別改成「color 要給色碼字串」（原本 `h.slice is not a function`）
+- `coin_burst`：改從中央往四周放射（原本像往下灑、擠在中間、第 5～7 格被底邊切掉）；位移上限＋重力＋幣徑設計成全程在框內，測試逐格逐枚檢查
+- `jp_marquee`：改上下兩列，級別字放大（預設字高 ≥ 框高 22%，`labelSize` 可調），預設 600×170；燈泡不描邊（flat 最壞情況 23.8 KB，預算 24 KB）
+- 狀態 experimental → **active**；版號照 semver（造型改變升 minor）
+- 測試 62 項；pixi_check 全過
+
 ## 2026-11-17 (ark-wiki-engine 3.3.0 —— wiki_query L3 不再讓種子輸給鄰居)
 
 > fish-bot 回報（kiro-cli `docs/issues/2026-11-13-from-fish-bot-ark-wiki-engine-ranking.md`）：查「逐發對照彙整」，BM25 第 2 名的正解 `parity-testing` 開全部層後掉出前 6，被 knowledge-map 等樞紐頁蓋過。

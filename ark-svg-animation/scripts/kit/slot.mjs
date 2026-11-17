@@ -12,7 +12,16 @@ const royal = {
   build(s, th) {
     const ch = String(s.letter ?? 'A').toUpperCase();
     if (!ROYAL[ch]) throw new Error(`royal：letter 只能是 ${ROYAL_ORDER.join('／')}（收到「${ch}」）`);
-    const col = shade(s.color ?? ROYAL[ch]), size = s.size ?? 256;
+    if (s.color !== undefined && !(typeof s.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(s.color))) throw new Error(`royal：color 要給色碼字串（例 "#e8424f"），收到 ${JSON.stringify(s.color)}`);
+    let col = shade(s.color ?? ROYAL[ch]);
+    const size = s.size ?? 256;
+    // 1.0.0（aidev 複驗建議）：放進底板且字色與底板同色系（RGB 距離小）→ 自動改金字，避免 A 在紅底上看不清；指定 color 時尊重使用者
+    if (s.plate && s.color === undefined) {
+      const pc = typeof s.plateColor === 'object' ? s.plateColor : th[s.plateColor ?? 'primary'];
+      const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+      const dist = rgb(col.main).reduce((a, v, i) => a + Math.abs(v - rgb(pc.main)[i]), 0);
+      if (dist < 200) col = shade(th.metal.gold[1][1]);
+    }
     const letter = [
       // 0.9.0：實心粗體（aidev 回饋：空心描邊字縮到盤面大小不好認）
       boldText(ch, { x: 128, y: 136, maxSize: 156, maxW: 214, weight: ROYAL_WEIGHT, spacing: 1.2, fill: tri(col), ink: th.ink }),

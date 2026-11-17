@@ -23,7 +23,7 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 |---|---|---|
 | `label` | `text`（必填）、`size` 字高 px（64）、`weight`（粗細倍率，預設 1.55）、`fill`（`'gold'｜'silver'｜'bronze'`＝金屬漸層，或色碼）、`ink`、`outline`、`spacing` | text（8 KB） |
 | `plate` | `shape`：`arch`／`circle`／`shield`／`diamond`；`color`：`'primary'｜'accent'｜{ main, dark, light }`；`rim`；`size`（256） | symbol（6 KB） |
-| `royal` | `letter`：A／K／Q／J／10／9（字色固定、描邊與寶石跟 theme）；`color` 覆寫；`plate`＋`plateColor`（0.8.0：放進底板）；`size` | symbol |
+| `royal` | `letter`：A／K／Q／J／10／9（字色固定、描邊與寶石跟 theme）；`color`（色碼字串）覆寫；`plate`＋`plateColor`（放進底板；字色與底板同色系時自動改金字，1.0.0）；`size` | symbol |
 | `badge` | `type`：wild／scatter／free／bonus（0.7.0 起；原 `kind` 與 kit 設定撞名）；`text` 覆寫字；`shape`／`color` 覆寫底板 | symbol |
 | `icon` | `name`：crown／gem／chest／coin／key／bell／trophy／star／seven／goldbar／clover／heart；`metal`（chest 材質：gold 金箱／silver 銀箱／bronze 木箱，0.8.0 起改箱體）；`plate`（放進底板） | symbol |
 | `frame` | `level` 1～3（銅／銀／金；2 級角釘、3 級寶石）；`metal` 覆寫 | symbol |
@@ -53,8 +53,8 @@ const { svg, meta } = asset('label', { text: 'MEGA WIN', size: 72, fill: 'gold',
 | `info_bar` | `labels`（1～5 格，預設 WIN／BALANCE／BET）、`values`、`w`／`h`（720×110） | ui |
 | `dialog` | `title`、`buttons` 0／1／2、`buttonText`、`close`（關閉鈕，預設有）、`w`／`h`（560×360） | ui |
 | `loading_bar` | `value` 0～1、`part` all／track／fill（遊戲自己裁 fill 長度）、`w`／`h`（480×56） | ui |
-| `coin_burst` | 🎞️ 一次性 8 格；`count`（1～40）、`seed`、`size`（360） | fx |
-| `jp_marquee` | 🎞️ 4 格燈泡追逐；`tier`、`label`、`value`、`w`／`h`（600×140） | fx |
+| `coin_burst` | 🎞️ 一次性 8 格，從中央往四周放射、全程在框內（1.0.0）；`count`（1～40）、`seed`、`size`（360） | fx |
+| `jp_marquee` | 🎞️ 4 格燈泡追逐；上排級別字（`label`、`labelSize`）＋下排數字槽（`value`）；`tier`、`w`／`h`（600×170，1.0.0） | fx |
 | `tide_banner` | 🎞️ 6 格兩層浪捲動一個波長；`text`（FISH TIDE）、`w`／`h`（720×220） | fx |
 | `boss_warning` | 🎞️ 4 格脈動；`text`（WARNING）、`color`、`w`／`h`（720×200） | fx |
 
