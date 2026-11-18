@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-18 (ark-agent-team-builder 3.3.0 —— 排程省 LLM：sched_gate 閘門＋範本改三種排程)
+
+> 本機五隊（kiro／nana／ninja／paddy／wukong）稽核：閒置週約 160 個 LLM 回合 —— 排程 57（其中 34 個只是代跑指令）、broadcast_all 扇出約 36、套件啟動提示約 65。
+> 雲端 game 11-17 先做了專用版 `scripts/sched_gate.sh`，本版通用化收進技能。
+
+- 新 `scripts/sched_gate.py`：`type: command` 排程呼叫，有變化才經 daemon `/api/send` 喚醒 agent；port（`.env` TEAM_AGENT_PORT＞team.yaml health_port）與 token（`state/api_token`）自動偵測；
+  規則 `tasks_open`（新）、`fingerprint`、`git_paths`、`new_files`（新）、`metric`，皆可 `max_skip_days` 保底；`target: "@new_daily"` 只喚醒自己 daily 有新檔的 agent（取代 broadcast_all）；`--check`／`--list`／`--dry`
+  - 相容 game 的 `config/gated_jobs.json` 格式
+  - 測試 9 項（每條規則都測「該觸發會觸發、不該觸發會跳過」；送出失敗不寫狀態；設定錯誤列出可用值；範圍是空的不算通過）
+- 範本：`scheduler.yaml.tpl`（原每小時 13 次進度檢查）、`scheduler-full.yaml`（原每小時檢查＋每日摘要／維運／broadcast_all／ingest）改為閘門＋`_builtin:preflight`＋只保留內容產出類 LLM；新增 `templates/config/gated_jobs.json`＋`gated_prompts/`
+- 新 `references/schedule-cost.md`：三種排程判斷表、閘門規則、扇出與套件啟動提示（後者已向 ark-agent-os 提需求）
+
 ## 2026-11-18 (ark-skills-sync 3.1.0 —— SKILL.md 開頭有 UTF-8 BOM 不再被判 BROKEN)
 
 > game 回報：ark-agent-os 2.2.6 心跳的 skills 檢查把 99 個好的 skill 判壞（`broken=99`）。根因在本 skill 的 `skilltree.py`（套件內建一份同樣的程式）。

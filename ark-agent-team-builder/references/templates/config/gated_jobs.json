@@ -1,0 +1,7 @@
+{
+  "progress-check": { "target": "admin-agent", "rule": "tasks_open", "max_skip_days": 7 },
+  "weekly-summary": { "target": "leader-agent", "rule": "new_files", "globs": ["memory/daily/*.md", "agents/*/memory/daily/*.md"] },
+  "wiki-ingest":    { "target": "admin-agent", "rule": "new_files", "globs": ["knowledge/raw/**/*.md", "agents/*/knowledge/raw/**/*.md"] },
+  "memory-distill": { "target": "@new_daily", "rule": "new_files", "globs": ["memory/daily/*.md", "agents/*/memory/daily/*.md"] },
+  "qa-review":      { "target": "qa-agent", "rule": "git_paths", "since_days": 7, "paths": ["src/", "tests/"] }
+}

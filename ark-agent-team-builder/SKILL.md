@@ -9,7 +9,8 @@ description: |
   預設多層專家團隊（manager + admin + leader + worker，用 group 歸屬）。
   使用此 Skill 當使用者提及 建立團隊、build team、agent team、多 agent 平台、
   AI 團隊協作、ark_team_agent 消費端、team daemon、team.yaml 骨架、
-  或任何需要建立 ark_team_agent 多 agent 團隊的場景。
+  或任何需要建立 ark_team_agent 多 agent 團隊的場景；
+  以及排程省 LLM：scheduler 成本、有變化才叫 LLM、排程閘門 sched_gate、broadcast_all 扇出、command 排程。
   不適用於：① 單 bot → ark-agent-bot-builder（ark_bot_agent）；
   ② 非套件獨立 web 應用 → ark-webapp-generator；③ steering 人格 → ark-agent-init。
 metadata:
@@ -27,8 +28,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.2.0"
-  updated: 2026-11-05
+  version: "3.3.0"
+  updated: 2026-11-18
 ---
 
 # ark-agent-team-builder
@@ -261,6 +262,12 @@ journalctl --user -u <svc> --since "-5min" | grep -E "All tools are now trusted|
 - 三層架構慣例（General manager → leader → worker group）見 `references/`
 - 職人 worker 不設 topic_id，輸出自動發到所屬 leader 的 topic
 
+## 排程省 LLM（3.3.0）
+
+> 每個排程先分三類：**腳本**（提詞只是「執行某指令」→ `type: command`，零 LLM）、**閘門**（閒置時只會回「沒事」→ `scripts/sched_gate.py` 有事才叫）、
+> **固定 LLM**（產出本身是內容）。提詞寫「無事就安靜」不省錢 —— 回合已經開了。`scheduler*.yaml` 範本 3.3.0 起照這個寫；
+> 舊範本（每小時進度檢查、每日 broadcast_all）閒置週約 120 個 LLM 回合，新範本約 5～7 個。細節與規則表：`references/schedule-cost.md`。
+
 ## 附帶資源
 
 | 路徑 | 說明 |
@@ -278,6 +285,9 @@ journalctl --user -u <svc> --since "-5min" | grep -E "All tools are now trusted|
 | `references/troubleshooting.md` | 環境問題排查（venv／依賴／啟動失敗）|
 | `scripts/scaffold_dirs.py` | 依 team.yaml 產目錄骨架 |
 | `scripts/validate_team.py` | team.yaml 驗證 |
+| `scripts/sched_gate.py` | 排程閘門：有變化才叫 LLM（`type: command` 排程呼叫；規則 tasks_open／fingerprint／git_paths／new_files／metric、`@new_daily` 取代 broadcast_all） |
+| `references/schedule-cost.md` | 排程省 LLM：三種排程（腳本／閘門／固定 LLM）、扇出與啟動提示 |
+| `references/templates/config/` | `gated_jobs.json`＋`gated_prompts/` 範本 |
 
 ## 注意事項
 
