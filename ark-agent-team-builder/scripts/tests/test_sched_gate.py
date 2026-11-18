@@ -83,6 +83,53 @@ def test_new_daily_fanout_only_wakes_agents_with_new_daily(tmp_path, daemon):
     assert [g["instance"] for g in got] == ["a1"], out             # boss、a2 沒新 daily → 不叫（取代 broadcast_all）
 
 
+
+def _distill_home(tmp_path, port, extra_cfg=None):
+    cfg = {"target": "@new_daily", "rule": "new_files", "globs": ["**/memory/daily/*.md"], "prompt": "蒸餾", **(extra_cfg or {})}
+    h = _home(tmp_path, {"memory-distill": cfg}, port)
+    for wd in ["memory", "agents/a1/memory", "agents/a2/memory"]:
+        (h / wd / "daily").mkdir(parents=True)
+    return h
+
+
+def _trigger_at(h: Path, ts: float) -> None:
+    st = h / "state" / "gate"; st.mkdir(parents=True, exist_ok=True)
+    (st / "memory-distill.json").write_text(json.dumps({"last_trigger": ts}))
+
+
+def test_new_daily_ignores_agents_own_distill_entry(tmp_path, daemon):
+    """3.3.1：被叫醒蒸餾的 agent 自己記的那筆不算新 —— 否則叫過一次就每週都叫（3.3.0 的漏洞）。"""
+    port, got = daemon
+    h = _distill_home(tmp_path, port)
+    _trigger_at(h, time.mktime((2026, 11, 15, 2, 0, 0, 0, 0, -1)))
+    (h / "agents/a1/memory/daily/2026-11-15.md").write_text(
+        "# 2026-11-15\n\n## 02:00 [a1] peer\n- Q: 請蒸餾 memory.md\n- A: 記憶蒸餾完成，無新增\n", encoding="utf-8")
+    (h / "agents/a2/memory/daily/2026-11-16.md").write_text(
+        "# 2026-11-16\n\n## 10:16 [a2] 修好 CI\n- 改了 workflow\n", encoding="utf-8")
+    out = sg.run(h, "memory-distill")
+    assert [g["instance"] for g in got] == ["a2"], out            # a1 只有蒸餾自己那筆 → 不叫；a2 有真工作 → 叫
+
+
+def test_new_daily_skips_sections_before_last_trigger(tmp_path, daemon):
+    port, got = daemon
+    h = _distill_home(tmp_path, port)
+    _trigger_at(h, time.mktime((2026, 11, 15, 12, 0, 0, 0, 0, -1)))
+    f = h / "agents/a1/memory/daily/2026-11-15.md"
+    f.write_text("## 09:00 [a1] 早上的工作\n- 已在上次蒸餾前\n", encoding="utf-8")   # 檔案 mtime 新、段落時間舊
+    assert "跳過" in sg.run(h, "memory-distill") and got == []
+    f.write_text(f.read_text(encoding="utf-8") + "## 15:30 [a1] 下午的工作\n- 新的\n", encoding="utf-8")
+    sg.run(h, "memory-distill")
+    assert [g["instance"] for g in got] == ["a1"]                # 反證：補一段觸發後的工作 → 叫
+
+
+def test_new_daily_custom_ignore_keywords(tmp_path, daemon):
+    port, got = daemon
+    h = _distill_home(tmp_path, port, {"ignore_keywords": ["記憶整理"]})
+    _trigger_at(h, time.mktime((2026, 11, 15, 2, 0, 0, 0, 0, -1)))
+    (h / "agents/a1/memory/daily/2026-11-15.md").write_text("## 02:01 [a1] 記憶整理\n- 沒有新增\n", encoding="utf-8")
+    assert "跳過" in sg.run(h, "memory-distill") and got == []
+
+
 def test_fingerprint_skip_when_unchanged(tmp_path, daemon):
     port, got = daemon
     h = _home(tmp_path, {"fp": {"target": "boss", "rule": "fingerprint", "prompt": "p"}}, port)

@@ -28,7 +28,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.3.0"
+  version: "3.3.1"
   updated: 2026-11-18
 ---
 

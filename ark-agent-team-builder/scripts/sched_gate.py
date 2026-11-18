@@ -24,6 +24,7 @@
 
 target 特例 `@new_daily`：逐一檢查 team.yaml 每個 instance 的 `<working_directory>/memory/daily/`，
 只把提詞送給上次觸發後有新 daily 的 agent（取代 memory-distill 的 broadcast_all —— 一次喚醒全隊）。
+「新」以段落計：排除含 蒸餾／distill／memory.md／job 名稱／ignore_keywords 的段落 —— agent 被叫醒後自己記的那筆不算（3.3.1）。
 
 exit：0＝判斷完成（觸發或跳過）；1＝設定或 API 錯誤（daemon 會通知）；2＝參數錯誤。
 """
@@ -35,11 +36,12 @@ import glob
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 import urllib.request
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 RULES = ("fingerprint", "git_paths", "metric", "new_files", "tasks_open")
@@ -139,12 +141,50 @@ def evaluate(home: Path, cfg: dict, state: dict, now: float | None = None) -> tu
     return fire, why, extra
 
 
-def new_daily_targets(home: Path, last: float) -> list[str]:
-    """上次觸發後，自己的 memory/daily 有新檔的 instance。"""
+IGNORE_DEFAULT = ("蒸餾", "distill", "memory.md")
+_SECTION = re.compile(r"(?m)^## ")
+_HHMM = re.compile(r"^(\d{1,2}):(\d{2})")
+
+
+def real_sections_since(daily_dir: Path, last: float, ignore: tuple[str, ...]) -> int:
+    """上次觸發後、不是排程自己留下的 daily 段落數。
+
+    🔴 不能只看檔案 mtime：agent 被叫醒蒸餾後會自己在 daily 記一筆「蒸餾了什麼」，
+    只看 mtime 的話它下週又被判成「有新 daily」→ 被叫過一次就每週都叫（3.3.0 的漏洞，3.3.1 修）。
+    判準：段落（`## HH:MM …`）時間在上次觸發之後，且內文不含 ignore 關鍵字；
+    沒有 `## HH:MM` 標題的檔案整份算一段、以 mtime 判斷（保守：寧可多叫，不漏叫）。
+    """
+    n = 0
+    for f in daily_dir.glob("*.md"):
+        if f.stat().st_mtime <= last:
+            continue
+        text = f.read_text(encoding="utf-8", errors="replace")
+        try:
+            day = datetime.strptime(f.stem[:10], "%Y-%m-%d")
+        except ValueError:
+            day = None
+        parts = _SECTION.split(text)
+        sections = parts[1:] if len(parts) > 1 else [text]
+        for sec in sections:
+            low = sec.lower()
+            if any(k.lower() in low for k in ignore):
+                continue
+            m = _HHMM.match(sec) if (day and len(parts) > 1) else None
+            if m:
+                ts = day.replace(hour=int(m.group(1)), minute=int(m.group(2))).timestamp()
+                if ts + 60 <= last:          # 同一分鐘算新的（保守）
+                    continue
+            if sec.strip():
+                n += 1
+    return n
+
+
+def new_daily_targets(home: Path, last: float, ignore: tuple[str, ...] = IGNORE_DEFAULT) -> list[str]:
+    """上次觸發後，自己的 memory/daily 有「真的新紀錄」的 instance（排除排程自己留下的段落）。"""
     out = []
     for name, wd in instances(home).items():
         d = wd / "memory" / "daily"
-        if d.is_dir() and any(f.stat().st_mtime > last for f in d.glob("*.md")):
+        if d.is_dir() and real_sections_since(d, last, ignore):
             out.append(name)
     return out
 
@@ -216,7 +256,9 @@ def run(home: Path, job: str, dry: bool = False, now: float | None = None, port:
     fire, why, extra = evaluate(home, cfg, state, now)
     if not fire:
         return f"⏭️ {job} 跳過：{why}"
-    targets = new_daily_targets(home, state.get("last_trigger", 0)) if cfg["target"] == "@new_daily" else [cfg["target"]]
+    ignore = (*IGNORE_DEFAULT, job, *(cfg.get("ignore_keywords") or ()))
+    targets = (new_daily_targets(home, state.get("last_trigger", 0), ignore)
+               if cfg["target"] == "@new_daily" else [cfg["target"]])
     if not targets:
         return f"⏭️ {job} 跳過：沒有 agent 有新 daily"
     if dry:

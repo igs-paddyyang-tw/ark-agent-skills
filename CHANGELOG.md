@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-18 (ark-agent-team-builder 3.3.1 —— `@new_daily` 不再把 agent 自己記的蒸餾紀錄當成新活動)
+
+> 3.3.0 只看 daily 檔案 mtime：agent 被叫醒蒸餾後會在自己的 daily 記一筆（雲端 slotverse 11-15、game ceo 11-18 實例），下週又被判成「有新 daily」→ 叫過一次就每週都叫，第二週起省不到。
+
+- `new_daily_targets` 改以段落判斷：`## HH:MM` 在上次觸發之後、且內文不含 `蒸餾`／`distill`／`memory.md`／job 名稱／job 的 `ignore_keywords`；沒有時間標題的檔案整份算一段、以 mtime 判斷（寧可多叫不漏叫）
+- `gated_jobs.json` 新欄位 `ignore_keywords`（選填）
+- 測試 9→12：只有蒸餾自記→不叫、段落早於上次觸發→不叫（補一段觸發後的工作→叫）、自訂關鍵字；**反證**：3 項新測試在 3.3.0 程式上皆失敗
+
 ## 2026-11-18 (ark-agent-team-builder 3.3.0 —— 排程省 LLM：sched_gate 閘門＋範本改三種排程)
 
 > 本機五隊（kiro／nana／ninja／paddy／wukong）稽核：閒置週約 160 個 LLM 回合 —— 排程 57（其中 34 個只是代跑指令）、broadcast_all 扇出約 36、套件啟動提示約 65。

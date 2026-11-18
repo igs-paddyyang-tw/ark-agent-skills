@@ -45,6 +45,7 @@
 
 - 所有規則可加 `max_skip_days`：太久沒觸發就保底一次
 - **`target: "@new_daily"`**：只喚醒「自己 memory/daily 有新檔」的 agent —— 取代 `broadcast_all`（一次喚醒全隊，lazy agent 每個都要重載上下文）
+  - 「新」以**段落**計（3.3.1）：段落時間（`## HH:MM`）在上次觸發之後，且不含 `蒸餾`／`distill`／`memory.md`／job 名稱／`ignore_keywords`。🔴 只看檔案 mtime 會出錯：agent 被叫醒蒸餾後自己記一筆，下週又被判成有新 daily → 叫過一次就每週都叫
 - 上線前：`sched_gate.py --check`（target、規則參數、提詞齊全）、`sched_gate.py --list`（乾跑看每個 job 現在會不會觸發）
 - 狀態在 `state/gate/<job>.json`；`DRY=1` 或 `--dry` 只判斷不送出
 
