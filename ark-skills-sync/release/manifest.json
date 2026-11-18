@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r50",
-  "commit": "ceb853b",
-  "generated_at": "2026-11-18T11:37:24+08:00",
+  "release": "skills-2026.11-r51",
+  "commit": "80c646f",
+  "generated_at": "2026-11-18T11:39:35+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -56,9 +56,9 @@
       "updated": "2026-11-13"
     },
     "ark-agent-team-builder": {
-      "version": "3.2.0",
-      "tree_hash": "sha256:7e9a36ad4d1e2a4f8c42b12d0d85b8f4c88232ea68ac340551d8c366230beb90",
-      "contract_hash": "sha256:bf37621ea2ac4874987b5534597cdfc263c55224de507ee6f06940cc7ec8132a",
+      "version": "3.3.0",
+      "tree_hash": "sha256:55e16773b60bf3aa10de41a9685968612892c10e494a9bafc730a1b9f4c3cb0b",
+      "contract_hash": "sha256:ab4c3ddabcd7e6d728d52ffba766940c8d4112a385fa3e4ca211d021d4bd69df",
       "status": "active",
       "category": "scaffolder",
       "depends_on": [
@@ -68,7 +68,7 @@
         }
       ],
       "replaces": [],
-      "updated": "2026-11-05"
+      "updated": "2026-11-18"
     },
     "ark-agent-team-design": {
       "version": "1.4.0",
