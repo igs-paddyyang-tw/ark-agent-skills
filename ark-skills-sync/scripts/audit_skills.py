@@ -105,7 +105,7 @@ FM_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
 def parse_frontmatter(text: str):
-    m = FM_RE.match(text)
+    m = FM_RE.match(text.lstrip("\ufeff"))   # 3.1.0：容忍 BOM
     if not m:
         return None
     try:
@@ -208,7 +208,7 @@ def load_skills(repo: Path):
             continue
         sk = d / "SKILL.md"
         if sk.exists():
-            fm = parse_frontmatter(sk.read_text(encoding="utf-8", errors="replace"))
+            fm = parse_frontmatter(sk.read_text(encoding="utf-8-sig", errors="replace"))
             skills[d.name] = {"path": str(sk), "fm": fm}
         elif (d / "README.md").exists():
             stubs[d.name] = {"path": str(d / "README.md")}

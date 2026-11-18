@@ -100,7 +100,7 @@ def local_deprecated(target: Path, names: set[str]) -> list[str]:
     out = []
     for n in sorted(names):
         md = skills_dir(target) / n / "SKILL.md"
-        if parse_frontmatter(md.read_text(encoding="utf-8", errors="replace")).get("deprecated"):
+        if parse_frontmatter(md.read_text(encoding="utf-8-sig", errors="replace")).get("deprecated"):
             out.append(n)
     return out
 

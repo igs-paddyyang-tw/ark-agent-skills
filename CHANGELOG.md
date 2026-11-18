@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-18 (ark-skills-sync 3.1.0 —— SKILL.md 開頭有 UTF-8 BOM 不再被判 BROKEN)
+
+> game 回報：ark-agent-os 2.2.6 心跳的 skills 檢查把 99 個好的 skill 判壞（`broken=99`）。根因在本 skill 的 `skilltree.py`（套件內建一份同樣的程式）。
+
+- 根因：讀 SKILL.md 用 `utf-8`（不是 `utf-8-sig`）→ BOM（`\ufeff`）留在開頭，`\A---` 對不上 → frontmatter 讀成空 → 判 BROKEN。BOM 來自 Windows 編輯（game 83 個 agent 複本是 2026-06-02 搬 `.kiro/` 佈局時寫進去的；上游 0 個）；aidev 先前也為此手動去過 24 個檔
+- 修：`skilltree.py`／`skills_sync.py`／`audit_skills.py`／`backfill_metadata.py` 讀 SKILL.md 改 `utf-8-sig`，`parse_frontmatter` 先去掉 BOM（`git show` 讀上游的文字也可能帶）
+- 測試 `test_bom_tolerance.py`：有 BOM（含 CRLF）判 OK；反證：沒有 name／沒有 frontmatter 的有沒有 BOM 都還是 BROKEN；另以修正前原檔實跑同一個檔 → BROKEN、修正後 → OK
+- 🔴 套件（ark-agent-os）內建的是複本 → 需 paddy-bot 重新打包（議題單已開）才會讓心跳不再誤報；消費端也可先去掉自己檔案的 BOM
+
 ## 2026-11-17 (ark-svg-animation 1.0.0 —— 轉 active 進列車；aidev 複驗通過＋3 個建議)
 
 > aidev 複驗（kiro-cli `docs/issues/2026-11-17-from-aidev-ark-svg-gamekit-0.10-verify.md`）：上次 3 項品質＋10 個新元素通過，可以 1.0.0；另附 3 個不擋版建議，本版一併處理。

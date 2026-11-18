@@ -12,7 +12,7 @@ description: |
   「alignment directive」「對齊 ark-agent-skills」「對齊 team 的 skill 版本」「升版 skill」，
   單一 skill 的建立／優化不用此 skill（改用 ark-skill-creator）。
 metadata:
-  version: "3.0.2"
+  version: "3.1.0"
   author: paddyyang
   schema_version: "1.2"
   category: ops
@@ -25,7 +25,7 @@ metadata:
   depends_on:
     - { name: ark-md-report, version: "^1.0.0" }
   status: active
-  updated: 2026-11-13
+  updated: 2026-11-18
 ---
 
 # ark-skills-sync

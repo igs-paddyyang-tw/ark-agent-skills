@@ -97,7 +97,7 @@ def backfill_versions_one(path: Path, dry: bool) -> str:
     ⚠️ 原規格（v2 AC-02）的「depends_on 字串→物件」從未實作；2026-10-20 已全庫手動改物件格式並帶範圍，
     範圍需人判（見 references/metadata-schema.md「depends_on」），不由本腳本自動填 `*`。
     """
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8-sig")   # 3.1.0：容忍 BOM（寫回時順便去掉）
     m = FM_RE.match(text)
     if not m:
         return "PARSE_FAIL"
@@ -132,7 +132,7 @@ def backfill_versions_one(path: Path, dry: bool) -> str:
 def backfill_one(path: Path, dry: bool) -> str:
     """外科手術式插入：只在 frontmatter 文字層新增缺少的 metadata 欄位，
     不做 yaml round-trip，description 與既有欄位的排版一字不動。"""
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8-sig")   # 3.1.0：容忍 BOM（寫回時順便去掉）
     m = FM_RE.match(text)
     if not m:
         return "PARSE_FAIL"

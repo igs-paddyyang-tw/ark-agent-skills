@@ -88,7 +88,7 @@ def contract_hash(skill_dir: Path, globs: list[str]) -> str:
 
 
 def parse_meta(skill_md: Path) -> dict:
-    m = FM_RE.match(skill_md.read_text(encoding="utf-8"))
+    m = FM_RE.match(skill_md.read_text(encoding="utf-8-sig"))
     if not m:
         return {}
     fm = yaml.safe_load(m.group(1)) or {}
@@ -102,7 +102,9 @@ _SUCC_RE = re.compile(r"已併入\s*(ark-[a-z0-9-]+)")
 
 def parse_frontmatter(text: str) -> dict:
     """SKILL.md 全文 → 常用欄位；讀不出 frontmatter 回 {}。"""
-    m = FM_RE.match(text.replace("\r\n", "\n"))
+    # 3.1.0：先去掉 UTF-8 BOM —— Windows 編輯過的 SKILL.md 開頭有 \ufeff，`\A---` 對不上 → 整個 skill 被判 BROKEN
+    #（game 2.2.6 心跳把 99 個好的 skill 判壞；aidev 也為此手動去過 24 個檔，nana-bot 02ef34058）
+    m = FM_RE.match(text.lstrip("\ufeff").replace("\r\n", "\n"))
     if not m:
         return {}
     try:
@@ -128,7 +130,7 @@ def skill_state(skill_dir: Path) -> str:
     if not md.is_file():
         return BROKEN
     try:
-        fm = parse_frontmatter(md.read_text(encoding="utf-8", errors="replace"))
+        fm = parse_frontmatter(md.read_text(encoding="utf-8-sig", errors="replace"))
     except OSError:
         return BROKEN
     return OK if fm.get("name") else BROKEN
