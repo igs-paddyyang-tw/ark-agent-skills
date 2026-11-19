@@ -1,7 +1,7 @@
 {
-  "release": "skills-2026.11-r53",
-  "commit": "59b1bc5",
-  "generated_at": "2026-11-19T09:56:44+08:00",
+  "release": "skills-2026.11-r54",
+  "commit": "1eff595",
+  "generated_at": "2026-11-19T14:09:56+08:00",
   "skills": {
     "ark-agent-bot-builder": {
       "version": "3.3.0",
@@ -233,9 +233,9 @@
       "updated": "2026-10-20"
     },
     "ark-game-prob": {
-      "version": "1.7.1",
-      "tree_hash": "sha256:8339123f3e9981601568657c4287be571e9250d9a36ef807d57b56f4cd6b26e9",
-      "contract_hash": "sha256:78cd6a034eb12435a51b69d98c977b5b5d438ea0fe8a4d86c434d2640020fcec",
+      "version": "1.7.2",
+      "tree_hash": "sha256:5e9e1d7ebb2bd59d6320c9b94d87458de29b8f04f9ebe0940bb8bdac8cb54975",
+      "contract_hash": "sha256:beff296cf9f6b02ef0a04e9d9bdf0f496882a58b85160bed485a5e8cf6919c79",
       "status": "active",
       "category": "document",
       "depends_on": [
@@ -252,9 +252,9 @@
       "updated": "2026-10-29"
     },
     "ark-game-proto": {
-      "version": "1.10.0",
-      "tree_hash": "sha256:20146133919444fcf6e6442e9040bd97842b77e7fb0192844ef56cb65da240c6",
-      "contract_hash": "sha256:7e380fa71a4840fed2ec7639f4cecb55ff5619ebfd104bf075bc88d929188e1c",
+      "version": "1.10.1",
+      "tree_hash": "sha256:7579e35100b286eb3a3487affdab618cb86eb0185eeff709b73dc732c5232541",
+      "contract_hash": "sha256:2942d68c707f52492a547b37ec67523bc453038a2fdb85ac85e0f274c416ad33",
       "status": "active",
       "category": "view",
       "depends_on": [
@@ -413,9 +413,9 @@
       "updated": "2026-10-20"
     },
     "ark-md-report": {
-      "version": "1.2.0",
-      "tree_hash": "sha256:b9332819c24a7a74d3660192006fcdffe5c48c392d588e5463e33b9278d4f22b",
-      "contract_hash": "sha256:4c049b32e49eaccfc974b5b5339104303c4e5fb5e0439da890e8cd7c2b29ed8a",
+      "version": "1.2.1",
+      "tree_hash": "sha256:16b790e9a67133c7d7ea5afcd6e565fc30ad2f315324c3d0329122b7957ffade",
+      "contract_hash": "sha256:0dfc1d7abcca245e29bce9478ffc361fb9e80bb7c8d04279a4615c2e1171f9f3",
       "status": "active",
       "category": "document",
       "depends_on": [
