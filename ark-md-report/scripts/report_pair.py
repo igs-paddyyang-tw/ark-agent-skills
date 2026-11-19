@@ -24,8 +24,22 @@ from pathlib import Path
 STAMP_RE = re.compile(r"<!--\s*content-src:\s*(\S+)\s+sha256:([0-9a-f]{16})\s*-->")
 
 
+def _norm(b: bytes) -> bytes:
+    """文字檔把 CRLF 統一成 LF（跨 Windows／Linux 同一份 md 同一個戳記）；含 NUL 的二進位原樣。"""
+    return b if b"\0" in b else b.replace(b"\r\n", b"\n")
+
+
 def md_hash(md_path: Path) -> str:
-    return hashlib.sha256(md_path.read_bytes()).hexdigest()[:16]
+    return hashlib.sha256(_norm(md_path.read_bytes())).hexdigest()[:16]
+
+
+def md_hash_ok(md_path: Path, stamp: str) -> bool:
+    """戳記是否吻合：接受換行正規化值，與舊版（原始位元組、LF→CRLF）值。"""
+    b = md_path.read_bytes()
+    ok = {md_hash(md_path), hashlib.sha256(b).hexdigest()[:16]}
+    if b"\0" not in b:
+        ok.add(hashlib.sha256(_norm(b).replace(b"\n", b"\r\n")).hexdigest()[:16])
+    return stamp in ok
 
 
 def html_candidates(md_path: Path) -> list[Path]:
@@ -60,7 +74,7 @@ def check(md_path: Path, quiet: bool = False) -> str:
             print(f"❌ BAD-REF  {html_path} 戳記指向 {ref_path}，非 {md_path.name}")
         return "BAD-REF"
 
-    if ref_hash != md_hash(md_path):
+    if not md_hash_ok(md_path, ref_hash):
         if not quiet:
             print(f"❌ STALE    {html_path}（MD 已更動，HTML 未重渲染）")
         return "STALE"

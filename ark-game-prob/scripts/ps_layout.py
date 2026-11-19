@@ -137,7 +137,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
                 add("L-STAMP", rel(h), f"無 content-src 戳記，無法偵測與 {sib.name} 的漂移", "warning")
                 continue
             want = C.sha16(sib)
-            if not any(sha == want for _, sha in stamps):
+            if not any(C.sha16_ok(sib, sha) for _, sha in stamps):
                 names = ", ".join(f"{n}:{sha}" for n, sha in stamps)
                 add("L-STAMP", rel(h), f"戳記（{names}）≠ 同名 {sib.name} 的 sha {want}：綁錯對象或 md 改了未重渲染")
 
@@ -160,7 +160,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
                 add("L-SPEC", rel(cs_p), f"restore-live 找不到設定檔來源 sources.config / source_config（{src.get('path')}）")
             else:
                 facts["config"] = {"path": rel(cfg_p.resolve()) if cfg_p.resolve().is_relative_to(game.resolve()) else cfg_p.as_posix(), "sha256_16": C.sha16(cfg_p)}
-                if src.get("sha256_16") != C.sha16(cfg_p):
+                if not C.sha16_ok(cfg_p, src.get("sha256_16")):
                     add("L-SPEC", rel(cs_p), "設定檔 sha 已變：重跑 gs_run --stage restore")
                 cfg = json.loads(cfg_p.read_text(encoding="utf-8"))
                 names, bad = set(), []
@@ -281,7 +281,7 @@ def check(game: pathlib.Path, mode: str) -> dict:
                 man = json.loads(man_p.read_text(encoding="utf-8"))
                 for it in man.get("files", []) + man.get("links", []):   # v3.5：links＝拍板書連到的定版家成品
                     fp = review / it["path"]
-                    if not fp.is_file() or (it.get("sha256_16") and C.sha16(fp) != it["sha256_16"]):
+                    if not fp.is_file() or (it.get("sha256_16") and not C.sha16_ok(fp, it["sha256_16"])):
                         stale.append(it["path"])
             except (json.JSONDecodeError, KeyError, TypeError):
                 stale.append("review-manifest.json（無法解析）")

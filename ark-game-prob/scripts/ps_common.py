@@ -90,8 +90,34 @@ def yaml_dump(o) -> str:
     return yaml.safe_dump(o, allow_unicode=True, sort_keys=False, width=200)
 
 
+def _sha_bytes(p: pathlib.Path) -> bytes:
+    """要算 sha 的位元組：文字檔（不含 NUL）先把 CRLF 統一成 LF，二進位檔原樣。
+
+    戳記與來源 sha 要跨作業系統一致：同一份 md 在 Windows（CRLF）與 Linux（LF）checkout 必須得到同一個 sha
+    （2026-11-19 aidev 盤點：Windows 算的戳記在 Linux 一律判「來源已變更」，內容其實沒變）。
+    """
+    b = p.read_bytes()
+    return b if b"\0" in b else b.replace(b"\r\n", b"\n")
+
+
 def sha16(p: pathlib.Path) -> str:
-    return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+    """檔案 sha256 前 16 碼（文字檔換行正規化，見 _sha_bytes）。"""
+    return hashlib.sha256(_sha_bytes(p)).hexdigest()[:16]
+
+
+def sha16_variants(p: pathlib.Path) -> set[str]:
+    """這個檔案可接受的 sha16：換行正規化值，加上舊版（未正規化的原始位元組、以及 LF→CRLF）——讓舊戳記在任一平台照樣通過。"""
+    b = p.read_bytes()
+    out = {sha16(p), hashlib.sha256(b).hexdigest()[:16]}
+    if b"\0" not in b:
+        lf = b.replace(b"\r\n", b"\n")
+        out.add(hashlib.sha256(lf.replace(b"\n", b"\r\n")).hexdigest()[:16])
+    return out
+
+
+def sha16_ok(p: pathlib.Path, stamp: str | None) -> bool:
+    """戳記是否吻合（接受正規化值與舊版 CRLF／LF 值）。"""
+    return bool(stamp) and stamp in sha16_variants(p)
 
 
 def atomic_write(path: pathlib.Path, text: str) -> None:

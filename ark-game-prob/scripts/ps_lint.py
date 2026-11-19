@@ -121,7 +121,7 @@ def lint(d: pathlib.Path) -> dict:
         if not p.exists():
             add("PS-STALE", k, f"來源不存在：{p}")
             continue
-        if C.sha16(p) != s.get("sha256_16"):
+        if not C.sha16_ok(p, s.get("sha256_16")):
             add("PS-STALE", k, f"來源已變更（{p.name}），請重產 prob-spec")
         try:
             if p.suffix.lower() in BINARY_SUFFIXES:  # 二進位來源只驗 sha，不拿位元組當數字
@@ -137,7 +137,7 @@ def lint(d: pathlib.Path) -> dict:
         m = re.search(r"<!-- content-src: prob-spec\.md sha256:([0-9a-f]{16}) -->", html_text)
         if not m:
             add("PS-STALE", "prob-spec.html", "缺 content-src 戳記")
-        elif m.group(1) != C.sha16(md_p):
+        elif not C.sha16_ok(md_p, m.group(1)):
             add("PS-STALE", "prob-spec.html", "html 戳記與 md 不符（md 改了未重渲染）")
         # PS-HTML-EMPTY：防空殼——html 須實際渲染六段內容，不能只有戳記 + 一句佔位。
         # 去標籤 / script / style 後的純文字，應命中六段標題中的多數；否則判為空殼。
@@ -162,7 +162,7 @@ def lint(d: pathlib.Path) -> dict:
                 add("PS-STALE", "prob-spec.xlsx", "缺 _meta 戳記分頁")
             else:
                 rows = {r[0]: (r[1], r[2]) for r in wb["_meta"].iter_rows(values_only=True) if r and r[0]}
-                if rows.get("content-src", ("", ""))[1] != C.sha16(md_p):
+                if not C.sha16_ok(md_p, rows.get("content-src", ("", ""))[1]):
                     add("PS-STALE", "prob-spec.xlsx", "xlsx 戳記與 md 不符（重跑 ps_probtable）")
                 odds_src = (meta.get("sources") or {}).get("odds") or {}
                 if odds_src and rows.get("odds", ("", ""))[1] != odds_src.get("sha256_16"):

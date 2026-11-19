@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-11-19 (ark-game-prob 1.7.2、ark-game-proto 1.10.1、ark-md-report 1.2.1 —— sha 戳記換行正規化：Windows 算的戳記在 Linux 不再誤判)
+
+> aidev 回貢（盤點報告 `projects/aidev-bot/docs/reports/review/2026-11-19-aidev-product-sop-gap-analysis.md` F-6）：戳記與來源 sha 直接對原始位元組算，
+> 同一份 md 在 Windows（CRLF）與 Linux（LF）checkout 得到不同 sha；huffnpuff-open-house 在 Linux 跑 ps_layout 11 error、ps_lint 7 個 PS-STALE，逐檔換回 CRLF 重算全部吻合（內容沒變）。
+
+- 文字檔（不含 NUL）先把 CRLF 統一成 LF 再算 sha；二進位檔原樣（xlsx、png 不受影響）
+- 比對時同時接受「正規化值」與舊版（原始位元組、LF→CRLF）值 → 庫裡既有戳記不用重蓋，任一平台都通過；新戳記跨平台一致
+  - ark-game-prob：`ps_common.sha16`／新 `sha16_variants`、`sha16_ok`；`ps_lint`（PS-STALE 三處）、`ps_layout`（L-STAMP、L-PROB config、清冊）改用 `sha16_ok`
+  - ark-game-proto：`review_build.sha16` 正規化、新 `sha16_variants`／`has_stamp`，html 戳記判定接受舊值
+  - ark-md-report：`report_pair.md_hash` 正規化、新 `md_hash_ok`，`check` 接受舊值
+- 測試：ark-game-prob `tests/test_sha_eol.py` 3 項、ark-md-report 契約測試 +1；**反證**：換回舊 `ps_common` → 3 項中 2 項失敗
+- 實測（aidev Linux）：huffnpuff-open-house ps_layout 11 error → 0（PASS）、ps_lint PS-STALE 7 → 0；magic-lamp PASS；three-pigs 只剩真缺口 L-SPEC
+
+---
+
 ## 2026-11-19 (ark-html-report 1.4.0 —— A4 文件版面：Markdown 直接轉多頁 A4 HTML)
 
 > fish-bot 回貢（交接單 `docs/issues/2026-11-19-to-kiro-cli-ark-html-report-a4-document.md`）：專案計畫書、規格、報告是多頁文件，

@@ -54,8 +54,28 @@ def emit(ok: bool, data=None, error=None) -> None:
     print(json.dumps({"success": ok, "data": data, "error": error}, ensure_ascii=False))
 
 
+def _sha_bytes(p: pathlib.Path) -> bytes:
+    """文字檔（不含 NUL）把 CRLF 統一成 LF 再算 sha，跨 Windows／Linux checkout 同一個值；二進位原樣。"""
+    b = p.read_bytes()
+    return b if b"\0" in b else b.replace(b"\r\n", b"\n")
+
+
 def sha16(p: pathlib.Path) -> str:
-    return hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+    return hashlib.sha256(_sha_bytes(p)).hexdigest()[:16]
+
+
+def sha16_variants(p: pathlib.Path) -> set[str]:
+    """可接受的 sha16：正規化值＋舊版（原始位元組、LF→CRLF）——舊戳記在任一平台照樣通過。"""
+    b = p.read_bytes()
+    out = {sha16(p), hashlib.sha256(b).hexdigest()[:16]}
+    if b"\0" not in b:
+        out.add(hashlib.sha256(_sha_bytes(p).replace(b"\n", b"\r\n")).hexdigest()[:16])
+    return out
+
+
+def has_stamp(text: str, name: str, p: pathlib.Path) -> bool:
+    """html 文字裡有沒有 `<name> sha256:<任一可接受值>` 的戳記。"""
+    return any(f"{name} sha256:{h}" in text for h in sha16_variants(p))
 
 
 def kb(n: int) -> str:
@@ -211,7 +231,7 @@ def report_links(data: pathlib.Path) -> list[tuple[str, str, str]]:
         title = m.group(1) if m else md.stem
         verdict = re.search(r"^verdict:\s*(\S+)", txt, re.M)
         hp = md.with_suffix(".html")
-        ok = hp.is_file() and f"sha256:{sha16(md)}" in hp.read_text(encoding="utf-8", errors="replace")
+        ok = hp.is_file() and any(f"sha256:{h}" in hp.read_text(encoding="utf-8", errors="replace") for h in sha16_variants(md))
         target = hp if ok else md
         note = ("HTML" if ok else ("md 正本（HTML 未隨 md 更新）" if hp.is_file() else "md")) + (f" · verdict {verdict.group(1)}" if verdict else "") + " · 時點快照"
         out.append((title, "../" + target.relative_to(data).as_posix(), note))
@@ -443,7 +463,7 @@ def linked_items(data: pathlib.Path, rv: pathlib.Path, skip_proto: bool = False,
             if kind == "report" and "closeout" in md.stem:          # 結案報告在 ⑩ 之後，不屬於送審
                 continue
             hp = md.with_suffix(".html")
-            target = hp if hp.is_file() and f"{md.name} sha256:{sha16(md)}" in hp.read_text(encoding="utf-8", errors="replace") else md
+            target = hp if hp.is_file() and has_stamp(hp.read_text(encoding="utf-8", errors="replace"), md.name, md) else md
             if kind == "report":
                 vd = re.search(r"^verdict:\s*(\S+)", md.read_text(encoding="utf-8", errors="replace"), re.M)
                 add(target, md_title(md), "報告（時點快照）" + (f" · verdict {vd.group(1)}" if vd else ""), "report")

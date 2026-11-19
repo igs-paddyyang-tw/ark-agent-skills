@@ -176,3 +176,16 @@ def test_register_rejects_report_without_frontmatter(tmp_path):
     r = run_cli("report_register.py", str(md))
     assert r.returncode == 1
     assert not (tmp_path / "reports" / "log.md").exists()
+
+
+def test_pair_stamp_crlf_lf_agnostic(tmp_path):
+    """report_pair：Windows（CRLF）算的舊戳記在 LF checkout 照樣 OK；新戳記不受換行影響（2026-11-19）。"""
+    import hashlib
+    md = tmp_path / "r.md"
+    md.write_bytes(b"# t\nbody\n")
+    legacy = hashlib.sha256(b"# t\r\nbody\r\n").hexdigest()[:16]
+    assert report_pair.md_hash_ok(md, legacy)
+    crlf = tmp_path / "s.md"
+    crlf.write_bytes(b"# t\r\nbody\r\n")
+    assert report_pair.md_hash(md) == report_pair.md_hash(crlf)
+    assert not report_pair.md_hash_ok(md, "0" * 16)

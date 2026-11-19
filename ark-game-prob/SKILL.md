@@ -14,7 +14,7 @@ metadata:
   category: document
   form: executor
   domain: game
-  version: "1.7.1"
+  version: "1.7.2"
   updated: 2026-10-29
   outputs:
     - { format: data, audience: ai }
