@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-11-19 (ark-html-report 1.4.0 —— A4 文件版面：Markdown 直接轉多頁 A4 HTML)
+
+> fish-bot 回貢（交接單 `docs/issues/2026-11-19-to-kiro-cli-ark-html-report-a4-document.md`）：專案計畫書、規格、報告是多頁文件，
+> 現有的 `build_report_html.py`（捲動長文）和 A4 資訊圖卡（單頁手工組版）都不合。上游版以 fish-bot 的 `md_to_a4_html.py` 為基礎重寫。
+
+- 新 `scripts/md_to_a4.py`：`@page A4`＋頁尾頁碼「N / 總頁數」、表格列／程式碼／引言／圖不跨頁切斷、標題不孤立、長表格每頁重複表頭
+  - `--style` 五種風格皆可（讀 `references/styles.md` 的 token，預設 paperprint）；`--kick`、`--no-webfont`、`--list-styles`
+  - 原稿 frontmatter 有 `source_skill: ark-md-report` 時自動寫雙軌戳記（與 `report_pair.py check` 相容）；`--stamp`／`--no-stamp`
+  - mermaid 沿用同一棵樹裡 ark-md-report 的渲染；沒有時保留原始碼區塊並提示（不形成 skill 間硬相依）
+  - 相對本地版的修正：frontmatter 容許 BOM／CRLF、不寫產生日期（deterministic）、內文 H1 與標題相同才拿掉、頁尾路徑不洩漏 home、拿掉寫死的專案字樣、不需 PyYAML
+- 新 `references/a4-document.md`；SKILL.md §2.5 版面三選一、description 加觸發詞「A4 文件」「計畫書 A4」「規格書列印版」「轉 PDF 的文件」
+- 測試 13 項；**反證**：分別拿掉 BOM／CRLF 處理、改回一律刪 H1、頁尾寫時間、頁尾放完整路徑，各自至少 1 項失敗
+- 實測：fish-bot 計畫書 5 頁、決策報告 3 頁（headless chrome 列印，每頁頁碼正確）
+
 ## 2026-11-18 (ark-agent-team-builder 3.3.1 —— `@new_daily` 不再把 agent 自己記的蒸餾紀錄當成新活動)
 
 > 3.3.0 只看 daily 檔案 mtime：agent 被叫醒蒸餾後會在自己的 daily 記一筆（雲端 slotverse 11-15、game ceo 11-18 實例），下週又被判成「有新 daily」→ 叫過一次就每週都叫，第二週起省不到。

@@ -1,11 +1,11 @@
 ---
 name: ark-html-report
-description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。使用此 skill 當使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout、圖片 figure／gallery 等），元件與風格可任意組合；另有 A4 資訊圖卡版面（「做一張圖卡」「A4 一頁講清楚」，單頁固定版面、可列印轉 PDF）。報告要放素材圖或示意圖時，附 html_images.py 放圖引擎：本機圖片自動縮圖、轉 WebP、去重後內嵌成零外部請求的單檔，並可自動排成圖說與圖庫（3.6 節）。與 ark-md-report 成對：本 skill 是 View 軌（給人看的網頁），給 AI／知識庫消費的結構化 Markdown 走 ark-md-report。不適用於：互動式數據儀錶板（篩選、排序、Chart.js）請用 ark-html-dashboard。
+description: 產出專業的單檔 HTML 報告（技術報告、日報/週報、數據分析、競品分析、專案總結、N-M-P-Q 報告）。使用此 skill 當使用者要求「做一份報告」「產出 HTML 報告」「整理成報告頁面」「做一個 dashboard 風格的總結」，或要把分析結果、數據、文件內容排版成可分享的網頁時。內含 5 種風格預設（token 系統）與完整元件庫（卡片、圖表、表格、時間軸、callout、圖片 figure／gallery 等），元件與風格可任意組合；另有 A4 資訊圖卡版面（「做一張圖卡」「A4 一頁講清楚」，單頁固定版面、可列印轉 PDF），以及 A4 文件版面：md_to_a4.py 把 Markdown 原稿直接轉成多頁 A4 HTML（「A4 文件」「計畫書 A4」「規格書列印版」「轉 PDF 的文件」，頁碼、分頁不切表格、五種風格可選）。報告要放素材圖或示意圖時，附 html_images.py 放圖引擎：本機圖片自動縮圖、轉 WebP、去重後內嵌成零外部請求的單檔，並可自動排成圖說與圖庫（3.6 節）。與 ark-md-report 成對：本 skill 是 View 軌（給人看的網頁），給 AI／知識庫消費的結構化 Markdown 走 ark-md-report。不適用於：互動式數據儀錶板（篩選、排序、Chart.js）請用 ark-html-dashboard。
 metadata:
-  version: "1.3.1"
+  version: "1.4.0"
   schema_version: "1.2"
   status: active
-  updated: 2026-10-20
+  updated: 2026-11-19
   category: view
   form: instruction
   domain: general
@@ -13,7 +13,7 @@ metadata:
     - format: html
       audience: human
   depends_on: []
-  requires: [Pillow]          # 只有 scripts/html_images.py 需要
+  requires: [Pillow, markdown]   # Pillow：html_images.py；markdown：md_to_a4.py
   author: paddyyang
 ---
 
@@ -50,7 +50,7 @@ metadata:
 
 也可以基於某個預設微調（換 accent 色、換字體），在 token 層改，不要改元件的 CSS。
 
-### 2.5 決定版面：捲動報告 或 A4 圖卡
+### 2.5 決定版面：捲動報告、A4 圖卡 或 A4 文件
 
 風格（配色）決定後，選**版面格式**——兩者正交：
 
@@ -58,9 +58,12 @@ metadata:
 |------|--------|------|
 | 捲動報告（預設） | 資料多、要捲動閱讀、含互動圖表 | 本檔 §3 |
 | **A4 資訊圖卡** | 「做一張圖卡」「A4 一頁講清楚」「快速了解 X」、教學/工具總覽、要列印貼牆或轉 PDF | `references/a4-infocard.md` |
+| **A4 文件**（多頁） | 「A4 文件」「計畫書 A4」「規格書列印版」「轉 PDF 的文件」；已有 Markdown 原稿的計畫書、規格、報告 | `references/a4-document.md`＋`scripts/md_to_a4.py` |
 
 A4 圖卡是**單頁固定版面**（上：核心概念+SVG 概念圖／下：分類卡片牆+流程圖），
 一眼掃完、密度高、字適中，必內嵌 SVG。選它就讀 `references/a4-infocard.md` 依三分區骨架組裝。
+
+A4 文件是**多頁、不手工組版**：原稿已是 Markdown 就直接跑 `scripts/md_to_a4.py`（風格用 `--style`），細節讀 `references/a4-document.md`。
 
 ### 3. 組裝元件
 
