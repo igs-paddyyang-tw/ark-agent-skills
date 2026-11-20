@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-11-20 (ark-game-quicktest 2.5.0 —— 魚機快測理論命中率支援權重魚與特殊魚；ark-superpowers 1.4.1 —— 指紋新鮮度改比內容)
+
+> aidev 回貢（計畫 `projects/aidev-bot/docs/plans/fish-kb-product-dev-plan.md`、提案 `docs/plans/2026-11-fish-skill-gap-proposal.md` 2026-11-20 更新）：
+> 一般廳與 JP 改走 `qt_fish_run.py` 時，設定檔的權重魚（`weights`）與特殊魚（`totals`）沒有 `odds` → `enrich()` KeyError；aidev 先用轉接器 `scripts/fish/fishsim_contract.py` 補「理論視圖」繞過，本版把概念收進技能。
+
+- ark-game-quicktest `scripts/fish/qt_fish_run.py`：新 `theory_gate()` —— 固定魚＝`odds`、權重魚＝依權重的倍率調和平均、命中後抽總倍率＝表加權平均（同 Go `FishInfo.Gate()`）；`feature` 在 `dynamic_features`（預設 1 旋風、2 閃光）的魚移到 `per_fish_dynamic`，不比對理論命中率；三者都沒有 → exit 2；`fields` 加 `weights`／`totals`／`feature`
+- 契約 `references/fish-quicktest-contract.md` 理論值表與 qt-config 欄位同步
+- 測試 +2（等效門檻與動態魚、缺門檻 exit 2）；**反證**：換回 2.4.0 的 `qt_fish_run.py` → 2 項都失敗；全套 50 passed
+- ark-superpowers `scripts/doc_lint.py`：指紋新鮮度原本只比 mtime，git clone／checkout 後模板 mtime 較新 → 內容相同也拒跑（「fingerprints.json 落後於模板」，新 clone 必中）；改成 mtime 較新時重算指紋比內容，真的不同才拒跑。測試 `tests/test_fingerprint_freshness.py` 2 項（含反證：模板加一行 → exit 2）
+- 未收：多人桌契約 v2（`seats`／`skill`／`second`、`aim: boss`）只在 aidev 提案，待審
+
+---
+
 ## 2026-11-19 (ark-game-prob 1.7.2、ark-game-proto 1.10.1、ark-md-report 1.2.1 —— sha 戳記換行正規化：Windows 算的戳記在 Linux 不再誤判)
 
 > aidev 回貢（盤點報告 `projects/aidev-bot/docs/reports/review/2026-11-19-aidev-product-sop-gap-analysis.md` F-6）：戳記與來源 sha 直接對原始位元組算，

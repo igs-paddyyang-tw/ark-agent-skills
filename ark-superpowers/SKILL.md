@@ -16,7 +16,7 @@ description: |
   files —— planning with files、3-file pattern、任務追蹤、長任務跨 session 不忘記。
   不適用於：遊戲企劃文件請用 ark-game-spec；照 plan 自動執行請用 ark-spec-executor；分析報告請用 ark-md-report。
 metadata:
-  version: "1.4.0"
+  version: "1.4.1"
   replaces: [ark-uml-generator, ark-project-planning, ark-doc-coauthoring, ark-planning-with-files]
   schema_version: "1.2"
   status: active

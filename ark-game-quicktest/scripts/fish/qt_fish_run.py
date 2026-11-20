@@ -38,7 +38,10 @@ EXIT_PASS, EXIT_BAD, EXIT_GATE = 0, 2, 3
 
 #: 設定檔 JSON 欄位名（可在 qt-config `fields` 覆寫）
 DEFAULT_FIELDS = {"game_rate": "game_rate", "fish_list": "fish_info", "type": "type",
-                  "name": "name", "odds": "odds", "drop_ppm": "drop_ppm"}
+                  "name": "name", "odds": "odds", "drop_ppm": "drop_ppm",
+                  "weights": "weights", "totals": "totals", "feature": "feature"}
+#: 門檻隨場上魚而變的 feature（旋風 1、閃光 2）→ 沒有靜態理論命中率（2.5.0；qt-config `dynamic_features` 可覆寫）
+DEFAULT_DYNAMIC_FEATURES = (1, 2)
 #: 打法敏感度：最偏打法與目標差距超過此值 → finding（P2）；總 RTP > 1 → P1
 DEFAULT_AIM_DEVIATION = 0.01
 
@@ -101,6 +104,7 @@ def load_qt(qt_path: Path, root: Path) -> dict:
             "bonus_key": qt.get("bonus_key", "bead"),
             "fields": {**DEFAULT_FIELDS, **(qt.get("fields") or {})},
             "aim_deviation": float(qt.get("aim_deviation", DEFAULT_AIM_DEVIATION)),
+            "dynamic_features": [int(x) for x in qt.get("dynamic_features", DEFAULT_DYNAMIC_FEATURES)],
             "_paths": paths}
 
 
@@ -194,6 +198,32 @@ def check_contract(d: dict, aim: str, seed: int) -> None:
 
 # ── 彙整 ───────────────────────────────────────────────────────────────────
 
+def _pairs(v) -> list[tuple[float, float]]:
+    """`[[值, 權重], …]`（可能是 JSON 字串）→ list。"""
+    if isinstance(v, str):
+        v = json.loads(v)
+    return [(float(a), float(b)) for a, b in v]
+
+
+def theory_gate(f: dict, F: dict, dynamic: list[int]) -> float | None:
+    """等效判定門檻（2.5.0）：命中率理論＝game_rate ÷ 門檻；動態門檻魚回 None（不比對）。
+
+    固定倍率＝odds；權重倍率（生成時抽 w）＝依權重的倍率調和平均 1／E[1／w]（命中率對生成分布的期望）；
+    命中後抽總倍率（totals）＝總倍率表加權平均（門檻固定、E[派彩]＝門檻 → 每發期望＝game_rate）。
+    """
+    if int(f.get(F["feature"]) or 0) in dynamic:
+        return None
+    if f.get(F["totals"]):
+        pairs = _pairs(f[F["totals"]])
+        return sum(a * w for a, w in pairs) / sum(w for _, w in pairs)
+    if f.get(F["weights"]):
+        pairs = _pairs(f[F["weights"]])
+        return sum(w for _, w in pairs) / sum(w / a for a, w in pairs)
+    if f.get(F["odds"]):
+        return float(f[F["odds"]])
+    raise QtError(f"魚種 {f.get(F['type'])} 沒有 {F['odds']}／{F['weights']}／{F['totals']}，算不出理論命中率")
+
+
 def binom_half(p: float, n: int) -> float:
     """二項 95% 區間半寬。"""
     return Z95 * math.sqrt(p * (1 - p) / n) if n else 0.0
@@ -205,15 +235,21 @@ def enrich(run: dict, cfg: dict, qt: dict) -> dict:
     info = {str(f[F["type"]]): f for f in cfg[F["fish_list"]]}
     rate = float(cfg[F["game_rate"]])
     total_shots = run.get("shots") or sum(s["shots"] for s in run["per_fish"].values()) or 1
-    for t, s in run["per_fish"].items():
+    dyn = run.setdefault("per_fish_dynamic", {})
+    for t, s in list(run["per_fish"].items()):
         f = info.get(str(t))
         if f is None:
             raise QtError(f"per_fish 的魚種 {t} 不在設定檔 {F['fish_list']}")
         s.setdefault("name", f.get(F["name"], str(t)))
-        p_hit = rate / float(f[F["odds"]])
+        gate = theory_gate(f, F, qt.get("dynamic_features", list(DEFAULT_DYNAMIC_FEATURES)))
+        if gate is None:  # 2.5.0：動態門檻魚移到 per_fish_dynamic，只留單魚 RTP、不比對命中率
+            dyn[str(t)] = run["per_fish"].pop(t)
+            continue
+        p_hit = rate / gate
         h = s["kills"] / s["shots"] if s["shots"] else 0.0
         half = binom_half(p_hit, s["shots"])
-        s.update(odds=f[F["odds"]], hit_theory=round(p_hit, 6), hit_actual=round(h, 6),
+        s.update(odds=f[F["odds"]] if f.get(F["odds"]) and not (f.get(F["weights"]) or f.get(F["totals"])) else round(gate, 6),
+                 hit_theory=round(p_hit, 6), hit_actual=round(h, 6),
                  hit_ci95=round(half, 6), hit_in_ci=abs(h - p_hit) <= half,
                  shot_share=round(s["shots"] / total_shots, 6))
         if "beads" in s and F["drop_ppm"] in f:

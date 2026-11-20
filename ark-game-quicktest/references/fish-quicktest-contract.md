@@ -23,8 +23,10 @@ out_dir: data/fish/<slug>/quicktest/qt-report      # 預設 qt-config 同層 qt-
 runs_dir: output/fish/<slug>/qt-runs               # 原始 JSON（不進 git）；預設 output/fish/<slug>/qt-runs
 bonus_key: bead                  # 副玩法 RTP 鍵名（rtp.<bonus_key>），預設 bead
 aim_deviation: 0.01              # 最偏打法偏離目標超過此值 → F-2 P2；總 RTP > 1 → P1
+dynamic_features: [1, 2]         # 2.5.0：門檻隨場上魚而變的 feature，不比對理論命中率
 fields:                          # 設定檔 JSON 欄位名覆寫（以下為預設）
-  { game_rate: game_rate, fish_list: fish_info, type: type, name: name, odds: odds, drop_ppm: drop_ppm }
+  { game_rate: game_rate, fish_list: fish_info, type: type, name: name, odds: odds, drop_ppm: drop_ppm,
+    weights: weights, totals: totals, feature: feature }   # 2.5.0 加後三個
 ```
 
 - 路徑（`tool`／`config`／`out_dir`／`runs_dir`）相對 `--root`（預設目前目錄）；絕對路徑原樣。
@@ -62,7 +64,7 @@ fishsim -config <設定檔.json> -shots <N> -seed <S> -aim <打法> -per <每幀
 
 | 量 | 公式 | 區間 |
 |---|---|---|
-| 命中率 | `game_rate ÷ odds`（單人無緩衝池時成立） | 二項 95%：p ± 1.96·√(p(1−p)/shots) |
+| 命中率 | `game_rate ÷ 門檻`（單人無緩衝池時成立）；門檻（2.5.0）：固定魚＝`odds`；權重魚（`weights`，生成時抽）＝依權重的倍率調和平均 1／E[1／w]；命中後抽總倍率（`totals`）＝表加權平均；`feature` 在 `dynamic_features`（預設 1 旋風、2 閃光）→ 移到 `per_fish_dynamic`，不比對 | 二項 95%：p ± 1.96·√(p(1−p)/shots) |
 | 附加獎勵率 | `drop_ppm ÷ 1e6` | 二項 95%：p ± 1.96·√(p(1−p)/kills) |
 
 ## 產物（out_dir）

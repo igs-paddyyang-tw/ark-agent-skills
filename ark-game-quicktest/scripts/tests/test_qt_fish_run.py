@@ -180,6 +180,37 @@ def test_field_override_and_bonus_key():
     assert v["hit_theory"] == 0.01 and v["drop_theory"] == 0.1 and v["odds"] == 90
 
 
+def _eq_cfg():
+    """2.5.0：固定、權重（字串格式）、命中後抽總倍率、旋風（動態門檻）各一。"""
+    return {"game_rate": 0.9, "fish_info": [
+        {"type": 1, "name": "固定", "odds": 3},
+        {"type": 2, "name": "權重", "weights": "[[10, 1], [30, 1]]"},
+        {"type": 3, "name": "炸彈", "feature": 5, "totals": [[200, 1], [300, 1]]},
+        {"type": 4, "name": "旋風", "feature": 1, "odds": 3}]}
+
+
+def test_equivalent_gate_weighted_totals_and_dynamic_skip():
+    qt = {"fields": Q.DEFAULT_FIELDS, "gate": {"total": 0.96, "tolerance": 0.005},
+          "dynamic_features": list(Q.DEFAULT_DYNAMIC_FEATURES)}
+    r = {"shots": 4000, "rtp": {"fish": 0.9, "total": 0.96}, "per_fish": {
+        str(t): {"shots": 1000, "kills": 10, "rtp": 0.9} for t in (1, 2, 3, 4)}}
+    out = Q.enrich(r, _eq_cfg(), qt)
+    pf = out["per_fish"]
+    assert pf["1"]["odds"] == 3 and pf["1"]["hit_theory"] == 0.3
+    assert pf["2"]["odds"] == 15.0                      # 調和平均 2 ÷ (1/10 + 1/30)
+    assert pf["3"]["odds"] == 250.0                     # 總倍率表加權平均
+    assert "4" not in pf and out["per_fish_dynamic"]["4"]["name"] == "旋風"
+    assert pf["1"]["shot_share"] == 0.25                # 動態魚移走不改分母
+
+
+def test_fish_without_any_gate_is_input_error():
+    qt = {"fields": Q.DEFAULT_FIELDS, "gate": {"total": 0.96, "tolerance": 0.005}}
+    cfg = {"game_rate": 0.9, "fish_info": [{"type": 9, "name": "怪魚"}]}
+    r = {"shots": 10, "rtp": {"fish": 0.9, "total": 0.96}, "per_fish": {"9": {"shots": 10, "kills": 1, "rtp": 0.9}}}
+    with pytest.raises(Q.QtError):
+        Q.enrich(r, cfg, qt)
+
+
 # ── 路徑與輸入 ───────────────────────────────────────────────────────────
 
 def test_paths_resolve_against_root_and_out_dir_override(tmp_path):

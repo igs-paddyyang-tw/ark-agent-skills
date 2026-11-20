@@ -119,14 +119,20 @@ def load_fingerprints() -> dict:
     if not FINGERPRINTS.exists():
         print("❌ fingerprints.json 不存在，請先跑 build_fingerprints.py", file=sys.stderr)
         sys.exit(2)
-    # 新鮮度：指紋不得舊於任一模板
+    # 新鮮度：模板比指紋新時，**比內容**再判（1.4.1）——git clone／checkout 不保留 mtime，
+    # 只看 mtime 會在內容完全相同時誤判「落後」而拒跑（2026-11-20 aidev AIPC 實測：新 clone 必拒跑）
+    data = json.loads(FINGERPRINTS.read_text(encoding="utf-8"))
     fp_mtime = FINGERPRINTS.stat().st_mtime
-    for md in TEMPLATES_DIR.rglob("*.md"):
-        if md.stat().st_mtime > fp_mtime:
-            print(f"❌ fingerprints.json 落後於模板 {md.name}，請重跑 build_fingerprints.py",
+    newer = [md for md in TEMPLATES_DIR.rglob("*.md") if md.stat().st_mtime > fp_mtime]
+    if newer:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from build_fingerprints import build  # noqa: E402
+        fresh = build()
+        if (fresh["lines"], fresh["cells"]) != (data.get("lines"), data.get("cells")):
+            print(f"❌ fingerprints.json 落後於模板 {newer[0].name}，請重跑 build_fingerprints.py",
                   file=sys.stderr)
             sys.exit(2)
-    return json.loads(FINGERPRINTS.read_text(encoding="utf-8"))
+    return data
 
 
 def lint(path: Path, fp: dict, sections: dict | None = None) -> list[dict]:
