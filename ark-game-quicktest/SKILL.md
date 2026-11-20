@@ -15,7 +15,7 @@ metadata:
   category: process
   form: executor
   domain: game
-  version: "2.5.0"
+  version: "2.6.0"
   updated: 2026-11-14
   outputs:
     - { format: data, audience: ai }
@@ -62,7 +62,7 @@ metadata:
 | `scripts/tests/` | golden：範本 `report_1.0.0.txt` 解析與三向、範本 odds 通過 lint、null/provenance 阻斷、決議填值；`test_qt_fish_run.py` 用假 fishsim（`fixtures/fish/fake_fishsim.py`）測魚機 gate／findings／區間／路徑 | 改腳本後 |
 | `references/quicktest-targets.template.yaml` | quicktest.yaml 範本：單版 target_rtp／rtp_tolerance／feel，多版 `versions[]`（qt_report `--version-id`） | 新遊戲要建目標檔時複製改 |
 | `scripts/port/`（2.2.0 路線 C）| C++ 快測 → Go 移植與 Go 世代 live 重跑：`cpp/cpp_trace.py`（g++ -m32 編原 C++、固定 seed、逐局追蹤）、`go/portkit`（SFMT19937 與 C++ 逐位元相同、MSVC rand、平行執行、Go 快測報表格式）、`cpp_parity.py`（同 seed 逐局對照）、`gen_config.py`（config-map → config json＋逐鍵來源標記 live／xlsx／engine／ruled／filled:*）；SOP `references/cpp-port-sop.md` | 舊遊戲（C++／Go 世代）重跑快測、還原線上機率 |
-| `scripts/fish/qt_fish_run.py`（2.4.0）| 魚機快測：qt-config.yaml → 平行跑專案的 fishsim（打法 × 種子）→ `rtp-report.json`＋md（ark-md-report data 型，report_lint）＋html；gate、打法敏感度、命中率／附加獎勵率 vs 理論 95% 區間；**2.5.0 起理論門檻支援權重魚（倍率調和平均）、命中後抽總倍率（表加權平均），旋風／閃光等動態門檻魚移到 `per_fish_dynamic` 不比對**；exit 0／3／2 | 魚機 ④⑤ 快測 |
+| `scripts/fish/qt_fish_run.py`（2.4.0）| 魚機快測：qt-config.yaml → 平行跑專案的 fishsim（打法 × 種子）→ `rtp-report.json`＋md（ark-md-report data 型，report_lint）＋html；gate、打法敏感度、命中率／附加獎勵率 vs 理論 95% 區間；**2.5.0 起理論門檻支援權重魚（倍率調和平均）、命中後抽總倍率（表加權平均），旋風／閃光等動態門檻魚移到 `per_fish_dynamic` 不比對**；**2.6.0 契約 v2：runs 可帶任意 fishsim 旗標（清單展開組合）、頂層 `flags`、每列 `config` 別名（不進 gate），`per_fish` 選填 → 多人桌可接**；exit 0／3／2 | 魚機 ④⑤ 快測 |
 | `references/fish-quicktest-contract.md`（2.4.0）| 魚機 qt-config 欄位、fishsim 旗標與輸出 JSON 契約、理論值公式、Findings 規則 | 新魚機接快測、寫 fishsim 時 |
 | `references/restore-stages-sop.md`（2.2.1）| 還原局每款流程 ⓪→④→③⑤→⑥-lite→⑦ 與 W1 26 款累積規律（找對版本、目標 RTP 取法、砍分五型、保底／天井、引擎坑）；gen_config 多層輪帶、expr 可用 symbol_map | 舊遊戲批次還原到單機試玩 |
 

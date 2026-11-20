@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import itertools
 import html
 import json
 import math
@@ -86,6 +87,11 @@ def load_qt(qt_path: Path, root: Path) -> dict:
     for r in qt["runs"]:
         if not {"aim", "seeds", "shots"} <= set(r):
             raise QtError(f"runs 每列需 aim／seeds／shots：{r}")
+        alias = r.get("config")
+        if alias is not None and not (isinstance(qt.get(alias), str) or resolve(root, alias).is_file()):
+            raise QtError(f"runs 的 config「{alias}」既不是 qt-config 的鍵、也不是存在的檔案")
+    if not isinstance(qt.get("flags", {}), dict):
+        raise QtError("flags 需為 {旗標: 值}")
     # slug 預設：qt-config 在 <slug>/quicktest/ 下 → <slug>；否則取所在目錄名
     slug = qt.get("slug") or (qt_path.parent.parent.name if qt_path.parent.name == "quicktest"
                               else qt_path.parent.name)
@@ -95,6 +101,7 @@ def load_qt(qt_path: Path, root: Path) -> dict:
         "config": resolve(root, qt["config"]),
         "out_dir": resolve(root, qt["out_dir"]) if qt.get("out_dir") else qt_path.parent / "qt-report",
         "runs_dir": resolve(root, qt["runs_dir"]) if qt.get("runs_dir") else root / "output" / "fish" / slug / "qt-runs",
+        "root": root,
     }
     if not paths["tool"].exists():
         raise QtError(f"tool 不存在：{paths['tool']}")
@@ -146,10 +153,44 @@ async def prepare_tool(tool: Path, runs_dir: Path, go: str | None) -> tuple[list
     return [str(tool)], tool.parent
 
 
-def run_name(aim: str, seed: int, shots: int) -> str:
-    """原始輸出檔名（與專案版相同慣例）。"""
+RUN_KEYS = {"aim", "seeds", "shots", "config"}
+
+
+def run_name(aim: str, seed: int, shots: int, params: dict | None = None, config_key: str | None = None) -> str:
+    """原始輸出檔名（與專案版相同慣例；契約 v2 的額外旗標與設定別名接在後面）。"""
     tag = f"{shots // 1_000_000}m" if shots >= 1_000_000 else str(shots)
-    return f"qt{tag}-{aim}-seed{seed}.json"
+    extra = "".join(f"-{k}{v}" for k, v in sorted((params or {}).items()))
+    cfg = f"-{config_key}" if config_key else ""
+    safe = aim.replace("@", "_")
+    return f"qt{tag}-{safe}{extra}{cfg}-seed{seed}.json"
+
+
+def expand_runs(qt: dict, shots_override: int | None = None) -> list[dict]:
+    """契約 v2（2.6.0）：runs 每列除 aim／seeds／shots／config 外的鍵都當 fishsim 旗標；值是清單就展開成所有組合。
+
+    qt-config `flags` 是每個 run 都帶的旗標；`config` 可寫 qt-config 的鍵（例 baseline）或檔案路徑，該 run 改用它。
+    """
+    P, base = qt["_paths"], dict(qt.get("flags") or {})
+    jobs: list[dict] = []
+    for r in qt["runs"]:
+        extras = {k: v for k, v in r.items() if k not in RUN_KEYS}
+        keys = sorted(extras)
+        grids = [extras[k] if isinstance(extras[k], list) else [extras[k]] for k in keys]
+        alias = r.get("config")
+        cfg_path = (resolve(P["root"], qt[alias]) if isinstance(qt.get(alias), str) else resolve(P["root"], alias)) if alias else P["config"]
+        for combo in itertools.product(*grids):
+            params = {**base, **dict(zip(keys, combo))}
+            for s in r["seeds"]:
+                jobs.append({"aim": str(r["aim"]), "seed": int(s), "shots": shots_override or int(r["shots"]),
+                             "params": params, "config": cfg_path, "config_key": alias})
+    return jobs
+
+
+def label(r: dict) -> str:
+    """報告上顯示的 run 名稱：打法＋額外旗標＋設定別名。"""
+    extra = " ".join(f"{k}={v}" for k, v in sorted((r.get("params") or {}).items()))
+    cfg = f" [{r['config_key']}]" if r.get("config_key") else ""
+    return f"{r['aim']}{(' ' + extra) if extra else ''}{cfg}"
 
 
 async def run_all(qt: dict, shots_override: int | None, go: str | None, jobs_n: int | None) -> list[dict]:
@@ -157,14 +198,16 @@ async def run_all(qt: dict, shots_override: int | None, go: str | None, jobs_n: 
     P = qt["_paths"]
     P["runs_dir"].mkdir(parents=True, exist_ok=True)
     cmd, cwd = await prepare_tool(P["tool"], P["runs_dir"], go)
-    jobs = [(str(r["aim"]), int(s), shots_override or int(r["shots"])) for r in qt["runs"] for s in r["seeds"]]
+    jobs = expand_runs(qt, shots_override)
     sem = asyncio.Semaphore(jobs_n or max(1, (os.cpu_count() or 2) - 1))
 
-    async def one(aim: str, seed: int, shots: int) -> dict:
+    async def one(job: dict) -> dict:
+        aim, seed, shots, params = job["aim"], job["seed"], job["shots"], job["params"]
+        flags = [x for k, v in params.items() for x in (f"-{k}", str(v))]
         async with sem:
-            raw = await sh(*cmd, "-config", str(P["config"]), "-shots", str(shots), "-seed", str(seed),
+            raw = await sh(*cmd, "-config", str(job["config"]), "-shots", str(shots), "-seed", str(seed),
                            "-aim", aim, "-per", str(qt.get("per_frame", 8)), "-bet", str(qt.get("bet", 1)),
-                           cwd=cwd)
+                           *flags, cwd=cwd)
         try:
             d = json.loads(raw)
         except json.JSONDecodeError as ex:
@@ -173,13 +216,15 @@ async def run_all(qt: dict, shots_override: int | None, go: str | None, jobs_n: 
         d.setdefault("aim", aim)
         d.setdefault("seed", seed)
         d.setdefault("shots", shots)
-        name = run_name(aim, seed, shots)
+        d["params"], d["config_key"] = params, job["config_key"]
+        d["label"] = label(d)
+        name = run_name(aim, seed, shots, params, job["config_key"])
         (P["runs_dir"] / name).write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
         d["file"] = name
-        print(f"  ✓ {aim:<8} seed {seed}  total {d['rtp']['total']:.6f}", file=sys.stderr)
+        print(f"  ✓ {d['label']:<24} seed {seed}  total {d['rtp']['total']:.6f}", file=sys.stderr)
         return d
 
-    return list(await asyncio.gather(*(one(*j) for j in jobs)))
+    return list(await asyncio.gather(*(one(j) for j in jobs)))
 
 
 def check_contract(d: dict, aim: str, seed: int) -> None:
@@ -189,8 +234,11 @@ def check_contract(d: dict, aim: str, seed: int) -> None:
     if not isinstance(rtp, dict) or not {"fish", "total"} <= set(rtp):
         raise QtError(f"fishsim 輸出缺 rtp.fish／rtp.total{where}")
     pf = d.get("per_fish")
-    if not isinstance(pf, dict) or not pf:
-        raise QtError(f"fishsim 輸出缺 per_fish{where}")
+    if pf is None:  # 契約 v2：per_fish 選填（多人桌等沒有逐魚統計的模擬器）→ F-3 略過
+        d["per_fish"] = {}
+        return
+    if not isinstance(pf, dict):
+        raise QtError(f"fishsim 輸出 per_fish 格式不對{where}")
     for t, s in pf.items():
         if not {"shots", "kills", "rtp"} <= set(s):
             raise QtError(f"per_fish[{t}] 缺 shots／kills／rtp{where}")
@@ -266,7 +314,9 @@ def enrich(run: dict, cfg: dict, qt: dict) -> dict:
 def build_report(qt: dict, cfg: dict, runs: list[dict], today: str, root: Path) -> dict:
     """彙整成 rtp-report.json（閉環回填來源）。"""
     P, F, gate = qt["_paths"], qt["fields"], qt["gate"]
-    rnd = sorted((r for r in runs if r["aim"] == "random"), key=lambda r: r["seed"])
+    # gate：aim＝random 且用主設定的 run（各旗標組合 × 種子都算；用設定別名的 run 如 baseline 不算）
+    rnd = sorted((r for r in runs if r["aim"] == "random" and not r.get("config_key")),
+                 key=lambda r: (label(r), r["seed"]))
     tot = [r["rtp"]["total"] for r in rnd]
     mean = statistics.fmean(tot) if tot else 0.0
     ci = (2.0 * statistics.stdev(tot) / math.sqrt(len(tot))) if len(tot) > 1 else None
@@ -286,9 +336,9 @@ def build_report(qt: dict, cfg: dict, runs: list[dict], today: str, root: Path) 
                    **({qt["bonus_key"]: bonus_cfg} if isinstance(bonus_cfg, dict) else {}),
                    "fish": [{k: f[k] for k in keep if k in f} for f in cfg[F["fish_list"]]]},
         "analytic": next((r["analytic"] for r in runs if r.get("analytic")), {}),
-        "gate": {"aim": "random", "seeds": len(rnd), "totals": tot, "mean": round(mean, 6),
+        "gate": {"aim": "random", "seeds": len(rnd), "labels": [f"{label(r)} seed {r['seed']}" for r in rnd], "totals": tot, "mean": round(mean, 6),
                  "seed_ci95": round(ci, 6) if ci is not None else None, "pass": passed},
-        "runs": sorted(runs, key=lambda r: (r["aim"] != "random", r["aim"], r["seed"])),
+        "runs": sorted(runs, key=lambda r: (r["aim"] != "random", bool(r.get("config_key")), label(r), r["seed"])),
     }
 
 
@@ -301,7 +351,7 @@ def findings(rep: dict, aim_deviation: float | None = None) -> list[dict]:
             "what": (f"random {g['seeds']} 種子總 RTP {'／'.join(f'{x:.4f}' for x in g['totals'])}，平均 {g['mean']:.4f}"
                      if g["seeds"] else "沒有 random 打法的 run，gate 無從判定"),
             "impact": f"gate {t['total']} ±{t['tolerance']} {'通過' if g['pass'] else '不通過'}"}]
-    others = [r for r in rep["runs"] if r["aim"] != "random"]
+    others = [r for r in rep["runs"] if r["aim"] != "random" and not r.get("config_key")]
     if others:
         worst = max(others, key=lambda r: abs(r["rtp"]["total"] - t["total"]))
         hi = max(others, key=lambda r: r["rtp"]["total"])
@@ -310,8 +360,8 @@ def findings(rep: dict, aim_deviation: float | None = None) -> list[dict]:
         over1 = hi["rtp"]["total"] > 1
         sev = "P1" if over1 else ("P2" if abs(dev) > aim_deviation else "P3")
         out.append({"id": "F-2", "sev": sev,
-                    "what": (f"打法敏感度：最高 {hi['aim']} {hi['rtp']['total']:.4f}、最低 {lo['aim']} {lo['rtp']['total']:.4f}；"
-                             f"最偏 {worst['aim']} 偏離目標 {dev:+.4f}（門檻 ±{aim_deviation}）"),
+                    "what": (f"打法敏感度：最高 {label(hi)} {hi['rtp']['total']:.4f}、最低 {label(lo)} {lo['rtp']['total']:.4f}；"
+                             f"最偏 {label(worst)} 偏離目標 {dev:+.4f}（門檻 ±{aim_deviation}）"),
                     "impact": ("專挑某魚的玩家長期回收超過 1" if over1 else
                                "最偏打法偏離超過門檻，交人判斷是否為打法漏洞" if sev == "P2" else
                                "打法差距在門檻內，交人判斷")})
@@ -321,9 +371,13 @@ def findings(rep: dict, aim_deviation: float | None = None) -> list[dict]:
     cells = sum(len(r["per_fish"]) for r in rep["runs"])
     miss = [1 for r in rep["runs"] for v in r["per_fish"].values() if not v["hit_in_ci"]]
     lim = len(rep["runs"]) // 4
-    out.append({"id": "F-3", "sev": "P2" if len(miss) > lim else "P3",
-                "what": f"各魚種命中率落在理論 95% 區間外 {len(miss)} 格（共 {cells} 格）",
-                "impact": "命中判定與 game_rate÷倍率一致" if len(miss) <= lim else "命中判定可能偏離規格，查命中鏈"})
+    if cells:
+        out.append({"id": "F-3", "sev": "P2" if len(miss) > lim else "P3",
+                    "what": f"各魚種命中率落在理論 95% 區間外 {len(miss)} 格（共 {cells} 格）",
+                    "impact": "命中判定與 game_rate÷倍率一致" if len(miss) <= lim else "命中判定可能偏離規格，查命中鏈"})
+    else:
+        out.append({"id": "F-3", "sev": "P3", "what": "模擬器沒有提供逐魚統計（契約 v2 per_fish 選填），未比對命中率",
+                    "impact": "命中鏈要靠模擬器自身的單元測試或另跑單人模式驗"})
     dcells = [v for r in rep["runs"] for v in r["per_fish"].values() if "drop_in_ci" in v]
     if dcells:
         dmiss = sum(1 for v in dcells if not v["drop_in_ci"])
@@ -377,7 +431,7 @@ def write_md(rep: dict, fs: list[dict], md: Path, sources: list[str]) -> None:
           f"| 打法 | 種子 | 發數 | 打魚 | {bk} | 總 RTP | 每千發附加獎勵 | 三同率 | 在區間 |",
           "|---|---:|---:|---:|---:|---:|---:|---:|:-:|"]
     for r in rep["runs"]:
-        L.append(f"| {r['aim']} | {r['seed']} | {r['shots']:,} | {r['rtp']['fish']:.6f} | {_fmt(r['rtp'].get(bk), '.6f')} | "
+        L.append(f"| {label(r)} | {r['seed']} | {r['shots']:,} | {r['rtp']['fish']:.6f} | {_fmt(r['rtp'].get(bk), '.6f')} | "
                  f"**{r['rtp']['total']:.6f}** | {_fmt(r.get('beads_per_1000'), '.2f')} | {_fmt(r.get('triple_rate'), '.2%')} | "
                  f"{'✅' if r['within_gate'] else '❌'} |")
     r0 = next((r for r in rep["runs"] if r["aim"] == "random"), rep["runs"][0])
@@ -412,7 +466,7 @@ def write_html(rep: dict, fs: list[dict], htm: Path) -> None:
     for i, r in enumerate(runs):
         y = i * bh + 4
         f, tot = r["rtp"]["fish"], r["rtp"]["total"]
-        bars += [f'<text x="140" y="{y + 15}" text-anchor="end">{e(r["aim"])} · seed {r["seed"]}</text>',
+        bars += [f'<text x="140" y="{y + 15}" text-anchor="end">{e(label(r))} · seed {r["seed"]}</text>',
                  f'<rect x="150" y="{y}" width="{x(tot) - 150:.1f}" height="{bh - 8}" fill="#f59e0b" opacity=".85"/>',
                  f'<rect x="150" y="{y}" width="{x(f) - 150:.1f}" height="{bh - 8}" fill="#2563eb"/>' if f > lo_ax else "",
                  f'<text x="{x(tot) + 6:.1f}" y="{y + 15}">{tot:.4f}</text>']
@@ -432,7 +486,7 @@ def write_html(rep: dict, fs: list[dict], htm: Path) -> None:
         f"<td>{v['hit_actual']:.3%}</td><td class='{'ok' if v['hit_in_ci'] else 'bad'}'>±{v['hit_ci95']:.3%}</td>"
         f"{drop_cells(v)}<td>{v['rtp']:.4f}</td></tr>" for v in r0["per_fish"].values())
     run_rows = "".join(
-        f"<tr><td>{e(r['aim'])}</td><td>{r['seed']}</td><td>{r['shots']:,}</td><td>{r['rtp']['fish']:.6f}</td>"
+        f"<tr><td>{e(label(r))}</td><td>{r['seed']}</td><td>{r['shots']:,}</td><td>{r['rtp']['fish']:.6f}</td>"
         f"<td>{_fmt(r['rtp'].get(bk), '.6f')}</td><td><b>{r['rtp']['total']:.6f}</b></td><td>{_fmt(r.get('beads_per_1000'), '.2f')}</td>"
         f"<td>{_fmt(r.get('triple_rate'), '.2%')}</td><td class='{'ok' if r['within_gate'] else 'bad'}'>{'✅' if r['within_gate'] else '❌'}</td></tr>"
         for r in runs)
@@ -442,7 +496,7 @@ def write_html(rep: dict, fs: list[dict], htm: Path) -> None:
            ("Gate", "通過" if g["pass"] else "不通過", f"{g['seeds']} 種子"),
            ("打魚 RTP", f"{r0['rtp']['fish']:.4f}", f"game_rate {rep['params']['game_rate']}"),
            (f"{bk} RTP", _fmt(r0["rtp"].get(bk), ".4f"), "副玩法"),
-           ("最偏打法", f"{worst['rtp']['total']:.4f}", worst["aim"]),
+           ("最偏打法", f"{worst['rtp']['total']:.4f}", label(worst)),
            ("解析近似", _fmt(rep["analytic"].get("total") if isinstance(rep["analytic"], dict) else None, ".4f"), "守門用")]
     kpis = "".join(f"<div class='kpi'><div class='k'>{e(a)}</div><div class='v'>{e(b)}</div><div class='s'>{e(str(c))}</div></div>" for a, b, c in kpi)
     note = f"<div class='note'>設定檔備註：{e(rep['config']['note'])}</div>" if rep["config"]["note"] else ""

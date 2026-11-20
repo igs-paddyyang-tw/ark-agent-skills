@@ -211,6 +211,62 @@ def test_fish_without_any_gate_is_input_error():
         Q.enrich(r, cfg, qt)
 
 
+# ── 契約 v2（2.6.0）：額外旗標、展開、設定別名、per_fish 選填 ──────────────
+def test_v2_flags_expand_and_gate_covers_all_combos(tmp_path):
+    runs = [{"aim": "random", "seeds": [1, 2], "shots": 1_000_000, "seats": [1, 4], "skill": "none"},
+            {"aim": "boss", "seeds": [1], "shots": 1_000_000, "seats": 4}]
+    make_game(tmp_path, {"random": 0.96, "boss": 0.959}, runs=runs, extra={"flags": {"second": "client"}})
+    rc, _ = run(tmp_path)
+    rep = report(tmp_path)
+    assert rc == 0 and rep["gate"]["seeds"] == 4 and len(rep["runs"]) == 5
+    r = next(x for x in rep["runs"] if x["aim"] == "random" and x["params"]["seats"] == 4)
+    assert r["echo_flags"] == {"-seats": "4", "-skill": "none", "-second": "client"}
+    assert r["label"] == "random seats=4 second=client skill=none"
+    files = sorted(p.name for p in (tmp_path / "output/fish/demo/qt-runs").glob("*.json"))
+    assert len(files) == 5 and any("seats4" in n for n in files)
+
+
+def test_v2_gate_fails_if_any_combo_out(tmp_path):
+    runs = [{"aim": "random", "seeds": [1], "shots": 1_000_000, "seats": [1, 4]}]
+    make_game(tmp_path, {"random": 0.96}, runs=runs)
+    cfg = tmp_path / "data/fish/demo/configs/demo.json"
+    d = json.loads(cfg.read_text(encoding="utf-8")); d["_fake"]["seats_step"] = 0.002
+    cfg.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    rc, _ = run(tmp_path)                                   # seats 4 → +0.008 → 帶外
+    assert rc == 3 and report(tmp_path)["gate"]["pass"] is False
+
+
+def test_v2_config_alias_excluded_from_gate_and_sensitivity(tmp_path):
+    runs = [{"aim": "random", "seeds": [1], "shots": 1_000_000},
+            {"aim": "random", "seeds": [1], "shots": 1_000_000, "config": "baseline"}]
+    make_game(tmp_path, {"random": 0.96}, runs=runs, extra={"baseline": "data/fish/demo/configs/base.json"})
+    d = json.loads((tmp_path / "data/fish/demo/configs/demo.json").read_text(encoding="utf-8"))
+    d["_fake"]["total"]["random"] = 0.90
+    (tmp_path / "data/fish/demo/configs/base.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    rc, _ = run(tmp_path)
+    rep = report(tmp_path)
+    assert rc == 0 and rep["gate"]["totals"] == [0.96]      # baseline 0.90 不進 gate
+    assert any(r["config_key"] == "baseline" and r["rtp"]["total"] == 0.9 for r in rep["runs"])
+
+
+def test_v2_bad_config_alias_exit2(tmp_path):
+    make_game(tmp_path, {"random": 0.96}, runs=[{"aim": "random", "seeds": [1], "shots": 1000, "config": "nope"}])
+    rc, _ = run(tmp_path)
+    assert rc == 2
+
+
+def test_v2_per_fish_optional(tmp_path):
+    make_game(tmp_path, {"random": 0.96, "gold": 0.96})
+    cfg = tmp_path / "data/fish/demo/configs/demo.json"
+    d = json.loads(cfg.read_text(encoding="utf-8")); d["_fake"]["no_per_fish"] = True
+    cfg.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    rc, _ = run(tmp_path)
+    rep = report(tmp_path)
+    assert rc == 0 and all(r["per_fish"] == {} for r in rep["runs"])
+    f3 = next(f for f in Q.findings(rep) if f["id"] == "F-3")
+    assert f3["sev"] == "P3" and "沒有提供逐魚統計" in f3["what"]
+
+
 # ── 路徑與輸入 ───────────────────────────────────────────────────────────
 
 def test_paths_resolve_against_root_and_out_dir_override(tmp_path):

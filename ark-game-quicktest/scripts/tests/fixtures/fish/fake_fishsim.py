@@ -14,10 +14,11 @@ for k in ("config", "aim"):
     ap.add_argument(f"-{k}")
 for k in ("shots", "seed", "per", "bet"):
     ap.add_argument(f"-{k}", type=int)
-a = ap.parse_args()
+a, rest = ap.parse_known_args()  # 契約 v2：其餘旗標（-seats 4 -skill cycle…）原樣回吐
+flags = dict(zip(rest[0::2], rest[1::2]))
 cfg = json.loads(Path(a.config).read_text(encoding="utf-8"))
 fake = cfg["_fake"]
-total = fake["total"][a.aim] + fake.get("seed_step", 0) * a.seed
+total = fake["total"][a.aim] + fake.get("seed_step", 0) * a.seed + fake.get("seats_step", 0) * int(flags.get("-seats", 0))
 skew = fake.get("hit_skew", 0.0)
 fish = cfg["fish_info"]
 per = a.shots // len(fish)
@@ -31,5 +32,7 @@ for f in fish:
 out = {"aim": a.aim, "seed": a.seed, "shots": per * len(fish), "bet": a.bet,
        "rtp": {"fish": round(total - 0.15, 6), "bead": 0.15, "total": round(total, 6)},
        "per_fish": per_fish, "analytic": {"fish": 0.8, "bead": 0.16, "total": 0.96},
-       "beads_per_1000": 13.0, "triple_rate": 0.12}
+       "beads_per_1000": 13.0, "triple_rate": 0.12, "echo_flags": flags}
+if fake.get("no_per_fish"):
+    del out["per_fish"]
 print(json.dumps(out, ensure_ascii=False))

@@ -87,3 +87,18 @@ fishsim -config <設定檔.json> -shots <N> -seed <S> -aim <打法> -per <每幀
 
 exit：0＝gate 過、3＝gate 不過、2＝輸入錯誤或執行失敗（tool／config 不存在、fishsim 失敗、輸出不合契約）。
 verdict 只看 gate；F-2～F-5 交人判斷，不下設計結論。
+
+## 契約 v2（2.6.0）：多人桌與額外旗標
+
+單人契約 v1 的旗標固定；多人桌（座位、主動技能、兩段式第二段、Boss 集火）要帶更多旗標。v2 **向下相容**（v1 的 qt-config 不用改）：
+
+| 欄位 | 位置 | 說明 |
+|---|---|---|
+| runs 列的其他鍵 | `runs[]` | `aim`／`seeds`／`shots`／`config` 以外的鍵都當 fishsim 旗標：`seats: 4` → `-seats 4`；**值是清單就展開成所有組合**（`seats: [1, 2, 4]` × `skill: [none, cycle]` ＝ 6 組 × 種子數） |
+| `flags` | qt-config 頂層 | 每個 run 都帶的旗標（例 `{second: client}`） |
+| `config` | `runs[]` | 這列改用別的設定檔：寫 qt-config 的鍵（例 `baseline: <path>` 再寫 `config: baseline`）或直接寫路徑；**用別名的 run 不進 gate、也不算打法敏感度**（當比較基準） |
+| `per_fish` | fishsim 輸出 | **改選填**：沒有逐魚統計的模擬器（多人桌）可省；F-3 改成 P3「未比對」 |
+
+- gate：`aim: random` 且用主設定的**所有旗標組合 × 種子**都要在帶內；`gate.labels` 列出每一格是哪個組合
+- 原始 JSON 檔名接上旗標與別名：`qt50m-random-seats4-skillcycle-seed1.json`
+- 報告的 run 名稱＝`打法 旗標=值 … [別名]`

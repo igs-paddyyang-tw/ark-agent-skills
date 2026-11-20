@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-20 (ark-game-quicktest 2.6.0 —— 魚機快測契約 v2：多人桌可接)
+
+> aidev 回貢（技能缺口提案 OQ-1／契約 v2）：殭屍魚機是多人桌（座位、主動技能、兩段式第二段、屍王集火），v1 的固定旗標與必填 `per_fish` 接不上，只能留專案版 `qt_run.py`。
+
+- `scripts/fish/qt_fish_run.py`：`runs[]` 除 `aim`／`seeds`／`shots`／`config` 外的鍵都當 fishsim 旗標、清單值展開成所有組合；頂層 `flags` 每個 run 都帶；每列 `config` 可寫 qt-config 的鍵或路徑（別名 run 不進 gate、不算打法敏感度）；`per_fish` 改選填（F-3 改 P3「未比對」）；gate 收所有 random 組合 × 種子並列 `gate.labels`；原始 JSON 檔名與報告 run 名稱帶旗標
+- 向下相容：v1 qt-config 不用改，既有 22 項測試照過
+- 契約 `references/fish-quicktest-contract.md` 加「契約 v2」節
+- 測試 +5（展開與 gate 涵蓋全組合、任一組合帶外 exit 3、別名不進 gate、別名不存在 exit 2、per_fish 選填）；**反證**：換回 2.5.0 → 5 項全失敗；全套 55 passed
+
+---
+
 ## 2026-11-20 (ark-agent-init 2.10.0 —— 驗收閉環：完成條件 → 證據 → 獨立驗收)
 
 > 依 kiro-cli pstack 對照分析（`output/reports/2026-11-20-pstack-agent-workflow-gaps.md`）：13 個部署 445 個任務 0 個指定驗收者、完成附驗證方式僅 41%；
@@ -15,6 +26,8 @@
 - 新 `assets/docs/verification.md`：build_kiro 在專案根產 `docs/verification.md` 驗證工具骨架（policy once）
 - 只影響新建 workspace；既有專案的 SOUL／AGENTS 不回頭改
 - 測試 65→69；**反證**：分別拿掉 Keep 欄、worker 改回寫 MEMORY.md、AGENTS 拿掉無法判斷、不產 verification.md，各 1 項變紅
+
+---
 
 ## 2026-11-20 (ark-game-quicktest 2.5.0 —— 魚機快測理論命中率支援權重魚與特殊魚；ark-superpowers 1.4.1 —— 指紋新鮮度改比內容)
 
