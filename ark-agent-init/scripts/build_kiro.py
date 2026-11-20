@@ -939,7 +939,8 @@ def _default_user_md() -> str:
 
 
 #: 專案根入口檔範本（2.6.0）：AGENTS.md 是 Ark Agent 架構與規範的單一來源；CLAUDE.md 只 @AGENTS.md 匯入＋Claude 專屬
-ENTRY_TEMPLATES = {"AGENTS.md": ASSETS_DIR / "AGENTS.md", "CLAUDE.md": ASSETS_DIR / "CLAUDE.md"}
+ENTRY_TEMPLATES = {"AGENTS.md": ASSETS_DIR / "AGENTS.md", "CLAUDE.md": ASSETS_DIR / "CLAUDE.md",
+                   "docs/verification.md": ASSETS_DIR / "docs" / "verification.md"}  # 2.10.0 驗證工具骨架
 #: Codex 讀 AGENTS.md 的合計上限（project_doc_max_bytes 預設 32 KiB）—— 範本渲染後必須低於它
 CODEX_DOC_MAX_BYTES = 32 * 1024
 
@@ -971,6 +972,7 @@ def _write_entry_files(base: Path, team_name: str, cfg: dict, instances: dict) -
         text = tpl.read_text(encoding="utf-8")
         for k, v in subs.items():
             text = text.replace(k, v)
+        dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text(text, encoding="utf-8")
         created.append(fname)
     return created

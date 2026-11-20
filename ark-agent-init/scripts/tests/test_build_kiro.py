@@ -645,3 +645,53 @@ def test_memory_check_selftest_and_rotate(tmp_path):
     assert mc.main(["--root", str(ws), "--rotate"]) == 0
     assert "- **2026-09-01** 舊 1" in (ws / "memory" / "archive" / "2026-09.md").read_text(encoding="utf-8")
     assert len(mc.milestones(mem.read_text(encoding="utf-8"))) == 20
+
+
+# ── 2.10.0：驗收閉環（完成條件 → 證據 → 獨立驗收；docs/specs/agent-verification-loop-spec.md R-I1～R-I6）──
+
+def _steering(project: Path, inst: str) -> str:
+    wd = _instances()[inst]["working_directory"]
+    return (_kiro_dir(project, wd) / "steering" / "SOUL.md").read_text(encoding="utf-8")
+
+
+def test_leader_dispatch_has_done_means_keep_and_evidence(project):
+    """R-I1／R-I3：leader 派工格式五欄；自己做的不能自己驗；結論四種。"""
+    soul = _steering(project, "leader-agent")
+    for must in ("❓ 問題", "✅ 完成條件", "🔒 不能變的事", "🧾 要交的證據", "📏 大小"):
+        assert must in soul, f"leader 派工格式缺 {must}"
+    assert "自己做的不能自己驗" in soul
+    for verdict in ("通過但有備註", "無法判斷"):
+        assert verdict in soul, f"leader 驗收結論缺 {verdict}"
+
+
+def test_worker_flow_reproduces_self_verifies_and_writes_daily(project):
+    """R-I2：worker 流程重現 → 自驗 → 證據；事件寫 daily，不寫 MEMORY.md、不手寫 wiki。"""
+    soul = _steering(project, "worker-agent")
+    for must in ("先自己重現", "用同一個方法再驗一次", "無法判斷", "memory/daily/"):
+        assert must in soul, f"worker 流程缺 {must}"
+    assert "更新 MEMORY.md" not in soul, "worker 不該寫 MEMORY.md（人寫；事件寫 daily）"
+    assert "寫入 knowledge/wiki/" not in soul, "wiki 只由 ingest 產生"
+
+
+def test_agents_md_has_verification_rules(project):
+    """R-I4：AGENTS.md 有交代工作與驗收一節，列出代理指標、無法判斷、效能上限、大小分級。"""
+    text = (project / "AGENTS.md").read_text(encoding="utf-8")
+    assert "## 交代工作與驗收" in text
+    for must in ("代理指標", "無法判斷", "先算上限", "依大小選流程", "docs/verification.md"):
+        assert must in text, f"AGENTS.md 缺 {must}"
+
+
+def test_verification_skeleton_generated_and_not_overwritten(tmp_path):
+    """R-I5：根目錄產 docs/verification.md 五段骨架、填入專案名；已存在不覆寫。"""
+    (tmp_path / "team.yaml").write_text(TEAM_YAML, encoding="utf-8")
+    run = lambda: subprocess.run([sys.executable, str(BUILD), str(tmp_path / "team.yaml"), str(tmp_path)],
+                                 capture_output=True, text=True)
+    assert run().returncode == 0
+    v = tmp_path / "docs" / "verification.md"
+    text = v.read_text(encoding="utf-8")
+    for sec in ("## 1. 怎麼啟動", "## 2. 怎麼確認正常", "## 3. 怎麼像使用者一樣操作", "## 4. 收什麼證據", "## 5. 怎麼收拾"):
+        assert sec in text
+    assert "草稿" in text and "{project}" not in text
+    v.write_text("# 手寫版\n", encoding="utf-8")
+    assert run().returncode == 0
+    assert v.read_text(encoding="utf-8") == "# 手寫版\n"

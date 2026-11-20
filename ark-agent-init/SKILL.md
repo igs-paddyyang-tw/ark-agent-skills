@@ -23,8 +23,8 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "2.9.0"
-  updated: 2026-11-13
+  version: "2.10.0"
+  updated: 2026-11-20
 ---
 
 # ark-agent-init
@@ -114,6 +114,7 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 | 各 workspace 根的 `AGENTS.md` | daemon 首次啟動產（policy `once`）；build_kiro 也給子 agent 產複本 | **不會**被覆寫 —— 可補工作區筆記；團隊規範改專案根那份再分配 |
 | `SOUL.md`、`MEMORY.md`、`USER.md`、`CODE.md` | **手建**（或 `--profile` 渲染 SOUL） | daemon 不生，要自己建 |
 | `BRAIN.md` | **build_kiro 產**（判準＋角色段；team daemon 也會產但只有角色段 —— 先跑 build_kiro） | policy once，手改會保留 |
+| 專案根 `docs/verification.md` | **build_kiro 產骨架**（2.10.0：怎麼啟動／確認正常／操作／收證據／收拾） | policy once；**實跑過才算數**，跑過後改檔頭為「最後實跑：日期」 |
 
 > 踩過的坑：手寫根層 mcp.json／TEAM.md 被 daemon 覆寫，以為設定沒生效。
 
@@ -124,6 +125,7 @@ python build_kiro.py team.yaml <out> --profile qa-manager
 ```
 {target}/
 ├── AGENTS.md                          # 🔴 全隊共用規範 SSOT —— 只在專案根一份
+├── docs/verification.md               # 2.10.0 驗證工具骨架（怎麼證明做好了；policy once）
 │                                      #   （根目錄 instance 直接載入這份；steering/ 不再產 AGENTS.md）
 ├── .kiro/                             # 根目錄 workspace = team-spec 的 entry instance
 │   │                                  #   🔴 不預設是 admin —— 可為 manager（用 --profile <role> 渲染）

@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-20 (ark-agent-init 2.10.0 —— 驗收閉環：完成條件 → 證據 → 獨立驗收)
+
+> 依 kiro-cli pstack 對照分析（`output/reports/2026-11-20-pstack-agent-workflow-gaps.md`）：13 個部署 445 個任務 0 個指定驗收者、完成附驗證方式僅 41%；
+> 規則（反證、標籤不等於內容）寫在 AGENTS.md 但沒接到派工與交付。規格 `docs/specs/agent-verification-loop-spec.md`（kiro-cli）R-I1～R-I6。
+
+- `SOUL-leader.md`：派工格式改五欄（問題／完成條件／不能變的事／要交的證據／大小），XS 可省；「自己做的不能自己驗」，驗收結論四種（通過／通過但有備註／不通過／無法判斷）
+- `SOUL-worker.md`：流程改為確認完成條件 → 重現 → 做 → 同一方法自驗 → 附證據（驗不了報無法判斷）；**修正兩處與規範矛盾**：「更新 MEMORY.md」改寫 `memory/daily/`、「寫入 knowledge/wiki/」改寫 `raw/`（wiki 只由 ingest 產生）
+- `assets/AGENTS.md` 新增「交代工作與驗收」一節：代理指標清單、無法判斷、獨立驗收、效能數字先算上限、依大小選流程、同一句提醒寫第二次就做成檢查
+- 新 `assets/docs/verification.md`：build_kiro 在專案根產 `docs/verification.md` 驗證工具骨架（policy once）
+- 只影響新建 workspace；既有專案的 SOUL／AGENTS 不回頭改
+- 測試 65→69；**反證**：分別拿掉 Keep 欄、worker 改回寫 MEMORY.md、AGENTS 拿掉無法判斷、不產 verification.md，各 1 項變紅
+
 ## 2026-11-20 (ark-game-quicktest 2.5.0 —— 魚機快測理論命中率支援權重魚與特殊魚；ark-superpowers 1.4.1 —— 指紋新鮮度改比內容)
 
 > aidev 回貢（計畫 `projects/aidev-bot/docs/plans/fish-kb-product-dev-plan.md`、提案 `docs/plans/2026-11-fish-skill-gap-proposal.md` 2026-11-20 更新）：
