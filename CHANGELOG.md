@@ -15,9 +15,13 @@
 
 ---
 
+## 2026-11-27 (ark-agent-team-builder 3.3.3 —— 版號更正)
+
+- **ark-agent-team-builder 3.3.3**：3.3.2 寫的「ark-agent-os 2.2.18 起」更正為 **2.2.19**（2.2.18 已是 11-26 的 Agent Gateway 版）
+
 ## 2026-11-27 (ark-agent-team-builder 3.3.2 —— port 規則：網站與 agent／API 各自設定)
 
-- **ark-agent-team-builder 3.3.2**：「網站自動起在 health_port＋5000」改寫為正式規則 —— `health_port`（或 `TEAM_AGENT_PORT`）管 agent／API，`web.port`（或 `WEBSITE_PORT`）管網站，`web.port` 不寫才用 +5000；規劃時兩個都寫進 team.yaml（對齊 ark-agent-os 2.2.18 文件／範本，行為自 2.2.9 起已支援）
+- **ark-agent-team-builder 3.3.2**：「網站自動起在 health_port＋5000」改寫為正式規則 —— `health_port`（或 `TEAM_AGENT_PORT`）管 agent／API，`web.port`（或 `WEBSITE_PORT`）管網站，`web.port` 不寫才用 +5000；規劃時兩個都寫進 team.yaml（對齊 ark-agent-os 2.2.19 文件／範本，行為自 2.2.9 起已支援）
 - 影響：只有文件；消費端照常 `mirror_sync` 即可
 
 ## 2026-11-20 (ark-agent-init 2.10.0 —— 驗收閉環：完成條件 → 證據 → 獨立驗收)

@@ -28,7 +28,7 @@ metadata:
     - format: code
       audience: ai
   author: paddyyang
-  version: "3.3.2"
+  version: "3.3.3"
   updated: 2026-11-27
 ---
 
@@ -174,7 +174,7 @@ team 端設定**集中在 team.yaml**（不像 bot 端分 bot.yaml/agents.yaml�
 
 #### ⚙️ 啟動後的兩個非致命現象（實測 1.8.4，可忽略或按需處理）
 
-- **網站 port 與 agent／API port 各自設定**（ark-agent-os 2.2.9 起支援，2.2.18 起改為正式規則）：
+- **網站 port 與 agent／API port 各自設定**（ark-agent-os 2.2.9 起支援，2.2.19 起改為正式規則）：
   `health_port`（或 `.env` `TEAM_AGENT_PORT`）管 daemon／team MCP／`/api/health`；
   `web.port`（或 `.env` `WEBSITE_PORT`）管網站（官網＋後台＋對話）。
   **`web.port` 不寫時才用 `health_port + 5000`**（如 health 23040 → 網站 28040）；兩者相同時啟動就報錯。
