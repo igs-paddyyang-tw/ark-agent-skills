@@ -15,6 +15,11 @@
 
 ---
 
+## 2026-11-27 (ark-agent-team-builder 3.3.2 —— port 規則：網站與 agent／API 各自設定)
+
+- **ark-agent-team-builder 3.3.2**：「網站自動起在 health_port＋5000」改寫為正式規則 —— `health_port`（或 `TEAM_AGENT_PORT`）管 agent／API，`web.port`（或 `WEBSITE_PORT`）管網站，`web.port` 不寫才用 +5000；規劃時兩個都寫進 team.yaml（對齊 ark-agent-os 2.2.18 文件／範本，行為自 2.2.9 起已支援）
+- 影響：只有文件；消費端照常 `mirror_sync` 即可
+
 ## 2026-11-20 (ark-agent-init 2.10.0 —— 驗收閉環：完成條件 → 證據 → 獨立驗收)
 
 > 依 kiro-cli pstack 對照分析（`output/reports/2026-11-20-pstack-agent-workflow-gaps.md`）：13 個部署 445 個任務 0 個指定驗收者、完成附驗證方式僅 41%；
