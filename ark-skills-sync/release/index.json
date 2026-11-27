@@ -2028,5 +2028,10 @@
     "skill": "ark-game-quicktest",
     "version": "2.6.0",
     "release": "skills-2026.11-r57"
+  },
+  "sha256:df6698072466ebf300eb1611eb1c9495d6643be214a0ec7afd00136b683e17ee": {
+    "skill": "ark-agent-team-builder",
+    "version": "3.3.2",
+    "release": "skills-2026.11-r57"
   }
 }
